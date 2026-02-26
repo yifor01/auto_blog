@@ -8,6 +8,15 @@ import pytest
 import yaml
 
 
+@pytest.fixture(autouse=True)
+def reset_config():
+    """每個測試前後重設 _config，防止測試間汙染。"""
+    import src.web.config_manager as cm
+    cm._config = {}
+    yield
+    cm._config = {}
+
+
 @pytest.fixture
 def tmp_env(tmp_path):
     """建立 .env 測試檔。"""
@@ -50,7 +59,6 @@ def tmp_config(tmp_path):
 
 def test_init_config_loads_yaml(tmp_config, tmp_env, monkeypatch):
     """init_config 應將 config.yaml 載入 _config。"""
-    import importlib
     import src.web.config_manager as cm
     monkeypatch.setattr(cm, "CONFIG_PATH", tmp_config)
     monkeypatch.setattr(cm, "ENV_PATH", tmp_env)
@@ -104,3 +112,14 @@ def test_update_and_save_writes_config(tmp_config, tmp_env, monkeypatch):
     with open(tmp_config) as f:
         disk = yaml.safe_load(f)
     assert disk["scoring"]["rule_threshold"] == 30
+
+
+def test_update_and_save_writes_env(tmp_config, tmp_env, monkeypatch):
+    """update_and_save 應更新 .env 中的 API key。"""
+    import src.web.config_manager as cm
+    monkeypatch.setattr(cm, "CONFIG_PATH", tmp_config)
+    monkeypatch.setattr(cm, "ENV_PATH", tmp_env)
+    cm.init_config()
+    cm.update_and_save({}, {"OPENROUTER_API_KEY": "sk-updated"})
+    content = tmp_env.read_text(encoding="utf-8")
+    assert "sk-updated" in content
