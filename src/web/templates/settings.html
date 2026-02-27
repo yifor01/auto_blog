@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+{% block title %}Settings — Auto Post Blog Monitor{% endblock %}
+
+{% block page_title %}
+<nav style="display:flex; align-items:center; gap:8px; font-size:13.5px;">
+  <a href="/dashboard" style="color:var(--t4); text-decoration:none;">Dashboard</a>
+  <span style="color:var(--t6);">/</span>
+  <span style="color:var(--t1); font-weight:600;">⚙️ Settings</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<style>
+.settings-section {
+  background: var(--bg-c); border: 1px solid var(--br);
+  border-radius: 12px; padding: 20px 24px; margin-bottom: 20px;
+}
+.settings-section-title {
+  font-size: 13px; font-weight: 600; color: var(--t2);
+  margin: 0 0 16px; padding-bottom: 10px; border-bottom: 1px solid var(--br3);
+}
+.form-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+.form-field { display: flex; flex-direction: column; gap: 5px; }
+.form-label { font-size: 11.5px; color: var(--t4); font-weight: 500; }
+.form-input {
+  padding: 8px 12px; background: var(--bg-in);
+  border: 1px solid var(--br2); border-radius: 8px;
+  font-size: 13px; color: var(--t1); outline: none;
+  transition: border-color 0.13s; width: 100%; box-sizing: border-box;
+}
+.form-input:focus { border-color: var(--av); }
+.form-input[type="number"] { -moz-appearance: textfield; }
+.form-hint { font-size: 10.5px; color: var(--t5); }
+.pw-wrap { position: relative; display: flex; }
+.pw-wrap .form-input { flex: 1; padding-right: 36px; }
+.pw-toggle {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; cursor: pointer; color: var(--t4);
+  font-size: 14px; padding: 2px 4px;
+}
+.form-actions {
+  display: flex; gap: 10px; justify-content: flex-end; padding-top: 6px;
+}
+.btn-save {
+  padding: 9px 20px; border-radius: 9px; border: none; cursor: pointer;
+  font-size: 13px; font-weight: 600;
+  background: var(--av); color: #fff; transition: opacity 0.13s;
+}
+.btn-save:hover { opacity: 0.88; }
+.btn-cancel {
+  padding: 9px 16px; border-radius: 9px; border: 1px solid var(--br2);
+  background: none; cursor: pointer; font-size: 13px; color: var(--t3);
+  transition: background 0.13s; text-decoration: none;
+  display: inline-flex; align-items: center;
+}
+.btn-cancel:hover { background: var(--bg-hv); }
+.toast-ok {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.3);
+  color: var(--ag); border-radius: 9px; padding: 10px 16px;
+  font-size: 13px; margin-bottom: 16px;
+}
+</style>
+
+<div style="margin-bottom:18px;">
+  <h2 style="font-size:20px; font-weight:700; color:var(--av); margin:0 0 4px;">⚙️ Settings</h2>
+  <p style="font-size:13px; color:var(--t4); margin:0;">調整 pipeline 參數，儲存後下次執行即生效</p>
+</div>
+
+{% if saved %}
+<div class="toast-ok">✅ 設定已儲存成功</div>
+{% endif %}
+
+<form method="post" action="/settings">
+
+  <!-- Section 1: LLM 設定 -->
+  <div class="settings-section">
+    <div class="settings-section-title">🤖 LLM 設定</div>
+    <div class="form-grid">
+
+      <div class="form-field" style="grid-column: 1/-1;">
+        <label class="form-label">API Key</label>
+        <div class="pw-wrap">
+          <input type="password" name="api_key" id="api-key-input"
+            class="form-input" placeholder="留空則不修改目前的 API Key"
+            autocomplete="off" />
+          <button type="button" class="pw-toggle"
+            onclick="togglePw('api-key-input', this)" title="顯示/隱藏">👁</button>
+        </div>
+        <span class="form-hint">
+          目前狀態：{{ '✅ 已設定' if env.api_key else '❌ 未設定' }}。留空表示不修改。
+        </span>
+      </div>
+
+      <div class="form-field">
+        <label class="form-label">API Base URL</label>
+        <input type="url" name="api_url" class="form-input"
+          value="{{ env.api_url or 'https://openrouter.ai/api/v1' }}" />
+        <span class="form-hint">空白則不修改</span>
+      </div>
+
+      <div class="form-field">
+        <label class="form-label">Model（主力）</label>
+        <input type="text" name="llm_model" class="form-input"
+          value="{{ cfg.llm.model if cfg.llm is defined else '' }}" />
+      </div>
+
+      <div class="form-field">
+        <label class="form-label">Fallback Model</label>
+        <input type="text" name="fallback_model" class="form-input"
+          value="{{ cfg.llm.fallback_model if cfg.llm is defined else '' }}" />
+      </div>
+
+      <div class="form-field">
+        <label class="form-label">Max Tokens</label>
+        <input type="number" name="max_tokens" class="form-input"
+          value="{{ cfg.llm.max_tokens if cfg.llm is defined else 8192 }}"
+          min="256" max="131072" required />
+      </div>
+
+      <div class="form-field">
+        <label class="form-label">Request Delay（秒）</label>
+        <input type="number" name="request_delay" class="form-input"
+          value="{{ cfg.llm.request_delay_seconds if cfg.llm is defined else 0.5 }}"
+          min="0" max="60" step="0.5" required />
+        <span class="form-hint">Free tier 建議 ≥ 7.5 秒（8 req/min）</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Section 2: 評分參數 -->
+  <div class="settings-section">
+    <div class="settings-section-title">📊 評分參數</div>
+    <div class="form-grid">
+
+      <div class="form-field">
+        <label class="form-label">Rule Score 門檻</label>
+        <input type="number" name="rule_threshold" class="form-input"
+          value="{{ cfg.scoring.rule_threshold if cfg.scoring is defined else 25 }}"
+          min="0" max="500" required />
+        <span class="form-hint">低於此分數直接排除，不進 LLM 評分</span>
+      </div>
+
+      <div class="form-field">
+        <label class="form-label">LLM 評分候選數</label>
+        <input type="number" name="llm_top_k" class="form-input"
+          value="{{ cfg.scoring.llm_top_k if cfg.scoring is defined else 30 }}"
+          min="1" max="1000" required />
+        <span class="form-hint">Rule 篩選後，送 LLM 評分的上限</span>
+      </div>
+
+      <div class="form-field">
+        <label class="form-label">最終產出數（final_top_k）</label>
+        <input type="number" name="final_top_k" class="form-input"
+          value="{{ cfg.scoring.final_top_k if cfg.scoring is defined else 10 }}"
+          min="1" max="500" required />
+        <span class="form-hint">每天最多生成幾篇文章</span>
+      </div>
+
+      <div class="form-field">
+        <label class="form-label">HF Upvote 加分門檻</label>
+        <input type="number" name="hf_upvote_threshold" class="form-input"
+          value="{{ cfg.scoring.hf_upvote_bonus_threshold if cfg.scoring is defined else 10 }}"
+          min="0" max="100000" required />
+      </div>
+
+      <div class="form-field">
+        <label class="form-label">GitHub Stars 高門檻</label>
+        <input type="number" name="github_stars_high" class="form-input"
+          value="{{ cfg.scoring.github_stars_high if cfg.scoring is defined else 100 }}"
+          min="1" max="100000" required />
+      </div>
+
+      <div class="form-field">
+        <label class="form-label">GitHub Stars 中門檻</label>
+        <input type="number" name="github_stars_medium" class="form-input"
+          value="{{ cfg.scoring.github_stars_medium if cfg.scoring is defined else 50 }}"
+          min="1" max="100000" required />
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Section 3: Pipeline 參數 -->
+  <div class="settings-section">
+    <div class="settings-section-title">🔧 Pipeline 參數</div>
+    <div class="form-grid">
+
+      <div class="form-field">
+        <label class="form-label">去重回看天數</label>
+        <input type="number" name="dedup_lookback" class="form-input"
+          value="{{ cfg.dedup.lookback_days if cfg.dedup is defined else 7 }}"
+          min="0" max="365" required />
+        <span class="form-hint">0 = 停用跨日去重</span>
+      </div>
+
+      <div class="form-field">
+        <label class="form-label">資料保留天數</label>
+        <input type="number" name="retention_days" class="form-input"
+          value="{{ cfg.retention_days if cfg.retention_days is defined else 90 }}"
+          min="7" max="3650" required />
+        <span class="form-hint">超過此天數的舊資料可清理</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="form-actions">
+    <a href="/dashboard" class="btn-cancel">取消</a>
+    <button type="submit" class="btn-save">💾 儲存設定</button>
+  </div>
+
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function togglePw(inputId, btn) {
+  var input = document.getElementById(inputId);
+  if (input.type === 'password') {
+    input.type = 'text';
+    btn.textContent = '🙈';
+  } else {
+    input.type = 'password';
+    btn.textContent = '👁';
+  }
+}
+</script>
+{% endblock %}
