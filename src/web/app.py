@@ -18,7 +18,13 @@ from src.web import data_service as ds
 from src.web import config_manager as cm
 
 app = FastAPI(title="Auto Post Blog Monitor", docs_url=None, redoc_url=None)
-cm.init_config()
+
+
+@app.on_event("startup")
+async def startup_event():
+    cm.init_config()
+
+
 RUNNING_TASKS: set[str] = set()
 
 # B5: 改用 pathlib 建構路徑，避免 str.replace 脆弱性
@@ -228,16 +234,16 @@ async def settings_save(
     api_url: str = Form(""),
     llm_model: str = Form(""),
     fallback_model: str = Form(""),
-    max_tokens: int = Form(8192),
-    request_delay: float = Form(0.5),
-    rule_threshold: int = Form(25),
-    llm_top_k: int = Form(30),
-    final_top_k: int = Form(10),
-    hf_upvote_threshold: int = Form(10),
-    github_stars_high: int = Form(100),
-    github_stars_medium: int = Form(50),
-    dedup_lookback: int = Form(7),
-    retention_days: int = Form(90),
+    max_tokens: int = Form(8192, ge=256, le=131072),
+    request_delay: float = Form(0.5, ge=0.0, le=60.0),
+    rule_threshold: int = Form(25, ge=0, le=500),
+    llm_top_k: int = Form(30, ge=1, le=1000),
+    final_top_k: int = Form(10, ge=1, le=500),
+    hf_upvote_threshold: int = Form(10, ge=0, le=100000),
+    github_stars_high: int = Form(100, ge=1, le=100000),
+    github_stars_medium: int = Form(50, ge=1, le=100000),
+    dedup_lookback: int = Form(7, ge=0, le=365),
+    retention_days: int = Form(90, ge=7, le=3650),
 ):
     env_updates: dict[str, str] = {}
     if api_key.strip():
@@ -259,7 +265,12 @@ async def settings_save(
         "dedup.lookback_days": dedup_lookback,
         "retention_days": retention_days,
     }
-    cm.update_and_save(config_updates, env_updates)
+    try:
+        cm.update_and_save(config_updates, env_updates)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception:
+        raise HTTPException(status_code=500, detail="設定儲存失敗，請稍後重試")
     return RedirectResponse(url="/settings?saved=1", status_code=303)
 
 
