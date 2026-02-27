@@ -1,0 +1,1155 @@
+<!doctype html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}Auto Post Blog Monitor{% endblock %}</title>
+
+    <!-- Prevent theme flash -->
+    <script>
+      (function () {
+        var t = localStorage.getItem("theme") || "dark";
+        if (t === "light") document.documentElement.classList.add("light");
+      })();
+    </script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github-dark.min.css"
+      id="hljs-theme"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/highlight.min.js"></script>
+
+    <style>
+      /* ── CSS Variables ── */
+      :root {
+        --bg: #020617;
+        --bg-s: #0f172a;
+        --bg-c: rgba(30, 41, 59, 0.6);
+        --bg-c2: #1e293b;
+        --bg-hd: rgba(2, 6, 23, 0.85);
+        --bg-hv: rgba(51, 65, 85, 0.2);
+        --bg-in: rgba(51, 65, 85, 0.45);
+        --day-bg: rgba(15, 23, 42, 0.75);
+        --day-hv: rgba(30, 41, 59, 0.9);
+
+        --br: rgba(51, 65, 85, 0.6);
+        --br2: rgba(51, 65, 85, 0.45);
+        --br3: rgba(51, 65, 85, 0.35);
+        --br4: rgba(51, 65, 85, 0.25);
+
+        --t1: #f1f5f9;
+        --t2: #e2e8f0;
+        --t3: #94a3b8;
+        --t4: #64748b;
+        --t5: #475569;
+        --t6: #334155;
+
+        --av: #a78bfa;
+        --av-d: rgba(139, 92, 246, 0.12);
+        --av-b: rgba(139, 92, 246, 0.25);
+        --ac: #22d3ee;
+        --ag: #34d399;
+        --ay: #fbbf24;
+        --ar: #f87171;
+
+        --bd-done: rgba(52, 211, 153, 0.4);
+        --bd-scored: rgba(251, 191, 36, 0.4);
+        --bd-col: rgba(34, 211, 238, 0.4);
+        --bd-none: rgba(51, 65, 85, 0.5);
+        --bd-running: rgba(139, 92, 246, 0.6);
+
+        --sc-n: linear-gradient(
+          135deg,
+          rgba(51, 65, 85, 0.5),
+          rgba(30, 41, 59, 0.4)
+        );
+        --sc-v: linear-gradient(
+          135deg,
+          rgba(109, 40, 217, 0.2),
+          rgba(30, 41, 59, 0.4)
+        );
+        --sc-g: linear-gradient(
+          135deg,
+          rgba(6, 95, 70, 0.3),
+          rgba(30, 41, 59, 0.4)
+        );
+        --sc-c: linear-gradient(
+          135deg,
+          rgba(14, 116, 144, 0.25),
+          rgba(30, 41, 59, 0.4)
+        );
+
+        --sb: #334155;
+        --sb-hv: #475569;
+        --ch-grid: rgba(51, 65, 85, 0.4);
+        --ch-text: #64748b;
+      }
+
+      html.light {
+        --bg: #f8fafc;
+        --bg-s: #f1f5f9;
+        --bg-c: rgba(255, 255, 255, 0.95);
+        --bg-c2: #ffffff;
+        --bg-hd: rgba(248, 250, 252, 0.9);
+        --bg-hv: rgba(0, 0, 0, 0.04);
+        --bg-in: rgba(0, 0, 0, 0.06);
+        --day-bg: rgba(255, 255, 255, 0.85);
+        --day-hv: rgba(248, 250, 252, 0.98);
+
+        --br: rgba(203, 213, 225, 0.8);
+        --br2: rgba(203, 213, 225, 0.6);
+        --br3: rgba(203, 213, 225, 0.5);
+        --br4: rgba(203, 213, 225, 0.35);
+
+        --t1: #0f172a;
+        --t2: #1e293b;
+        --t3: #475569;
+        --t4: #64748b;
+        --t5: #94a3b8;
+        --t6: #cbd5e1;
+
+        --av: #7c3aed;
+        --av-d: rgba(124, 58, 237, 0.08);
+        --av-b: rgba(124, 58, 237, 0.2);
+        --ac: #0891b2;
+        --ag: #059669;
+        --ay: #d97706;
+        --ar: #dc2626;
+
+        --bd-done: rgba(5, 150, 105, 0.4);
+        --bd-scored: rgba(217, 119, 6, 0.4);
+        --bd-col: rgba(8, 145, 178, 0.4);
+        --bd-none: rgba(203, 213, 225, 0.6);
+        --bd-running: rgba(124, 58, 237, 0.6);
+
+        --sc-n: linear-gradient(
+          135deg,
+          rgba(203, 213, 225, 0.3),
+          rgba(255, 255, 255, 0.85)
+        );
+        --sc-v: linear-gradient(
+          135deg,
+          rgba(124, 58, 237, 0.08),
+          rgba(248, 250, 252, 0.9)
+        );
+        --sc-g: linear-gradient(
+          135deg,
+          rgba(5, 150, 105, 0.08),
+          rgba(248, 250, 252, 0.9)
+        );
+        --sc-c: linear-gradient(
+          135deg,
+          rgba(8, 145, 178, 0.08),
+          rgba(248, 250, 252, 0.9)
+        );
+
+        --sb: #cbd5e1;
+        --sb-hv: #94a3b8;
+        --ch-grid: rgba(203, 213, 225, 0.5);
+        --ch-text: #94a3b8;
+      }
+
+      /* ── Reset & Base ── */
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: "Inter", system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--t1);
+        min-height: 100vh;
+      }
+
+      ::-webkit-scrollbar {
+        width: 5px;
+        height: 5px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: var(--sb);
+        border-radius: 9px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: var(--sb-hv);
+      }
+
+      /* ── Layout ── */
+      .layout {
+        display: flex;
+        min-height: 100vh;
+      }
+      .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 220px;
+        background: var(--bg-s);
+        border-right: 1px solid var(--br3);
+        display: flex;
+        flex-direction: column;
+        z-index: 50;
+        overflow-y: auto;
+      }
+      .main-wrap {
+        margin-left: 220px;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+      }
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 40;
+        height: 52px;
+        background: var(--bg-hd);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid var(--br3);
+        padding: 0 28px;
+        display: flex;
+        align-items: center;
+      }
+      .page-main {
+        flex: 1;
+        padding: 24px 28px;
+        animation: fadeUp 0.28s ease both;
+      }
+      .page-footer {
+        padding: 9px 28px;
+        border-top: 1px solid var(--br4);
+        font-size: 11px;
+        color: var(--t6);
+        text-align: center;
+      }
+
+      /* ── Sidebar ── */
+      .logo-area {
+        padding: 17px 16px 13px;
+        border-bottom: 1px solid var(--br3);
+      }
+      .logo-link {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        text-decoration: none;
+      }
+      .logo-icon {
+        width: 34px;
+        height: 34px;
+        border-radius: 9px;
+        background: linear-gradient(135deg, #7c3aed, #0e7490);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        font-weight: 700;
+        color: white;
+        flex-shrink: 0;
+        box-shadow: 0 0 18px rgba(124, 58, 237, 0.3);
+      }
+      .logo-name {
+        font-size: 13.5px;
+        font-weight: 600;
+        color: var(--t1);
+        line-height: 1.2;
+      }
+      .logo-sub {
+        font-size: 11px;
+        color: var(--t4);
+      }
+
+      nav.sidenav {
+        flex: 1;
+        padding: 10px 10px;
+      }
+      .nav-section {
+        font-size: 10.5px;
+        font-weight: 500;
+        color: var(--t5);
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        padding: 10px 12px 4px;
+      }
+      .nav-link {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 7px 12px;
+        border-radius: 8px;
+        font-size: 13.5px;
+        color: var(--t3);
+        text-decoration: none;
+        transition:
+          background 0.13s,
+          color 0.13s;
+      }
+      .nav-link:hover {
+        background: var(--bg-hv);
+        color: var(--t2);
+      }
+      .nav-link.active {
+        background: var(--av-d);
+        color: var(--av);
+        font-weight: 500;
+      }
+      .nav-link svg {
+        width: 15px;
+        height: 15px;
+        flex-shrink: 0;
+        opacity: 0.7;
+      }
+      .nav-link.active svg {
+        opacity: 1;
+      }
+      .nav-link .ext-icon {
+        width: 11px;
+        height: 11px;
+        margin-left: auto;
+        opacity: 0.4;
+      }
+
+      /* Nav badge（計數徽章） */
+      .nav-badge {
+        margin-left: auto;
+        font-size: 10px;
+        font-weight: 600;
+        padding: 1px 6px;
+        border-radius: 10px;
+        background: var(--bg-hv);
+        color: var(--t4);
+        min-width: 20px;
+        text-align: center;
+      }
+      .nav-link.active .nav-badge {
+        background: var(--av-d);
+        color: var(--av);
+      }
+
+      /* Sidebar 快速統計 */
+      .sidebar-quick-stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+        padding: 8px 12px 12px;
+      }
+      .sq-chip {
+        background: var(--bg-hv);
+        border-radius: 8px;
+        padding: 6px 8px;
+        text-align: center;
+      }
+      .sq-chip-label {
+        font-size: 9.5px;
+        color: var(--t5);
+        letter-spacing: 0.04em;
+        display: block;
+        margin-bottom: 2px;
+      }
+      .sq-chip-num {
+        font-size: 16px;
+        font-weight: 700;
+        line-height: 1;
+      }
+      .sq-chip-num.green { color: var(--ag); }
+      .sq-chip-num.cyan  { color: var(--ac); }
+
+      .sidebar-foot {
+        padding: 9px 14px;
+        border-top: 1px solid var(--br3);
+        font-size: 11px;
+        color: var(--t5);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .live-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      /* ── Theme Toggle ── */
+      .theme-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 5px;
+        color: var(--t4);
+        border-radius: 7px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition:
+          color 0.13s,
+          background 0.13s;
+      }
+      .theme-btn:hover {
+        color: var(--t1);
+        background: var(--bg-hv);
+      }
+      .theme-btn svg {
+        width: 15px;
+        height: 15px;
+        display: block;
+      }
+
+      /* ── Cards ── */
+      .card {
+        background: var(--bg-c);
+        border: 1px solid var(--br);
+        border-radius: 12px;
+      }
+
+      /* ── Day cards (Dashboard) ── */
+      .day-card {
+        display: block;
+        text-decoration: none;
+        background: var(--day-bg);
+        border: 1px solid var(--br);
+        border-radius: 11px;
+        padding: 13px 12px;
+        transition:
+          background 0.15s,
+          transform 0.15s,
+          box-shadow 0.15s;
+      }
+      .day-card:hover {
+        background: var(--day-hv);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+      }
+      .day-card-done {
+        border-color: var(--bd-done);
+      }
+      .day-card-scored {
+        border-color: var(--bd-scored);
+      }
+      .day-card-collected {
+        border-color: var(--bd-col);
+      }
+      .day-card-none {
+        border-color: var(--bd-none);
+      }
+      .day-card-running {
+        border-color: var(--bd-running);
+        background: rgba(139, 92, 246, 0.08);
+        animation: pulseBorder 1.5s infinite;
+      }
+
+      @keyframes pulseBorder {
+        0% {
+          box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.4);
+        }
+        70% {
+          box-shadow: 0 0 0 6px rgba(139, 92, 246, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(139, 92, 246, 0);
+        }
+      }
+      .day-card-today {
+        outline: 2px solid var(--av);
+        outline-offset: 2px;
+      }
+
+      /* ── Stat cards ── */
+      .stat-n {
+        background: var(--sc-n);
+        border: 1px solid var(--br);
+        border-radius: 12px;
+        padding: 16px;
+      }
+      .stat-v {
+        background: var(--sc-v);
+        border: 1px solid var(--br);
+        border-radius: 12px;
+        padding: 16px;
+      }
+      .stat-g {
+        background: var(--sc-g);
+        border: 1px solid var(--br);
+        border-radius: 12px;
+        padding: 16px;
+      }
+      .stat-c {
+        background: var(--sc-c);
+        border: 1px solid var(--br);
+        border-radius: 12px;
+        padding: 16px;
+      }
+
+      /* ── Badges ── */
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        font-size: 11px;
+        font-weight: 500;
+        padding: 2px 7px;
+        border-radius: 5px;
+        border: 1px solid;
+      }
+      .badge-done {
+        background: rgba(52, 211, 153, 0.1);
+        color: var(--ag);
+        border-color: rgba(52, 211, 153, 0.25);
+      }
+      .badge-scored {
+        background: rgba(251, 191, 36, 0.1);
+        color: var(--ay);
+        border-color: rgba(251, 191, 36, 0.25);
+      }
+      .badge-collected {
+        background: rgba(34, 211, 238, 0.1);
+        color: var(--ac);
+        border-color: rgba(34, 211, 238, 0.25);
+      }
+      .badge-none {
+        background: var(--bg-hv);
+        color: var(--t4);
+        border-color: var(--br3);
+      }
+      .badge-running {
+        background: rgba(139, 92, 246, 0.15);
+        color: var(--av);
+        border-color: rgba(139, 92, 246, 0.4);
+      }
+
+      /* ── Score badge ── */
+      .score-badge {
+        display: inline-flex;
+        align-items: center;
+        background: var(--av-d);
+        color: var(--av);
+        border: 1px solid var(--av-b);
+        font-weight: 700;
+        font-size: 12px;
+        padding: 3px 10px;
+        border-radius: 99px;
+      }
+
+      /* ── Chip (source tag) ── */
+      .chip {
+        font-size: 12px;
+        background: var(--bg-in);
+        color: var(--t3);
+        padding: 2px 8px;
+        border-radius: 5px;
+      }
+
+      /* ── Tags ── */
+      .tag-v {
+        background: var(--av-d);
+        color: var(--av);
+        font-size: 11.5px;
+        padding: 2px 9px;
+        border-radius: 99px;
+        border: 1px solid var(--av-b);
+      }
+
+      /* ── Table ── */
+      .data-table {
+        width: 100%;
+      }
+      .data-table thead {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: var(--bg-c2);
+      }
+      .data-table thead tr {
+        border-bottom: 1px solid var(--br2);
+      }
+      .data-table th {
+        padding: 10px 16px;
+        font-size: 11px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--t4);
+        text-align: left;
+      }
+      .data-table td {
+        padding: 13px 16px;
+      }
+      .data-table tbody tr {
+        border-bottom: 1px solid var(--br4);
+        transition: background 0.1s;
+      }
+      .data-table tbody tr:last-child {
+        border-bottom: none;
+      }
+      .data-table tbody tr:hover {
+        background: var(--bg-hv);
+      }
+
+      /* ── Buttons ── */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 8px 16px;
+        border-radius: 9px;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.13s;
+        border: 1px solid;
+      }
+      .btn svg {
+        width: 15px;
+        height: 15px;
+      }
+      .btn:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+      .btn-v {
+        background: var(--av-d);
+        border-color: var(--av-b);
+        color: var(--av);
+      }
+      .btn-v:hover:not(:disabled) {
+        background: rgba(139, 92, 246, 0.2);
+      }
+      .btn-y {
+        background: rgba(251, 191, 36, 0.08);
+        border-color: rgba(251, 191, 36, 0.3);
+        color: var(--ay);
+      }
+      .btn-y:hover:not(:disabled) {
+        background: rgba(251, 191, 36, 0.15);
+      }
+
+      /* ── Score bars ── */
+      .score-bar {
+        height: 5px;
+        background: var(--bg-in);
+        border-radius: 9px;
+        overflow: hidden;
+      }
+      .score-bar-fill {
+        height: 100%;
+        border-radius: 9px;
+        transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      /* ── Gradient text ── */
+      .grad-text {
+        background: linear-gradient(135deg, var(--av) 0%, var(--ac) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      /* ── Prose ── */
+      .prose {
+        color: var(--t3);
+        line-height: 1.85;
+        font-size: 15px;
+      }
+      .prose h1 {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: var(--t1);
+        margin: 2rem 0 1rem;
+        line-height: 1.25;
+      }
+      .prose h2 {
+        font-size: 1.35rem;
+        font-weight: 700;
+        color: var(--t1);
+        margin: 1.75rem 0 0.6rem;
+        border-bottom: 1px solid var(--br3);
+        padding-bottom: 0.4rem;
+      }
+      .prose h3 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--t2);
+        margin: 1.25rem 0 0.5rem;
+      }
+      .prose p {
+        margin: 0.9rem 0;
+      }
+      .prose ul {
+        list-style: disc;
+        padding-left: 1.6rem;
+        margin: 0.9rem 0;
+      }
+      .prose ol {
+        list-style: decimal;
+        padding-left: 1.6rem;
+        margin: 0.9rem 0;
+      }
+      .prose li {
+        margin: 0.3rem 0;
+      }
+      .prose blockquote {
+        border-left: 3px solid var(--av);
+        background: var(--av-d);
+        padding: 0.75rem 1rem;
+        margin: 1.25rem 0;
+        border-radius: 0 8px 8px 0;
+        color: var(--t4);
+      }
+      .prose code:not(pre code) {
+        background: var(--av-d);
+        color: var(--av);
+        padding: 0.15rem 0.45rem;
+        border-radius: 5px;
+        font-size: 0.875em;
+        font-family: "JetBrains Mono", monospace;
+        border: 1px solid var(--av-b);
+      }
+      .prose pre {
+        margin: 1.25rem 0;
+        border-radius: 10px;
+        overflow: hidden;
+        border: 1px solid var(--br2);
+      }
+      .prose pre code {
+        font-size: 0.84em;
+        font-family: "JetBrains Mono", monospace;
+      }
+      .prose a {
+        color: var(--av);
+        text-decoration: none;
+      }
+      .prose a:hover {
+        text-decoration: underline;
+      }
+      .prose strong {
+        font-weight: 700;
+        color: var(--t1);
+      }
+      .prose table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 1.25rem 0;
+      }
+      .prose th,
+      .prose td {
+        border: 1px solid var(--br2);
+        padding: 0.55rem 0.8rem;
+      }
+      .prose th {
+        background: var(--bg-c2);
+        font-weight: 600;
+        color: var(--t2);
+      }
+      .prose td {
+        background: var(--bg);
+      }
+      .prose hr {
+        border: none;
+        border-top: 1px solid var(--br3);
+        margin: 1.5rem 0;
+      }
+
+      /* ── Light mode: hljs override ── */
+      html.light .hljs {
+        background: #f6f8fa !important;
+      }
+
+      /* ── Frontmatter card ── */
+      .fm-card {
+        background: linear-gradient(
+          135deg,
+          var(--av-d),
+          rgba(34, 211, 238, 0.04)
+        );
+        border: 1px solid var(--av-b);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 20px;
+      }
+
+      /* ── Link utilities ── */
+      .link-v {
+        color: var(--av);
+        text-decoration: none;
+        transition: color 0.12s;
+      }
+      .link-v:hover {
+        color: var(--t2);
+      }
+      .link-c {
+        color: var(--ac);
+        text-decoration: none;
+        transition: color 0.12s;
+      }
+      .link-c:hover {
+        color: var(--t2);
+      }
+      .link-muted {
+        color: var(--t4);
+        text-decoration: none;
+        transition: color 0.12s;
+      }
+      .link-muted:hover {
+        color: var(--t1);
+      }
+
+      /* ── Toast ── */
+      #toast {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        z-index: 9999;
+        transition:
+          opacity 0.2s,
+          transform 0.2s;
+      }
+      #toast.hidden {
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(8px);
+      }
+      .toast-inner {
+        background: var(--bg-c2);
+        border: 1px solid var(--br);
+        border-radius: 12px;
+        padding: 12px 18px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 240px;
+      }
+
+      /* ── Live dot ── */
+      @keyframes pulseRing {
+        0% {
+          transform: scale(1);
+          opacity: 0.6;
+        }
+        100% {
+          transform: scale(2.2);
+          opacity: 0;
+        }
+      }
+      .live-dot {
+        position: relative;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #34d399;
+        flex-shrink: 0;
+      }
+      .live-dot::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        background: #34d399;
+        animation: pulseRing 2s infinite;
+      }
+
+      /* ── Animations ── */
+      @keyframes fadeUp {
+        from {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <!-- ── Sidebar ── -->
+      <aside class="sidebar">
+        <div class="logo-area">
+          <a href="/dashboard" class="logo-link">
+            <div class="logo-icon">AP</div>
+            <div>
+              <div class="logo-name">AutoPost</div>
+              <div class="logo-sub">Blog Monitor</div>
+            </div>
+          </a>
+        </div>
+
+        <nav class="sidenav">
+          <div class="nav-section">主要</div>
+          <a
+            href="/dashboard"
+            class="nav-link {% if request.url.path in ('/', '/dashboard') %}active{% endif %}"
+          >
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"
+              />
+            </svg>
+            Dashboard
+          </a>
+          <a
+            href="/posts"
+            class="nav-link {% if request.url.path == '/posts' %}active{% endif %}"
+          >
+            <span style="font-size:16px; margin-right:4px;">📝</span>
+            部落格文
+            {% if sidebar_stats is defined %}
+            <span class="nav-badge">{{ sidebar_stats.total_posts }}</span>
+            {% endif %}
+          </a>
+          <a
+            href="/notes"
+            class="nav-link {% if request.url.path == '/notes' %}active{% endif %}"
+          >
+            <span style="font-size:16px; margin-right:4px;">📓</span>
+            AI 筆記
+            {% if sidebar_stats is defined %}
+            <span class="nav-badge">{{ sidebar_stats.total_notes }}</span>
+            {% endif %}
+          </a>
+
+          {% if sidebar_stats is defined %}
+          <div class="nav-section" style="margin-top:8px;">今日產出</div>
+          <div style="padding: 2px 12px 12px;">
+            <!-- Posts row -->
+            <div style="margin-bottom:10px;">
+              <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px;">
+                <span style="font-size:11px; color:var(--t4);">📝 文章</span>
+                <span style="font-size:12px; font-weight:700; color:var(--ag);">
+                  {{ sidebar_stats.today_posts }}<span style="font-size:10px; font-weight:400; color:var(--t5);"> / {{ sidebar_stats.total_posts }}</span>
+                </span>
+              </div>
+              {%- set pp = [sidebar_stats.today_posts * 20, 100] | min -%}
+              <div style="height:3px; background:var(--br3); border-radius:2px; overflow:hidden;">
+                <div style="width:{{ pp }}%; height:100%; background:var(--ag); border-radius:2px;"></div>
+              </div>
+            </div>
+            <!-- Notes row -->
+            <div>
+              <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px;">
+                <span style="font-size:11px; color:var(--t4);">📓 筆記</span>
+                <span style="font-size:12px; font-weight:700; color:var(--ac);">
+                  {{ sidebar_stats.today_notes }}<span style="font-size:10px; font-weight:400; color:var(--t5);"> / {{ sidebar_stats.total_notes }}</span>
+                </span>
+              </div>
+              {%- set np = [sidebar_stats.today_notes * 20, 100] | min -%}
+              <div style="height:3px; background:var(--br3); border-radius:2px; overflow:hidden;">
+                <div style="width:{{ np }}%; height:100%; background:var(--ac); border-radius:2px;"></div>
+              </div>
+            </div>
+          </div>
+          {% endif %}
+
+          <a
+            href="/settings"
+            class="nav-link {% if request.url.path == '/settings' %}active{% endif %}"
+          >
+            <span style="font-size:15px; margin-right:4px;">⚙️</span>
+            Settings
+          </a>
+
+          <div class="nav-section" style="margin-top: 6px">工具</div>
+          <a href="/api/status" class="nav-link">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+              />
+            </svg>
+            API Status
+            <svg
+              class="ext-icon"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+              />
+            </svg>
+          </a>
+        </nav>
+
+        <div class="sidebar-foot">
+          <div class="live-row">
+            <div class="live-dot"></div>
+            <span>本地運行中</span>
+          </div>
+          <!-- Dark/Light Toggle -->
+          <button
+            class="theme-btn"
+            id="theme-btn"
+            onclick="toggleTheme()"
+            title="切換明暗模式"
+          >
+            <svg
+              id="icon-moon"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+              />
+            </svg>
+            <svg
+              id="icon-sun"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              style="display: none"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+              />
+            </svg>
+          </button>
+        </div>
+      </aside>
+
+      <!-- ── Main ── -->
+      <div class="main-wrap">
+        <header class="topbar">
+          {% block header %}
+          <span style="font-size: 13.5px; color: var(--t3)"
+            >{% block page_title %}Auto Post Blog Monitor{% endblock %}</span
+          >
+          {% endblock %}
+        </header>
+
+        <main class="page-main">{% block content %}{% endblock %}</main>
+
+        <footer class="page-footer">
+          Auto Post Blog Monitor &mdash; 本地監控介面
+        </footer>
+      </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="hidden">
+      <div class="toast-inner">
+        <span id="toast-icon" style="font-size: 16px; flex-shrink: 0">⚡</span>
+        <span
+          id="toast-msg"
+          style="font-size: 13px; color: var(--t2); line-height: 1.4"
+        ></span>
+      </div>
+    </div>
+
+    <script>
+      // ── Highlight.js ──
+      document.addEventListener("DOMContentLoaded", function () {
+        document
+          .querySelectorAll("pre code")
+          .forEach((el) => hljs.highlightElement(el));
+      });
+
+      // ── Toast ──
+      function showToast(msg, icon, duration) {
+        icon = icon || "⚡";
+        duration = duration || 5000;
+        var t = document.getElementById("toast");
+        document.getElementById("toast-msg").textContent = msg;
+        document.getElementById("toast-icon").textContent = icon;
+        t.classList.remove("hidden");
+        clearTimeout(t._t);
+        t._t = setTimeout(function () {
+          t.classList.add("hidden");
+        }, duration);
+      }
+
+      // ── Theme toggle ──
+      function toggleTheme() {
+        var html = document.documentElement;
+        var isLight = html.classList.toggle("light");
+        localStorage.setItem("theme", isLight ? "light" : "dark");
+        document.getElementById("icon-moon").style.display = isLight
+          ? "none"
+          : "block";
+        document.getElementById("icon-sun").style.display = isLight
+          ? "block"
+          : "none";
+
+        // Swap hljs CSS
+        var link = document.getElementById("hljs-theme");
+        if (link) {
+          link.href = isLight
+            ? "https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github.min.css"
+            : "https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github-dark.min.css";
+        }
+
+        // Update Chart.js
+        var gridColor = isLight
+          ? "rgba(203,213,225,0.5)"
+          : "rgba(51,65,85,0.4)";
+        var textColor = isLight ? "#94a3b8" : "#64748b";
+        if (window.__charts && window.__charts.length) {
+          Chart.defaults.color = textColor;
+          window.__charts.forEach(function (c) {
+            if (c.options.scales) {
+              Object.values(c.options.scales).forEach(function (s) {
+                if (s.grid) s.grid.color = gridColor;
+                if (s.ticks) s.ticks.color = textColor;
+              });
+            }
+            if (
+              c.options.plugins &&
+              c.options.plugins.legend &&
+              c.options.plugins.legend.labels
+            ) {
+              c.options.plugins.legend.labels.color = textColor;
+            }
+            c.update();
+          });
+        }
+      }
+
+      // ── Init icon on load ──
+      document.addEventListener("DOMContentLoaded", function () {
+        var isLight = document.documentElement.classList.contains("light");
+        document.getElementById("icon-moon").style.display = isLight
+          ? "none"
+          : "block";
+        document.getElementById("icon-sun").style.display = isLight
+          ? "block"
+          : "none";
+        if (isLight) {
+          var link = document.getElementById("hljs-theme");
+          if (link)
+            link.href =
+              "https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github.min.css";
+        }
+      });
+    </script>
+    {% block scripts %}{% endblock %}
+  </body>
+</html>
