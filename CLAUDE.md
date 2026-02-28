@@ -152,6 +152,8 @@ scoring:
 | POST | `/api/run/{date}` | 觸發 pipeline（背景執行，重複執行回 409） |
 | POST | `/api/run/{date}/force` | 強制重跑 pipeline |
 | POST | `/api/run/{date}/stop` | 中止執行中的 pipeline（SIGTERM → SIGKILL） |
+| POST | `/api/run/{date}/stage/{stage_name}` | 重跑單一 stage（collect/score/generate） |
+| GET | `/api/logs/{date}/stage/{stage_name}` | 取得特定 stage 的格式化 log（含 ts、level、msg） |
 
 > `/posts` 和 `/notes` 已 301 重導至 `/materials`
 
