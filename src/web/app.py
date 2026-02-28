@@ -10,14 +10,18 @@ from pathlib import Path
 from typing import Optional
 
 import asyncio
+import threading
 import time as _time
 
 from fastapi import BackgroundTasks, FastAPI, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 
+from src.logger import get_logger
 from src.web import data_service as ds
 from src.web import config_manager as cm
+
+_logger = get_logger("web.app")
 
 app = FastAPI(title="Auto Post Blog Monitor", docs_url=None, redoc_url=None)
 
@@ -27,6 +31,7 @@ async def startup_event():
     cm.init_config()
 
 
+_proc_lock = threading.Lock()
 RUNNING_TASKS: set[str] = set()
 RUNNING_PROCS: dict[str, subprocess.Popen] = {}
 
@@ -708,13 +713,16 @@ async def api_health():
 
 def _run_pipeline(date_str: str, force: bool) -> None:
     """在背景執行 pipeline，並將 stdout/stderr 寫入 logs/{date_str}.log。"""
-    RUNNING_TASKS.add(date_str)
+    with _proc_lock:
+        if date_str in RUNNING_TASKS:
+            return  # 防止同一日期重複執行
+        RUNNING_TASKS.add(date_str)
+
     log_path = LOGS_DIR / f"{date_str}.log"
     try:
         cmd = [sys.executable, "-m", "src.cli", "run", "--date", date_str]
         if force:
             cmd.append("--force")
-        # B6: 改用 Popen 寫 log，不再 capture_output 吞掉所有輸出
         with open(log_path, "w", encoding="utf-8") as log_file:
             log_file.write(f"=== Pipeline started: {date_str} (force={force}) ===\n")
             log_file.flush()
@@ -727,18 +735,24 @@ def _run_pipeline(date_str: str, force: bool) -> None:
                 encoding="utf-8",
                 env=env,
             )
-            RUNNING_PROCS[date_str] = proc
+            with _proc_lock:
+                RUNNING_PROCS[date_str] = proc
             proc.wait()
             exit_code = proc.returncode
-            if exit_code == -15 or exit_code == -9:  # SIGTERM / SIGKILL
+            if exit_code in (-15, -9):  # SIGTERM / SIGKILL
                 log_file.write(f"\n=== Pipeline cancelled by user: exit_code={exit_code} ===\n")
             else:
                 log_file.write(f"\n=== Pipeline finished: exit_code={exit_code} ===\n")
     except Exception as e:
-        log_path.write_text(f"Pipeline failed to start: {e}\n", encoding="utf-8")
+        _logger.error("Pipeline failed to start", extra={"date": date_str, "error": str(e)})
+        try:
+            log_path.write_text(f"Pipeline failed to start: {e}\n", encoding="utf-8")
+        except OSError:
+            pass
     finally:
-        RUNNING_TASKS.discard(date_str)
-        RUNNING_PROCS.pop(date_str, None)
+        with _proc_lock:
+            RUNNING_TASKS.discard(date_str)
+            RUNNING_PROCS.pop(date_str, None)
 
 
 @app.post("/api/run/{date_str}")
@@ -748,6 +762,9 @@ async def api_run(date_str: str, background_tasks: BackgroundTasks):
         date.fromisoformat(date_str)
     except ValueError:
         raise HTTPException(status_code=400, detail="日期格式錯誤")
+    with _proc_lock:
+        if date_str in RUNNING_TASKS:
+            raise HTTPException(status_code=409, detail=f"Pipeline 已在執行中（{date_str}）")
     background_tasks.add_task(_run_pipeline, date_str, False)
     return JSONResponse({"message": f"Pipeline 已啟動（{date_str}），可透過 /api/logs/{date_str} 查看進度", "date": date_str})
 
@@ -759,6 +776,9 @@ async def api_run_force(date_str: str, background_tasks: BackgroundTasks):
         date.fromisoformat(date_str)
     except ValueError:
         raise HTTPException(status_code=400, detail="日期格式錯誤")
+    with _proc_lock:
+        if date_str in RUNNING_TASKS:
+            raise HTTPException(status_code=409, detail=f"Pipeline 已在執行中（{date_str}）")
     background_tasks.add_task(_run_pipeline, date_str, True)
     return JSONResponse({"message": f"強制重跑已啟動（{date_str}），可透過 /api/logs/{date_str} 查看進度", "date": date_str})
 
@@ -771,11 +791,16 @@ async def api_run_stop(date_str: str):
     except ValueError:
         raise HTTPException(status_code=400, detail="日期格式錯誤")
 
-    proc = RUNNING_PROCS.get(date_str)
+    with _proc_lock:
+        proc = RUNNING_PROCS.get(date_str)
+
     if proc is None:
         raise HTTPException(status_code=404, detail="找不到執行中的 pipeline")
 
-    # 嘗試優雅終止，3 秒後強制殺死
+    if proc.poll() is not None:
+        # 已結束但尚未從 dict 清除
+        return JSONResponse({"message": f"Pipeline 已結束（{date_str}）", "date": date_str})
+
     proc.terminate()
     try:
         proc.wait(timeout=3)
