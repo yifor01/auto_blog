@@ -288,6 +288,7 @@ def run(
     _logger.info("Stage ended", extra={
         "pipeline_stage": "collect", "stage_action": "end",
         "elapsed": round(_time.time() - _t0, 1),
+        "item_count": len(items),
     })
     if not items:
         _logger.warning("No items collected", extra={"date": str(d)})
@@ -300,6 +301,7 @@ def run(
     _logger.info("Stage ended", extra={
         "pipeline_stage": "score", "stage_action": "end",
         "elapsed": round(_time.time() - _t0, 1),
+        "item_count": len(top_items),
     })
     if top_k:
         top_items = top_items[:top_k]
@@ -320,6 +322,7 @@ def run(
     _logger.info("Stage ended", extra={
         "pipeline_stage": "generate", "stage_action": "end",
         "elapsed": round(_time.time() - _t0, 1),
+        "item_count": len(post_paths) + len(note_paths),
     })
 
     console.rule("[bold green]📋 每日報告[/bold green]")
