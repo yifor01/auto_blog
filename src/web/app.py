@@ -573,6 +573,10 @@ async def api_logs_stage_info(date_str: str):
                     if stages[n]["status"] == "running":
                         stages[n]["status"] = "cancelled"
                 continue
+            for s in ["collect", "score", "generate"]:
+                if f"Stage {s} cancelled by user" in line:
+                    if stages[s]["status"] == "running":
+                        stages[s]["status"] = "cancelled"
             if "=== Pipeline finished" in line:
                 if date_str not in RUNNING_TASKS:
                     pipeline_status = "done" if "exit_code=0" in line else "failed"
@@ -807,6 +811,11 @@ def _run_stage_pipeline(date_str: str, stage_name: str) -> None:
                 log_file.write(f"\n=== Stage {stage_name} finished: exit_code={exit_code} ===\n")
     except Exception as e:
         _logger.error("Stage pipeline failed", extra={"date": date_str, "stage": stage_name, "error": str(e)})
+        try:
+            with open(log_path, "a", encoding="utf-8") as lf:
+                lf.write(f"\n=== Stage {stage_name} finished: exit_code=1 ===\n")
+        except OSError:
+            pass
     finally:
         with _proc_lock:
             RUNNING_TASKS.discard(date_str)
@@ -873,7 +882,7 @@ async def api_run_stop(date_str: str):
 
 
 @app.post("/api/run/{date_str}/stage/{stage_name}")
-async def api_run_stage(date_str: str, stage_name: str):
+async def api_run_stage(date_str: str, stage_name: str, background_tasks: BackgroundTasks):
     """觸發指定日期的單一 pipeline stage（背景執行）。"""
     if stage_name not in VALID_STAGES:
         raise HTTPException(status_code=400, detail=f"Invalid stage: {stage_name}")
@@ -883,9 +892,9 @@ async def api_run_stage(date_str: str, stage_name: str):
         raise HTTPException(status_code=400, detail="日期格式錯誤")
     with _proc_lock:
         if date_str in RUNNING_TASKS:
-            raise HTTPException(status_code=409, detail="Pipeline already running")
-    threading.Thread(target=_run_stage_pipeline, args=(date_str, stage_name), daemon=True).start()
-    return {"status": "started", "date": date_str, "stage": stage_name}
+            raise HTTPException(status_code=409, detail=f"Pipeline 已在執行中（{date_str}）")
+    background_tasks.add_task(_run_stage_pipeline, date_str, stage_name)
+    return JSONResponse({"status": "started", "date": date_str, "stage": stage_name})
 
 
 @app.get("/api/logs/{date_str}/stage/{stage_name}")
@@ -929,6 +938,8 @@ async def api_stage_log(date_str: str, stage_name: str):
         except (json.JSONDecodeError, ValueError):
             pass
 
+    if in_stage:
+        return {"stage": stage_name, "entries": temp_entries, "item_count": None, "in_progress": True}
     return {"stage": stage_name, "entries": all_entries, "item_count": item_count}
 
 
