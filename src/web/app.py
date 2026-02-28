@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
@@ -41,6 +42,8 @@ templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 # B6: log 存放目錄
 LOGS_DIR = Path(__file__).resolve().parent.parent.parent / "logs"
 LOGS_DIR.mkdir(parents=True, exist_ok=True)
+
+VALID_STAGES = {"collect", "score", "generate"}
 
 
 @app.get("/", response_class=RedirectResponse)
@@ -527,7 +530,6 @@ async def api_logs(date_str: str):
 @app.get("/api/logs/{date_str}/stage-info")
 async def api_logs_stage_info(date_str: str):
     """解析 log 檔，回傳 pipeline 各階段狀態摘要。"""
-    import json as _json
     try:
         d = date.fromisoformat(date_str)
     except ValueError:
@@ -535,7 +537,7 @@ async def api_logs_stage_info(date_str: str):
 
     log_path = LOGS_DIR / f"{date_str}.log"
     stages_order = ["collect", "score", "generate"]
-    stages = {n: {"name": n, "status": "pending", "elapsed": None} for n in stages_order}
+    stages = {n: {"name": n, "status": "pending", "elapsed": None, "item_count": None} for n in stages_order}
 
     # Step 1：用資料檔推算基礎狀態（最可靠的 fallback）
     data_state = ds.get_pipeline_state(d)
@@ -560,7 +562,7 @@ async def api_logs_stage_info(date_str: str):
         for line in content.splitlines():
             if "=== Pipeline started" in line:
                 # 新一輪執行：重置 stage 狀態（log 是每次覆寫的）
-                stages = {n: {"name": n, "status": "pending", "elapsed": None} for n in stages_order}
+                stages = {n: {"name": n, "status": "pending", "elapsed": None, "item_count": None} for n in stages_order}
                 if date_str not in RUNNING_TASKS:
                     pipeline_status = "running"
                 continue
@@ -580,7 +582,7 @@ async def api_logs_stage_info(date_str: str):
                         s["status"] = "failed"
                 continue
             try:
-                parsed = _json.loads(line)
+                parsed = json.loads(line)
                 if "pipeline_stage" in parsed:
                     has_stage_markers = True
                     name = parsed["pipeline_stage"]
@@ -590,6 +592,8 @@ async def api_logs_stage_info(date_str: str):
                     elif action == "end":
                         stages[name]["status"] = "done"
                         stages[name]["elapsed"] = parsed.get("elapsed")
+                        if "item_count" in parsed:
+                            stages[name]["item_count"] = parsed["item_count"]
             except Exception:
                 pass
 
@@ -616,7 +620,6 @@ async def api_logs_stream(date_str: str):
     log_path = LOGS_DIR / f"{date_str}.log"
 
     async def event_generator():
-        import json as _json
         offset = 0
         consecutive_idle = 0
         current_stage = None
@@ -633,17 +636,19 @@ async def api_logs_stream(date_str: str):
                                 continue
                             display = line
                             try:
-                                parsed = _json.loads(line)
+                                parsed = json.loads(line)
                                 if "pipeline_stage" in parsed:
                                     name = parsed["pipeline_stage"]
                                     action = parsed["stage_action"]
                                     current_stage = name if action == "start" else None
-                                    stage_data = _json.dumps({
+                                    stage_payload: dict = {
                                         "name": name,
                                         "action": action,
                                         "elapsed": parsed.get("elapsed"),
-                                    })
-                                    yield f"event: stage\ndata: {stage_data}\n\n"
+                                    }
+                                    if action == "end" and "item_count" in parsed:
+                                        stage_payload["item_count"] = parsed["item_count"]
+                                    yield f"event: stage\ndata: {json.dumps(stage_payload)}\n\n"
                                     continue  # 不輸出為普通 log 行
                                 if "msg" in parsed:
                                     level = parsed.get("level", "INFO")
@@ -655,7 +660,7 @@ async def api_logs_stream(date_str: str):
                             except Exception:
                                 pass
                             # 偵測 pipeline 取消
-                            if "Pipeline cancelled by user" in display:
+                            if "Pipeline cancelled by user" in display or "Stage" in display and "cancelled by user" in display:
                                 yield f"event: cancelled\ndata: {{}}\n\n"
                                 return
                             # 若偵測到 pipeline 結束行，立即送 done event
@@ -663,6 +668,12 @@ async def api_logs_stream(date_str: str):
                                 yield f"data: pipeline|{display}\n\n"
                                 yield "event: done\ndata: done\n\n"
                                 return
+                            # 偵測單一 stage 重跑結束行
+                            for _sname in VALID_STAGES:
+                                if f"=== Stage {_sname} finished" in line:
+                                    yield f"data: pipeline|{display}\n\n"
+                                    yield "event: done\ndata: done\n\n"
+                                    return
                             prefix = current_stage or "pipeline"
                             yield f"data: {prefix}|{display}\n\n"
                         offset = offset_new
@@ -679,10 +690,10 @@ async def api_logs_stream(date_str: str):
             # 若 pipeline 結束且 30 秒無新輸出，斷開連線
             if consecutive_idle >= 30 and log_path.exists():
                 content = log_path.read_text(encoding="utf-8", errors="replace")
-                if "Pipeline cancelled by user" in content:
+                if "Pipeline cancelled by user" in content or any(f"Stage {s} cancelled" in content for s in VALID_STAGES):
                     yield f"event: cancelled\ndata: {{}}\n\n"
                     return
-                if "=== Pipeline finished" in content:
+                if "=== Pipeline finished" in content or any(f"=== Stage {s} finished" in content for s in VALID_STAGES):
                     yield "data: [Pipeline 已結束]\n\n"
                     yield "event: done\ndata: done\n\n"
                     return
@@ -769,6 +780,37 @@ def _run_pipeline(date_str: str, force: bool) -> None:
             RUNNING_PROCS.pop(date_str, None)
 
 
+def _run_stage_pipeline(date_str: str, stage_name: str) -> None:
+    """在背景執行單一 pipeline stage，並將 stdout/stderr 附加至 logs/{date_str}.log。"""
+    with _proc_lock:
+        if date_str in RUNNING_TASKS:
+            return
+        RUNNING_TASKS.add(date_str)
+    log_path = LOGS_DIR / f"{date_str}.log"
+    try:
+        cmd = [sys.executable, "-m", "src.cli", stage_name, "--date", date_str]
+        with open(log_path, "a", encoding="utf-8") as log_file:
+            log_file.write(f"\n=== Stage {stage_name} re-run: {date_str} ===\n")
+            log_file.flush()
+            env = {**os.environ, "AUTOPB_LOG_FORMAT": "json"}
+            proc = subprocess.Popen(cmd, stdout=log_file, stderr=subprocess.STDOUT,
+                                    text=True, encoding="utf-8", env=env)
+            with _proc_lock:
+                RUNNING_PROCS[date_str] = proc
+            proc.wait()
+            exit_code = proc.returncode
+            if exit_code in (-15, -9):
+                log_file.write(f"\n=== Stage {stage_name} cancelled by user: exit_code={exit_code} ===\n")
+            else:
+                log_file.write(f"\n=== Stage {stage_name} finished: exit_code={exit_code} ===\n")
+    except Exception as e:
+        _logger.error("Stage pipeline failed", extra={"date": date_str, "stage": stage_name, "error": str(e)})
+    finally:
+        with _proc_lock:
+            RUNNING_TASKS.discard(date_str)
+            RUNNING_PROCS.pop(date_str, None)
+
+
 @app.post("/api/run/{date_str}")
 async def api_run(date_str: str, background_tasks: BackgroundTasks):
     """在背景執行指定日期的 pipeline。"""
@@ -826,6 +868,66 @@ async def api_run_stop(date_str: str):
         proc.kill()
 
     return JSONResponse({"message": f"Pipeline 已中止（{date_str}）", "date": date_str})
+
+
+@app.post("/api/run/{date_str}/stage/{stage_name}")
+async def api_run_stage(date_str: str, stage_name: str):
+    """觸發指定日期的單一 pipeline stage（背景執行）。"""
+    if stage_name not in VALID_STAGES:
+        raise HTTPException(status_code=400, detail=f"Invalid stage: {stage_name}")
+    try:
+        date.fromisoformat(date_str)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="日期格式錯誤")
+    with _proc_lock:
+        if date_str in RUNNING_TASKS:
+            raise HTTPException(status_code=409, detail="Pipeline already running")
+    threading.Thread(target=_run_stage_pipeline, args=(date_str, stage_name), daemon=True).start()
+    return {"status": "started", "date": date_str, "stage": stage_name}
+
+
+@app.get("/api/logs/{date_str}/stage/{stage_name}")
+async def api_stage_log(date_str: str, stage_name: str):
+    """回傳指定 stage 最後一次執行的 log 條目。"""
+    if stage_name not in VALID_STAGES:
+        raise HTTPException(status_code=400, detail=f"Invalid stage: {stage_name}")
+    try:
+        date.fromisoformat(date_str)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="日期格式錯誤")
+
+    log_path = LOGS_DIR / f"{date_str}.log"
+    if not log_path.exists():
+        return {"stage": stage_name, "entries": [], "item_count": None}
+
+    item_count = None
+    in_stage = False
+    all_entries: list[dict] = []
+    temp_entries: list[dict] = []
+
+    for line in log_path.read_text(encoding="utf-8").splitlines():
+        try:
+            obj = json.loads(line)
+            if obj.get("pipeline_stage") == stage_name:
+                if obj.get("stage_action") == "start":
+                    temp_entries = []
+                    in_stage = True
+                elif obj.get("stage_action") == "end":
+                    in_stage = False
+                    item_count = obj.get("item_count")
+                    all_entries = list(temp_entries)
+            elif in_stage:
+                ts_full = obj.get("ts", "")
+                ts = ts_full[11:19] if len(ts_full) >= 19 else ts_full
+                temp_entries.append({
+                    "ts": ts,
+                    "level": obj.get("level", "INFO"),
+                    "msg": obj.get("msg", line),
+                })
+        except (json.JSONDecodeError, ValueError):
+            pass
+
+    return {"stage": stage_name, "entries": all_entries, "item_count": item_count}
 
 
 @app.post("/api/feedback/{date_str}/{slug}/{rating}")
