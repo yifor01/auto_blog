@@ -7,6 +7,7 @@ import subprocess
 import sys
 from datetime import date
 from pathlib import Path
+from typing import Optional
 
 import asyncio
 import time as _time
@@ -329,12 +330,30 @@ async def settings_save(
     github_stars_medium: int = Form(50, ge=1, le=100000),
     dedup_lookback: int = Form(7, ge=0, le=365),
     retention_days: int = Form(90, ge=7, le=3650),
+    # Collector toggles（checkbox 未勾選時不送出，需用 Optional[str]）
+    arxiv_enabled: Optional[str] = Form(None),
+    arxiv_max_results: int = Form(50, ge=1, le=200),
+    hf_papers_enabled: Optional[str] = Form(None),
+    chatpaper_enabled: Optional[str] = Form(None),
+    chatpaper_page_size: int = Form(30, ge=1, le=100),
+    rss_enabled: Optional[str] = Form(None),
+    blogs_enabled: Optional[str] = Form(None),
+    github_enabled: Optional[str] = Form(None),
+    hackernews_enabled: Optional[str] = Form(None),
+    hackernews_queries: str = Form(""),
+    hackernews_min_points: int = Form(50, ge=0, le=1000),
+    hackernews_max_results: int = Form(30, ge=1, le=200),
 ):
     env_updates: dict[str, str] = {}
     if api_key.strip():
         env_updates["OPENROUTER_API_KEY"] = api_key.strip()
     if api_url.strip():
         env_updates["OPENROUTER_API_URL"] = api_url.strip()
+
+    # 解析 hackernews queries（逗號分隔 → list）
+    hn_queries = [q.strip() for q in hackernews_queries.split(",") if q.strip()]
+    if not hn_queries:
+        hn_queries = ["AI", "LLM", "GPT"]
 
     config_updates: dict = {
         "llm.model": llm_model.strip() or cm.get_config().get("llm", {}).get("model", ""),
@@ -349,6 +368,19 @@ async def settings_save(
         "scoring.github_stars_medium": github_stars_medium,
         "dedup.lookback_days": dedup_lookback,
         "retention_days": retention_days,
+        # Collectors
+        "collectors.arxiv.enabled": arxiv_enabled is not None,
+        "collectors.arxiv.max_results": arxiv_max_results,
+        "collectors.hf_papers.enabled": hf_papers_enabled is not None,
+        "collectors.chatpaper.enabled": chatpaper_enabled is not None,
+        "collectors.chatpaper.page_size": chatpaper_page_size,
+        "collectors.rss.enabled": rss_enabled is not None,
+        "collectors.blogs.enabled": blogs_enabled is not None,
+        "collectors.github.enabled": github_enabled is not None,
+        "collectors.hackernews.enabled": hackernews_enabled is not None,
+        "collectors.hackernews.queries": hn_queries,
+        "collectors.hackernews.min_points": hackernews_min_points,
+        "collectors.hackernews.max_results": hackernews_max_results,
     }
     try:
         cm.update_and_save(config_updates, env_updates)
@@ -486,6 +518,80 @@ async def api_logs(date_str: str):
     return PlainTextResponse(log_path.read_text(encoding="utf-8", errors="replace"))
 
 
+@app.get("/api/logs/{date_str}/stage-info")
+async def api_logs_stage_info(date_str: str):
+    """解析 log 檔，回傳 pipeline 各階段狀態摘要。"""
+    import json as _json
+    try:
+        d = date.fromisoformat(date_str)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="日期格式錯誤")
+
+    log_path = LOGS_DIR / f"{date_str}.log"
+    stages_order = ["collect", "score", "generate"]
+    stages = {n: {"name": n, "status": "pending", "elapsed": None} for n in stages_order}
+
+    # Step 1：用資料檔推算基礎狀態（最可靠的 fallback）
+    data_state = ds.get_pipeline_state(d)
+    if data_state in ("collected", "scored", "done"):
+        stages["collect"]["status"] = "done"
+    if data_state in ("scored", "done"):
+        stages["score"]["status"] = "done"
+    if data_state == "done":
+        stages["generate"]["status"] = "done"
+
+    pipeline_status = data_state if data_state != "none" else "idle"
+
+    # Step 2：若正在執行中，標記 pipeline_status = running
+    if date_str in RUNNING_TASKS:
+        pipeline_status = "running"
+
+    # Step 3：解析 log 取得精確 elapsed 與即時 stage 狀態（覆蓋 Step 1）
+    if log_path.exists():
+        content = log_path.read_text(encoding="utf-8", errors="replace")
+        has_stage_markers = False
+
+        for line in content.splitlines():
+            if "=== Pipeline started" in line:
+                # 新一輪執行：重置 stage 狀態（log 是每次覆寫的）
+                stages = {n: {"name": n, "status": "pending", "elapsed": None} for n in stages_order}
+                if date_str not in RUNNING_TASKS:
+                    pipeline_status = "running"
+                continue
+            if "=== Pipeline finished" in line:
+                if date_str not in RUNNING_TASKS:
+                    pipeline_status = "done" if "exit_code=0" in line else "failed"
+                # 若 pipeline 結束但有 stage 仍為 running → 標為 failed
+                for s in stages.values():
+                    if s["status"] == "running":
+                        s["status"] = "failed"
+                continue
+            try:
+                parsed = _json.loads(line)
+                if "pipeline_stage" in parsed:
+                    has_stage_markers = True
+                    name = parsed["pipeline_stage"]
+                    action = parsed["stage_action"]
+                    if action == "start":
+                        stages[name]["status"] = "running"
+                    elif action == "end":
+                        stages[name]["status"] = "done"
+                        stages[name]["elapsed"] = parsed.get("elapsed")
+            except Exception:
+                pass
+
+        # 若 log 沒有 stage markers（舊格式），回退到 data_state 推算結果
+        if not has_stage_markers:
+            if data_state in ("collected", "scored", "done"):
+                stages["collect"]["status"] = "done"
+            if data_state in ("scored", "done"):
+                stages["score"]["status"] = "done"
+            if data_state == "done":
+                stages["generate"]["status"] = "done"
+
+    return JSONResponse({"stages": [stages[n] for n in stages_order], "pipeline_status": pipeline_status})
+
+
 @app.get("/api/logs/{date_str}/stream")
 async def api_logs_stream(date_str: str):
     """SSE 串流：即時推送 pipeline 執行日誌（每 1 秒 poll log 檔新增行）。"""
@@ -497,8 +603,10 @@ async def api_logs_stream(date_str: str):
     log_path = LOGS_DIR / f"{date_str}.log"
 
     async def event_generator():
+        import json as _json
         offset = 0
         consecutive_idle = 0
+        current_stage = None
         # 最多串流 10 分鐘（600 次 × 1s）
         for _ in range(600):
             if log_path.exists():
@@ -512,27 +620,44 @@ async def api_logs_stream(date_str: str):
                                 continue
                             display = line
                             try:
-                                import json as _json
                                 parsed = _json.loads(line)
+                                if "pipeline_stage" in parsed:
+                                    name = parsed["pipeline_stage"]
+                                    action = parsed["stage_action"]
+                                    current_stage = name if action == "start" else None
+                                    stage_data = _json.dumps({
+                                        "name": name,
+                                        "action": action,
+                                        "elapsed": parsed.get("elapsed"),
+                                    })
+                                    yield f"event: stage\ndata: {stage_data}\n\n"
+                                    continue  # 不輸出為普通 log 行
                                 if "msg" in parsed:
                                     level = parsed.get("level", "INFO")
                                     msg = parsed["msg"]
                                     extras = {k: v for k, v in parsed.items()
-                                              if k not in ("ts", "level", "logger", "msg", "exc")}
+                                              if k not in ("ts", "level", "logger", "msg", "exc",
+                                                           "pipeline_stage", "stage_action", "elapsed")}
                                     display = f"[{level}] {msg}" + (f" {extras}" if extras else "")
                             except Exception:
                                 pass
-                            yield f"data: {display}\n\n"
+                            # 若偵測到 pipeline 結束行，立即送 done event
+                            if "=== Pipeline finished" in line:
+                                yield f"data: pipeline|{display}\n\n"
+                                yield "event: done\ndata: done\n\n"
+                                return
+                            prefix = current_stage or "pipeline"
+                            yield f"data: {prefix}|{display}\n\n"
                         offset = offset_new
                         consecutive_idle = 0
                     else:
                         consecutive_idle += 1
                 except Exception as e:
-                    yield f"data: [讀取 log 失敗: {e}]\n\n"
+                    yield f"data: pipeline|[讀取 log 失敗: {e}]\n\n"
             else:
                 consecutive_idle += 1
                 if consecutive_idle == 1:
-                    yield f"data: [等待 pipeline 啟動...]\n\n"
+                    yield f"data: pipeline|[等待 pipeline 啟動...]\n\n"
 
             # 若 pipeline 結束且 30 秒無新輸出，斷開連線
             if consecutive_idle >= 30 and log_path.exists():
