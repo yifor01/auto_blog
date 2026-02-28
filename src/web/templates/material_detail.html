@@ -1,0 +1,312 @@
+{% extends "base.html" %}
+{% block title %}{{ item.title[:40] }} — 素材詳情{% endblock %}
+
+{% block page_title %}
+<nav style="display:flex; align-items:center; gap:8px; font-size:13.5px;">
+  <a href="/dashboard" class="link-muted">Dashboard</a>
+  <span style="color:var(--t6);">/</span>
+  <a href="/materials" class="link-muted">素材庫</a>
+  <span style="color:var(--t6);">/</span>
+  <span style="color:var(--t1); font-weight:600;">{{ item.title[:30] }}{% if item.title|length > 30 %}...{% endif %}</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<style>
+.mat-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 18px;
+  align-items: start;
+}
+@media(max-width:900px){ .mat-detail-grid{ grid-template-columns:1fr!important; } }
+
+/* Tab styles */
+.tab-bar {
+  display: flex; gap: 0; border-bottom: 1px solid var(--br2); margin-bottom: 16px;
+}
+.tab-btn {
+  padding: 10px 20px; font-size: 13px; font-weight: 500;
+  background: none; border: none; border-bottom: 2px solid transparent;
+  color: var(--t4); cursor: pointer; transition: all 0.15s;
+  display: flex; align-items: center; gap: 6px;
+}
+.tab-btn:hover { color: var(--t2); background: var(--bg-hv); }
+.tab-btn.active { color: var(--av); border-bottom-color: var(--av); }
+.tab-btn .tab-status {
+  width: 7px; height: 7px; border-radius: 50%; display: inline-block;
+}
+.tab-status-green { background: var(--ag); }
+.tab-status-gray { background: var(--t5); opacity: 0.4; }
+
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+.empty-tab {
+  padding: 40px; text-align: center; color: var(--t5);
+  background: var(--bg-hv); border-radius: 10px;
+}
+
+/* Bookmark button */
+.bm-btn {
+  background: none; border: 1px solid var(--br2); border-radius: 8px;
+  padding: 6px 14px; font-size: 12px; cursor: pointer;
+  color: var(--t4); transition: all 0.15s;
+  display: flex; align-items: center; gap: 5px;
+}
+.bm-btn:hover { border-color: var(--ay); color: var(--ay); }
+.bm-btn.bookmarked { background: rgba(251,191,36,0.1); border-color: var(--ay); color: var(--ay); }
+</style>
+
+<div class="mat-detail-grid">
+  <!-- Left panel -->
+  <div style="display:flex; flex-direction:column; gap:14px;">
+
+    <!-- Title card -->
+    <div class="card" style="padding:22px;">
+      <div style="display:flex; align-items:flex-start; gap:10px; margin-bottom:14px;">
+        <span class="chip"
+              style="white-space:nowrap; flex-shrink:0; margin-top:3px;
+                     font-family:'JetBrains Mono',monospace; font-size:11.5px;">
+          {{ item.source_name or item.source }}
+        </span>
+        <h1 style="font-size:17px; font-weight:700; color:var(--t1); line-height:1.4; margin:0; flex:1;">
+          {{ item.title }}
+        </h1>
+        <button class="bm-btn" id="bm-btn" onclick="toggleBookmark()">
+          <span id="bm-icon">☆</span> <span id="bm-text">收藏</span>
+        </button>
+      </div>
+
+      <div style="display:flex; flex-wrap:wrap; gap:14px; font-size:13px;
+                  color:var(--t4); margin-bottom:14px;">
+        {% if item.organization %}
+        <span style="display:flex; align-items:center; gap:5px;">
+          <svg style="width:13px; height:13px; opacity:0.6;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+          </svg>
+          {{ item.organization }}
+        </span>
+        {% endif %}
+        {% if item.authors %}
+        <span style="display:flex; align-items:center; gap:5px;">
+          <svg style="width:13px; height:13px; opacity:0.6;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+          </svg>
+          {{ item.authors[:3] | join(", ") }}{% if item.authors|length > 3 %} +{{ item.authors|length - 3 }}{% endif %}
+        </span>
+        {% endif %}
+        <span style="font-family:'JetBrains Mono',monospace; font-size:12px;">
+          {{ item.published_date }}
+        </span>
+      </div>
+
+      {% if item.tags %}
+      <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px;">
+        {% for tag in item.tags[:10] %}
+        <span class="tag-v">{{ tag }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <a href="{{ item.url }}" target="_blank" class="link-v"
+         style="display:inline-flex; align-items:center; gap:6px; font-size:13px;">
+        <svg style="width:14px; height:14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+        </svg>
+        查看原始資料
+      </a>
+    </div>
+
+    <!-- Abstract -->
+    {% if item.abstract %}
+    <div class="card" style="padding:22px;">
+      <h2 style="font-size:11.5px; font-weight:500; color:var(--t4);
+                 text-transform:uppercase; letter-spacing:0.07em; margin:0 0 12px;">
+        摘要 / Abstract
+      </h2>
+      <p style="font-size:13.5px; color:var(--t3); line-height:1.8; margin:0; white-space:pre-wrap;">{{ item.abstract }}</p>
+    </div>
+    {% endif %}
+
+    <!-- Generated content tabs -->
+    <div class="card" style="padding:0; overflow:hidden;">
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab('blog')">
+          <span class="tab-status {{ 'tab-status-green' if item.has_post else 'tab-status-gray' }}"></span>
+          Blog Draft
+        </button>
+        <button class="tab-btn" onclick="switchTab('note')">
+          <span class="tab-status {{ 'tab-status-green' if item.has_note else 'tab-status-gray' }}"></span>
+          Note Summary
+        </button>
+      </div>
+      <div style="padding:20px 24px;">
+        <div id="tab-blog" class="tab-panel active">
+          {% if item.post_content %}
+          <div class="prose">{{ item.post_content | safe }}</div>
+          {% else %}
+          <div class="empty-tab">
+            <div style="font-size:28px; margin-bottom:10px;">📝</div>
+            <p style="margin:0;">尚未生成 Blog Draft</p>
+          </div>
+          {% endif %}
+        </div>
+        <div id="tab-note" class="tab-panel">
+          {% if item.note_content %}
+          <div class="prose">{{ item.note_content | safe }}</div>
+          {% else %}
+          <div class="empty-tab">
+            <div style="font-size:28px; margin-bottom:10px;">📓</div>
+            <p style="margin:0;">尚未生成 Note Summary</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right panel: scoring -->
+  <div style="display:flex; flex-direction:column; gap:12px;">
+
+    <!-- Total score -->
+    <div class="card" style="padding:20px; text-align:center;">
+      <div style="font-size:11px; font-weight:500; color:var(--t5);
+                  text-transform:uppercase; letter-spacing:0.08em; margin-bottom:8px;">
+        Total Score
+      </div>
+      <div class="grad-text" style="font-size:56px; font-weight:800; line-height:1; margin-bottom:4px;">
+        {{ "%.0f"|format(item.total_score) }}
+      </div>
+      <div style="display:flex; justify-content:center; gap:24px; margin-top:14px;">
+        <div style="text-align:center;">
+          <div style="font-size:16px; font-weight:700; color:var(--t2);">{{ "%.1f"|format(item.rule_score) }}</div>
+          <div style="font-size:11px; color:var(--t5); margin-top:2px;">規則分</div>
+        </div>
+        {% if item.llm_score is not none %}
+        <div style="width:1px; background:var(--br2);"></div>
+        <div style="text-align:center;">
+          <div style="font-size:16px; font-weight:700; color:var(--t2);">{{ "%.1f"|format(item.llm_score) }}</div>
+          <div style="font-size:11px; color:var(--t5); margin-top:2px;">LLM 分</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Rule reasons -->
+    {% if item.rule_reasons %}
+    <div class="card" style="padding:16px;">
+      <h2 style="font-size:11.5px; font-weight:500; color:var(--t4);
+                 text-transform:uppercase; letter-spacing:0.07em; margin:0 0 10px;">
+        規則加分原因
+      </h2>
+      <ul style="list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:7px;">
+        {% for reason in item.rule_reasons %}
+        <li style="display:flex; align-items:flex-start; gap:7px; font-size:12.5px; color:var(--t3);">
+          <svg style="width:13px; height:13px; color:var(--ag); flex-shrink:0; margin-top:2px;"
+               fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+          </svg>
+          {{ reason }}
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    <!-- 5D scores -->
+    {% if item.llm_score is not none %}
+    <div class="card" style="padding:16px;">
+      <h2 style="font-size:11.5px; font-weight:500; color:var(--t4);
+                 text-transform:uppercase; letter-spacing:0.07em; margin:0 0 14px;">
+        5 維度評分 (/20)
+      </h2>
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        {% set dims = [
+          ('新穎性',      item.novelty,          '#a78bfa'),
+          ('影響力',      item.impact,            '#fb923c'),
+          ('話題性',      item.trending,          '#34d399'),
+          ('實用性',      item.practicality,      '#f59e0b'),
+          ('部落格適合度', item.blog_worthiness,  '#22d3ee'),
+        ] %}
+        {% for label, val, color in dims %}
+        {% if val is not none %}
+        <div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+            <span style="font-size:12.5px; color:var(--t3);">{{ label }}</span>
+            <span style="font-size:12.5px; font-weight:600; color:var(--t2);">{{ "%.1f"|format(val) }}</span>
+          </div>
+          <div class="score-bar">
+            <div class="score-bar-fill"
+                 style="width:{{ (val / 20 * 100)|int }}%; background:{{ color }};"></div>
+          </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- LLM reason -->
+    {% if item.llm_reason %}
+    <div class="card" style="padding:16px;">
+      <h2 style="font-size:11.5px; font-weight:500; color:var(--t4);
+                 text-transform:uppercase; letter-spacing:0.07em; margin:0 0 8px;">
+        LLM 評語
+      </h2>
+      <p style="font-size:12.5px; color:var(--t3); line-height:1.7; margin:0;">{{ item.llm_reason }}</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(function(b, i){
+    b.classList.toggle('active', (tab === 'blog' && i === 0) || (tab === 'note' && i === 1));
+  });
+  document.getElementById('tab-blog').classList.toggle('active', tab === 'blog');
+  document.getElementById('tab-note').classList.toggle('active', tab === 'note');
+}
+
+function toggleBookmark() {
+  var btn = document.getElementById('bm-btn');
+  var isBookmarked = btn.classList.contains('bookmarked');
+  var method = isBookmarked ? 'DELETE' : 'POST';
+  fetch('/api/bookmark/{{ date_str }}/{{ item.index }}', { method: method })
+    .then(function(res){ return res.json(); })
+    .then(function(data){
+      btn.classList.toggle('bookmarked');
+      var icon = document.getElementById('bm-icon');
+      var text = document.getElementById('bm-text');
+      if (btn.classList.contains('bookmarked')) {
+        icon.textContent = '★';
+        text.textContent = '已收藏';
+      } else {
+        icon.textContent = '☆';
+        text.textContent = '收藏';
+      }
+    })
+    .catch(function(err){ showToast('操作失敗', '❌'); });
+}
+
+// Check initial bookmark state
+fetch('/api/bookmark/{{ date_str }}/{{ item.index }}/check')
+  .then(function(res){ return res.json(); })
+  .then(function(data){
+    if (data.bookmarked) {
+      var btn = document.getElementById('bm-btn');
+      btn.classList.add('bookmarked');
+      document.getElementById('bm-icon').textContent = '★';
+      document.getElementById('bm-text').textContent = '已收藏';
+    }
+  })
+  .catch(function(){});
+</script>
+{% endblock %}

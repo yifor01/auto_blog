@@ -242,7 +242,7 @@ generated_at: {gen.generated_at.isoformat()}
     prompt_path = PROMPTS_DIR / f"{date_str}_{slug}_prompt.md"
     prompt_path.write_text(gen.prompt_used, encoding="utf-8")
 
-    _logger.info("Blog post saved", extra={"filename": post_path.name})
+    _logger.info("Blog post saved", extra={"output_file": post_path.name})
     return str(post_path)
 
 

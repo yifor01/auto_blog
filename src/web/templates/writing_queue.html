@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+{% block title %}待寫清單 — Auto Post Blog Monitor{% endblock %}
+
+{% block page_title %}
+<nav style="display:flex; align-items:center; gap:8px; font-size:13.5px;">
+  <a href="/dashboard" class="link-muted">Dashboard</a>
+  <span style="color:var(--t6);">/</span>
+  <span style="color:var(--t1); font-weight:600;">待寫清單</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<style>
+.kanban {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  min-height: 400px;
+}
+@media(max-width:1024px) { .kanban { grid-template-columns: repeat(2, 1fr); } }
+@media(max-width:640px)  { .kanban { grid-template-columns: 1fr; } }
+
+.kanban-col {
+  background: var(--bg-s);
+  border: 1px solid var(--br3);
+  border-radius: 12px;
+  padding: 12px;
+  min-height: 300px;
+}
+.kanban-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 4px 12px; border-bottom: 1px solid var(--br3);
+  margin-bottom: 10px;
+}
+.kanban-title { font-size: 13px; font-weight: 600; color: var(--t2); }
+.kanban-count {
+  font-size: 11px; font-weight: 600; padding: 2px 8px;
+  border-radius: 10px; background: var(--bg-hv); color: var(--t4);
+}
+
+.kanban-drop {
+  min-height: 200px;
+  transition: background 0.15s;
+  border-radius: 8px;
+}
+.kanban-drop.drag-over {
+  background: var(--av-d);
+  outline: 2px dashed var(--av-b);
+}
+
+.kb-card {
+  background: var(--bg-c); border: 1px solid var(--br);
+  border-radius: 10px; padding: 12px; margin-bottom: 10px;
+  cursor: grab; transition: transform 0.12s, box-shadow 0.12s;
+}
+.kb-card:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+.kb-card.dragging { opacity: 0.5; transform: scale(0.95); }
+
+.kb-title { font-size: 13px; font-weight: 600; color: var(--t1); line-height: 1.4; margin-bottom: 6px; }
+.kb-meta { font-size: 11px; color: var(--t5); display: flex; gap: 10px; flex-wrap: wrap; }
+.kb-score {
+  font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 8px;
+  background: var(--av-d); color: var(--av);
+}
+.kb-notes-input {
+  width: 100%; margin-top: 8px; padding: 6px 8px;
+  background: var(--bg-hv); border: 1px solid var(--br3); border-radius: 6px;
+  font-size: 11px; color: var(--t3); resize: none; outline: none;
+}
+.kb-notes-input:focus { border-color: var(--av); }
+.kb-remove {
+  font-size: 10px; color: var(--t5); cursor: pointer; float: right;
+  padding: 2px 6px; border-radius: 4px; border: none; background: none;
+}
+.kb-remove:hover { color: var(--ar); background: rgba(248,113,113,0.1); }
+
+/* 狀態顏色 */
+.col-bookmarked .kanban-header { border-bottom-color: var(--ay); }
+.col-writing .kanban-header { border-bottom-color: var(--av); }
+.col-written .kanban-header { border-bottom-color: var(--ag); }
+.col-published .kanban-header { border-bottom-color: var(--ac); }
+</style>
+
+<div style="margin-bottom:18px;">
+  <h2 style="font-size:20px; font-weight:700; margin:0 0 4px;">
+    <span class="grad-text">待寫清單</span>
+  </h2>
+  <p style="font-size:13px; color:var(--t4); margin:0;">
+    收藏素材、追蹤撰寫進度。拖曳卡片切換狀態。
+  </p>
+</div>
+
+{% set total_count = (columns.bookmarked|length) + (columns.writing|length) + (columns.written|length) + (columns.published|length) %}
+
+{% if total_count == 0 %}
+<div class="card" style="padding:48px; text-align:center;">
+  <div style="font-size:32px; margin-bottom:12px;">📌</div>
+  <p style="color:var(--t4); font-size:14px; margin:0 0 8px;">目前沒有收藏的素材</p>
+  <p style="color:var(--t5); font-size:12px; margin:0;">
+    前往 <a href="/materials" class="link-v">素材庫</a> 收藏有興趣的素材
+  </p>
+</div>
+{% else %}
+
+<div class="kanban">
+  {% set col_config = [
+    ('bookmarked', '已收藏', '☆'),
+    ('writing',    '撰寫中', '✏️'),
+    ('written',    '已完成', '✅'),
+    ('published',  '已發布', '🚀'),
+  ] %}
+
+  {% for status, label, icon in col_config %}
+  <div class="kanban-col col-{{ status }}">
+    <div class="kanban-header">
+      <span class="kanban-title">{{ icon }} {{ label }}</span>
+      <span class="kanban-count">{{ columns[status]|length }}</span>
+    </div>
+    <div class="kanban-drop" data-status="{{ status }}"
+         ondragover="onDragOver(event)" ondrop="onDrop(event)" ondragleave="onDragLeave(event)">
+      {% for item in columns[status] %}
+      <div class="kb-card" draggable="true"
+           data-key="{{ item.key }}"
+           data-date="{{ item.date_str }}"
+           data-index="{{ item.index }}"
+           ondragstart="onDragStart(event)">
+        <button class="kb-remove" onclick="removeBookmark('{{ item.date_str }}', {{ item.index }}, this)" title="移除收藏">✕</button>
+        <a href="/material/{{ item.date_str }}/{{ item.index }}" class="kb-title" style="text-decoration:none; display:block;">
+          {{ item.title or item.key }}
+        </a>
+        <div class="kb-meta">
+          <span>{{ item.date_str }}</span>
+          {% if item.source_name %}<span>{{ item.source_name }}</span>{% endif %}
+          {% if item.total_score %}<span class="kb-score">{{ item.total_score|int }}</span>{% endif %}
+        </div>
+        {% if item.notes %}
+        <textarea class="kb-notes-input" rows="2"
+                  placeholder="備註..."
+                  onchange="updateNotes('{{ item.date_str }}', {{ item.index }}, this.value)">{{ item.notes }}</textarea>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+var draggedEl = null;
+
+function onDragStart(e) {
+  draggedEl = e.target.closest('.kb-card');
+  draggedEl.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', draggedEl.dataset.key);
+}
+
+function onDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  e.currentTarget.classList.add('drag-over');
+}
+
+function onDragLeave(e) {
+  e.currentTarget.classList.remove('drag-over');
+}
+
+function onDrop(e) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if (!draggedEl) return;
+
+  var newStatus = e.currentTarget.dataset.status;
+  var dateStr = draggedEl.dataset.date;
+  var index = draggedEl.dataset.index;
+
+  fetch('/api/bookmark/' + dateStr + '/' + index + '/status', {
+    method: 'PATCH',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({status: newStatus})
+  })
+  .then(function(res){ return res.json(); })
+  .then(function(){
+    e.currentTarget.appendChild(draggedEl);
+    draggedEl.classList.remove('dragging');
+    draggedEl = null;
+    // 更新計數
+    updateCounts();
+    showToast('狀態已更新', '✅');
+  })
+  .catch(function(err){
+    draggedEl.classList.remove('dragging');
+    showToast('更新失敗', '❌');
+  });
+}
+
+function removeBookmark(dateStr, index, btn) {
+  if (!confirm('確定移除此收藏？')) return;
+  fetch('/api/bookmark/' + dateStr + '/' + index, { method: 'DELETE' })
+    .then(function(res){ return res.json(); })
+    .then(function(){
+      var card = btn.closest('.kb-card');
+      card.remove();
+      updateCounts();
+      showToast('已移除收藏', '🗑️');
+    });
+}
+
+function updateCounts() {
+  document.querySelectorAll('.kanban-drop').forEach(function(drop){
+    var count = drop.querySelectorAll('.kb-card').length;
+    var header = drop.parentElement.querySelector('.kanban-count');
+    if (header) header.textContent = count;
+  });
+}
+</script>
+{% endblock %}

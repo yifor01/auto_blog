@@ -38,7 +38,7 @@ def get_env_values() -> dict[str, str]:
     }
 
 
-_ALLOWED_KEY_PREFIXES = ("llm.", "scoring.", "dedup.", "generation.")
+_ALLOWED_KEY_PREFIXES = ("llm.", "scoring.", "dedup.", "generation.", "collectors.")
 _ALLOWED_EXACT_KEYS = {"retention_days"}
 
 

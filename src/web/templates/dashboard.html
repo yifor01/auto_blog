@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Auto Post Blog Monitor{% endblock %}
+
+{% block page_title %}
+<span style="font-size:13.5px; font-weight:600; color:var(--t1);">Dashboard</span>
+{% endblock %}
+
+{% block content %}
+<div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:24px;">
+  <div>
+    <h2 style="font-size:20px; font-weight:700; color:var(--t1); margin:0 0 4px;">Pipeline Overview</h2>
+    <p style="font-size:13px; color:var(--t4); margin:0;">最近 7 天執行狀態一覽</p>
+  </div>
+</div>
+
+<!-- 7天狀態卡片 -->
+<section style="margin-bottom:32px;">
+  <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(118px,1fr)); gap:10px;">
+    {% for day in week_status %}
+    {% set is_today = day.date == today %}
+    <a href="/day/{{ day.date }}"
+       class="day-card day-card-{{ day.state }}{% if is_today %} day-card-today{% endif %}">
+
+      <div style="font-size:11.5px; color:var(--t4); font-family:'JetBrains Mono',monospace; margin-bottom:7px;">
+        {{ day.date[5:] }}{% if is_today %} <span style="color:var(--av); font-weight:600;">今</span>{% endif %}
+      </div>
+
+      <span class="badge badge-{{ day.state }}" style="margin-bottom:10px; display:inline-flex;">
+        {{ day.state }}
+      </span>
+
+      <div style="margin-top:8px; font-size:12px; color:var(--t4); display:flex; flex-direction:column; gap:3px;">
+        <div style="display:flex; justify-content:space-between;">
+          <span>收集</span>
+          <span style="color:var(--t2); font-weight:500;">{{ day.raw_count }}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between;">
+          <span>評分</span>
+          <span style="color:var(--t2); font-weight:500;">{{ day.scored_count }}</span>
+        </div>
+        {% if day.posts_count > 0 %}
+        <div style="display:flex; justify-content:space-between;">
+          <span>文章</span>
+          <span style="color:var(--av); font-weight:600;">{{ day.posts_count }}</span>
+        </div>
+        {% endif %}
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+
+<!-- Charts Section -->
+<section style="margin-bottom:32px; display:grid; grid-template-columns:2fr 1fr; gap:20px;">
+  <!-- Trend Chart -->
+  <div class="card" style="padding:20px;">
+    <h3 style="font-size:14px; font-weight:600; color:var(--t2); margin:0 0 16px;">📈 過去 30 天平均分數趨勢</h3>
+    <div style="height:220px;">
+      <canvas id="trendChart"></canvas>
+    </div>
+  </div>
+  <!-- Source Pie -->
+  <div class="card" style="padding:20px;">
+    <h3 style="font-size:14px; font-weight:600; color:var(--t2); margin:0 0 16px;">📊 Top Sources (30天)</h3>
+    <div style="height:220px; display:flex; justify-content:center;">
+      <canvas id="sourceChart"></canvas>
+    </div>
+  </div>
+</section>
+
+<!-- Health Panel Section -->
+<section style="margin-bottom:32px;">
+  <h3 style="font-size:15px; font-weight:600; color:var(--t2); margin:0 0 14px;">🩺 Collector 健康狀態 (最近 7 天)</h3>
+  <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:12px;">
+    {% for h in charts.health_panel %}
+    <div class="card" style="padding:14px; display:flex; flex-direction:column; gap:8px;">
+      <div style="font-size:13px; font-weight:600; color:var(--t2);">{{ h.name }}</div>
+      <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--t4);">
+        <span>成功: <span style="color:var(--ag); font-weight:500;">{{ h.success }}</span></span>
+        <span>失敗: <span style="{% if h.error > 0 %}color:var(--ar); font-weight:600;{% else %}color:var(--t4);{% endif %}">{{ h.error }}</span></span>
+      </div>
+      <div style="font-size:11px; color:var(--t5);">平均耗時: {{ h.avg_time }}s</div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<!-- Top 10 table -->
+<section>
+  <h2 style="font-size:15px; font-weight:600; color:var(--t2); margin:0 0 14px;
+             display:flex; align-items:center; gap:8px;">
+    <span>🏆</span> 本週 Top 10 項目
+  </h2>
+
+  {% if top_items %}
+  <div class="card" style="overflow:hidden;">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th style="width:36px;">#</th>
+          <th>分數</th>
+          <th>日期</th>
+          <th>來源</th>
+          <th>標題 / 資訊</th>
+          <th>評語</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for it in top_items %}
+        <tr>
+          <td style="color:var(--t5); font-family:'JetBrains Mono',monospace; font-size:12px;">
+            {{ loop.index }}
+          </td>
+          <td>
+            <span class="score-badge">{{ "%.0f"|format(it.total_score) }}</span>
+          </td>
+          <td style="color:var(--t4); font-size:12px; font-family:'JetBrains Mono',monospace;">
+            {{ it.date }}
+          </td>
+          <td>
+            <span class="chip">{{ it.source_name }}</span>
+          </td>
+          <td>
+            <a href="{{ it.url }}" target="_blank" class="link-v" title="{{ it.abstract[:300] if it.abstract else '' }}"
+               style="font-size:13.5px; font-weight:500; line-height:1.4;
+                      display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">
+              {{ it.title }}
+            </a>
+            {% if it.tags or it.authors %}
+            <div style="margin-top:6px; display:flex; gap:6px; flex-wrap:wrap;">
+              {% for t in (it.tags or [])[:3] %}
+              <span class="tag-v" style="font-size:10px; padding:1px 6px;">{{ t }}</span>
+              {% endfor %}
+              {% if it.authors %}
+              <span style="font-size:11px; color:var(--t4);">{{ it.authors[0] }}{% if it.authors|length > 1 %} et al.{% endif %}</span>
+              {% endif %}
+            </div>
+            {% endif %}
+          </td>
+          <td style="color:var(--t5); font-size:12px; min-width:200px; max-width:300px; line-height:1.5;">
+            {{ it.llm_reason }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card" style="padding:48px; text-align:center;">
+    <div style="font-size:32px; margin-bottom:12px;">📭</div>
+    <p style="color:var(--t4); font-size:14px; margin:0;">最近 7 天尚無評分資料</p>
+  </div>
+  {% endif %}
+</section>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const chartsData = JSON.parse('{{ charts | tojson | safe }}');
+    
+    // Trend Chart
+    const ctxTrend = document.getElementById('trendChart').getContext('2d');
+    new Chart(ctxTrend, {
+        type: 'line',
+        data: {
+            labels: chartsData.trend_labels,
+            datasets: [{
+                label: '平均分數',
+                data: chartsData.trend_scores,
+                borderColor: '#7c3aed',
+                backgroundColor: 'rgba(124, 58, 237, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.3,
+                pointRadius: 3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { grid: { color: 'rgba(100, 116, 139, 0.2)' } },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+
+    // Source Pie
+    const ctxSource = document.getElementById('sourceChart').getContext('2d');
+    new Chart(ctxSource, {
+        type: 'doughnut',
+        data: {
+            labels: chartsData.source_labels,
+            datasets: [{
+                data: chartsData.source_data,
+                backgroundColor: ['#7c3aed', '#0891b2', '#059669', '#d97706', '#dc2626', '#4f46e5', '#db2777'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'right', labels: { boxWidth: 10, font: { size: 11 } } }
+            },
+            cutout: '60%'
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,332 @@
+{% extends "base.html" %}
+{% block title %}所有部落格文 — Auto Post Blog Monitor{% endblock %}
+
+{% block page_title %}
+<nav style="display:flex; align-items:center; gap:8px; font-size:13.5px;">
+  <a href="/dashboard" class="link-muted">Dashboard</a>
+  <span style="color:var(--t6);">/</span>
+  <span style="color:var(--t1); font-weight:600;">📝 所有部落格文</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<style>
+/* ── 篩選列 ── */
+.filter-bar {
+  display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.filter-input {
+  flex: 1; min-width: 200px; padding: 8px 14px;
+  background: var(--bg-c); border: 1px solid var(--br2); border-radius: 9px;
+  font-size: 13px; color: var(--t1); outline: none; transition: border-color 0.13s;
+}
+.filter-input:focus { border-color: var(--ag); }
+.filter-input::placeholder { color: var(--t5); }
+.filter-select {
+  padding: 8px 12px; background: var(--bg-c);
+  border: 1px solid var(--br2); border-radius: 9px;
+  font-size: 12.5px; color: var(--t3); cursor: pointer; outline: none;
+}
+.count-label { font-size: 12px; color: var(--t5); margin-left: auto; white-space: nowrap; }
+
+/* ── 快速 tag chips ── */
+.quick-tags {
+  display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 20px;
+}
+.qtag {
+  font-size: 11.5px; padding: 4px 10px; border-radius: 20px; cursor: pointer;
+  background: var(--bg-hv); color: var(--t3); border: 1px solid var(--br3);
+  transition: all 0.12s; user-select: none;
+}
+.qtag:hover { background: var(--bg-in); color: var(--t2); }
+.qtag.active {
+  background: rgba(52,211,153,0.15); color: var(--ag);
+  border-color: rgba(52,211,153,0.35); font-weight: 600;
+}
+
+/* ── 日期分組 ── */
+.date-group { margin-bottom: 28px; }
+.date-header {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--br3);
+}
+.date-label {
+  font-size: 13px; font-weight: 600; color: var(--t2);
+  font-family: 'JetBrains Mono', monospace;
+}
+.date-count { font-size: 11.5px; color: var(--t5); }
+
+/* ── 卡片格 ── */
+.content-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 14px;
+}
+
+/* ── 內容卡片 ── */
+.content-card {
+  background: var(--bg-c); border: 1px solid var(--br);
+  border-left-width: 3px; border-radius: 12px;
+  transition: transform 0.15s, box-shadow 0.15s;
+  cursor: pointer; display: flex; flex-direction: column;
+  text-decoration: none;
+}
+.content-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+}
+/* Feedback 著色 */
+.cc-good  { border-left-color: var(--ag); background-color: rgba(52,211,153,0.04); }
+.cc-bad   { border-left-color: var(--ar); background-color: rgba(248,113,113,0.04); }
+.cc-normal { border-left-color: var(--t5); }
+.cc-unrated { border-left-color: var(--br2); }
+
+.cc-header {
+  padding: 12px 14px 0;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.cc-source {
+  font-size: 10.5px; padding: 2px 7px; border-radius: 4px;
+  background: var(--bg-in); color: var(--t4);
+  font-family: 'JetBrains Mono', monospace; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; max-width: 120px;
+}
+.cc-feedback-badge {
+  font-size: 10.5px; padding: 2px 7px; border-radius: 4px; font-weight: 600;
+}
+.cc-feedback-good  { background: rgba(52,211,153,0.12); color: var(--ag); }
+.cc-feedback-bad   { background: rgba(248,113,113,0.12); color: var(--ar); }
+.cc-feedback-normal { background: var(--bg-in); color: var(--t5); }
+
+.cc-body { padding: 10px 14px 8px; flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.cc-title {
+  font-size: 13.5px; font-weight: 600; color: var(--t1); line-height: 1.4;
+}
+.cc-excerpt {
+  font-size: 12px; color: var(--t4); line-height: 1.5;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+
+/* ── 5D mini bars ── */
+.cc-5d { display: flex; flex-direction: column; gap: 5px; margin-top: 4px; }
+.mini-bar-row {
+  display: flex; align-items: center; gap: 6px;
+}
+.mini-bar-label { font-size: 10px; color: var(--t5); width: 42px; flex-shrink: 0; }
+.mini-bar-track {
+  flex: 1; height: 4px; background: var(--bg-in); border-radius: 3px; overflow: hidden;
+}
+.mini-bar-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
+.mini-bar-val { font-size: 10px; color: var(--t4); width: 18px; text-align: right; }
+
+/* ── 標籤 & Footer ── */
+.cc-tags {
+  padding: 6px 14px; display: flex; gap: 5px; flex-wrap: wrap; align-items: center;
+}
+.tag-chip-g {
+  font-size: 10px; padding: 2px 6px; border-radius: 4px;
+  background: rgba(52,211,153,0.1); color: var(--ag);
+  border: 1px solid rgba(52,211,153,0.2);
+}
+.cc-footer {
+  padding: 8px 14px 12px;
+  border-top: 1px solid var(--br4);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.cc-score {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11.5px; font-weight: 700;
+  background: var(--av-d); color: var(--av);
+  border: 1px solid var(--av-b); border-radius: 99px;
+  padding: 2px 9px;
+}
+.cc-meta { font-size: 11px; color: var(--t5); }
+</style>
+
+<!-- 頁面標題 -->
+<div style="margin-bottom:18px;">
+  <h2 style="font-size:20px; font-weight:700; color:var(--ag); margin:0 0 4px;">📝 部落格文庫</h2>
+  <p style="font-size:13px; color:var(--t4); margin:0;">
+    共 {{ posts|length }} 篇文章
+    {%- set unique_dates = posts | map(attribute='date_str') | unique | list %}
+    · 來自 {{ unique_dates|length }} 天
+  </p>
+</div>
+
+<!-- 篩選列 -->
+<div class="filter-bar">
+  <input type="text" id="search-input" class="filter-input"
+    placeholder="🔍 搜尋標題或標籤..." oninput="filterCards()" />
+  <select id="sort-select" class="filter-select" onchange="rebuildGroups()">
+    <option value="newest">最新優先</option>
+    <option value="oldest">最早優先</option>
+  </select>
+  <span class="count-label" id="count-label">{{ posts|length }} 篇</span>
+</div>
+
+<!-- 快速 tag chips -->
+<div class="quick-tags" id="quick-tags">
+  <span class="qtag active" data-tag="" onclick="toggleTag(this,'')">全部</span>
+  {% for tag in ['LLM','Agent','RAG','Fine-tuning','Multimodal','安全','小模型','推理','Anthropic','OpenAI','Meta','開源'] %}
+  <span class="qtag" data-tag="{{ tag }}" onclick="toggleTag(this,'{{ tag }}')">{{ tag }}</span>
+  {% endfor %}
+</div>
+
+{% if not posts %}
+<!-- 空狀態 -->
+<div class="card" style="padding:48px; text-align:center;">
+  <div style="font-size:32px; margin-bottom:12px;">📭</div>
+  <p style="color:var(--t4); font-size:14px; margin:0;">目前尚無部落格文章</p>
+</div>
+{% else %}
+
+<!-- 日期分組 -->
+{% for date_str, date_items in posts | groupby('date_str') | list | reverse %}
+<div class="date-group" id="group-{{ date_str }}" data-date="{{ date_str }}">
+  <div class="date-header">
+    <span class="date-label">📅 {{ date_str }}</span>
+    <span class="date-count" id="gc-{{ date_str }}">{{ date_items | list | length }} 篇</span>
+  </div>
+  <div class="content-grid">
+    {% for p in date_items %}
+    {%- set fb = p.feedback or '' -%}
+    {%- set fb_class = 'cc-' + fb if fb else 'cc-unrated' -%}
+    <a href="/post/{{ p.date_str }}/{{ p.slug }}"
+       class="content-card {{ fb_class }}"
+       data-date="{{ p.date_str }}"
+       data-title="{{ (p.title or p.slug) | lower }}"
+       data-tags="{{ (p.tags or []) | join(' ') | lower }} {{ (p.source_name or p.source_fm or '') | lower }}">
+
+      <!-- Header: source + feedback -->
+      <div class="cc-header">
+        <span class="cc-source">{{ p.source_name or p.source_fm or '—' }}</span>
+        {% if fb %}
+        <span class="cc-feedback-badge cc-feedback-{{ fb }}">
+          {% if fb == 'good' %}👍 好{% elif fb == 'bad' %}👎 差{% else %}─ 普通{% endif %}
+        </span>
+        {% endif %}
+      </div>
+
+      <!-- Title + Excerpt -->
+      <div class="cc-body">
+        <div class="cc-title">{{ p.title or p.slug }}</div>
+        {% if p.excerpt %}
+        <div class="cc-excerpt">{{ p.excerpt }}</div>
+        {% endif %}
+
+        <!-- 5D mini bars（只在有資料時顯示） -->
+        {% if p.novelty is not none %}
+        <div class="cc-5d">
+          {% set dims5 = [
+            ('新穎性', p.novelty,         '#a78bfa'),
+            ('影響力', p.impact,           '#fb923c'),
+            ('話題性', p.trending,         '#34d399'),
+            ('實用性', p.practicality,     '#f59e0b'),
+            ('適合度', p.blog_worthiness,  '#22d3ee'),
+          ] %}
+          {% for label, val, color in dims5 %}
+          {% if val is not none %}
+          <div class="mini-bar-row">
+            <span class="mini-bar-label">{{ label }}</span>
+            <div class="mini-bar-track">
+              <div class="mini-bar-fill"
+                   style="width:{{ (val / 20 * 100)|int }}%; background:{{ color }};"></div>
+            </div>
+            <span class="mini-bar-val">{{ val|int }}</span>
+          </div>
+          {% endif %}
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Tags -->
+      {% if p.tags %}
+      <div class="cc-tags">
+        {% for tag in p.tags[:4] %}
+        <span class="tag-chip-g">{{ tag }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <!-- Footer: score + reading time -->
+      <div class="cc-footer">
+        <span class="cc-score">⭐ {{ (p.fm_score or ((p.rule_score or 0) + (p.llm_score or 0)))|int }}</span>
+        <span class="cc-meta">⏱ {{ p.reading_time_min }}分 · {{ p.word_count }}字</span>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endfor %}
+
+<!-- 空搜尋結果 -->
+<div id="empty-search" style="display:none; padding:48px; text-align:center;">
+  <div style="font-size:32px; margin-bottom:12px;">🔍</div>
+  <p style="color:var(--t4); font-size:14px; margin:0;">找不到符合條件的文章</p>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+var allCards = null;
+var activeTag = '';
+
+function initCards() {
+  allCards = Array.from(document.querySelectorAll('.content-card[data-date]'));
+}
+
+function toggleTag(btn, tagName) {
+  activeTag = (activeTag === tagName) ? '' : tagName;
+  document.querySelectorAll('.qtag').forEach(function(el) {
+    el.classList.toggle('active', el.dataset.tag === activeTag);
+  });
+  filterCards();
+}
+
+function filterCards() {
+  if (!allCards) initCards();
+  var query = document.getElementById('search-input').value.toLowerCase().trim();
+
+  var total = 0;
+  allCards.forEach(function(card) {
+    var combined = (card.dataset.title || '') + ' ' + (card.dataset.tags || '');
+    var queryMatch = !query || combined.indexOf(query) >= 0;
+    var tagMatch = !activeTag || combined.indexOf(activeTag.toLowerCase()) >= 0;
+    var show = queryMatch && tagMatch;
+    card.style.display = show ? '' : 'none';
+    if (show) total++;
+  });
+
+  // 更新每個 date-group 的計數與可見性
+  document.querySelectorAll('.date-group').forEach(function(group) {
+    var date = group.dataset.date;
+    var visible = Array.from(group.querySelectorAll('.content-card'))
+                       .filter(function(c){ return c.style.display !== 'none'; });
+    group.style.display = visible.length > 0 ? '' : 'none';
+    var countEl = document.getElementById('gc-' + date);
+    if (countEl) countEl.textContent = visible.length + ' 篇';
+  });
+
+  document.getElementById('count-label').textContent = total + ' 篇';
+  var empty = document.getElementById('empty-search');
+  if (empty) empty.style.display = total === 0 ? 'block' : 'none';
+}
+
+function rebuildGroups() {
+  var sort = document.getElementById('sort-select').value;
+  var groups = Array.from(document.querySelectorAll('.date-group'));
+  groups.sort(function(a, b) {
+    var da = a.dataset.date, db = b.dataset.date;
+    return sort === 'newest' ? (db > da ? 1 : -1) : (da > db ? 1 : -1);
+  });
+  var anchor = document.getElementById('empty-search');
+  groups.forEach(function(g) {
+    anchor.parentNode.insertBefore(g, anchor);
+  });
+}
+</script>
+{% endblock %}

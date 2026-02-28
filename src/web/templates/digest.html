@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}每日摘要 — Auto Post Blog Monitor{% endblock %}
+
+{% block page_title %}
+<nav style="display:flex; align-items:center; gap:8px; font-size:13.5px;">
+  <a href="/dashboard" class="link-muted">Dashboard</a>
+  <span style="color:var(--t6);">/</span>
+  <span style="color:var(--t1); font-weight:600;">每日摘要</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<style>
+.digest-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+  margin-bottom: 28px;
+}
+.digest-card {
+  background: var(--bg-c); border: 1px solid var(--br);
+  border-radius: 12px; padding: 18px;
+  transition: transform 0.15s, box-shadow 0.15s;
+  cursor: pointer; text-decoration: none; display: block;
+}
+.digest-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+}
+.digest-date {
+  font-size: 18px; font-weight: 700; color: var(--t1);
+  font-family: 'JetBrains Mono', monospace; margin-bottom: 8px;
+}
+.digest-stats {
+  display: flex; gap: 16px; font-size: 12px; color: var(--t4);
+}
+.digest-stat-val { font-weight: 700; color: var(--t2); }
+
+/* 單日摘要 */
+.digest-content { max-width: 900px; margin: 0 auto; }
+</style>
+
+{% if digest %}
+<!-- 單日摘要視圖 -->
+<div style="margin-bottom:18px; display:flex; align-items:center; justify-content:space-between;">
+  <div>
+    <h2 style="font-size:20px; font-weight:700; margin:0 0 4px;">
+      <span class="grad-text">每日精選摘要</span>
+    </h2>
+    <p style="font-size:13px; color:var(--t4); margin:0;">{{ date_str }}</p>
+  </div>
+  <a href="/digest" class="link-muted" style="font-size:13px;">← 所有摘要</a>
+</div>
+
+<div class="digest-content card" style="padding:28px 32px;">
+  <div class="prose">
+    {{ digest_html | safe }}
+  </div>
+</div>
+
+{% elif digests %}
+<!-- 摘要列表 -->
+<div style="margin-bottom:18px;">
+  <h2 style="font-size:20px; font-weight:700; margin:0 0 4px;">
+    <span class="grad-text">每日摘要</span>
+  </h2>
+  <p style="font-size:13px; color:var(--t4); margin:0;">
+    共 {{ digests|length }} 份摘要
+  </p>
+</div>
+
+<div class="digest-list">
+  {% for d in digests %}
+  <a href="/digest/{{ d.date_str }}" class="digest-card">
+    <div class="digest-date">{{ d.date_str }}</div>
+    <div class="digest-stats">
+      <span>素材: <span class="digest-stat-val">{{ d.total_items }}</span></span>
+      <span>平均分: <span class="digest-stat-val">{{ "%.1f"|format(d.avg_score|float) }}</span></span>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+
+{% else %}
+<!-- 空狀態 -->
+<div style="margin-bottom:18px;">
+  <h2 style="font-size:20px; font-weight:700; margin:0 0 4px;">
+    <span class="grad-text">每日摘要</span>
+  </h2>
+</div>
+<div class="card" style="padding:48px; text-align:center;">
+  <div style="font-size:32px; margin-bottom:12px;">📋</div>
+  <p style="color:var(--t4); font-size:14px; margin:0 0 8px;">目前尚無摘要</p>
+  <p style="color:var(--t5); font-size:12px; margin:0;">使用 <code style="background:var(--av-d); color:var(--av); padding:2px 6px; border-radius:4px;">python -m src.cli digest</code> 生成</p>
+</div>
+{% endif %}
+
+{% endblock %}

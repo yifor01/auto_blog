@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
-import calendar
+import re
 import time
 from datetime import date, datetime
+from urllib.parse import urlparse
+from zoneinfo import ZoneInfo
 
 from src.collectors.base import BaseCollector
 from src.models import ContentItem, SourceType
@@ -30,9 +32,9 @@ class HackerNewsCollector(BaseCollector):
         min_points: int = cfg.get("min_points", 50)
         max_results: int = cfg.get("max_results", 30)
 
-        # 計算目標日期的 Unix timestamp 範圍
-        start_dt = datetime(target_date.year, target_date.month, target_date.day)
-        start_ts = int(calendar.timegm(start_dt.timetuple()))
+        # 計算目標日期的 Unix timestamp 範圍（以台灣時區 Asia/Taipei 為基準）
+        start_dt = datetime(target_date.year, target_date.month, target_date.day, tzinfo=ZoneInfo("Asia/Taipei"))
+        start_ts = int(start_dt.timestamp())
         end_ts = start_ts + 86400  # +1 day
 
         items: list[ContentItem] = []
@@ -77,6 +79,15 @@ class HackerNewsCollector(BaseCollector):
                     points = hit.get("points", 0)
                     num_comments = hit.get("num_comments", 0)
                     author = hit.get("author", "")
+                    story_text_raw = hit.get("story_text") or ""
+                    story_text = re.sub(r"<[^>]+>", " ", story_text_raw).strip()
+
+                    if story_text:
+                        abstract = story_text
+                    else:
+                        # link post：從 URL domain + engagement 組裝摘要
+                        domain = urlparse(raw_url).netloc.replace("www.", "") if raw_url else "news.ycombinator.com"
+                        abstract = f"{domain} — {points} points, {num_comments} comments on Hacker News"
 
                     items.append(
                         ContentItem(
@@ -85,7 +96,7 @@ class HackerNewsCollector(BaseCollector):
                             title=title,
                             url=url,
                             authors=[author] if author else [],
-                            abstract=f"Hacker News ({points} points, {num_comments} comments): {title}",
+                            abstract=abstract,
                             published_date=target_date,
                             tags=["hackernews"],
                             raw_metadata={

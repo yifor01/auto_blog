@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block title %}主題瀏覽 — Auto Post Blog Monitor{% endblock %}
+
+{% block page_title %}
+<nav style="display:flex; align-items:center; gap:8px; font-size:13.5px;">
+  <a href="/dashboard" class="link-muted">Dashboard</a>
+  <span style="color:var(--t6);">/</span>
+  <span style="color:var(--t1); font-weight:600;">主題瀏覽</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<style>
+.topic-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.topic-card {
+  background: var(--bg-c); border: 1px solid var(--br);
+  border-radius: 12px; padding: 18px;
+  cursor: pointer; transition: transform 0.15s, box-shadow 0.15s;
+}
+.topic-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+}
+.topic-card.expanded { border-color: var(--av-b); }
+
+.topic-name { font-size: 16px; font-weight: 700; color: var(--t1); margin-bottom: 6px; }
+.topic-count { font-size: 12px; color: var(--t4); margin-bottom: 12px; }
+
+/* Sparkline */
+.sparkline-container {
+  height: 32px; display: flex; align-items: flex-end; gap: 2px;
+  margin-bottom: 12px;
+}
+.spark-bar {
+  flex: 1; min-width: 4px; max-width: 12px;
+  background: var(--av); border-radius: 2px 2px 0 0;
+  transition: height 0.3s ease;
+  opacity: 0.7;
+}
+.spark-bar:hover { opacity: 1; }
+
+/* Top items preview */
+.topic-preview { display: flex; flex-direction: column; gap: 6px; }
+.tp-item {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; color: var(--t3);
+}
+.tp-score {
+  font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 8px;
+  background: var(--av-d); color: var(--av); flex-shrink: 0;
+}
+.tp-title {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* Expanded items list */
+.topic-expanded {
+  display: none; margin-top: 16px; padding-top: 12px;
+  border-top: 1px solid var(--br3);
+}
+.topic-expanded.show { display: block; }
+
+.te-group { margin-bottom: 14px; }
+.te-date {
+  font-size: 11px; font-weight: 600; color: var(--t4);
+  font-family: 'JetBrains Mono', monospace; margin-bottom: 6px;
+}
+.te-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 0; font-size: 12.5px;
+}
+.te-item a { color: var(--t2); text-decoration: none; }
+.te-item a:hover { color: var(--av); }
+</style>
+
+<div style="margin-bottom:18px;">
+  <h2 style="font-size:20px; font-weight:700; margin:0 0 4px;">
+    <span class="grad-text">主題瀏覽</span>
+  </h2>
+  <p style="font-size:13px; color:var(--t4); margin:0;">
+    過去 {{ days }} 天的主題分布，追蹤同一話題發展脈絡
+  </p>
+</div>
+
+{% if not topics %}
+<div class="card" style="padding:48px; text-align:center;">
+  <div style="font-size:32px; margin-bottom:12px;">🏷️</div>
+  <p style="color:var(--t4); font-size:14px; margin:0;">尚無主題資料</p>
+</div>
+{% else %}
+
+<div class="topic-grid">
+  {% for topic_name, items in topics.items() %}
+  {% if items %}
+  <div class="topic-card" onclick="toggleTopic(this, '{{ topic_name }}')">
+    <div class="topic-name">{{ topic_name }}</div>
+    <div class="topic-count">{{ items|length }} 筆素材</div>
+
+    <!-- Sparkline (14 天) -->
+    <div class="sparkline-container">
+      {% set ns = namespace(max_val=1) %}
+      {% for d in spark_dates %}
+        {% set count = timeline[topic_name].get(d, 0) %}
+        {% if count > ns.max_val %}{% set ns.max_val = count %}{% endif %}
+      {% endfor %}
+      {% for d in spark_dates %}
+        {% set count = timeline[topic_name].get(d, 0) %}
+        {% set height = (count / ns.max_val * 100)|int if ns.max_val > 0 else 0 %}
+        <div class="spark-bar" style="height:{{ height if height > 0 else 2 }}%;"
+             title="{{ d }}: {{ count }}"></div>
+      {% endfor %}
+    </div>
+
+    <!-- Top 3 preview -->
+    <div class="topic-preview">
+      {% for it in items[:3] %}
+      <div class="tp-item">
+        <span class="tp-score">{{ it.total_score|int }}</span>
+        <span class="tp-title">{{ it.title[:50] }}</span>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Expanded list (hidden) -->
+    <div class="topic-expanded" id="expand-{{ topic_name }}">
+      {% for date_str, date_items in items | groupby('date_str') | list | reverse %}
+      <div class="te-group">
+        <div class="te-date">{{ date_str }}</div>
+        {% for it in date_items %}
+        <div class="te-item">
+          <span class="tp-score">{{ it.total_score|int }}</span>
+          <a href="/material/{{ it.date_str }}/{{ it.index }}">{{ it.title[:60] }}</a>
+        </div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+  {% endfor %}
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleTopic(card, name) {
+  var expanded = document.getElementById('expand-' + name);
+  if (expanded) {
+    expanded.classList.toggle('show');
+    card.classList.toggle('expanded');
+  }
+}
+</script>
+{% endblock %}

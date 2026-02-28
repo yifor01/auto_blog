@@ -111,7 +111,7 @@ generated_at: {gen.generated_at.isoformat()}
 """
     note_path.write_text(note_content, encoding="utf-8")
 
-    _logger.info("Note saved", extra={"filename": note_path.name})
+    _logger.info("Note saved", extra={"output_file": note_path.name})
     return str(note_path)
 
 

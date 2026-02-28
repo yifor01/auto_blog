@@ -280,13 +280,27 @@ def run(
         console.print(f"[green]✅ {d} 已完成所有階段, 不需重跑 (用 --force 強制重跑)[/green]")
         return
 
+    import time as _time
+
+    _t0 = _time.time()
+    _logger.info("Stage started", extra={"pipeline_stage": "collect", "stage_action": "start"})
     items = _collect(d)
+    _logger.info("Stage ended", extra={
+        "pipeline_stage": "collect", "stage_action": "end",
+        "elapsed": round(_time.time() - _t0, 1),
+    })
     if not items:
         _logger.warning("No items collected", extra={"date": str(d)})
         console.print("[yellow]⚠ No items collected. Exiting.[/yellow]")
         return
 
+    _t0 = _time.time()
+    _logger.info("Stage started", extra={"pipeline_stage": "score", "stage_action": "start"})
     top_items = _score(items, d)
+    _logger.info("Stage ended", extra={
+        "pipeline_stage": "score", "stage_action": "end",
+        "elapsed": round(_time.time() - _t0, 1),
+    })
     if top_k:
         top_items = top_items[:top_k]
 
@@ -300,7 +314,13 @@ def run(
         console.print("[yellow]⚠ No items passed scoring. Exiting.[/yellow]")
         return
 
+    _t0 = _time.time()
+    _logger.info("Stage started", extra={"pipeline_stage": "generate", "stage_action": "start"})
     post_paths, note_paths = _generate(top_items, d)
+    _logger.info("Stage ended", extra={
+        "pipeline_stage": "generate", "stage_action": "end",
+        "elapsed": round(_time.time() - _t0, 1),
+    })
 
     console.rule("[bold green]📋 每日報告[/bold green]")
     console.print(f"  📡 收集: {len(items)} unique items")
