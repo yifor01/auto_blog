@@ -660,7 +660,9 @@ async def api_logs_stream(date_str: str):
                             except Exception:
                                 pass
                             # 偵測 pipeline 取消
-                            if "Pipeline cancelled by user" in display or "Stage" in display and "cancelled by user" in display:
+                            if "Pipeline cancelled by user" in display or any(
+                                f"Stage {s} cancelled by user" in display for s in VALID_STAGES
+                            ):
                                 yield f"event: cancelled\ndata: {{}}\n\n"
                                 return
                             # 若偵測到 pipeline 結束行，立即送 done event
