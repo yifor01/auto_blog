@@ -1,0 +1,637 @@
+{% extends "base.html" %}
+{% block title %}{{ date_str }} — Auto Post Blog Monitor{% endblock %}
+
+{% block page_title %}
+<nav style="display:flex; align-items:center; gap:8px; font-size:13.5px;">
+  <a href="/dashboard" class="link-muted">Dashboard</a>
+  <span style="color:var(--t6);">/</span>
+  <span style="color:var(--t1); font-weight:600;">{{ date_str }}</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div style="margin-bottom:20px;">
+  <h2 style="font-size:20px; font-weight:700; color:var(--t1); margin:0 0 4px;">{{ date_str }}</h2>
+  <p style="font-size:13px; color:var(--t4); margin:0;">
+    {% if stats.scored_count > 0 %}共 {{ stats.scored_count }} 筆評分資料{% else %}尚無資料{% endif %}
+  </p>
+</div>
+
+<!-- GitLab-style Pipeline Card -->
+<div class="pipeline-card" id="pipeline-card">
+  <!-- 標頭：狀態 + 重跑按鈕 -->
+  <div class="pipeline-header">
+    <div class="pipeline-meta">
+      <span class="pipeline-title">Pipeline</span>
+      <span id="pipeline-badge" class="pipeline-badge badge-{{ state }}">
+        {% if state == 'done' %}✓ 完成
+        {% elif state == 'running' %}⟳ 執行中
+        {% elif state == 'scored' %}評分完成
+        {% elif state == 'collected' %}已收集
+        {% else %}尚未執行{% endif %}
+      </span>
+      <span id="pipeline-duration" class="pipeline-duration"></span>
+    </div>
+    <div class="split-btn-wrap">
+      <button class="btn-run-main" id="btn-run-main"
+              onclick="triggerRun(dateStr, true)">↻ 重跑</button>
+      <button class="btn-run-caret" id="btn-run-caret"
+              onclick="toggleRunDropdown(event)">▾</button>
+      <div class="run-dropdown" id="run-dropdown" style="display:none;">
+        <button onclick="triggerRun(dateStr, true); closeRunDropdown()">強制重跑（清除快取）</button>
+        <button onclick="triggerRun(dateStr, false); closeRunDropdown()">續跑（保留已有進度）</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 階段節點列 -->
+  <div class="pipeline-stages-row">
+    {% for stage_name, stage_label in [('collect','收集'),('score','評分'),('generate','生成')] %}
+    {% if not loop.first %}<div class="stage-arrow">→</div>{% endif %}
+    <div class="stage-node stage-pending" id="snode-{{ stage_name }}">
+      <div class="stage-icon" id="sicon-{{ stage_name }}">⬜</div>
+      <div class="stage-label">{{ stage_label }}</div>
+      <div class="stage-elapsed" id="selapsed-{{ stage_name }}">-</div>
+      <button class="stage-stop-btn" onclick="stopPipeline()">■ 停止</button>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- 每階段 log accordion -->
+  <div class="stage-accordions">
+    {% for stage_name, stage_label in [('collect','收集'),('score','評分'),('generate','生成')] %}
+    <div class="stage-accordion" id="sacc-{{ stage_name }}">
+      <div class="accordion-header" onclick="toggleAccordion('{{ stage_name }}')">
+        <span class="acc-toggle" id="atoggle-{{ stage_name }}">▶</span>
+        <span class="acc-name">{{ stage_label }}</span>
+        <span class="acc-badge" id="abadge-{{ stage_name }}">等待中</span>
+        <span class="acc-elapsed" id="aelapsed-{{ stage_name }}"></span>
+      </div>
+      <div class="accordion-body" id="abody-{{ stage_name }}" style="display:none;">
+        <pre class="stage-log-pre" id="slog-{{ stage_name }}"></pre>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<style>
+/* Pipeline Card */
+.pipeline-card { background: var(--bg-c); border: 1px solid var(--br2); border-radius: 10px; margin-bottom: 1.5rem; overflow: hidden; }
+.pipeline-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; border-bottom: 1px solid var(--br2); }
+.pipeline-meta { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.pipeline-title { font-weight: 600; font-size: 0.95rem; }
+.pipeline-badge { padding: 2px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; }
+.pipeline-badge.badge-done { background: rgba(34,197,94,0.15); color: #22c55e; }
+.pipeline-badge.badge-running { background: rgba(139,92,246,0.15); color: #8b5cf6; animation: pipelinePulse 1.5s infinite; }
+.pipeline-badge.badge-scored, .pipeline-badge.badge-collected { background: rgba(251,191,36,0.15); color: #f59e0b; }
+.pipeline-badge.badge-none, .pipeline-badge.badge-idle { background: var(--br2); color: var(--t5); }
+.pipeline-badge.badge-failed { background: rgba(239,68,68,0.15); color: #ef4444; }
+.pipeline-badge.badge-cancelled { background: rgba(249,115,22,0.15); color: #f97316; }
+.stage-node.stage-cancelled { border-color: #f97316; background: rgba(249,115,22,0.08); }
+.acc-badge.badge-cancelled { background: rgba(249,115,22,0.15); color: #f97316; }
+.pipeline-duration { font-size: 0.8rem; color: var(--t5); }
+@keyframes pipelinePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* Stage Nodes */
+.pipeline-stages-row { display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 1.25rem 1rem; border-bottom: 1px solid var(--br2); flex-wrap: wrap; }
+.stage-node { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 18px; border: 2px solid var(--br2); border-radius: 8px; min-width: 80px; text-align: center; transition: all 0.2s; cursor: default; }
+.stage-node.stage-done { border-color: #22c55e; background: rgba(34,197,94,0.08); }
+.stage-node.stage-running { border-color: #8b5cf6; background: rgba(139,92,246,0.08); animation: nodeRunning 1.5s infinite; }
+.stage-node.stage-failed { border-color: #ef4444; background: rgba(239,68,68,0.08); }
+.stage-node.stage-pending { opacity: 0.5; }
+@keyframes nodeRunning {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(139,92,246,0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(139,92,246,0); }
+}
+.stage-icon { font-size: 1.2rem; }
+.stage-label { font-size: 0.78rem; font-weight: 600; }
+.stage-elapsed { font-size: 0.7rem; color: var(--t5); }
+.stage-stop-btn {
+  display: none;
+  margin-top: 4px;
+  padding: 2px 8px;
+  font-size: 0.68rem;
+  background: rgba(239,68,68,0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239,68,68,0.3);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s;
+  line-height: 1.4;
+}
+.stage-stop-btn:hover { background: rgba(239,68,68,0.3); }
+.pipeline-running .stage-stop-btn { display: inline-block; }
+.stage-arrow { color: var(--t5); font-size: 1.2rem; }
+
+/* Accordion */
+.stage-accordions { padding: 0.25rem 0; }
+.stage-accordion { border-top: 1px solid var(--br2); }
+.accordion-header { display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 1.25rem; cursor: pointer; user-select: none; font-size: 0.85rem; }
+.accordion-header:hover { background: var(--bg-in); }
+.acc-toggle { font-size: 0.7rem; color: var(--t5); width: 12px; }
+.acc-name { font-weight: 600; flex: 1; }
+.acc-badge { padding: 1px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 600; background: var(--br2); color: var(--t5); }
+.acc-badge.badge-running { background: rgba(139,92,246,0.15); color: #8b5cf6; }
+.acc-badge.badge-done { background: rgba(34,197,94,0.15); color: #22c55e; }
+.acc-badge.badge-failed { background: rgba(239,68,68,0.15); color: #ef4444; }
+.acc-elapsed { font-size: 0.72rem; color: var(--t5); }
+.stage-log-pre { margin: 0; padding: 0.75rem 1.25rem; font-size: 0.78rem; max-height: 300px; overflow-y: auto; background: var(--bg-in); color: var(--t3); border-radius: 0; white-space: pre-wrap; word-break: break-all; font-family: 'JetBrains Mono', monospace; line-height: 1.55; }
+
+/* Split Button */
+.split-btn-wrap { position: relative; display: flex; }
+.btn-run-main { padding: 6px 14px; background: var(--av); color: white; border: none; border-radius: 6px 0 0 6px; cursor: pointer; font-size: 0.85rem; transition: opacity 0.15s; }
+.btn-run-caret { padding: 6px 9px; background: var(--av); color: white; border: none; border-left: 1px solid rgba(255,255,255,0.3); border-radius: 0 6px 6px 0; cursor: pointer; transition: opacity 0.15s; }
+.btn-run-main:hover, .btn-run-caret:hover { opacity: 0.85; }
+.btn-run-main:disabled, .btn-run-caret:disabled { opacity: 0.45; cursor: not-allowed; }
+.run-dropdown { position: absolute; top: 100%; right: 0; background: var(--bg-c); border: 1px solid var(--br2); border-radius: 6px; min-width: 180px; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.3); margin-top: 4px; }
+.run-dropdown button { display: block; width: 100%; text-align: left; padding: 8px 14px; background: none; border: none; cursor: pointer; font-size: 0.85rem; color: var(--t2); }
+.run-dropdown button:hover { background: var(--bg-in); }
+</style>
+
+<!-- Stats Top Row (Counts Only) -->
+<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; margin-bottom:14px;">
+  <!-- Raw count -->
+  <a href="/raw/{{ date_str }}" class="stat-n" style="text-decoration:none; display:flex; flex-direction:column; padding:16px 20px; transition:transform 0.1s; cursor:pointer;"
+     onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+      <span style="font-size:14px; font-weight:600; color:var(--t4);">收集筆數</span>
+      <span style="font-size:18px; opacity:0.7;">📡</span>
+    </div>
+    <div style="font-size:32px; font-weight:700; color:var(--t1); line-height:1;">{{ stats.raw_count }}</div>
+    <div style="font-size:10.5px; color:var(--t5); margin-top:12px;">點擊檢視原始清單 ➔</div>
+  </a>
+
+  <!-- Scored count -->
+  <div class="stat-v" style="padding:16px 20px; display:flex; flex-direction:column;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+      <span style="font-size:14px; font-weight:600; color:var(--t4);">評分筆數</span>
+      <span style="font-size:18px; opacity:0.7;">🔍</span>
+    </div>
+    <div style="font-size:32px; font-weight:700; color:var(--av); line-height:1;">{{ stats.scored_count }}</div>
+  </div>
+
+  <!-- Posts count -->
+  <div class="stat-g" style="padding:16px 20px; display:flex; flex-direction:column;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+      <span style="font-size:14px; font-weight:600; color:var(--t4);">部落格文</span>
+      <span style="font-size:18px; opacity:0.7;">📝</span>
+    </div>
+    <div style="font-size:32px; font-weight:700; color:var(--ag); line-height:1;">{{ stats.posts_count }}</div>
+  </div>
+
+  <!-- Notes count -->
+  <div class="stat-c" style="padding:16px 20px; display:flex; flex-direction:column;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+      <span style="font-size:14px; font-weight:600; color:var(--t4);">AI 筆記</span>
+      <span style="font-size:18px; opacity:0.7;">📓</span>
+    </div>
+    <div style="font-size:32px; font-weight:700; color:var(--ac); line-height:1;">{{ stats.notes_count }}</div>
+  </div>
+</div>
+
+<!-- Lists Row -->
+{% if posts or notes %}
+<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:14px; margin-bottom:28px; align-items:start;">
+  {% if posts %}
+  <div class="card" style="padding:16px 20px; display:flex; flex-direction:column;">
+    <h3 style="font-size:14px; font-weight:600; color:var(--ag); margin:0 0 12px; display:flex; align-items:center; gap:8px; border-bottom:1px solid var(--br2); padding-bottom:8px;">
+      <span style="font-size:16px;">📝</span> 產出的部落格文
+      <span style="margin-left:auto; font-size:11px; color:var(--t5); font-weight:400;">{{ posts|length }} 篇</span>
+    </h3>
+    <ul style="list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px;">
+      {% for p in posts %}
+      <li>
+        {%- set fb = p.feedback or '' -%}
+        <a href="/post/{{ date_str }}/{{ p.slug }}"
+           style="display:block; padding:9px 12px; border-radius:8px; text-decoration:none;
+                  border-left: 3px solid {% if fb == 'good' %}var(--ag){% elif fb == 'bad' %}var(--ar){% elif fb == 'normal' %}var(--t5){% else %}rgba(52,211,153,0.25){% endif %};
+                  background: {% if fb == 'good' %}rgba(52,211,153,0.05){% elif fb == 'bad' %}rgba(248,113,113,0.03){% else %}rgba(52,211,153,0.03){% endif %};
+                  border-top: 1px solid rgba(52,211,153,0.08); border-right: 1px solid rgba(52,211,153,0.08); border-bottom: 1px solid rgba(52,211,153,0.08);
+                  transition: background 0.13s;">
+          <div style="display:flex; align-items:center; gap:6px; margin-bottom:3px;">
+            <div style="font-size:13px; font-weight:600; color:var(--t1); line-height:1.35; flex:1;
+                        overflow:hidden; display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical;">
+              {{ p.title or p.slug }}
+            </div>
+            {% if fb == 'good' %}<span style="font-size:11px; flex-shrink:0;">👍</span>
+            {% elif fb == 'bad' %}<span style="font-size:11px; flex-shrink:0;">👎</span>{% endif %}
+          </div>
+          <div style="display:flex; gap:4px; align-items:center; flex-wrap:wrap;">
+            {% for tag in (p.tags or [])[:3] %}
+            <span style="font-size:10px; padding:1px 5px; border-radius:3px;
+                         background:rgba(52,211,153,0.1); color:var(--ag);">{{ tag }}</span>
+            {% endfor %}
+            <span style="margin-left:auto; font-size:10.5px; color:var(--t5);">
+              {% if p.fm_score %}⭐{{ p.fm_score|int }} · {% endif %}⏱ {{ p.reading_time_min }}分
+            </span>
+          </div>
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  {% if notes %}
+  <div class="card" style="padding:16px 20px; display:flex; flex-direction:column;">
+    <h3 style="font-size:14px; font-weight:600; color:var(--ac); margin:0 0 12px; display:flex; align-items:center; gap:8px; border-bottom:1px solid var(--br2); padding-bottom:8px;">
+      <span style="font-size:16px;">📓</span> 產出的 AI 筆記
+      <span style="margin-left:auto; font-size:11px; color:var(--t5); font-weight:400;">{{ notes|length }} 篇</span>
+    </h3>
+    <ul style="list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px;">
+      {% for n in notes %}
+      <li>
+        {%- set fb = n.feedback or '' -%}
+        <a href="/note/{{ date_str }}/{{ n.slug }}"
+           style="display:block; padding:9px 12px; border-radius:8px; text-decoration:none;
+                  border-left: 3px solid {% if fb == 'good' %}var(--ag){% elif fb == 'bad' %}var(--ar){% elif fb == 'normal' %}var(--t5){% else %}rgba(34,211,238,0.25){% endif %};
+                  background: {% if fb == 'good' %}rgba(52,211,153,0.05){% elif fb == 'bad' %}rgba(248,113,113,0.03){% else %}rgba(34,211,238,0.03){% endif %};
+                  border-top: 1px solid rgba(34,211,238,0.08); border-right: 1px solid rgba(34,211,238,0.08); border-bottom: 1px solid rgba(34,211,238,0.08);
+                  transition: background 0.13s;">
+          <div style="display:flex; align-items:center; gap:6px; margin-bottom:3px;">
+            <div style="font-size:13px; font-weight:600; color:var(--t1); line-height:1.35; flex:1;
+                        overflow:hidden; display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical;">
+              {{ n.title or n.slug }}
+            </div>
+            {% if fb == 'good' %}<span style="font-size:11px; flex-shrink:0;">👍</span>
+            {% elif fb == 'bad' %}<span style="font-size:11px; flex-shrink:0;">👎</span>{% endif %}
+          </div>
+          <div style="display:flex; gap:4px; align-items:center; flex-wrap:wrap;">
+            {% for tag in (n.tags or [])[:3] %}
+            <span style="font-size:10px; padding:1px 5px; border-radius:3px;
+                         background:rgba(34,211,238,0.1); color:var(--ac);">{{ tag }}</span>
+            {% endfor %}
+            <span style="margin-left:auto; font-size:10.5px; color:var(--t5);">
+              {% if n.fm_score %}⭐{{ n.fm_score|int }} · {% endif %}⏱ {{ n.reading_time_min }}分
+            </span>
+          </div>
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+</div>
+{% else %}
+<div style="margin-bottom:28px;"></div>
+{% endif %}
+
+<!-- Charts -->
+{% if stats.scored_count > 0 %}
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:28px;" class="chart-grid">
+  <div class="card" style="padding:18px;">
+    <h3 style="font-size:13px; font-weight:600; color:var(--t3); margin:0 0 14px;">分數分佈</h3>
+    <div style="position:relative; height:160px;">
+      <canvas id="scoreChart"></canvas>
+    </div>
+  </div>
+  <div class="card" style="padding:18px;">
+    <h3 style="font-size:13px; font-weight:600; color:var(--t3); margin:0 0 14px;">來源佔比</h3>
+    <div style="position:relative; height:160px;">
+      <canvas id="sourceChart"></canvas>
+    </div>
+  </div>
+</div>
+<style>@media(max-width:600px){.chart-grid{grid-template-columns:1fr!important;}}</style>
+{% endif %}
+
+<!-- Scored items table -->
+<section>
+  <h3 style="font-size:15px; font-weight:600; color:var(--t2); margin:0 0 14px;">評分列表</h3>
+  {% if items %}
+  <div class="card" style="overflow:hidden;">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th style="width:36px;">#</th>
+          <th>分數</th>
+          <th style="width:120px;">來源</th>
+          <th style="width:50%;">標題 / 資訊</th>
+          <th>詳細評語</th>
+          <th style="width:60px;"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for it in items %}
+        <tr>
+          <td style="color:var(--t5); font-family:'JetBrains Mono',monospace; font-size:12px;">
+            {{ loop.index }}
+          </td>
+          <td>
+            <div style="display:flex; flex-direction:column; gap:3px;">
+              <span class="score-badge">{{ "%.0f"|format(it.total_score) }}</span>
+              <span style="font-size:11px; color:var(--t5); font-family:'JetBrains Mono',monospace;">
+                R:{{ "%.0f"|format(it.rule_score) }}{% if it.llm_score is not none %} L:{{ "%.0f"|format(it.llm_score) }}{% endif %}
+              </span>
+            </div>
+          </td>
+          <td>
+            <span class="chip" style="display:inline-block; max-width:90px;
+                  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+              {{ it.source_name or it.source }}
+            </span>
+          </td>
+          <td style="max-width:300px;">
+            <div style="display:flex; flex-direction:column; gap:6px;">
+              <a href="{{ it.url }}" target="_blank" class="link-v"
+                 style="font-size:13.5px; font-weight:500; line-height:1.4; color:var(--t2);"
+                 onmouseover="this.style.color='var(--av)'" onmouseout="this.style.color='var(--t2)'">
+                {{ it.title }}
+              </a>
+              {% if it.tags or it.authors %}
+              <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+                {% for t in (it.tags or [])[:4] %}
+                <span class="tag-v" style="font-size:10px; padding:1px 6px;">{{ t }}</span>
+                {% endfor %}
+                {% if it.authors %}
+                <span style="font-size:11px; color:var(--t4);">{{ it.authors[0] }}{% if it.authors|length > 1 %} et al.{% endif %}</span>
+                {% endif %}
+              </div>
+              {% endif %}
+              {% if it.abstract %}
+              <details style="font-size:11.5px; color:var(--t4); margin-top:2px;">
+                <summary style="cursor:pointer; opacity:0.8;">預覽摘要</summary>
+                <div style="margin-top:4px; padding:8px; background:var(--bg-in); border-radius:6px; line-height:1.5;">
+                  {{ it.abstract[:400] }}{% if it.abstract|length > 400 %}...{% endif %}
+                </div>
+              </details>
+              {% endif %}
+            </div>
+          </td>
+          <td style="color:var(--t5); font-size:12px; min-width:200px; line-height:1.5;">
+            {{ it.llm_reason }}
+          </td>
+          <td>
+            <a href="/item/{{ date_str }}/{{ it.index }}" class="link-v"
+               style="display:inline-flex; align-items:center; gap:3px;
+                      font-size:12.5px; white-space:nowrap;">
+              詳細
+              <svg style="width:12px; height:12px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+              </svg>
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card" style="padding:48px; text-align:center;">
+    <div style="font-size:32px; margin-bottom:12px;">📭</div>
+    <p style="color:var(--t4); font-size:14px; margin:0;">{{ date_str }} 尚無評分資料</p>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% if stats.scored_count > 0 %}
+<script>
+window.__charts = window.__charts || [];
+var isDark = !document.documentElement.classList.contains('light');
+Chart.defaults.color = isDark ? '#64748b' : '#94a3b8';
+Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
+
+var gridColor = isDark ? 'rgba(51,65,85,0.4)' : 'rgba(203,213,225,0.5)';
+var textColor = isDark ? '#64748b' : '#94a3b8';
+
+var scoreCtx = document.getElementById('scoreChart');
+if (scoreCtx) {
+  var c1 = new Chart(scoreCtx, {
+    type: 'bar',
+    data: {
+      labels: {{ stats.score_dist_labels | tojson }},
+      datasets: [{
+        data: {{ stats.score_dist | tojson }},
+        backgroundColor: 'rgba(139,92,246,0.25)',
+        borderColor: 'rgba(139,92,246,0.7)',
+        borderWidth: 1.5,
+        borderRadius: 5,
+        hoverBackgroundColor: 'rgba(139,92,246,0.4)',
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: gridColor }, ticks: { color: textColor, font: { size: 11 } } },
+        y: { grid: { color: gridColor }, ticks: { color: textColor, font: { size: 11 }, precision: 0 }, beginAtZero: true }
+      }
+    }
+  });
+  window.__charts.push(c1);
+}
+
+var srcCtx = document.getElementById('sourceChart');
+if (srcCtx) {
+  var srcData = {{ stats.source_counts | tojson }};
+  var sorted = Object.entries(srcData).sort(function(a,b){ return b[1]-a[1]; }).slice(0,7);
+  var palette = ['#a78bfa','#22d3ee','#34d399','#fbbf24','#f87171','#818cf8','#38bdf8'];
+  var c2 = new Chart(srcCtx, {
+    type: 'doughnut',
+    data: {
+      labels: sorted.map(function(x){ return x[0]; }),
+      datasets: [{
+        data: sorted.map(function(x){ return x[1]; }),
+        backgroundColor: palette.map(function(c){ return c+'aa'; }),
+        borderColor: palette, borderWidth: 1.5, hoverOffset: 4,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '65%',
+      plugins: {
+        legend: {
+          position: 'right',
+          labels: { color: textColor, font: { size: 11 }, boxWidth: 11, padding: 7 }
+        }
+      }
+    }
+  });
+  window.__charts.push(c2);
+}
+</script>
+{% endif %}
+
+<script>
+const dateStr = "{{ date_str }}";
+const STAGES = ['collect', 'score', 'generate'];
+let _es = null;
+
+const stageState = {
+  collect:  { status: 'pending', elapsed: null },
+  score:    { status: 'pending', elapsed: null },
+  generate: { status: 'pending', elapsed: null },
+};
+
+// ---- Stage UI helpers ----
+function updateStageNode(name) {
+  const s = stageState[name];
+  const node = document.getElementById('snode-' + name);
+  const icon = document.getElementById('sicon-' + name);
+  const el   = document.getElementById('selapsed-' + name);
+  if (!node) return;
+  node.className = 'stage-node stage-' + s.status;
+  icon.textContent = { pending: '⬜', running: '⟳', done: '✓', failed: '✗' }[s.status] || '⬜';
+  el.textContent   = s.elapsed ? s.elapsed + 's' : (s.status === 'running' ? '...' : '-');
+}
+
+function updateAccordion(name) {
+  const s     = stageState[name];
+  const badge = document.getElementById('abadge-' + name);
+  const el    = document.getElementById('aelapsed-' + name);
+  if (!badge) return;
+  const labels = { pending: '等待中', running: '執行中', done: '完成', failed: '失敗' };
+  badge.textContent = labels[s.status] || s.status;
+  badge.className   = 'acc-badge' + (s.status !== 'pending' ? ' badge-' + s.status : '');
+  el.textContent    = s.elapsed ? s.elapsed + 's' : '';
+}
+
+function expandAccordion(name) {
+  const body = document.getElementById('abody-' + name);
+  if (body) body.style.display = 'block';
+  const toggle = document.getElementById('atoggle-' + name);
+  if (toggle) toggle.textContent = '▼';
+}
+
+function collapseAccordion(name) {
+  const body = document.getElementById('abody-' + name);
+  if (body) body.style.display = 'none';
+  const toggle = document.getElementById('atoggle-' + name);
+  if (toggle) toggle.textContent = '▶';
+}
+
+function toggleAccordion(name) {
+  const body = document.getElementById('abody-' + name);
+  if (!body) return;
+  if (body.style.display === 'none') expandAccordion(name);
+  else collapseAccordion(name);
+}
+
+function appendStageLog(name, text) {
+  const pre = document.getElementById('slog-' + name);
+  if (!pre) return;
+  pre.textContent += text + '\n';
+  pre.scrollTop = pre.scrollHeight;
+}
+
+function updatePipelineBadge(status) {
+  const badge = document.getElementById('pipeline-badge');
+  if (!badge) return;
+  const labels = { done: '✓ 完成', running: '⟳ 執行中', failed: '✗ 失敗',
+                   idle: '尚未執行', collected: '已收集', scored: '評分完成' };
+  badge.textContent = labels[status] || status;
+  badge.className   = 'pipeline-badge badge-' + status;
+}
+
+// ---- Stage Info (page load) ----
+async function initStageInfo() {
+  try {
+    const r = await fetch('/api/logs/' + dateStr + '/stage-info');
+    if (!r.ok) return;
+    const data = await r.json();
+    data.stages.forEach(function(s) {
+      stageState[s.name] = { status: s.status, elapsed: s.elapsed };
+      updateStageNode(s.name);
+      updateAccordion(s.name);
+      if (s.status === 'done') expandAccordion(s.name);
+    });
+    updatePipelineBadge(data.pipeline_status);
+    if (data.pipeline_status === 'running') openLogStream();
+  } catch(e) { /* 靜默失敗 */ }
+}
+
+// ---- SSE Stream ----
+function openLogStream() {
+  if (_es) { _es.close(); }
+  _es = new EventSource('/api/logs/' + dateStr + '/stream');
+
+  _es.onmessage = function(e) {
+    const sep = e.data.indexOf('|');
+    if (sep === -1) return;
+    const stageName = e.data.substring(0, sep);
+    const text = e.data.substring(sep + 1);
+    if (STAGES.indexOf(stageName) !== -1) appendStageLog(stageName, text);
+  };
+
+  _es.addEventListener('stage', function(e) {
+    const payload = JSON.parse(e.data);
+    const name = payload.name, action = payload.action, elapsed = payload.elapsed;
+    if (action === 'start') {
+      stageState[name].status = 'running';
+      expandAccordion(name);
+    } else if (action === 'end') {
+      stageState[name].status = 'done';
+      stageState[name].elapsed = elapsed;
+    }
+    updateStageNode(name);
+    updateAccordion(name);
+    updatePipelineBadge('running');
+  });
+
+  _es.addEventListener('done', function() {
+    _es.close(); _es = null;
+    updatePipelineBadge('done');
+    setTimeout(function() { location.reload(); }, 1500);
+  });
+
+  _es.onerror = function() {
+    if (_es) { _es.close(); _es = null; }
+  };
+}
+
+// ---- Trigger Run ----
+async function triggerRun(dateStr, force) {
+  const mainBtn  = document.getElementById('btn-run-main');
+  const caretBtn = document.getElementById('btn-run-caret');
+  mainBtn.disabled  = true;
+  caretBtn.disabled = true;
+  closeRunDropdown();
+
+  // 重置 stage 狀態
+  STAGES.forEach(function(s) {
+    stageState[s] = { status: 'pending', elapsed: null };
+    updateStageNode(s);
+    updateAccordion(s);
+    const pre = document.getElementById('slog-' + s);
+    if (pre) pre.textContent = '';
+    collapseAccordion(s);
+  });
+  updatePipelineBadge('running');
+
+  try {
+    const url = force ? '/api/run/' + dateStr + '/force' : '/api/run/' + dateStr;
+    const res  = await fetch(url, { method: 'POST' });
+    const data = await res.json();
+    showToast(data.message || 'Pipeline 已啟動', '🚀');
+    setTimeout(function() { openLogStream(); }, 800);
+  } catch(e) {
+    showToast('啟動失敗，請確認 server 狀態', '❌');
+    updatePipelineBadge('failed');
+  }
+  setTimeout(function() { mainBtn.disabled = false; caretBtn.disabled = false; }, 5000);
+}
+
+// ---- Dropdown ----
+function toggleRunDropdown(e) {
+  e.stopPropagation();
+  const d = document.getElementById('run-dropdown');
+  d.style.display = (d.style.display === 'none' || d.style.display === '') ? 'block' : 'none';
+}
+function closeRunDropdown() {
+  const d = document.getElementById('run-dropdown');
+  if (d) d.style.display = 'none';
+}
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.split-btn-wrap')) closeRunDropdown();
+});
+
+// Init
+initStageInfo();
+</script>
+{% endblock %}
