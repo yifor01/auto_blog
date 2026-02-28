@@ -647,6 +647,10 @@ async def api_logs_stream(date_str: str):
                                     display = f"[{level}] {msg}" + (f" {extras}" if extras else "")
                             except Exception:
                                 pass
+                            # 偵測 pipeline 取消
+                            if "Pipeline cancelled by user" in display:
+                                yield f"event: cancelled\ndata: {{}}\n\n"
+                                return
                             # 若偵測到 pipeline 結束行，立即送 done event
                             if "=== Pipeline finished" in line:
                                 yield f"data: pipeline|{display}\n\n"
@@ -668,6 +672,9 @@ async def api_logs_stream(date_str: str):
             # 若 pipeline 結束且 30 秒無新輸出，斷開連線
             if consecutive_idle >= 30 and log_path.exists():
                 content = log_path.read_text(encoding="utf-8", errors="replace")
+                if "Pipeline cancelled by user" in content:
+                    yield f"event: cancelled\ndata: {{}}\n\n"
+                    return
                 if "=== Pipeline finished" in content:
                     yield "data: [Pipeline 已結束]\n\n"
                     yield "event: done\ndata: done\n\n"
