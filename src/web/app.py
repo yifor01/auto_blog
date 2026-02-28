@@ -564,6 +564,13 @@ async def api_logs_stage_info(date_str: str):
                 if date_str not in RUNNING_TASKS:
                     pipeline_status = "running"
                 continue
+            if "Pipeline cancelled by user" in line:
+                pipeline_status = "cancelled"
+                # 將仍為 running 的 stage 標為 cancelled
+                for n in stages_order:
+                    if stages[n]["status"] == "running":
+                        stages[n]["status"] = "cancelled"
+                continue
             if "=== Pipeline finished" in line:
                 if date_str not in RUNNING_TASKS:
                     pipeline_status = "done" if "exit_code=0" in line else "failed"
@@ -810,8 +817,12 @@ async def api_run_stop(date_str: str):
 
     proc.terminate()
     try:
-        proc.wait(timeout=3)
-    except subprocess.TimeoutExpired:
+        loop = asyncio.get_event_loop()
+        await asyncio.wait_for(
+            loop.run_in_executor(None, proc.wait),
+            timeout=3.0,
+        )
+    except asyncio.TimeoutError:
         proc.kill()
 
     return JSONResponse({"message": f"Pipeline 已中止（{date_str}）", "date": date_str})
