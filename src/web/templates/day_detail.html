@@ -477,7 +477,7 @@ function updateStageNode(name) {
   const el   = document.getElementById('selapsed-' + name);
   if (!node) return;
   node.className = 'stage-node stage-' + s.status;
-  icon.textContent = { pending: '⬜', running: '⟳', done: '✓', failed: '✗' }[s.status] || '⬜';
+  icon.textContent = { pending: '⬜', running: '⟳', done: '✓', failed: '✗', cancelled: '⊘' }[s.status] || '⬜';
   el.textContent   = s.elapsed ? s.elapsed + 's' : (s.status === 'running' ? '...' : '-');
 }
 
@@ -486,7 +486,7 @@ function updateAccordion(name) {
   const badge = document.getElementById('abadge-' + name);
   const el    = document.getElementById('aelapsed-' + name);
   if (!badge) return;
-  const labels = { pending: '等待中', running: '執行中', done: '完成', failed: '失敗' };
+  const labels = { pending: '等待中', running: '執行中', done: '完成', failed: '失敗', cancelled: '已取消' };
   badge.textContent = labels[s.status] || s.status;
   badge.className   = 'acc-badge' + (s.status !== 'pending' ? ' badge-' + s.status : '');
   el.textContent    = s.elapsed ? s.elapsed + 's' : '';
@@ -524,7 +524,8 @@ function updatePipelineBadge(status) {
   const badge = document.getElementById('pipeline-badge');
   if (!badge) return;
   const labels = { done: '✓ 完成', running: '⟳ 執行中', failed: '✗ 失敗',
-                   idle: '尚未執行', collected: '已收集', scored: '評分完成' };
+                   idle: '尚未執行', collected: '已收集', scored: '評分完成',
+                   cancelled: '⊘ 已取消' };
   badge.textContent = labels[status] || status;
   badge.className   = 'pipeline-badge badge-' + status;
 }
@@ -549,6 +550,7 @@ async function initStageInfo() {
 // ---- SSE Stream ----
 function openLogStream() {
   if (_es) { _es.close(); }
+  document.getElementById('pipeline-card').classList.add('pipeline-running');
   _es = new EventSource('/api/logs/' + dateStr + '/stream');
 
   _es.onmessage = function(e) {
@@ -576,12 +578,28 @@ function openLogStream() {
 
   _es.addEventListener('done', function() {
     _es.close(); _es = null;
+    document.getElementById('pipeline-card').classList.remove('pipeline-running');
     updatePipelineBadge('done');
     setTimeout(function() { location.reload(); }, 1500);
   });
 
+  _es.addEventListener('cancelled', function() {
+    _es.close(); _es = null;
+    document.getElementById('pipeline-card').classList.remove('pipeline-running');
+    STAGES.forEach(function(s) {
+      if (stageState[s].status === 'running') {
+        stageState[s].status = 'cancelled';
+        updateStageNode(s);
+        updateAccordion(s);
+      }
+    });
+    updatePipelineBadge('cancelled');
+    showToast('Pipeline 已取消', '⊘');
+  });
+
   _es.onerror = function() {
     if (_es) { _es.close(); _es = null; }
+    document.getElementById('pipeline-card').classList.remove('pipeline-running');
   };
 }
 
@@ -603,6 +621,7 @@ async function triggerRun(dateStr, force) {
     collapseAccordion(s);
   });
   updatePipelineBadge('running');
+  document.getElementById('pipeline-card').classList.add('pipeline-running');
 
   try {
     const url = force ? '/api/run/' + dateStr + '/force' : '/api/run/' + dateStr;
@@ -613,8 +632,20 @@ async function triggerRun(dateStr, force) {
   } catch(e) {
     showToast('啟動失敗，請確認 server 狀態', '❌');
     updatePipelineBadge('failed');
+    document.getElementById('pipeline-card').classList.remove('pipeline-running');
   }
   setTimeout(function() { mainBtn.disabled = false; caretBtn.disabled = false; }, 5000);
+}
+
+async function stopPipeline() {
+  if (!confirm('確定要中止此 Pipeline 嗎？')) return;
+  try {
+    const res = await fetch('/api/run/' + dateStr + '/stop', { method: 'POST' });
+    const data = await res.json();
+    showToast(data.message || 'Pipeline 已中止', '⊘');
+  } catch(e) {
+    showToast('中止失敗，請確認 server 狀態', '❌');
+  }
 }
 
 // ---- Dropdown ----
