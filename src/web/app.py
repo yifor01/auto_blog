@@ -28,6 +28,7 @@ async def startup_event():
 
 
 RUNNING_TASKS: set[str] = set()
+RUNNING_PROCS: dict[str, subprocess.Popen] = {}
 
 # B5: 改用 pathlib 建構路徑，避免 str.replace 脆弱性
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
@@ -726,13 +727,18 @@ def _run_pipeline(date_str: str, force: bool) -> None:
                 encoding="utf-8",
                 env=env,
             )
+            RUNNING_PROCS[date_str] = proc
             proc.wait()
             exit_code = proc.returncode
-            log_file.write(f"\n=== Pipeline finished: exit_code={exit_code} ===\n")
+            if exit_code == -15 or exit_code == -9:  # SIGTERM / SIGKILL
+                log_file.write(f"\n=== Pipeline cancelled by user: exit_code={exit_code} ===\n")
+            else:
+                log_file.write(f"\n=== Pipeline finished: exit_code={exit_code} ===\n")
     except Exception as e:
         log_path.write_text(f"Pipeline failed to start: {e}\n", encoding="utf-8")
     finally:
         RUNNING_TASKS.discard(date_str)
+        RUNNING_PROCS.pop(date_str, None)
 
 
 @app.post("/api/run/{date_str}")
@@ -755,6 +761,28 @@ async def api_run_force(date_str: str, background_tasks: BackgroundTasks):
         raise HTTPException(status_code=400, detail="日期格式錯誤")
     background_tasks.add_task(_run_pipeline, date_str, True)
     return JSONResponse({"message": f"強制重跑已啟動（{date_str}），可透過 /api/logs/{date_str} 查看進度", "date": date_str})
+
+
+@app.post("/api/run/{date_str}/stop")
+async def api_run_stop(date_str: str):
+    """中止正在執行的 pipeline。"""
+    try:
+        date.fromisoformat(date_str)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="日期格式錯誤")
+
+    proc = RUNNING_PROCS.get(date_str)
+    if proc is None:
+        raise HTTPException(status_code=404, detail="找不到執行中的 pipeline")
+
+    # 嘗試優雅終止，3 秒後強制殺死
+    proc.terminate()
+    try:
+        proc.wait(timeout=3)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+
+    return JSONResponse({"message": f"Pipeline 已中止（{date_str}）", "date": date_str})
 
 
 @app.post("/api/feedback/{date_str}/{slug}/{rating}")
