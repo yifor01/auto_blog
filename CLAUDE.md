@@ -49,7 +49,7 @@ python -m src.cli web                    # 啟動監控網頁 http://127.0.0.1:8
 autopb run
 
 # Testing
-pytest tests/
+pytest tests/                            # 110 tests
 ```
 
 ## Architecture
