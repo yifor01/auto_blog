@@ -45,34 +45,35 @@
     </div>
   </div>
 
-  <!-- 階段節點列 -->
+  <!-- 階段卡片列 -->
   <div class="pipeline-stages-row">
     {% for stage_name, stage_label in [('collect','收集'),('score','評分'),('generate','生成')] %}
-    {% if not loop.first %}<div class="stage-arrow">→</div>{% endif %}
-    <div class="stage-node stage-pending" id="snode-{{ stage_name }}">
-      <div class="stage-icon" id="sicon-{{ stage_name }}">⬜</div>
-      <div class="stage-label">{{ stage_label }}</div>
-      <div class="stage-elapsed" id="selapsed-{{ stage_name }}">-</div>
-      <button class="stage-stop-btn" onclick="stopPipeline()">■ 停止</button>
+    <div class="stage-card stage-pending" id="scard-{{ stage_name }}"
+         onclick="selectStage('{{ stage_name }}')">
+      <div class="stage-card-header">
+        <span class="stage-icon" id="sicon-{{ stage_name }}">⬜</span>
+        <span class="stage-warn-icon" id="swarn-{{ stage_name }}" style="display:none">⚠</span>
+      </div>
+      <div class="stage-card-label">{{ stage_label }}</div>
+      <div class="stage-card-count" id="scount-{{ stage_name }}">-</div>
+      <div class="stage-card-elapsed" id="selapsed-{{ stage_name }}">-</div>
+      <div class="stage-card-actions">
+        <button class="stage-rerun-btn" id="srerun-{{ stage_name }}"
+                onclick="rerunStage('{{ stage_name }}', event)" title="重新執行">↺</button>
+        <button class="stage-stop-btn" id="sstop-{{ stage_name }}"
+                onclick="stopPipeline(event)" title="停止">■</button>
+      </div>
     </div>
     {% endfor %}
   </div>
 
-  <!-- 每階段 log accordion -->
-  <div class="stage-accordions">
-    {% for stage_name, stage_label in [('collect','收集'),('score','評分'),('generate','生成')] %}
-    <div class="stage-accordion" id="sacc-{{ stage_name }}">
-      <div class="accordion-header" onclick="toggleAccordion('{{ stage_name }}')">
-        <span class="acc-toggle" id="atoggle-{{ stage_name }}">▶</span>
-        <span class="acc-name">{{ stage_label }}</span>
-        <span class="acc-badge" id="abadge-{{ stage_name }}">等待中</span>
-        <span class="acc-elapsed" id="aelapsed-{{ stage_name }}"></span>
-      </div>
-      <div class="accordion-body" id="abody-{{ stage_name }}" style="display:none;">
-        <pre class="stage-log-pre" id="slog-{{ stage_name }}"></pre>
-      </div>
+  <!-- Log Panel -->
+  <div class="log-panel" id="log-panel" style="display:none">
+    <div class="log-panel-header">
+      <span id="log-panel-title">Log</span>
+      <button class="log-panel-close" onclick="closeLogPanel()">×</button>
     </div>
-    {% endfor %}
+    <pre class="log-panel-pre" id="log-panel-pre"></pre>
   </div>
 </div>
 
@@ -89,58 +90,112 @@
 .pipeline-badge.badge-none, .pipeline-badge.badge-idle { background: var(--br2); color: var(--t5); }
 .pipeline-badge.badge-failed { background: rgba(239,68,68,0.15); color: #ef4444; }
 .pipeline-badge.badge-cancelled { background: rgba(249,115,22,0.15); color: #f97316; }
-.stage-node.stage-cancelled { border-color: #f97316; background: rgba(249,115,22,0.08); }
-.acc-badge.badge-cancelled { background: rgba(249,115,22,0.15); color: #f97316; }
 .pipeline-duration { font-size: 0.8rem; color: var(--t5); }
 @keyframes pipelinePulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.6; }
 }
 
-/* Stage Nodes */
-.pipeline-stages-row { display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 1.25rem 1rem; border-bottom: 1px solid var(--br2); flex-wrap: wrap; }
-.stage-node { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 18px; border: 2px solid var(--br2); border-radius: 8px; min-width: 80px; text-align: center; transition: all 0.2s; cursor: default; }
-.stage-node.stage-done { border-color: #22c55e; background: rgba(34,197,94,0.08); }
-.stage-node.stage-running { border-color: #8b5cf6; background: rgba(139,92,246,0.08); animation: nodeRunning 1.5s infinite; }
-.stage-node.stage-failed { border-color: #ef4444; background: rgba(239,68,68,0.08); }
-.stage-node.stage-pending { opacity: 0.5; }
-@keyframes nodeRunning {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(139,92,246,0.4); }
-  50% { box-shadow: 0 0 0 6px rgba(139,92,246,0); }
+/* Stage Cards Row */
+.pipeline-stages-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 1.25rem 1rem 0.75rem;
 }
-.stage-icon { font-size: 1.2rem; }
-.stage-label { font-size: 0.78rem; font-weight: 600; }
-.stage-elapsed { font-size: 0.7rem; color: var(--t5); }
-.stage-stop-btn {
-  display: none;
-  margin-top: 4px;
-  padding: 2px 8px;
-  font-size: 0.68rem;
-  background: rgba(239,68,68,0.15);
-  color: #ef4444;
-  border: 1px solid rgba(239,68,68,0.3);
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background 0.15s;
-  line-height: 1.4;
-}
-.stage-stop-btn:hover { background: rgba(239,68,68,0.3); }
-.pipeline-running .stage-stop-btn { display: inline-block; }
-.stage-arrow { color: var(--t5); font-size: 1.2rem; }
 
-/* Accordion */
-.stage-accordions { padding: 0.25rem 0; }
-.stage-accordion { border-top: 1px solid var(--br2); }
-.accordion-header { display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 1.25rem; cursor: pointer; user-select: none; font-size: 0.85rem; }
-.accordion-header:hover { background: var(--bg-in); }
-.acc-toggle { font-size: 0.7rem; color: var(--t5); width: 12px; }
-.acc-name { font-weight: 600; flex: 1; }
-.acc-badge { padding: 1px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 600; background: var(--br2); color: var(--t5); }
-.acc-badge.badge-running { background: rgba(139,92,246,0.15); color: #8b5cf6; }
-.acc-badge.badge-done { background: rgba(34,197,94,0.15); color: #22c55e; }
-.acc-badge.badge-failed { background: rgba(239,68,68,0.15); color: #ef4444; }
-.acc-elapsed { font-size: 0.72rem; color: var(--t5); }
-.stage-log-pre { margin: 0; padding: 0.75rem 1.25rem; font-size: 0.78rem; max-height: 300px; overflow-y: auto; background: var(--bg-in); color: var(--t3); border-radius: 0; white-space: pre-wrap; word-break: break-all; font-family: 'JetBrains Mono', monospace; line-height: 1.55; }
+/* Stage Card */
+.stage-card {
+  cursor: pointer;
+  border: 1px solid var(--br2);
+  border-radius: 8px;
+  padding: 12px;
+  width: 160px;
+  transition: border-color .2s, box-shadow .2s;
+  position: relative;
+}
+.stage-card:hover { border-color: var(--accent, #8b5cf6); }
+.stage-card.selected { border-color: var(--accent, #8b5cf6); box-shadow: 0 0 0 2px rgba(139,92,246,.2); }
+
+.stage-card-header { display: flex; align-items: center; gap: 4px; margin-bottom: 4px; }
+.stage-icon { font-size: 18px; }
+.stage-warn-icon { color: #eab308; font-size: 14px; }
+.stage-card-label { font-weight: 600; font-size: 14px; }
+.stage-card-count { font-size: 12px; color: var(--t5); margin-top: 2px; }
+.stage-card-elapsed { font-size: 11px; color: var(--t5); }
+.stage-card-actions { margin-top: 8px; display: flex; gap: 6px; }
+
+/* Stage card status colours */
+.stage-card.stage-pending { opacity: 0.6; }
+.stage-card.stage-running { border-color: #3b82f6; opacity: 1; animation: nodeRunning 1.5s infinite; }
+.stage-card.stage-done { border-color: #22c55e; opacity: 1; }
+.stage-card.stage-failed { border-color: #ef4444; opacity: 1; }
+.stage-card.stage-cancelled { border-color: #f97316; opacity: 1; }
+.stage-card.stage-warning { border-color: #eab308; }
+@keyframes nodeRunning {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(59,130,246,0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(59,130,246,0); }
+}
+
+/* Per-stage buttons */
+.stage-rerun-btn, .stage-stop-btn {
+  display: none;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--br2);
+  background: var(--bg-in, #1e293b);
+  color: var(--t2);
+  cursor: pointer;
+  font-size: 13px;
+}
+.stage-card.stage-done .stage-rerun-btn,
+.stage-card.stage-failed .stage-rerun-btn,
+.stage-card.stage-cancelled .stage-rerun-btn { display: inline-block; }
+
+.pipeline-running .stage-stop-btn { display: inline-block; }
+
+/* Log Panel */
+.log-panel {
+  margin: 0 1rem 1rem;
+  border: 1px solid var(--br2);
+  border-radius: 8px;
+  background: #0d1117;
+  overflow: hidden;
+}
+.log-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--br2);
+  font-size: 13px;
+  font-weight: 600;
+}
+.log-panel-close {
+  background: none;
+  border: none;
+  color: var(--t5);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0 4px;
+}
+.log-panel-pre {
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 12px;
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin: 0;
+  color: #c9d1d9;
+  font-family: 'JetBrains Mono', monospace;
+}
+.log-entry { display: block; }
+.log-ts    { color: #484f58; }
+.log-INFO  { color: #79c0ff; }
+.log-WARN, .log-WARNING { color: #e3b341; }
+.log-ERROR { color: #f85149; }
 
 /* Split Button */
 .split-btn-wrap { position: relative; display: flex; }
@@ -461,63 +516,24 @@ if (srcCtx) {
 <script>
 const dateStr = "{{ date_str }}";
 const STAGES = ['collect', 'score', 'generate'];
+const STAGE_LABELS = { collect: '收集', score: '評分', generate: '生成' };
 let _es = null;
 
 const stageState = {
-  collect:  { status: 'pending', elapsed: null },
-  score:    { status: 'pending', elapsed: null },
-  generate: { status: 'pending', elapsed: null },
+  collect:  { status: 'pending', elapsed: null, itemCount: null },
+  score:    { status: 'pending', elapsed: null, itemCount: null },
+  generate: { status: 'pending', elapsed: null, itemCount: null },
 };
+let _selectedStage = null;
+const _liveLogs = { collect: [], score: [], generate: [] };
 
-// ---- Stage UI helpers ----
-function updateStageNode(name) {
-  const s = stageState[name];
-  const node = document.getElementById('snode-' + name);
-  const icon = document.getElementById('sicon-' + name);
-  const el   = document.getElementById('selapsed-' + name);
-  if (!node) return;
-  node.className = 'stage-node stage-' + s.status;
-  icon.textContent = { pending: '⬜', running: '⟳', done: '✓', failed: '✗', cancelled: '⊘' }[s.status] || '⬜';
-  el.textContent   = s.elapsed ? s.elapsed + 's' : (s.status === 'running' ? '...' : '-');
-}
-
-function updateAccordion(name) {
-  const s     = stageState[name];
-  const badge = document.getElementById('abadge-' + name);
-  const el    = document.getElementById('aelapsed-' + name);
-  if (!badge) return;
-  const labels = { pending: '等待中', running: '執行中', done: '完成', failed: '失敗', cancelled: '已取消' };
-  badge.textContent = labels[s.status] || s.status;
-  badge.className   = 'acc-badge' + (s.status !== 'pending' ? ' badge-' + s.status : '');
-  el.textContent    = s.elapsed ? s.elapsed + 's' : '';
-}
-
-function expandAccordion(name) {
-  const body = document.getElementById('abody-' + name);
-  if (body) body.style.display = 'block';
-  const toggle = document.getElementById('atoggle-' + name);
-  if (toggle) toggle.textContent = '▼';
-}
-
-function collapseAccordion(name) {
-  const body = document.getElementById('abody-' + name);
-  if (body) body.style.display = 'none';
-  const toggle = document.getElementById('atoggle-' + name);
-  if (toggle) toggle.textContent = '▶';
-}
-
-function toggleAccordion(name) {
-  const body = document.getElementById('abody-' + name);
-  if (!body) return;
-  if (body.style.display === 'none') expandAccordion(name);
-  else collapseAccordion(name);
-}
-
-function appendStageLog(name, text) {
-  const pre = document.getElementById('slog-' + name);
-  if (!pre) return;
-  pre.textContent += text + '\n';
-  pre.scrollTop = pre.scrollHeight;
+// ---- Helpers ----
+function escapeHtml(text) {
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 function updatePipelineBadge(status) {
@@ -530,24 +546,136 @@ function updatePipelineBadge(status) {
   badge.className   = 'pipeline-badge badge-' + status;
 }
 
-// ---- Stage Info (page load) ----
-async function initStageInfo() {
-  try {
-    const r = await fetch('/api/logs/' + dateStr + '/stage-info');
-    if (!r.ok) return;
-    const data = await r.json();
-    data.stages.forEach(function(s) {
-      stageState[s.name] = { status: s.status, elapsed: s.elapsed };
-      updateStageNode(s.name);
-      updateAccordion(s.name);
-      if (s.status === 'done') expandAccordion(s.name);
+// ---- Stage Card UI ----
+function updateStageCard(name) {
+  const s = stageState[name];
+  const card = document.getElementById('scard-' + name);
+  if (!card) return;
+  ['pending', 'running', 'done', 'failed', 'cancelled', 'warning'].forEach(function(c) {
+    card.classList.remove('stage-' + c);
+  });
+  card.classList.add('stage-' + s.status);
+
+  const icons = { pending: '⬜', running: '⟳', done: '✓', failed: '✗', cancelled: '⊘' };
+  document.getElementById('sicon-' + name).textContent = icons[s.status] || '⬜';
+
+  const el = document.getElementById('selapsed-' + name);
+  if (s.elapsed !== null) {
+    el.textContent = s.elapsed + 's';
+  } else {
+    el.textContent = s.status === 'running' ? '...' : '-';
+  }
+
+  const countEl = document.getElementById('scount-' + name);
+  if (s.itemCount !== null) {
+    const label = name === 'generate' ? 'posts' : 'items';
+    countEl.textContent = s.itemCount + ' ' + label;
+    if (s.itemCount === 0 && name !== 'collect') {
+      card.classList.add('stage-warning');
+      document.getElementById('swarn-' + name).style.display = 'inline';
+    }
+  } else {
+    countEl.textContent = '-';
+  }
+}
+
+// ---- Log Panel ----
+function selectStage(name) {
+  STAGES.forEach(function(s) {
+    document.getElementById('scard-' + s).classList.toggle('selected', s === name);
+  });
+  _selectedStage = name;
+  const panel = document.getElementById('log-panel');
+  panel.style.display = 'block';
+  document.getElementById('log-panel-title').textContent = STAGE_LABELS[name] + ' Log';
+  const pre = document.getElementById('log-panel-pre');
+
+  if (_liveLogs[name].length > 0) {
+    pre.innerHTML = '';
+    _liveLogs[name].forEach(function(text) {
+      const div = document.createElement('div');
+      div.className = 'log-entry';
+      div.textContent = text;
+      pre.appendChild(div);
     });
-    updatePipelineBadge(data.pipeline_status);
-    if (data.pipeline_status === 'running') openLogStream();
-  } catch(e) { /* 靜默失敗 */ }
+    pre.scrollTop = pre.scrollHeight;
+  } else {
+    fetchStageLog(name, pre);
+  }
+}
+
+function closeLogPanel() {
+  document.getElementById('log-panel').style.display = 'none';
+  STAGES.forEach(function(s) {
+    document.getElementById('scard-' + s).classList.remove('selected');
+  });
+  _selectedStage = null;
+}
+
+async function fetchStageLog(name, pre) {
+  pre.innerHTML = '<span class="log-ts">載入中...</span>';
+  try {
+    const r = await fetch('/api/logs/' + dateStr + '/stage/' + name);
+    const data = await r.json();
+    if (!data.entries || !data.entries.length) {
+      pre.innerHTML = '<span class="log-ts">無 log 記錄</span>';
+      return;
+    }
+    renderLogEntries(data.entries, pre);
+  } catch(e) {
+    pre.innerHTML = '<span class="log-ERROR">無法載入 log</span>';
+  }
+}
+
+function renderLogEntries(entries, pre) {
+  pre.innerHTML = '';
+  entries.forEach(function(e) {
+    const line = document.createElement('div');
+    line.className = 'log-entry';
+    line.innerHTML = '<span class="log-ts">' + escapeHtml(e.ts || '') + '</span>  ' +
+                     '<span class="log-' + escapeHtml(e.level || 'INFO') + '">' +
+                     escapeHtml((e.level || 'INFO').padEnd(5)) + '</span>  ' +
+                     '<span>' + escapeHtml(e.msg || '') + '</span>';
+    pre.appendChild(line);
+  });
+  pre.scrollTop = pre.scrollHeight;
+}
+
+function appendLiveStageLog(stageName, text) {
+  _liveLogs[stageName].push(text);
+  if (_selectedStage === stageName) {
+    const pre = document.getElementById('log-panel-pre');
+    const div = document.createElement('div');
+    div.className = 'log-entry';
+    div.textContent = text;
+    pre.appendChild(div);
+    pre.scrollTop = pre.scrollHeight;
+  }
+}
+
+// ---- Stage Event Handler ----
+function handleStageEvent(payload) {
+  const name = payload.name, action = payload.action,
+        elapsed = payload.elapsed, item_count = payload.item_count;
+  if (action === 'start') {
+    stageState[name].status = 'running';
+    _liveLogs[name] = [];
+    if (_selectedStage === null) selectStage(name);
+  } else if (action === 'end') {
+    stageState[name].status = 'done';
+    stageState[name].elapsed = elapsed;
+    if (item_count !== undefined && item_count !== null) {
+      stageState[name].itemCount = item_count;
+    }
+  } else if (action === 'failed') {
+    stageState[name].status = 'failed';
+  }
+  updateStageCard(name);
 }
 
 // ---- SSE Stream ----
+function startSSE() { openLogStream(); }
+
 function openLogStream() {
   if (_es) { _es.close(); }
   document.getElementById('pipeline-card').classList.add('pipeline-running');
@@ -558,21 +686,11 @@ function openLogStream() {
     if (sep === -1) return;
     const stageName = e.data.substring(0, sep);
     const text = e.data.substring(sep + 1);
-    if (STAGES.indexOf(stageName) !== -1) appendStageLog(stageName, text);
+    if (STAGES.indexOf(stageName) !== -1) appendLiveStageLog(stageName, text);
   };
 
   _es.addEventListener('stage', function(e) {
-    const payload = JSON.parse(e.data);
-    const name = payload.name, action = payload.action, elapsed = payload.elapsed;
-    if (action === 'start') {
-      stageState[name].status = 'running';
-      expandAccordion(name);
-    } else if (action === 'end') {
-      stageState[name].status = 'done';
-      stageState[name].elapsed = elapsed;
-    }
-    updateStageNode(name);
-    updateAccordion(name);
+    handleStageEvent(JSON.parse(e.data));
     updatePipelineBadge('running');
   });
 
@@ -589,8 +707,7 @@ function openLogStream() {
     STAGES.forEach(function(s) {
       if (stageState[s].status === 'running') {
         stageState[s].status = 'cancelled';
-        updateStageNode(s);
-        updateAccordion(s);
+        updateStageCard(s);
       }
     });
     updatePipelineBadge('cancelled');
@@ -613,13 +730,11 @@ async function triggerRun(dateStr, force) {
 
   // 重置 stage 狀態
   STAGES.forEach(function(s) {
-    stageState[s] = { status: 'pending', elapsed: null };
-    updateStageNode(s);
-    updateAccordion(s);
-    const pre = document.getElementById('slog-' + s);
-    if (pre) pre.textContent = '';
-    collapseAccordion(s);
+    stageState[s] = { status: 'pending', elapsed: null, itemCount: null };
+    _liveLogs[s] = [];
+    updateStageCard(s);
   });
+  closeLogPanel();
   updatePipelineBadge('running');
   document.getElementById('pipeline-card').classList.add('pipeline-running');
 
@@ -637,7 +752,8 @@ async function triggerRun(dateStr, force) {
   setTimeout(function() { mainBtn.disabled = false; caretBtn.disabled = false; }, 5000);
 }
 
-async function stopPipeline() {
+async function stopPipeline(event) {
+  if (event) event.stopPropagation();
   if (!confirm('確定要中止此 Pipeline 嗎？')) return;
   try {
     const res = await fetch('/api/run/' + dateStr + '/stop', { method: 'POST' });
@@ -645,6 +761,33 @@ async function stopPipeline() {
     showToast(data.message || 'Pipeline 已中止', '⊘');
   } catch(e) {
     showToast('中止失敗，請確認 server 狀態', '❌');
+  }
+}
+
+// ---- rerunStage ----
+async function rerunStage(stageName, event) {
+  event.stopPropagation();
+  if (!confirm('確定重新執行「' + STAGE_LABELS[stageName] + '」嗎？')) return;
+
+  stageState[stageName].status = 'running';
+  stageState[stageName].itemCount = null;
+  _liveLogs[stageName] = [];
+  updateStageCard(stageName);
+  document.getElementById('pipeline-card').classList.add('pipeline-running');
+
+  selectStage(stageName);
+  openLogStream();
+
+  try {
+    const res = await fetch('/api/run/' + dateStr + '/stage/' + stageName, { method: 'POST' });
+    if (!res.ok) {
+      const d = await res.json().catch(function() { return {}; });
+      showToast(d.detail || '執行失敗', '❌');
+      stageState[stageName].status = 'failed';
+      updateStageCard(stageName);
+    }
+  } catch(e) {
+    showToast('執行失敗', '❌');
   }
 }
 
@@ -662,7 +805,28 @@ document.addEventListener('click', function(e) {
   if (!e.target.closest('.split-btn-wrap')) closeRunDropdown();
 });
 
-// Init
-initStageInfo();
+// ---- Page Load: init stage info ----
+async function loadInitialStageInfo() {
+  try {
+    const r = await fetch('/api/logs/' + dateStr + '/stage-info');
+    if (!r.ok) return;
+    const data = await r.json();
+    if (!data.stages) return;
+    data.stages.forEach(function(stage) {
+      if (stageState[stage.name]) {
+        stageState[stage.name].status = stage.status;
+        stageState[stage.name].elapsed = stage.elapsed || null;
+        stageState[stage.name].itemCount = (stage.item_count !== undefined) ? stage.item_count : null;
+        updateStageCard(stage.name);
+      }
+    });
+    updatePipelineBadge(data.pipeline_status);
+    if (data.pipeline_status === 'running') {
+      document.getElementById('pipeline-card').classList.add('pipeline-running');
+      openLogStream();
+    }
+  } catch(e) { /* 靜默失敗 */ }
+}
+document.addEventListener('DOMContentLoaded', loadInitialStageInfo);
 </script>
 {% endblock %}
