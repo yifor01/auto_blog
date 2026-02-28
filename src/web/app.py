@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from datetime import date
@@ -185,27 +186,111 @@ async def note_view(request: Request, date_str: str, slug: str):
     )
 
 
-@app.get("/posts", response_class=HTMLResponse)
-async def posts_list(request: Request):
-    posts = ds.list_all_posts()
+@app.get("/materials", response_class=HTMLResponse)
+async def material_library(request: Request):
+    materials = ds.list_all_materials()
     return templates.TemplateResponse(
-        "posts_list.html",
+        "material_library.html",
         {
             "request": request,
-            "posts": posts,
+            "materials": materials,
             "sidebar_stats": ds.get_sidebar_stats(),
         },
     )
 
 
-@app.get("/notes", response_class=HTMLResponse)
-async def notes_list(request: Request):
-    notes = ds.list_all_notes()
+@app.get("/material/{date_str}/{index}", response_class=HTMLResponse)
+async def material_detail(request: Request, date_str: str, index: int):
+    try:
+        date.fromisoformat(date_str)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="日期格式錯誤")
+
+    detail = ds.get_material_detail(date_str, index)
+    if detail is None:
+        raise HTTPException(status_code=404, detail="找不到該素材")
+
     return templates.TemplateResponse(
-        "notes_list.html",
+        "material_detail.html",
         {
             "request": request,
-            "notes": notes,
+            "date_str": date_str,
+            "item": detail,
+            "sidebar_stats": ds.get_sidebar_stats(),
+        },
+    )
+
+
+@app.get("/posts", response_class=RedirectResponse)
+async def posts_redirect():
+    return RedirectResponse(url="/materials", status_code=301)
+
+
+@app.get("/notes", response_class=RedirectResponse)
+async def notes_redirect():
+    return RedirectResponse(url="/materials", status_code=301)
+
+
+@app.get("/topics", response_class=HTMLResponse)
+async def topics_view(request: Request, days: int = 30):
+    result = ds.cluster_topics(days)
+    topics = result["topics"]
+    timeline = result["timeline"]
+
+    # 產生最近 14 天日期列表給 sparkline
+    from datetime import timedelta
+    today = date.today()
+    spark_dates = [(today - timedelta(days=i)).isoformat() for i in range(13, -1, -1)]
+
+    return templates.TemplateResponse(
+        "topics.html",
+        {
+            "request": request,
+            "topics": topics,
+            "timeline": timeline,
+            "days": days,
+            "spark_dates": spark_dates,
+            "sidebar_stats": ds.get_sidebar_stats(),
+        },
+    )
+
+
+@app.get("/digest", response_class=HTMLResponse)
+async def digest_list(request: Request):
+    digests = ds.list_recent_digests(90)
+    return templates.TemplateResponse(
+        "digest.html",
+        {
+            "request": request,
+            "digests": digests,
+            "digest": None,
+            "sidebar_stats": ds.get_sidebar_stats(),
+        },
+    )
+
+
+@app.get("/digest/{date_str}", response_class=HTMLResponse)
+async def digest_view(request: Request, date_str: str):
+    try:
+        date.fromisoformat(date_str)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="日期格式錯誤")
+
+    digest = ds.get_digest(date_str)
+    if digest is None:
+        raise HTTPException(status_code=404, detail="找不到該日期的摘要")
+
+    from markdown_it import MarkdownIt
+    md = MarkdownIt()
+    digest_html = md.render(digest["body"])
+
+    return templates.TemplateResponse(
+        "digest.html",
+        {
+            "request": request,
+            "date_str": date_str,
+            "digest": digest,
+            "digest_html": digest_html,
             "sidebar_stats": ds.get_sidebar_stats(),
         },
     )
@@ -274,6 +359,113 @@ async def settings_save(
     return RedirectResponse(url="/settings?saved=1", status_code=303)
 
 
+@app.get("/api/search")
+async def api_search(
+    q: str = "",
+    source: str = "",
+    min_score: float = 0,
+    max_score: float = 999,
+    date_from: str = "",
+    date_to: str = "",
+    page: int = 1,
+    limit: int = 20,
+):
+    """搜尋素材 API。"""
+    result = ds.search_items(
+        q=q, source=source, min_score=min_score, max_score=max_score,
+        date_from=date_from, date_to=date_to, page=page, limit=limit,
+    )
+    return JSONResponse(content=result)
+
+
+@app.post("/api/bookmark/{date_str}/{index}")
+async def api_bookmark_add(date_str: str, index: int):
+    """收藏素材。"""
+    try:
+        d = date.fromisoformat(date_str)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="日期格式錯誤")
+    detail = ds.get_item_detail(d, index)
+    title = detail["title"] if detail else ""
+    ds.set_bookmark(date_str, index, title=title)
+    return JSONResponse({"message": "已收藏"})
+
+
+@app.delete("/api/bookmark/{date_str}/{index}")
+async def api_bookmark_remove(date_str: str, index: int):
+    """取消收藏。"""
+    ds.remove_bookmark(date_str, index)
+    return JSONResponse({"message": "已取消收藏"})
+
+
+@app.patch("/api/bookmark/{date_str}/{index}/status")
+async def api_bookmark_status(request: Request, date_str: str, index: int):
+    """更新書籤狀態。"""
+    body = await request.json()
+    status = body.get("status", "")
+    if status not in ("bookmarked", "writing", "written", "published"):
+        raise HTTPException(status_code=400, detail="無效的狀態")
+    ds.update_bookmark_status(date_str, index, status)
+    return JSONResponse({"message": "已更新"})
+
+
+@app.get("/api/bookmark/{date_str}/{index}/check")
+async def api_bookmark_check(date_str: str, index: int):
+    """檢查是否已收藏。"""
+    return JSONResponse({"bookmarked": ds.is_bookmarked(date_str, index)})
+
+
+@app.get("/api/bookmarks")
+async def api_bookmarks(status: str = ""):
+    """列出所有書籤。"""
+    items = ds.list_bookmarked_items(status)
+    return JSONResponse(content={"items": items})
+
+
+@app.get("/queue", response_class=HTMLResponse)
+async def writing_queue(request: Request):
+    """待寫清單（Kanban 視圖）。"""
+    bookmarks = ds.get_all_bookmarks()
+
+    # 按狀態分組
+    columns = {
+        "bookmarked": [],
+        "writing": [],
+        "written": [],
+        "published": [],
+    }
+    for key, val in bookmarks.items():
+        status = val.get("status", "bookmarked")
+        if status not in columns:
+            status = "bookmarked"
+
+        # 載入完整 item 資訊
+        d_str = val.get("date_str", "")
+        idx = val.get("index", 0)
+        try:
+            d = date.fromisoformat(d_str)
+            detail = ds.get_item_detail(d, idx)
+        except Exception:
+            detail = None
+
+        entry = {**val, "key": key}
+        if detail:
+            entry["title"] = detail["title"]
+            entry["source_name"] = detail.get("source_name", "")
+            entry["total_score"] = detail.get("total_score", 0)
+            entry["tags"] = detail.get("tags", [])
+        columns[status].append(entry)
+
+    return templates.TemplateResponse(
+        "writing_queue.html",
+        {
+            "request": request,
+            "columns": columns,
+            "sidebar_stats": ds.get_sidebar_stats(),
+        },
+    )
+
+
 @app.get("/api/status")
 async def api_status():
     """JSON 格式的 7 天狀態（除錯用）。"""
@@ -316,7 +508,21 @@ async def api_logs_stream(date_str: str):
                         new_text = content[offset:]
                         offset_new = len(content)
                         for line in new_text.splitlines():
-                            yield f"data: {line}\n\n"
+                            if not line.strip():
+                                continue
+                            display = line
+                            try:
+                                import json as _json
+                                parsed = _json.loads(line)
+                                if "msg" in parsed:
+                                    level = parsed.get("level", "INFO")
+                                    msg = parsed["msg"]
+                                    extras = {k: v for k, v in parsed.items()
+                                              if k not in ("ts", "level", "logger", "msg", "exc")}
+                                    display = f"[{level}] {msg}" + (f" {extras}" if extras else "")
+                            except Exception:
+                                pass
+                            yield f"data: {display}\n\n"
                         offset = offset_new
                         consecutive_idle = 0
                     else:
@@ -386,12 +592,14 @@ def _run_pipeline(date_str: str, force: bool) -> None:
         with open(log_path, "w", encoding="utf-8") as log_file:
             log_file.write(f"=== Pipeline started: {date_str} (force={force}) ===\n")
             log_file.flush()
+            env = {**os.environ, "AUTOPB_LOG_FORMAT": "json"}
             proc = subprocess.Popen(
                 cmd,
                 stdout=log_file,
                 stderr=subprocess.STDOUT,
                 text=True,
                 encoding="utf-8",
+                env=env,
             )
             proc.wait()
             exit_code = proc.returncode
