@@ -599,6 +599,8 @@ function selectStage(name) {
       pre.appendChild(div);
     });
     pre.scrollTop = pre.scrollHeight;
+  } else if (stageState[name] && stageState[name].status === 'running') {
+    pre.innerHTML = '<span class="log-ts">等待 log...</span>';
   } else {
     fetchStageLog(name, pre);
   }
@@ -616,6 +618,7 @@ async function fetchStageLog(name, pre) {
   pre.innerHTML = '<span class="log-ts">載入中...</span>';
   try {
     const r = await fetch('/api/logs/' + dateStr + '/stage/' + name);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
     const data = await r.json();
     if (!data.entries || !data.entries.length) {
       pre.innerHTML = '<span class="log-ts">無 log 記錄</span>';
@@ -785,9 +788,15 @@ async function rerunStage(stageName, event) {
       showToast(d.detail || '執行失敗', '❌');
       stageState[stageName].status = 'failed';
       updateStageCard(stageName);
+      document.getElementById('pipeline-card').classList.remove('pipeline-running');
+      if (typeof _es !== 'undefined' && _es) { _es.close(); _es = null; }
     }
   } catch(e) {
     showToast('執行失敗', '❌');
+    stageState[stageName].status = 'failed';
+    updateStageCard(stageName);
+    document.getElementById('pipeline-card').classList.remove('pipeline-running');
+    if (typeof _es !== 'undefined' && _es) { _es.close(); _es = null; }
   }
 }
 
