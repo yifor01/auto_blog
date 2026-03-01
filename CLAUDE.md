@@ -49,7 +49,7 @@ python -m src.cli web                    # 啟動監控網頁 http://127.0.0.1:8
 autopb run
 
 # Testing
-pytest tests/                            # 115 tests
+pytest tests/                            # 116 tests
 ```
 
 ## Architecture
@@ -157,6 +157,14 @@ scoring:
 | GET | `/api/logs/{date}/stage/{stage_name}` | 取得特定 stage 的格式化 log（含 ts、level、msg、in_progress） |
 
 > `/posts` 和 `/notes` 已 301 重導至 `/materials`
+
+### Day Detail 頁面（`/day/{date}`）
+
+- **Pipeline Stages**：GitLab 圓角膠囊（Pill）風格，3 個 `.stage-pill`（收集/評分/生成）+ `.stage-connector` 連接線/chevron，狀態色系統（done=綠、running=藍 pulse、failed=紅、cancelled=橘、pending=半透明），連接線隨上游完成變綠（CSS adjacent sibling）
+- **Charts Strip**：分數分佈 + 來源佔比水平並列（grid 1fr 1fr，110px），位於 pipeline card 下方、評分列表上方
+- **評分列表含「產出」欄**：`content_map`（title→Blog/Note 映射）由後端傳入，表格內嵌 Blog/Note badge 連結，不再有獨立「產出內容」區塊
+- **Log Panel**：點擊 pill 展開 log，再點同一顆收合（toggle）；live log 格式 `[HH:MM:SS] [LEVEL] [source] msg (N 筆)`（UTC+8），歷史 log `ts` 欄同為 UTC+8，`msg` 包含 blog/feed 名稱與計數
+- **Emoji 字體**：base.html 引入 Noto Color Emoji（Google Fonts）
 
 ### topic_clusters（`config.yaml`）
 
