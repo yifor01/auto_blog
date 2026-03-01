@@ -47,7 +47,8 @@ def _fetch_arxiv_abstract(arxiv_id: str, client) -> str:
         if summary_el is None or not summary_el.text:
             return ""
         return " ".join(summary_el.text.split())  # 清理多餘換行
-    except Exception:
+    except Exception as e:
+        _logger.debug("arXiv API fetch error", extra={"arxiv_id": arxiv_id, "error": str(e)})
         return ""
 
 
