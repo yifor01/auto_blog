@@ -16,6 +16,8 @@ from src.utils import console, llm_chat, load_config
 _logger = get_logger("scoring.scorer")
 _json_mode = os.environ.get("AUTOPB_LOG_FORMAT", "").lower() == "json"
 
+ABSTRACT_MIN_LEN_FOR_LLM = 50
+
 SCORING_SYSTEM_PROMPT = """你是一位 GenAI 領域的資深研究員和技術部落客。你的任務是評估一篇 AI 相關內容的「部落格寫作價值」。
 
 請從以下 5 個維度評分 (每個 0-20 分, 總分 0-100):
@@ -118,6 +120,14 @@ def batch_llm_score(
     if _json_mode:
         for i, item in enumerate(candidates):
             _logger.debug("Item scored", extra={"index": i + 1, "total": len(candidates)})
+            abstract_len = len(item.item.abstract.strip())
+            if abstract_len < ABSTRACT_MIN_LEN_FOR_LLM:
+                _logger.warning(
+                    "Skipping LLM scoring: abstract too short",
+                    extra={"title": item.item.title[:80], "source": item.item.source.value, "abstract_len": abstract_len},
+                )
+                scored.append(item)
+                continue
             scored_item = llm_score_item(item)
             scored.append(scored_item)
             if i < len(candidates) - 1:
@@ -135,6 +145,15 @@ def batch_llm_score(
             task = progress.add_task("LLM 評分中...", total=len(candidates))
             for i, item in enumerate(candidates):
                 progress.update(task, description=f"[cyan]評分[/cyan] {item.item.title[:45]}...")
+                abstract_len = len(item.item.abstract.strip())
+                if abstract_len < ABSTRACT_MIN_LEN_FOR_LLM:
+                    _logger.warning(
+                        "Skipping LLM scoring: abstract too short",
+                        extra={"title": item.item.title[:80], "source": item.item.source.value, "abstract_len": abstract_len},
+                    )
+                    scored.append(item)
+                    progress.advance(task)
+                    continue
                 scored_item = llm_score_item(item)
                 scored.append(scored_item)
                 progress.advance(task)
