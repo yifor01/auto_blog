@@ -44,6 +44,14 @@ class TestIsValidBlogEntry:
             abstract="This article explains the transformer model in detail...",
         ) is True
 
+    def test_empty_url_filtered(self):
+        """URL 為空應被過濾（無法追蹤來源）。"""
+        assert BlogCollector._is_valid_blog_entry(
+            title="A Valid Article Title",
+            url="",
+            abstract="A proper abstract with enough content.",
+        ) is False
+
     def test_feed_word_in_path_middle_passes(self):
         """URL 路徑中間含 'feed' 字詞但非最後一段，應通過（防誤殺）。"""
         assert BlogCollector._is_valid_blog_entry(

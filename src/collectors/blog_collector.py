@@ -214,11 +214,12 @@ class BlogCollector(BaseCollector):
         title_lower = title.lower()
         if any(kw in title_lower for kw in _INVALID_TITLE_KEYWORDS):
             return False
-        if url:
-            path = urlparse(url).path.rstrip("/")
-            last_seg = path.split("/")[-1].lower() if path else ""
-            if last_seg in _FEED_URL_LAST_SEGMENTS or path.lower().endswith(_FEED_URL_EXTENSIONS):
-                return False
+        if not url:
+            return False
+        path = urlparse(url).path.rstrip("/")
+        last_seg = path.split("/")[-1].lower() if path else ""
+        if last_seg in _FEED_URL_LAST_SEGMENTS or path.lower().endswith(_FEED_URL_EXTENSIONS):
+            return False
         if not abstract.strip():
             return False
         return True
