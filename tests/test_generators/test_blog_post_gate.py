@@ -1,7 +1,6 @@
 """Tests for abstract quality gate in blog post generator."""
 from unittest.mock import MagicMock, patch
-import pytest
-from datetime import date
+from datetime import date, datetime
 from src.generators.blog_post import generate_and_save_posts
 from src.models import ContentItem, ScoredItem, SourceType
 
@@ -38,7 +37,6 @@ def test_sufficient_abstract_generates():
     mock_content.content = "Generated blog post"
     mock_content.prompt_used = "prompt"
     mock_content.model_used = "test-model"
-    from datetime import datetime
     mock_content.generated_at = datetime.now()
     with patch("src.generators.blog_post.generate_blog_post", return_value=mock_content):
         with patch("src.generators.blog_post.save_blog_post", return_value="/fake/path.md") as mock_save:
