@@ -8,7 +8,7 @@ import subprocess
 import sys
 from datetime import date
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 import asyncio
 import threading
@@ -46,7 +46,7 @@ LOGS_DIR.mkdir(parents=True, exist_ok=True)
 VALID_STAGES = {"collect", "score", "generate"}
 
 
-def _fmt_log_msg(parsed: dict) -> str:
+def _fmt_log_msg(parsed: dict[str, Any]) -> str:
     """將 JSON log entry 轉為人類可讀字串，包含 source 名稱與計數。"""
     msg = parsed.get("msg", "")
     # 前綴：source 名稱（blog/feed/category/language/repo 取第一個）
@@ -62,7 +62,8 @@ def _fmt_log_msg(parsed: dict) -> str:
     # 後綴：錯誤訊息（截斷至 100 字元）
     err = parsed.get("error")
     if err:
-        err_short = str(err)[:100] + ("..." if len(str(err)) > 100 else "")
+        err_str = str(err)
+        err_short = err_str[:100] + ("..." if len(err_str) > 100 else "")
         msg = f"{msg}: {err_short}"
     return msg
 
@@ -630,7 +631,7 @@ async def api_logs_stage_info(date_str: str):
                         if "item_count" in parsed:
                             stages[name]["item_count"] = parsed["item_count"]
             except Exception:
-                pass
+                _logger.debug("SSE log parse error", exc_info=True)
 
         # 若 log 沒有 stage markers（舊格式），回退到 data_state 推算結果
         if not has_stage_markers:
@@ -693,7 +694,7 @@ async def api_logs_stream(date_str: str):
                                     prefix = f"[{ts_display}] " if ts_display else ""
                                     display = f"{prefix}[{level}] {msg}"
                             except Exception:
-                                pass
+                                _logger.debug("SSE log parse error", exc_info=True)
                             # 偵測 pipeline 取消
                             if "Pipeline cancelled by user" in display or any(
                                 f"Stage {s} cancelled by user" in display for s in VALID_STAGES
