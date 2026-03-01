@@ -46,6 +46,27 @@ LOGS_DIR.mkdir(parents=True, exist_ok=True)
 VALID_STAGES = {"collect", "score", "generate"}
 
 
+def _fmt_log_msg(parsed: dict) -> str:
+    """將 JSON log entry 轉為人類可讀字串，包含 source 名稱與計數。"""
+    msg = parsed.get("msg", "")
+    # 前綴：source 名稱（blog/feed/category/language/repo 取第一個）
+    for key in ("blog", "feed", "category", "language", "repo"):
+        val = parsed.get(key)
+        if val:
+            msg = f"[{val}] {msg}"
+            break
+    # 後綴：計數
+    count = parsed.get("count") if parsed.get("count") is not None else parsed.get("total_count")
+    if count is not None:
+        msg = f"{msg} ({count} 筆)"
+    # 後綴：錯誤訊息（截斷至 100 字元）
+    err = parsed.get("error")
+    if err:
+        err_short = str(err)[:100] + ("..." if len(str(err)) > 100 else "")
+        msg = f"{msg}: {err_short}"
+    return msg
+
+
 @app.get("/", response_class=RedirectResponse)
 async def index():
     return RedirectResponse(url="/dashboard")
@@ -78,8 +99,19 @@ async def day_detail(request: Request, date_str: str):
 
     stats = ds.get_day_stats(d)
     items = ds.get_day_items(d)
-    posts = ds.list_posts(date_str)
-    notes = ds.list_notes(date_str)
+    contents = ds.list_day_contents(date_str)
+
+    # Build title → content mapping for inline badges in scored items table
+    content_map = {}
+    for c in contents:
+        key = (c.get("title") or "").strip().lower()
+        if key:
+            content_map[key] = {
+                "has_post": c.get("has_post", False),
+                "has_note": c.get("has_note", False),
+                "post_slug": c.get("post_slug"),
+                "note_slug": c.get("note_slug"),
+            }
 
     state = ds.get_pipeline_state(d)
     if RUNNING_TASKS and date_str in RUNNING_TASKS:
@@ -92,8 +124,7 @@ async def day_detail(request: Request, date_str: str):
             "date_str": date_str,
             "stats": stats,
             "items": items,
-            "posts": posts,
-            "notes": notes,
+            "content_map": content_map,
             "state": state,
             "sidebar_stats": ds.get_sidebar_stats(),
         },
@@ -656,11 +687,11 @@ async def api_logs_stream(date_str: str):
                                     continue  # 不輸出為普通 log 行
                                 if "msg" in parsed:
                                     level = parsed.get("level", "INFO")
-                                    msg = parsed["msg"]
-                                    extras = {k: v for k, v in parsed.items()
-                                              if k not in ("ts", "level", "logger", "msg", "exc",
-                                                           "pipeline_stage", "stage_action", "elapsed")}
-                                    display = f"[{level}] {msg}" + (f" {extras}" if extras else "")
+                                    msg = _fmt_log_msg(parsed)
+                                    ts_str = parsed.get("ts", "")
+                                    ts_display = ts_str[11:19] if len(ts_str) >= 19 else ""
+                                    prefix = f"[{ts_display}] " if ts_display else ""
+                                    display = f"{prefix}[{level}] {msg}"
                             except Exception:
                                 pass
                             # 偵測 pipeline 取消
@@ -933,7 +964,7 @@ async def api_stage_log(date_str: str, stage_name: str):
                 temp_entries.append({
                     "ts": ts,
                     "level": obj.get("level", "INFO"),
-                    "msg": obj.get("msg", line),
+                    "msg": _fmt_log_msg(obj),
                 })
         except (json.JSONDecodeError, ValueError):
             pass
