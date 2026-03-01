@@ -38,8 +38,9 @@ def test_sufficient_abstract_generates():
     mock_content.prompt_used = "prompt"
     mock_content.model_used = "test-model"
     mock_content.generated_at = datetime.now()
-    with patch("src.generators.blog_post.generate_blog_post", return_value=mock_content):
-        with patch("src.generators.blog_post.save_blog_post", return_value="/fake/path.md") as mock_save:
-            result = generate_and_save_posts([item], target_date=date.today())
-            mock_save.assert_called_once()
+    with patch("src.generators.blog_post.load_config", return_value={"llm": {"request_delay_seconds": 0}}):
+        with patch("src.generators.blog_post.generate_blog_post", return_value=mock_content):
+            with patch("src.generators.blog_post.save_blog_post", return_value="/fake/path.md") as mock_save:
+                result = generate_and_save_posts([item], target_date=date.today())
+                mock_save.assert_called_once()
     assert result == ["/fake/path.md"]
