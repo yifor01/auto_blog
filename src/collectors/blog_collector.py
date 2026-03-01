@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import date
+from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup
 
@@ -12,6 +13,15 @@ from src.logger import get_logger
 from src.utils import extract_full_text_from_html, fetch_article_text, get_http_client, load_config
 
 _logger = get_logger("collectors.blogs")
+
+_INVALID_TITLE_KEYWORDS = frozenset([
+    "rss feed", "subscribe via email", "subscribe", "newsletter",
+    "mailing list", "sign up", "signup", "notification",
+    "atom feed", "sitemap", "follow us",
+])
+
+_FEED_URL_LAST_SEGMENTS = frozenset(["feed", "rss", "atom"])
+_FEED_URL_EXTENSIONS = (".xml", ".rss", ".atom")
 
 
 class BlogCollector(BaseCollector):
@@ -109,6 +119,14 @@ class BlogCollector(BaseCollector):
                 if len(fetched) > len(abstract):
                     abstract = fetched
 
+            if not self._is_valid_blog_entry(
+                title=entry.get("title", ""),
+                url=article_url,
+                abstract=abstract,
+            ):
+                _logger.debug("Skipping invalid blog entry", extra={"title": entry.get("title", "")[:80]})
+                continue
+
             items.append(
                 ContentItem(
                     source=SourceType.BLOG,
@@ -166,6 +184,11 @@ class BlogCollector(BaseCollector):
                 except Exception:
                     pass
 
+                final_abstract = content_abstract[:1000] if content_abstract else f"Title: {title}"
+                if not self._is_valid_blog_entry(title=title, url=href, abstract=final_abstract):
+                    _logger.debug("Skipping invalid HTML scraped entry", extra={"title": title[:80]})
+                    continue
+
                 items.append(
                     ContentItem(
                         source=SourceType.BLOG,
@@ -173,7 +196,7 @@ class BlogCollector(BaseCollector):
                         title=title,
                         url=href,
                         authors=[name],
-                        abstract=content_abstract[:1000] if content_abstract else f"Title: {title}",
+                        abstract=final_abstract,
                         published_date=target_date,
                         tags=["blog"],
                         raw_metadata={"blog_name": name, "blog_url": url},
@@ -182,6 +205,23 @@ class BlogCollector(BaseCollector):
             return items
         except Exception:
             return []
+
+    @staticmethod
+    def _is_valid_blog_entry(title: str, url: str, abstract: str) -> bool:
+        """過濾導航頁/訂閱連結，只保留真正的文章。"""
+        if not title or len(title.strip()) < 5:
+            return False
+        title_lower = title.lower()
+        if any(kw in title_lower for kw in _INVALID_TITLE_KEYWORDS):
+            return False
+        if url:
+            path = urlparse(url).path.rstrip("/")
+            last_seg = path.split("/")[-1].lower() if path else ""
+            if last_seg in _FEED_URL_LAST_SEGMENTS or path.lower().endswith(_FEED_URL_EXTENSIONS):
+                return False
+        if not abstract.strip():
+            return False
+        return True
 
     @staticmethod
     def _parse_entry_date(entry) -> date | None:
