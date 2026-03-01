@@ -9,7 +9,8 @@ from __future__ import annotations
 
 import logging
 import os
-from datetime import datetime, timezone
+from datetime import datetime
+from zoneinfo import ZoneInfo
 from typing import Any
 
 
@@ -30,7 +31,7 @@ class JsonFormatter(logging.Formatter):
 
         record.message = record.getMessage()
         payload: dict[str, Any] = {
-            "ts": datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(),
+            "ts": datetime.fromtimestamp(record.created, tz=ZoneInfo("Asia/Taipei")).isoformat(),
             "level": record.levelname,
             "logger": record.name,
             "msg": record.message,
