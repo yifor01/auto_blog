@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import re
 import time
 import xml.etree.ElementTree as ET
 from datetime import date
+from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup
 
@@ -15,19 +17,19 @@ from src.utils import get_http_client, load_config
 
 _logger = get_logger("collectors.hf_papers")
 
-_ARXIV_API_URL = "http://export.arxiv.org/api/query"
+_ARXIV_API_URL = "https://export.arxiv.org/api/query"
 _ARXIV_NS = {"atom": "http://www.w3.org/2005/Atom"}
+_ARXIV_ID_RE = re.compile(r"^\d{4}\.\d{4,5}(v\d+)?$")
 
 
 def _extract_arxiv_id(paper_url: str) -> str | None:
-    """從 HF paper URL 解析 arxiv ID。
-    例：https://huggingface.co/papers/2402.12345 → '2402.12345'
-    """
-    from urllib.parse import urlparse
-    path = urlparse(paper_url).path.rstrip("/")  # e.g. "/papers/2402.12345"
+    """從 HF paper URL 解析 arxiv ID。"""
+    path = urlparse(paper_url).path.rstrip("/")
     parts = path.strip("/").split("/")
     if len(parts) == 2 and parts[0] == "papers":
-        return parts[1]
+        candidate = parts[1]
+        if _ARXIV_ID_RE.match(candidate):
+            return candidate
     return None
 
 
@@ -104,8 +106,11 @@ class HFPapersCollector(BaseCollector):
                             if len(text) > 100:  # 通常 abstract 都比較長
                                 abstract = text
                                 break
-                except Exception:
-                    pass
+                except Exception as e:
+                    _logger.debug(
+                        "Failed to fetch HF paper abstract",
+                        extra={"url": paper_url, "error": str(e)},
+                    )
                 
                 # 如果還是抓不到，我們預設為標題
                 if not abstract:
