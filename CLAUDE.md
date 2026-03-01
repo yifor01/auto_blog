@@ -49,7 +49,7 @@ python -m src.cli web                    # 啟動監控網頁 http://127.0.0.1:8
 autopb run
 
 # Testing
-pytest tests/                            # 110 tests
+pytest tests/                            # 115 tests
 ```
 
 ## Architecture
@@ -153,7 +153,8 @@ scoring:
 | POST | `/api/run/{date}/force` | 強制重跑 pipeline |
 | POST | `/api/run/{date}/stop` | 中止執行中的 pipeline（SIGTERM → SIGKILL） |
 | POST | `/api/run/{date}/stage/{stage_name}` | 重跑單一 stage（collect/score/generate） |
-| GET | `/api/logs/{date}/stage/{stage_name}` | 取得特定 stage 的格式化 log（含 ts、level、msg） |
+| GET | `/api/logs/{date}/stage-info` | 各 stage 狀態摘要（status/elapsed/item_count） |
+| GET | `/api/logs/{date}/stage/{stage_name}` | 取得特定 stage 的格式化 log（含 ts、level、msg、in_progress） |
 
 > `/posts` 和 `/notes` 已 301 重導至 `/materials`
 
