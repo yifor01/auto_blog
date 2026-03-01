@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+import xml.etree.ElementTree as ET
 from datetime import date
 
 from bs4 import BeautifulSoup
@@ -13,6 +14,39 @@ from src.logger import get_logger
 from src.utils import get_http_client, load_config
 
 _logger = get_logger("collectors.hf_papers")
+
+_ARXIV_API_URL = "http://export.arxiv.org/api/query"
+_ARXIV_NS = {"atom": "http://www.w3.org/2005/Atom"}
+
+
+def _extract_arxiv_id(paper_url: str) -> str | None:
+    """從 HF paper URL 解析 arxiv ID。
+    例：https://huggingface.co/papers/2402.12345 → '2402.12345'
+    """
+    from urllib.parse import urlparse
+    path = urlparse(paper_url).path.rstrip("/")  # e.g. "/papers/2402.12345"
+    parts = path.strip("/").split("/")
+    if len(parts) == 2 and parts[0] == "papers":
+        return parts[1]
+    return None
+
+
+def _fetch_arxiv_abstract(arxiv_id: str, client) -> str:
+    """從 arXiv API 取得論文摘要。失敗時回傳空字串。"""
+    try:
+        resp = client.get(_ARXIV_API_URL, params={"id_list": arxiv_id})
+        if resp.status_code != 200:
+            return ""
+        root = ET.fromstring(resp.text)
+        entry = root.find("atom:entry", _ARXIV_NS)
+        if entry is None:
+            return ""
+        summary_el = entry.find("atom:summary", _ARXIV_NS)
+        if summary_el is None or not summary_el.text:
+            return ""
+        return " ".join(summary_el.text.split())  # 清理多餘換行
+    except Exception:
+        return ""
 
 
 class HFPapersCollector(BaseCollector):
@@ -76,7 +110,18 @@ class HFPapersCollector(BaseCollector):
                 # 如果還是抓不到，我們預設為標題
                 if not abstract:
                     abstract = f"AI Paper from HuggingFace Daily Papers: {title}"
-                
+
+                # NEW: arXiv abstract enrichment
+                arxiv_id = _extract_arxiv_id(paper_url)
+                if len(abstract.strip()) < 100 and arxiv_id:
+                    _logger.debug("Attempting arXiv enrichment", extra={"arxiv_id": arxiv_id})
+                    arxiv_abstract = _fetch_arxiv_abstract(arxiv_id, client)
+                    if arxiv_abstract:
+                        abstract = arxiv_abstract
+                        _logger.info("arXiv enrichment succeeded", extra={"arxiv_id": arxiv_id, "abstract_len": len(abstract)})
+                    else:
+                        _logger.warning("arXiv enrichment failed, keeping fallback", extra={"arxiv_id": arxiv_id})
+
                 # Sleep briefly to be nice to the server
                 time.sleep(0.5)
 
@@ -93,6 +138,7 @@ class HFPapersCollector(BaseCollector):
                         raw_metadata={
                             "upvotes": upvotes,
                             "hf_url": paper_url,
+                            "arxiv_id": arxiv_id or "",  # 新增
                         },
                     )
                 )
