@@ -18,6 +18,8 @@ from src.utils import (
 
 _logger = get_logger("generators.blog_post")
 
+ABSTRACT_MIN_LEN_FOR_GENERATION = 100
+
 BLOG_SYSTEM_PROMPT = """你是一位資深 AI 技術部落客，專門將 AI 研究論文和新聞轉換為高互動的 Facebook 科技部落格貼文。
 
 ## 撰寫流程
@@ -256,6 +258,13 @@ def generate_and_save_posts(items: list[ScoredItem], target_date: date | None = 
     _logger.info("Starting blog post generation", extra={"count": len(items)})
     paths: list[str] = []
     for i, item in enumerate(items):
+        abstract_len = len(item.item.abstract.strip())
+        if abstract_len < ABSTRACT_MIN_LEN_FOR_GENERATION:
+            _logger.warning(
+                "Skipping blog post generation: abstract too short",
+                extra={"title": item.item.title[:80], "source": item.item.source.value, "abstract_len": abstract_len},
+            )
+            continue
         try:
             gen = generate_blog_post(item)
             path = save_blog_post(gen, target_date)
