@@ -369,8 +369,17 @@ def get_all_feedback() -> dict[str, str]:
     return result
 
 
+_sidebar_cache: dict | None = None
+_sidebar_cache_ts: float = 0.0
+_SIDEBAR_TTL = 60  # 60 秒
+
+
 def get_sidebar_stats() -> dict:
     """取得 Sidebar 快速統計（只做 glob 計數，不讀取內容）。"""
+    global _sidebar_cache, _sidebar_cache_ts
+    if _sidebar_cache is not None and (_time.time() - _sidebar_cache_ts) < _SIDEBAR_TTL:
+        return _sidebar_cache
+
     today_str = date.today().isoformat()
     total_posts = len(list(POSTS_DIR.glob("*.md")))
     total_notes = len(list(NOTES_DIR.glob("*.md")))
@@ -392,7 +401,7 @@ def get_sidebar_stats() -> dict:
         if isinstance(bm_data, dict):
             bookmarks_count = len(bm_data)
 
-    return {
+    result = {
         "total_posts": total_posts,
         "total_notes": total_notes,
         "today_posts": today_posts,
@@ -400,6 +409,9 @@ def get_sidebar_stats() -> dict:
         "total_materials": total_materials,
         "bookmarks_count": bookmarks_count,
     }
+    _sidebar_cache = result
+    _sidebar_cache_ts = _time.time()
+    return result
 
 
 def _parse_markdown_file(path: Path) -> dict | None:
@@ -476,6 +488,48 @@ def list_notes(date_str: str) -> list[dict]:
         item = _enrich_with_scored(item)
         item["feedback"] = feedback_map.get(f"{date_str}_{slug}")
         result.append(item)
+    return result
+
+
+def list_day_contents(date_str: str) -> list[dict]:
+    """合併指定日期的 posts + notes，同標題合併為一筆，按 total_score 降序。"""
+    posts = list_posts(date_str)
+    notes = list_notes(date_str)
+
+    # 以 title 為 key 合併
+    merged: dict[str, dict] = {}
+    for p in posts:
+        title = p.get("title") or p.get("slug", "")
+        key = title.strip().lower()
+        merged[key] = {
+            **p,
+            "has_post": True,
+            "has_note": False,
+            "post_slug": p.get("slug"),
+            "note_slug": None,
+        }
+
+    for n in notes:
+        title = n.get("title") or n.get("slug", "")
+        key = title.strip().lower()
+        if key in merged:
+            merged[key]["has_note"] = True
+            merged[key]["note_slug"] = n.get("slug")
+        else:
+            merged[key] = {
+                **n,
+                "has_post": False,
+                "has_note": True,
+                "post_slug": None,
+                "note_slug": n.get("slug"),
+            }
+
+    result = list(merged.values())
+    # 用 rule_score + llm_score 排序（取自 _enrich_with_scored 填入的欄位）
+    result.sort(
+        key=lambda x: (x.get("rule_score") or 0) + (x.get("llm_score") or 0),
+        reverse=True,
+    )
     return result
 
 
