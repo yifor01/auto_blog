@@ -647,7 +647,17 @@ async def api_logs_stage_info(date_str: str):
             if data_state == "done":
                 stages["generate"]["status"] = "done"
 
-    return JSONResponse({"stages": [stages[n] for n in stages_order], "pipeline_status": pipeline_status})
+    result = {"stages": [stages[n] for n in stages_order], "pipeline_status": pipeline_status}
+    if date_str in RUNNING_TASKS and log_path.exists():
+        log_text = log_path.read_text(encoding="utf-8", errors="replace")
+        log_offset = 0
+        markers = ["=== Pipeline started"] + [f"=== Stage {s} re-run" for s in VALID_STAGES]
+        for marker in markers:
+            pos = log_text.rfind(marker)
+            if pos > log_offset:
+                log_offset = pos
+        result["log_offset"] = log_offset
+    return JSONResponse(result)
 
 
 @app.get("/api/logs/{date_str}/stream")
