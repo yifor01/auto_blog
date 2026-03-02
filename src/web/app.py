@@ -651,7 +651,7 @@ async def api_logs_stage_info(date_str: str):
 
 
 @app.get("/api/logs/{date_str}/stream")
-async def api_logs_stream(date_str: str, from_: int = Query(0, alias="from")):
+async def api_logs_stream(date_str: str, from_: int = Query(0, alias="from", ge=0)):
     """SSE 串流：即時推送 pipeline 執行日誌（每 1 秒 poll log 檔新增行）。"""
     try:
         date.fromisoformat(date_str)
