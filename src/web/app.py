@@ -19,6 +19,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, Red
 from fastapi.templating import Jinja2Templates
 
 from src.logger import get_logger
+from src.utils import NOTES_DIR, POSTS_DIR, PROMPTS_DIR
 from src.web import data_service as ds
 from src.web import config_manager as cm
 
@@ -826,7 +827,22 @@ def _run_stage_pipeline(date_str: str, stage_name: str) -> None:
         RUNNING_TASKS.add(date_str)
     log_path = LOGS_DIR / f"{date_str}.log"
     try:
-        cmd = [sys.executable, "-m", "src.cli", stage_name, "--date", date_str]
+        if stage_name in ("collect", "score"):
+            cmd = [sys.executable, "-m", "src.cli", stage_name, "--force", "--date", date_str]
+        else:
+            # generate 子命令不支援 --force，由 web layer 預先刪除舊輸出
+            for pattern_dir, glob_pattern in [
+                (POSTS_DIR, f"{date_str}*.md"),
+                (NOTES_DIR, f"{date_str}*.md"),
+                (PROMPTS_DIR, f"{date_str}*.md"),
+            ]:
+                for old_file in pattern_dir.glob(glob_pattern):
+                    try:
+                        old_file.unlink()
+                        _logger.debug("Deleted old output file", extra={"file": str(old_file)})
+                    except OSError as del_err:
+                        _logger.warning("Failed to delete output file", extra={"file": str(old_file), "error": str(del_err)})
+            cmd = [sys.executable, "-m", "src.cli", "generate", "--date", date_str]
         with open(log_path, "a", encoding="utf-8") as log_file:
             log_file.write(f"\n=== Stage {stage_name} re-run: {date_str} ===\n")
             log_file.flush()
