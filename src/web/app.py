@@ -170,6 +170,8 @@ async def item_detail(request: Request, date_str: str, index: int):
             "request": request,
             "date_str": date_str,
             "item": detail,
+            "back_url": f"/day/{date_str}",
+            "back_label": date_str,
             "sidebar_stats": ds.get_sidebar_stats(),
         },
     )
@@ -259,6 +261,8 @@ async def material_detail(request: Request, date_str: str, index: int):
             "request": request,
             "date_str": date_str,
             "item": detail,
+            "back_url": "/materials",
+            "back_label": "素材庫",
             "sidebar_stats": ds.get_sidebar_stats(),
         },
     )
