@@ -829,7 +829,7 @@ def _run_stage_pipeline(date_str: str, stage_name: str) -> None:
     try:
         if stage_name in ("collect", "score"):
             cmd = [sys.executable, "-m", "src.cli", stage_name, "--force", "--date", date_str]
-        else:
+        elif stage_name == "generate":
             # generate 子命令不支援 --force，由 web layer 預先刪除舊輸出
             for pattern_dir, glob_pattern in [
                 (POSTS_DIR, f"{date_str}*.md"),
@@ -843,6 +843,8 @@ def _run_stage_pipeline(date_str: str, stage_name: str) -> None:
                     except OSError as del_err:
                         _logger.warning("Failed to delete output file", extra={"file": str(old_file), "error": str(del_err)})
             cmd = [sys.executable, "-m", "src.cli", "generate", "--date", date_str]
+        else:
+            raise ValueError(f"Unhandled stage in _run_stage_pipeline: {stage_name}")
         with open(log_path, "a", encoding="utf-8") as log_file:
             log_file.write(f"\n=== Stage {stage_name} re-run: {date_str} ===\n")
             log_file.flush()
