@@ -45,24 +45,30 @@
     </div>
   </div>
 
-  <!-- 階段卡片列 -->
-  <div class="pipeline-stages-row">
-    {% for stage_name, stage_label in [('collect','收集'),('score','評分'),('generate','生成')] %}
-    <div class="stage-card stage-pending" id="scard-{{ stage_name }}"
+  <!-- Pipeline Stages（Pill 風格） -->
+  <div class="pipeline-stages">
+    {% for stage_name, stage_label, default_count in [('collect','收集', stats.raw_count),('score','評分', stats.scored_count),('generate','生成', stats.posts_count)] %}
+    {% if not loop.first %}
+    <div class="stage-connector"><div class="connector-line"></div><span class="connector-chevron">›</span><div class="connector-line"></div></div>
+    {% endif %}
+    <div class="stage-pill stage-pending" id="scard-{{ stage_name }}"
+         data-default-count="{{ default_count }}"
          onclick="selectStage('{{ stage_name }}')">
-      <div class="stage-card-header">
-        <span class="stage-icon" id="sicon-{{ stage_name }}">⬜</span>
-        <span class="stage-warn-icon" id="swarn-{{ stage_name }}" style="display:none">⚠</span>
+      <span class="pill-icon" id="sicon-{{ stage_name }}">⬜</span>
+      <div class="pill-body">
+        <span class="pill-label">{{ stage_label }}</span>
+        <span class="pill-meta">
+          <span class="pill-count" id="scount-{{ stage_name }}">{{ default_count if default_count else '-' }}</span>
+          <span class="pill-elapsed" id="selapsed-{{ stage_name }}">-</span>
+        </span>
       </div>
-      <div class="stage-card-label">{{ stage_label }}</div>
-      <div class="stage-card-count" id="scount-{{ stage_name }}">-</div>
-      <div class="stage-card-elapsed" id="selapsed-{{ stage_name }}">-</div>
-      <div class="stage-card-actions">
+      <span class="pill-warn" id="swarn-{{ stage_name }}" style="display:none">⚠</span>
+      <span class="pill-actions">
         <button class="stage-rerun-btn" id="srerun-{{ stage_name }}"
                 onclick="rerunStage('{{ stage_name }}', event)" title="重新執行">↺</button>
         <button class="stage-stop-btn" id="sstop-{{ stage_name }}"
                 onclick="stopPipeline(event)" title="停止">■</button>
-      </div>
+      </span>
     </div>
     {% endfor %}
   </div>
@@ -79,88 +85,118 @@
 
 <style>
 /* Pipeline Card */
-.pipeline-card { background: var(--bg-c); border: 1px solid var(--br2); border-radius: 10px; margin-bottom: 1.5rem; overflow: hidden; }
-.pipeline-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; border-bottom: 1px solid var(--br2); }
+.pipeline-card { background: var(--bg-c); border: none; border-radius: 14px; margin-bottom: 1.5rem; overflow: hidden; box-shadow: var(--card-shadow); }
+.pipeline-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 1.25rem; border-bottom: 1px solid var(--br2); }
 .pipeline-meta { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
 .pipeline-title { font-weight: 600; font-size: 0.95rem; }
 .pipeline-badge { padding: 2px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; }
-.pipeline-badge.badge-done { background: rgba(34,197,94,0.15); color: #22c55e; }
-.pipeline-badge.badge-running { background: rgba(139,92,246,0.15); color: #8b5cf6; animation: pipelinePulse 1.5s infinite; }
-.pipeline-badge.badge-scored, .pipeline-badge.badge-collected { background: rgba(251,191,36,0.15); color: #f59e0b; }
+.pipeline-badge.badge-done { background: rgba(52,199,89,0.15); color: #34C759; }
+.pipeline-badge.badge-running { background: rgba(0,122,255,0.15); color: #007AFF; animation: pipelinePulse 1.5s infinite; }
+.pipeline-badge.badge-scored, .pipeline-badge.badge-collected { background: rgba(255,149,0,0.15); color: #FF9500; }
 .pipeline-badge.badge-none, .pipeline-badge.badge-idle { background: var(--br2); color: var(--t5); }
-.pipeline-badge.badge-failed { background: rgba(239,68,68,0.15); color: #ef4444; }
-.pipeline-badge.badge-cancelled { background: rgba(249,115,22,0.15); color: #f97316; }
-.pipeline-duration { font-size: 0.8rem; color: var(--t5); }
+.pipeline-badge.badge-failed { background: rgba(255,59,48,0.15); color: #FF3B30; }
+.pipeline-badge.badge-cancelled { background: rgba(255,149,0,0.15); color: #FF9500; }
+.pipeline-duration { font-size: 0.8rem; color: var(--t5); font-family: 'JetBrains Mono', monospace; }
 @keyframes pipelinePulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.6; }
 }
 
-/* Stage Cards Row */
-.pipeline-stages-row {
+/* Pipeline Stages (Pill style) */
+.pipeline-stages {
   display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  padding: 1.25rem 1rem 0.75rem;
+  align-items: center;
+  padding: 14px 20px;
+  gap: 0;
+  border-top: 1px solid var(--br2);
 }
-
-/* Stage Card */
-.stage-card {
+.stage-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 24px;
+  border: 1.5px solid var(--br2);
+  background: var(--bg-in);
   cursor: pointer;
-  border: 1px solid var(--br2);
-  border-radius: 8px;
-  padding: 12px;
-  width: 160px;
-  transition: border-color .2s, box-shadow .2s;
+  transition: background .15s, border-color .2s, box-shadow .2s;
   position: relative;
+  white-space: nowrap;
 }
-.stage-card:hover { border-color: var(--accent, #8b5cf6); }
-.stage-card.selected { border-color: var(--accent, #8b5cf6); box-shadow: 0 0 0 2px rgba(139,92,246,.2); }
+.stage-pill:hover { box-shadow: 0 0 0 2px rgba(0,122,255,0.15); }
+.stage-pill.selected { box-shadow: 0 0 0 2px rgba(0,122,255,0.3); background: rgba(0,122,255,0.06); }
+.pill-icon {
+  display: flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border-radius: 50%;
+  font-size: 13px; flex-shrink: 0;
+  background: var(--br2); color: var(--t3);
+}
+.pill-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.pill-label { font-weight: 600; font-size: 12.5px; color: var(--t2); }
+.pill-meta { display: flex; gap: 6px; align-items: center; }
+.pill-count { font-size: 11.5px; color: var(--t3); font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+.pill-elapsed { font-size: 10.5px; color: var(--t5); font-family: 'JetBrains Mono', monospace; }
+.pill-warn { color: #eab308; font-size: 13px; flex-shrink: 0; }
+.pill-actions { display: flex; gap: 4px; flex-shrink: 0; margin-left: 2px; }
 
-.stage-card-header { display: flex; align-items: center; gap: 4px; margin-bottom: 4px; }
-.stage-icon { font-size: 18px; }
-.stage-warn-icon { color: #eab308; font-size: 14px; }
-.stage-card-label { font-weight: 600; font-size: 14px; }
-.stage-card-count { font-size: 12px; color: var(--t5); margin-top: 2px; }
-.stage-card-elapsed { font-size: 11px; color: var(--t5); }
-.stage-card-actions { margin-top: 8px; display: flex; gap: 6px; }
+/* Connector between pills */
+.stage-connector {
+  display: flex; align-items: center; gap: 0; flex-shrink: 0; padding: 0 2px;
+}
+.connector-line { width: 12px; height: 2px; background: var(--br2); transition: background .2s; }
+.connector-chevron { font-size: 14px; color: var(--t6); line-height: 1; transition: color .2s; }
+/* Connector turns green when upstream pill is done */
+.stage-pill.stage-done + .stage-connector .connector-line { background: rgba(52,199,89,0.5); }
+.stage-pill.stage-done + .stage-connector .connector-chevron { color: #34C759; }
 
-/* Stage card status colours */
-.stage-card.stage-pending { opacity: 0.6; }
-.stage-card.stage-running { border-color: #3b82f6; opacity: 1; animation: nodeRunning 1.5s infinite; }
-.stage-card.stage-done { border-color: #22c55e; opacity: 1; }
-.stage-card.stage-failed { border-color: #ef4444; opacity: 1; }
-.stage-card.stage-cancelled { border-color: #f97316; opacity: 1; }
-.stage-card.stage-warning { border-color: #eab308; }
-@keyframes nodeRunning {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(59,130,246,0.4); }
-  50% { box-shadow: 0 0 0 6px rgba(59,130,246,0); }
+/* Pill status colours */
+.stage-pill.stage-pending { opacity: 0.55; border-color: var(--br2); }
+.stage-pill.stage-running {
+  border-color: #007AFF; background: rgba(0,122,255,0.08); opacity: 1;
+  animation: pillRunning 1.5s infinite;
+}
+.stage-pill.stage-running .pill-icon { background: rgba(0,122,255,0.2); color: #007AFF; }
+.stage-pill.stage-done { border-color: rgba(52,199,89,0.5); background: rgba(52,199,89,0.06); opacity: 1; }
+.stage-pill.stage-done .pill-icon { background: rgba(52,199,89,0.2); color: #34C759; }
+.stage-pill.stage-failed { border-color: rgba(255,59,48,0.5); background: rgba(255,59,48,0.06); opacity: 1; }
+.stage-pill.stage-failed .pill-icon { background: rgba(255,59,48,0.2); color: #FF3B30; }
+.stage-pill.stage-cancelled { border-color: rgba(255,149,0,0.5); background: rgba(255,149,0,0.06); opacity: 1; }
+.stage-pill.stage-cancelled .pill-icon { background: rgba(255,149,0,0.2); color: #FF9500; }
+.stage-pill.stage-warning .pill-warn { display: inline !important; }
+@keyframes pillRunning {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0,122,255,0); }
+  50% { box-shadow: 0 0 0 3px rgba(0,122,255,0.15); }
 }
 
 /* Per-stage buttons */
 .stage-rerun-btn, .stage-stop-btn {
   display: none;
-  padding: 2px 8px;
+  padding: 2px 7px;
   border-radius: 4px;
   border: 1px solid var(--br2);
   background: var(--bg-in, #1e293b);
   color: var(--t2);
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12px;
 }
-.stage-card.stage-done .stage-rerun-btn,
-.stage-card.stage-failed .stage-rerun-btn,
-.stage-card.stage-cancelled .stage-rerun-btn { display: inline-block; }
-
+.stage-pill.stage-done .stage-rerun-btn,
+.stage-pill.stage-failed .stage-rerun-btn,
+.stage-pill.stage-cancelled .stage-rerun-btn { display: inline-block; }
 .pipeline-running .stage-stop-btn { display: inline-block; }
+
+@media(max-width:700px) {
+  .pipeline-stages { flex-direction: column; gap: 0; padding: 12px 16px; }
+  .stage-connector { transform: rotate(90deg); padding: 4px 0; }
+  .stage-pill { width: 100%; }
+}
 
 /* Log Panel */
 .log-panel {
-  margin: 0 1rem 1rem;
-  border: 1px solid var(--br2);
-  border-radius: 8px;
-  background: #0d1117;
+  margin: 0;
+  border-top: 1px solid var(--br2);
+  background: #1C1C1E;
   overflow: hidden;
+  border-radius: 0 0 14px 14px;
 }
 .log-panel-header {
   display: flex;
@@ -180,7 +216,7 @@
   padding: 0 4px;
 }
 .log-panel-pre {
-  max-height: 400px;
+  max-height: 300px;
   overflow-y: auto;
   padding: 12px;
   font-size: 12px;
@@ -188,187 +224,84 @@
   white-space: pre-wrap;
   word-break: break-all;
   margin: 0;
-  color: #c9d1d9;
-  font-family: 'JetBrains Mono', monospace;
+  color: rgba(255,255,255,0.75);
+  font-family: "SF Mono", "JetBrains Mono", monospace;
 }
 .log-entry { display: block; }
-.log-ts    { color: #484f58; }
-.log-INFO  { color: #79c0ff; }
-.log-WARN, .log-WARNING { color: #e3b341; }
-.log-ERROR { color: #f85149; }
+.log-ts    { color: rgba(255,255,255,0.25); }
+.log-INFO  { color: #32ADE6; }
+.log-WARN, .log-WARNING { color: #FF9500; }
+.log-ERROR { color: #FF3B30; }
 
 /* Split Button */
 .split-btn-wrap { position: relative; display: flex; }
-.btn-run-main { padding: 6px 14px; background: var(--av); color: white; border: none; border-radius: 6px 0 0 6px; cursor: pointer; font-size: 0.85rem; transition: opacity 0.15s; }
-.btn-run-caret { padding: 6px 9px; background: var(--av); color: white; border: none; border-left: 1px solid rgba(255,255,255,0.3); border-radius: 0 6px 6px 0; cursor: pointer; transition: opacity 0.15s; }
+.btn-run-main { padding: 5px 12px; background: var(--av); color: white; border: none; border-radius: 6px 0 0 6px; cursor: pointer; font-size: 0.82rem; transition: opacity 0.15s; }
+.btn-run-caret { padding: 5px 8px; background: var(--av); color: white; border: none; border-left: 1px solid rgba(255,255,255,0.3); border-radius: 0 6px 6px 0; cursor: pointer; transition: opacity 0.15s; }
 .btn-run-main:hover, .btn-run-caret:hover { opacity: 0.85; }
 .btn-run-main:disabled, .btn-run-caret:disabled { opacity: 0.45; cursor: not-allowed; }
 .run-dropdown { position: absolute; top: 100%; right: 0; background: var(--bg-c); border: 1px solid var(--br2); border-radius: 6px; min-width: 180px; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.3); margin-top: 4px; }
 .run-dropdown button { display: block; width: 100%; text-align: left; padding: 8px 14px; background: none; border: none; cursor: pointer; font-size: 0.85rem; color: var(--t2); }
 .run-dropdown button:hover { background: var(--bg-in); }
+
+/* Charts Strip */
+.charts-strip {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.charts-strip .card { padding: 12px; }
+.charts-strip canvas { height: 110px !important; }
+@media(max-width:700px) {
+  .charts-strip { grid-template-columns: 1fr; }
+}
+
+/* Content badge in table */
+.content-badge {
+  display: inline-block;
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  text-decoration: none;
+  white-space: nowrap;
+  font-weight: 500;
+}
+.content-badge-blog { border: 1px solid rgba(52,199,89,0.3); background: rgba(52,199,89,0.06); color: #34C759; }
+.content-badge-note { border: 1px solid rgba(50,173,230,0.3); background: rgba(50,173,230,0.06); color: #32ADE6; }
 </style>
 
-<!-- Stats Top Row (Counts Only) -->
-<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; margin-bottom:14px;">
-  <!-- Raw count -->
-  <a href="/raw/{{ date_str }}" class="stat-n" style="text-decoration:none; display:flex; flex-direction:column; padding:16px 20px; transition:transform 0.1s; cursor:pointer;"
-     onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-      <span style="font-size:14px; font-weight:600; color:var(--t4);">收集筆數</span>
-      <span style="font-size:18px; opacity:0.7;">📡</span>
-    </div>
-    <div style="font-size:32px; font-weight:700; color:var(--t1); line-height:1;">{{ stats.raw_count }}</div>
-    <div style="font-size:10.5px; color:var(--t5); margin-top:12px;">點擊檢視原始清單 ➔</div>
-  </a>
-
-  <!-- Scored count -->
-  <div class="stat-v" style="padding:16px 20px; display:flex; flex-direction:column;">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-      <span style="font-size:14px; font-weight:600; color:var(--t4);">評分筆數</span>
-      <span style="font-size:18px; opacity:0.7;">🔍</span>
-    </div>
-    <div style="font-size:32px; font-weight:700; color:var(--av); line-height:1;">{{ stats.scored_count }}</div>
-  </div>
-
-  <!-- Posts count -->
-  <div class="stat-g" style="padding:16px 20px; display:flex; flex-direction:column;">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-      <span style="font-size:14px; font-weight:600; color:var(--t4);">部落格文</span>
-      <span style="font-size:18px; opacity:0.7;">📝</span>
-    </div>
-    <div style="font-size:32px; font-weight:700; color:var(--ag); line-height:1;">{{ stats.posts_count }}</div>
-  </div>
-
-  <!-- Notes count -->
-  <div class="stat-c" style="padding:16px 20px; display:flex; flex-direction:column;">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-      <span style="font-size:14px; font-weight:600; color:var(--t4);">AI 筆記</span>
-      <span style="font-size:18px; opacity:0.7;">📓</span>
-    </div>
-    <div style="font-size:32px; font-weight:700; color:var(--ac); line-height:1;">{{ stats.notes_count }}</div>
-  </div>
-</div>
-
-<!-- Lists Row -->
-{% if posts or notes %}
-<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:14px; margin-bottom:28px; align-items:start;">
-  {% if posts %}
-  <div class="card" style="padding:16px 20px; display:flex; flex-direction:column;">
-    <h3 style="font-size:14px; font-weight:600; color:var(--ag); margin:0 0 12px; display:flex; align-items:center; gap:8px; border-bottom:1px solid var(--br2); padding-bottom:8px;">
-      <span style="font-size:16px;">📝</span> 產出的部落格文
-      <span style="margin-left:auto; font-size:11px; color:var(--t5); font-weight:400;">{{ posts|length }} 篇</span>
-    </h3>
-    <ul style="list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px;">
-      {% for p in posts %}
-      <li>
-        {%- set fb = p.feedback or '' -%}
-        <a href="/post/{{ date_str }}/{{ p.slug }}"
-           style="display:block; padding:9px 12px; border-radius:8px; text-decoration:none;
-                  border-left: 3px solid {% if fb == 'good' %}var(--ag){% elif fb == 'bad' %}var(--ar){% elif fb == 'normal' %}var(--t5){% else %}rgba(52,211,153,0.25){% endif %};
-                  background: {% if fb == 'good' %}rgba(52,211,153,0.05){% elif fb == 'bad' %}rgba(248,113,113,0.03){% else %}rgba(52,211,153,0.03){% endif %};
-                  border-top: 1px solid rgba(52,211,153,0.08); border-right: 1px solid rgba(52,211,153,0.08); border-bottom: 1px solid rgba(52,211,153,0.08);
-                  transition: background 0.13s;">
-          <div style="display:flex; align-items:center; gap:6px; margin-bottom:3px;">
-            <div style="font-size:13px; font-weight:600; color:var(--t1); line-height:1.35; flex:1;
-                        overflow:hidden; display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical;">
-              {{ p.title or p.slug }}
-            </div>
-            {% if fb == 'good' %}<span style="font-size:11px; flex-shrink:0;">👍</span>
-            {% elif fb == 'bad' %}<span style="font-size:11px; flex-shrink:0;">👎</span>{% endif %}
-          </div>
-          <div style="display:flex; gap:4px; align-items:center; flex-wrap:wrap;">
-            {% for tag in (p.tags or [])[:3] %}
-            <span style="font-size:10px; padding:1px 5px; border-radius:3px;
-                         background:rgba(52,211,153,0.1); color:var(--ag);">{{ tag }}</span>
-            {% endfor %}
-            <span style="margin-left:auto; font-size:10.5px; color:var(--t5);">
-              {% if p.fm_score %}⭐{{ p.fm_score|int }} · {% endif %}⏱ {{ p.reading_time_min }}分
-            </span>
-          </div>
-        </a>
-      </li>
-      {% endfor %}
-    </ul>
-  </div>
-  {% endif %}
-
-  {% if notes %}
-  <div class="card" style="padding:16px 20px; display:flex; flex-direction:column;">
-    <h3 style="font-size:14px; font-weight:600; color:var(--ac); margin:0 0 12px; display:flex; align-items:center; gap:8px; border-bottom:1px solid var(--br2); padding-bottom:8px;">
-      <span style="font-size:16px;">📓</span> 產出的 AI 筆記
-      <span style="margin-left:auto; font-size:11px; color:var(--t5); font-weight:400;">{{ notes|length }} 篇</span>
-    </h3>
-    <ul style="list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px;">
-      {% for n in notes %}
-      <li>
-        {%- set fb = n.feedback or '' -%}
-        <a href="/note/{{ date_str }}/{{ n.slug }}"
-           style="display:block; padding:9px 12px; border-radius:8px; text-decoration:none;
-                  border-left: 3px solid {% if fb == 'good' %}var(--ag){% elif fb == 'bad' %}var(--ar){% elif fb == 'normal' %}var(--t5){% else %}rgba(34,211,238,0.25){% endif %};
-                  background: {% if fb == 'good' %}rgba(52,211,153,0.05){% elif fb == 'bad' %}rgba(248,113,113,0.03){% else %}rgba(34,211,238,0.03){% endif %};
-                  border-top: 1px solid rgba(34,211,238,0.08); border-right: 1px solid rgba(34,211,238,0.08); border-bottom: 1px solid rgba(34,211,238,0.08);
-                  transition: background 0.13s;">
-          <div style="display:flex; align-items:center; gap:6px; margin-bottom:3px;">
-            <div style="font-size:13px; font-weight:600; color:var(--t1); line-height:1.35; flex:1;
-                        overflow:hidden; display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical;">
-              {{ n.title or n.slug }}
-            </div>
-            {% if fb == 'good' %}<span style="font-size:11px; flex-shrink:0;">👍</span>
-            {% elif fb == 'bad' %}<span style="font-size:11px; flex-shrink:0;">👎</span>{% endif %}
-          </div>
-          <div style="display:flex; gap:4px; align-items:center; flex-wrap:wrap;">
-            {% for tag in (n.tags or [])[:3] %}
-            <span style="font-size:10px; padding:1px 5px; border-radius:3px;
-                         background:rgba(34,211,238,0.1); color:var(--ac);">{{ tag }}</span>
-            {% endfor %}
-            <span style="margin-left:auto; font-size:10.5px; color:var(--t5);">
-              {% if n.fm_score %}⭐{{ n.fm_score|int }} · {% endif %}⏱ {{ n.reading_time_min }}分
-            </span>
-          </div>
-        </a>
-      </li>
-      {% endfor %}
-    </ul>
-  </div>
-  {% endif %}
-</div>
-{% else %}
-<div style="margin-bottom:28px;"></div>
-{% endif %}
-
-<!-- Charts -->
+<!-- Charts Strip -->
 {% if stats.scored_count > 0 %}
-<div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:28px;" class="chart-grid">
-  <div class="card" style="padding:18px;">
-    <h3 style="font-size:13px; font-weight:600; color:var(--t3); margin:0 0 14px;">分數分佈</h3>
-    <div style="position:relative; height:160px;">
+<div class="charts-strip">
+  <div class="card">
+    <h3 style="font-size:11px; font-weight:600; color:var(--t3); margin:0 0 8px;">分數分佈</h3>
+    <div style="position:relative; height:110px;">
       <canvas id="scoreChart"></canvas>
     </div>
   </div>
-  <div class="card" style="padding:18px;">
-    <h3 style="font-size:13px; font-weight:600; color:var(--t3); margin:0 0 14px;">來源佔比</h3>
-    <div style="position:relative; height:160px;">
+  <div class="card">
+    <h3 style="font-size:11px; font-weight:600; color:var(--t3); margin:0 0 8px;">來源佔比</h3>
+    <div style="position:relative; height:110px;">
       <canvas id="sourceChart"></canvas>
     </div>
   </div>
 </div>
-<style>@media(max-width:600px){.chart-grid{grid-template-columns:1fr!important;}}</style>
 {% endif %}
 
 <!-- Scored items table -->
 <section>
-  <h3 style="font-size:15px; font-weight:600; color:var(--t2); margin:0 0 14px;">評分列表</h3>
+  <h3 style="font-size:14px; font-weight:600; color:var(--t2); margin:0 0 10px;">評分列表</h3>
   {% if items %}
   <div class="card" style="overflow:hidden;">
     <table class="data-table">
       <thead>
         <tr>
-          <th style="width:36px;">#</th>
-          <th>分數</th>
-          <th style="width:120px;">來源</th>
-          <th style="width:50%;">標題 / 資訊</th>
-          <th>詳細評語</th>
-          <th style="width:60px;"></th>
+          <th style="width:32px;">#</th>
+          <th style="width:70px;">分數</th>
+          <th style="width:90px;">來源</th>
+          <th>標題 / 資訊</th>
+          <th style="width:80px;">產出</th>
+          <th style="width:50px;"></th>
         </tr>
       </thead>
       <tbody>
@@ -378,55 +311,66 @@
             {{ loop.index }}
           </td>
           <td>
-            <div style="display:flex; flex-direction:column; gap:3px;">
+            <div style="display:flex; flex-direction:column; gap:2px;">
               <span class="score-badge">{{ "%.0f"|format(it.total_score) }}</span>
-              <span style="font-size:11px; color:var(--t5); font-family:'JetBrains Mono',monospace;">
+              <span style="font-size:10px; color:var(--t5); font-family:'JetBrains Mono',monospace;">
                 R:{{ "%.0f"|format(it.rule_score) }}{% if it.llm_score is not none %} L:{{ "%.0f"|format(it.llm_score) }}{% endif %}
               </span>
             </div>
           </td>
           <td>
-            <span class="chip" style="display:inline-block; max-width:90px;
-                  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+            <span class="chip" style="display:inline-block; max-width:80px;
+                  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:10.5px;">
               {{ it.source_name or it.source }}
             </span>
           </td>
-          <td style="max-width:300px;">
-            <div style="display:flex; flex-direction:column; gap:6px;">
+          <td>
+            <div style="display:flex; flex-direction:column; gap:4px;">
               <a href="{{ it.url }}" target="_blank" class="link-v"
-                 style="font-size:13.5px; font-weight:500; line-height:1.4; color:var(--t2);"
+                 style="font-size:13px; font-weight:500; line-height:1.35; color:var(--t2);"
                  onmouseover="this.style.color='var(--av)'" onmouseout="this.style.color='var(--t2)'">
                 {{ it.title }}
               </a>
               {% if it.tags or it.authors %}
-              <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
-                {% for t in (it.tags or [])[:4] %}
-                <span class="tag-v" style="font-size:10px; padding:1px 6px;">{{ t }}</span>
+              <div style="display:flex; gap:4px; flex-wrap:wrap; align-items:center;">
+                {% for t in (it.tags or [])[:3] %}
+                <span class="tag-v" style="font-size:10px; padding:1px 5px;">{{ t }}</span>
                 {% endfor %}
                 {% if it.authors %}
-                <span style="font-size:11px; color:var(--t4);">{{ it.authors[0] }}{% if it.authors|length > 1 %} et al.{% endif %}</span>
+                <span style="font-size:10.5px; color:var(--t4);">{{ it.authors[0] }}{% if it.authors|length > 1 %} et al.{% endif %}</span>
                 {% endif %}
               </div>
               {% endif %}
-              {% if it.abstract %}
-              <details style="font-size:11.5px; color:var(--t4); margin-top:2px;">
-                <summary style="cursor:pointer; opacity:0.8;">預覽摘要</summary>
-                <div style="margin-top:4px; padding:8px; background:var(--bg-in); border-radius:6px; line-height:1.5;">
-                  {{ it.abstract[:400] }}{% if it.abstract|length > 400 %}...{% endif %}
+              {% if it.llm_reason %}
+              <details style="font-size:11px; color:var(--t4); margin-top:1px;">
+                <summary style="cursor:pointer; opacity:0.7;">評語</summary>
+                <div style="margin-top:3px; padding:6px 8px; background:var(--bg-in); border-radius:5px; line-height:1.5; font-size:11.5px;">
+                  {{ it.llm_reason }}
                 </div>
               </details>
               {% endif %}
             </div>
           </td>
-          <td style="color:var(--t5); font-size:12px; min-width:200px; line-height:1.5;">
-            {{ it.llm_reason }}
+          <td>
+            {% set ckey = (it.title or '')|lower|trim %}
+            {% if ckey in content_map %}
+              {% set cm = content_map[ckey] %}
+              <div style="display:flex; gap:3px; flex-wrap:wrap;">
+                {% if cm.has_post and cm.post_slug %}
+                <a href="/post/{{ date_str }}/{{ cm.post_slug }}" class="content-badge content-badge-blog">Blog</a>
+                {% endif %}
+                {% if cm.has_note and cm.note_slug %}
+                <a href="/note/{{ date_str }}/{{ cm.note_slug }}" class="content-badge content-badge-note">Note</a>
+                {% endif %}
+              </div>
+            {% endif %}
           </td>
           <td>
             <a href="/item/{{ date_str }}/{{ it.index }}" class="link-v"
-               style="display:inline-flex; align-items:center; gap:3px;
-                      font-size:12.5px; white-space:nowrap;">
+               style="display:inline-flex; align-items:center; gap:2px;
+                      font-size:12px; white-space:nowrap;">
               詳細
-              <svg style="width:12px; height:12px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg style="width:11px; height:11px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
               </svg>
             </a>
@@ -437,9 +381,9 @@
     </table>
   </div>
   {% else %}
-  <div class="card" style="padding:48px; text-align:center;">
-    <div style="font-size:32px; margin-bottom:12px;">📭</div>
-    <p style="color:var(--t4); font-size:14px; margin:0;">{{ date_str }} 尚無評分資料</p>
+  <div class="card" style="padding:40px; text-align:center;">
+    <div style="font-size:28px; margin-bottom:10px;">📭</div>
+    <p style="color:var(--t4); font-size:13px; margin:0;">{{ date_str }} 尚無評分資料</p>
   </div>
   {% endif %}
 </section>
@@ -561,26 +505,60 @@ function updateStageCard(name) {
 
   const el = document.getElementById('selapsed-' + name);
   if (s.elapsed !== null) {
-    el.textContent = s.elapsed + 's';
+    if (s.elapsed >= 60) {
+      el.textContent = Math.floor(s.elapsed / 60) + 'm' + Math.round(s.elapsed % 60) + 's';
+    } else {
+      el.textContent = Math.round(s.elapsed) + 's';
+    }
   } else {
-    el.textContent = s.status === 'running' ? '...' : '-';
+    el.textContent = s.status === 'running' ? '...' : '';
   }
 
   const countEl = document.getElementById('scount-' + name);
   if (s.itemCount !== null) {
-    const label = name === 'generate' ? 'posts' : 'items';
-    countEl.textContent = s.itemCount + ' ' + label;
+    countEl.textContent = s.itemCount;
     if (s.itemCount === 0 && name !== 'collect') {
       card.classList.add('stage-warning');
       document.getElementById('swarn-' + name).style.display = 'inline';
     }
   } else {
-    countEl.textContent = '-';
+    const def = card.getAttribute('data-default-count');
+    countEl.textContent = (def && def !== '0') ? def : '-';
+  }
+  updatePipelineSummary();
+}
+
+function updatePipelineSummary() {
+  const el = document.getElementById('pipeline-duration');
+  if (!el) return;
+  let total = 0;
+  let hasAny = false;
+  STAGES.forEach(function(s) {
+    if (stageState[s].elapsed !== null) {
+      total += stageState[s].elapsed;
+      hasAny = true;
+    }
+  });
+  if (hasAny) {
+    if (total >= 60) {
+      var m = Math.floor(total / 60);
+      var s = Math.round(total % 60);
+      el.textContent = m + 'm ' + s + 's';
+    } else {
+      el.textContent = total.toFixed(1) + 's';
+    }
+  } else {
+    el.textContent = '';
   }
 }
 
 // ---- Log Panel ----
 function selectStage(name) {
+  // Toggle: 若點擊已選中的 stage，收合 panel
+  if (_selectedStage === name) {
+    closeLogPanel();
+    return;
+  }
   STAGES.forEach(function(s) {
     document.getElementById('scard-' + s).classList.toggle('selected', s === name);
   });
