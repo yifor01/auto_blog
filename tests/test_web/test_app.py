@@ -230,3 +230,49 @@ def test_run_stage_generate_deletes_old_files(tmp_path: Path, monkeypatch):
 
     # RUNNING_TASKS 在 finally 中應被清空
     assert date_str not in app_module.RUNNING_TASKS
+
+
+# ──────────────────────────────────────────────────────────
+# 測試 8：api_run_stage 成功時回傳 log_offset（無 log 檔）
+# ──────────────────────────────────────────────────────────
+
+def test_run_stage_returns_log_offset_zero_when_no_log(client, tmp_path, monkeypatch):
+    """POST /api/run/{date}/stage/{stage} 無 log 檔時 log_offset 為 0"""
+    import src.web.app as app_module
+    monkeypatch.setattr(app_module, "LOGS_DIR", tmp_path)
+    monkeypatch.setattr(app_module, "RUNNING_TASKS", set())
+    with patch("src.web.app._run_stage_pipeline"):
+        res = client.post("/api/run/2026-01-01/stage/collect")
+    assert res.status_code == 200
+    data = res.json()
+    assert "log_offset" in data
+    assert data["log_offset"] == 0
+
+
+# ──────────────────────────────────────────────────────────
+# 測試 9：api_run_stage 成功時回傳 log_offset（有 log 檔）
+# ──────────────────────────────────────────────────────────
+
+def test_run_stage_returns_log_offset_when_log_exists(client, tmp_path, monkeypatch):
+    """POST /api/run/{date}/stage/{stage} 有 log 檔時 log_offset 為 log 大小"""
+    import src.web.app as app_module
+    monkeypatch.setattr(app_module, "LOGS_DIR", tmp_path)
+    monkeypatch.setattr(app_module, "RUNNING_TASKS", set())
+    log_file = tmp_path / "2026-01-01.log"
+    log_file.write_text("existing content", encoding="utf-8")
+    expected_offset = log_file.stat().st_size
+    with patch("src.web.app._run_stage_pipeline"):
+        res = client.post("/api/run/2026-01-01/stage/collect")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["log_offset"] == expected_offset
+
+
+# ──────────────────────────────────────────────────────────
+# 測試 10：負數 offset 應回傳 422
+# ──────────────────────────────────────────────────────────
+
+def test_logs_stream_rejects_negative_offset(client):
+    """GET /api/logs/{date}/stream?from=-1 應回傳 422 驗證錯誤"""
+    res = client.get("/api/logs/2026-01-01/stream?from=-1")
+    assert res.status_code == 422

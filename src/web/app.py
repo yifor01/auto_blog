@@ -945,11 +945,11 @@ async def api_run_stage(date_str: str, stage_name: str, background_tasks: Backgr
         date.fromisoformat(date_str)
     except ValueError:
         raise HTTPException(status_code=400, detail="日期格式錯誤")
+    log_path = LOGS_DIR / f"{date_str}.log"
     with _proc_lock:
         if date_str in RUNNING_TASKS:
             raise HTTPException(status_code=409, detail=f"Pipeline 已在執行中（{date_str}）")
-    log_path = LOGS_DIR / f"{date_str}.log"
-    log_offset = log_path.stat().st_size if log_path.exists() else 0
+        log_offset = log_path.stat().st_size if log_path.exists() else 0
     background_tasks.add_task(_run_stage_pipeline, date_str, stage_name)
     return JSONResponse({"status": "started", "date": date_str, "stage": stage_name, "log_offset": log_offset})
 
