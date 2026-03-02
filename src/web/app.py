@@ -156,16 +156,16 @@ async def raw_detail(request: Request, date_str: str):
 @app.get("/item/{date_str}/{index}", response_class=HTMLResponse)
 async def item_detail(request: Request, date_str: str, index: int):
     try:
-        d = date.fromisoformat(date_str)
+        date.fromisoformat(date_str)
     except ValueError:
         raise HTTPException(status_code=400, detail="日期格式錯誤")
 
-    detail = ds.get_item_detail(d, index)
+    detail = ds.get_material_detail(date_str, index)
     if detail is None:
         raise HTTPException(status_code=404, detail="找不到該項目")
 
     return templates.TemplateResponse(
-        "item_detail.html",
+        "material_detail.html",
         {
             "request": request,
             "date_str": date_str,
