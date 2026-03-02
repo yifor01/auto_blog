@@ -395,7 +395,7 @@ def get_sidebar_stats() -> dict:
 
     # 書籤數
     bookmarks_count = 0
-    bookmarks_path = Path(SCORED_DIR).parent / "bookmarks.json"
+    bookmarks_path = DATA_DIR / "bookmarks.json"
     if bookmarks_path.exists():
         bm_data = load_json(bookmarks_path)
         if isinstance(bm_data, dict):
