@@ -14,7 +14,7 @@ import asyncio
 import threading
 import time as _time
 
-from fastapi import BackgroundTasks, FastAPI, Form, HTTPException, Request
+from fastapi import BackgroundTasks, FastAPI, Form, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 
@@ -617,10 +617,10 @@ async def api_logs_stage_info(date_str: str):
             if "=== Pipeline finished" in line:
                 if date_str not in RUNNING_TASKS:
                     pipeline_status = "done" if "exit_code=0" in line else "failed"
-                # 若 pipeline 結束但有 stage 仍為 running → 標為 failed
-                for s in stages.values():
-                    if s["status"] == "running":
-                        s["status"] = "failed"
+                    # 若 pipeline 結束但有 stage 仍為 running → 標為 failed
+                    for s in stages.values():
+                        if s["status"] == "running":
+                            s["status"] = "failed"
                 continue
             try:
                 parsed = json.loads(line)
@@ -651,7 +651,7 @@ async def api_logs_stage_info(date_str: str):
 
 
 @app.get("/api/logs/{date_str}/stream")
-async def api_logs_stream(date_str: str):
+async def api_logs_stream(date_str: str, from_: int = Query(0, alias="from")):
     """SSE 串流：即時推送 pipeline 執行日誌（每 1 秒 poll log 檔新增行）。"""
     try:
         date.fromisoformat(date_str)
@@ -661,7 +661,7 @@ async def api_logs_stream(date_str: str):
     log_path = LOGS_DIR / f"{date_str}.log"
 
     async def event_generator():
-        offset = 0
+        offset = from_
         consecutive_idle = 0
         current_stage = None
         # 最多串流 10 分鐘（600 次 × 1s）
@@ -733,10 +733,11 @@ async def api_logs_stream(date_str: str):
             # 若 pipeline 結束且 30 秒無新輸出，斷開連線
             if consecutive_idle >= 30 and log_path.exists():
                 content = log_path.read_text(encoding="utf-8", errors="replace")
-                if "Pipeline cancelled by user" in content or any(f"Stage {s} cancelled" in content for s in VALID_STAGES):
+                new_content = content[offset:]  # 只看未讀過的部分
+                if "Pipeline cancelled by user" in new_content or any(f"Stage {s} cancelled" in new_content for s in VALID_STAGES):
                     yield f"event: cancelled\ndata: {{}}\n\n"
                     return
-                if "=== Pipeline finished" in content or any(f"=== Stage {s} finished" in content for s in VALID_STAGES):
+                if "=== Pipeline finished" in new_content or any(f"=== Stage {s} finished" in new_content for s in VALID_STAGES):
                     yield "data: [Pipeline 已結束]\n\n"
                     yield "event: done\ndata: done\n\n"
                     return
@@ -947,8 +948,10 @@ async def api_run_stage(date_str: str, stage_name: str, background_tasks: Backgr
     with _proc_lock:
         if date_str in RUNNING_TASKS:
             raise HTTPException(status_code=409, detail=f"Pipeline 已在執行中（{date_str}）")
+    log_path = LOGS_DIR / f"{date_str}.log"
+    log_offset = log_path.stat().st_size if log_path.exists() else 0
     background_tasks.add_task(_run_stage_pipeline, date_str, stage_name)
-    return JSONResponse({"status": "started", "date": date_str, "stage": stage_name})
+    return JSONResponse({"status": "started", "date": date_str, "stage": stage_name, "log_offset": log_offset})
 
 
 @app.get("/api/logs/{date_str}/stage/{stage_name}")
