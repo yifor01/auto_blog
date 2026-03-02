@@ -592,8 +592,8 @@ async def api_logs_stage_info(date_str: str):
         pipeline_status = "running"
 
     # Step 3：解析 log 取得精確 elapsed 與即時 stage 狀態（覆蓋 Step 1）
-    if log_path.exists():
-        content = log_path.read_text(encoding="utf-8", errors="replace")
+    content = log_path.read_text(encoding="utf-8", errors="replace") if log_path.exists() else ""
+    if content:
         has_stage_markers = False
 
         for line in content.splitlines():
@@ -648,12 +648,11 @@ async def api_logs_stage_info(date_str: str):
                 stages["generate"]["status"] = "done"
 
     result = {"stages": [stages[n] for n in stages_order], "pipeline_status": pipeline_status}
-    if date_str in RUNNING_TASKS and log_path.exists():
-        log_text = log_path.read_text(encoding="utf-8", errors="replace")
+    if date_str in RUNNING_TASKS and content:
         log_offset = 0
         markers = ["=== Pipeline started"] + [f"=== Stage {s} re-run" for s in VALID_STAGES]
         for marker in markers:
-            pos = log_text.rfind(marker)
+            pos = content.rfind(marker)
             if pos > log_offset:
                 log_offset = pos
         result["log_offset"] = log_offset
