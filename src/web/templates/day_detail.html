@@ -660,7 +660,7 @@ function startSSE() { openLogStream(); }
 function openLogStream(fromOffset) {
   if (_es) { _es.close(); }
   document.getElementById('pipeline-card').classList.add('pipeline-running');
-  var streamUrl = fromOffset
+  var streamUrl = (fromOffset !== undefined && fromOffset !== null)
     ? '/api/logs/' + dateStr + '/stream?from=' + fromOffset
     : '/api/logs/' + dateStr + '/stream';
   _es = new EventSource(streamUrl);
@@ -726,6 +726,12 @@ async function triggerRun(dateStr, force) {
     const url = force ? '/api/run/' + dateStr + '/force' : '/api/run/' + dateStr;
     const res  = await fetch(url, { method: 'POST' });
     const data = await res.json();
+    if (!res.ok) {
+      showToast(data.detail || '啟動失敗（Pipeline 可能已在執行中）', '❌');
+      updatePipelineBadge('failed');
+      document.getElementById('pipeline-card').classList.remove('pipeline-running');
+      return;
+    }
     showToast(data.message || 'Pipeline 已啟動', '🚀');
     setTimeout(function() { openLogStream(); }, 800);
   } catch(e) {

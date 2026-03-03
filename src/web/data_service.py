@@ -374,6 +374,24 @@ _sidebar_cache_ts: float = 0.0
 _SIDEBAR_TTL = 60  # 60 秒
 
 
+def invalidate_scored_cache(date_str: str) -> None:
+    """清除指定日期的 scored cache entry。Pipeline 完成後由 _finalize_run 呼叫。"""
+    _scored_cache.pop(date_str, None)
+
+
+def invalidate_sidebar_cache() -> None:
+    """強制下次 sidebar stats 重新計算。"""
+    global _sidebar_cache, _sidebar_cache_ts
+    _sidebar_cache = None
+    _sidebar_cache_ts = 0.0
+
+
+def invalidate_search_index() -> None:
+    """強制下次搜尋重建索引。"""
+    global _search_built_at
+    _search_built_at = 0
+
+
 def get_sidebar_stats() -> dict:
     """取得 Sidebar 快速統計（只做 glob 計數，不讀取內容）。"""
     global _sidebar_cache, _sidebar_cache_ts

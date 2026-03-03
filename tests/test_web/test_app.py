@@ -1,4 +1,4 @@
-"""Per-stage pipeline API 測試。"""
+"""Pipeline API 測試（PipelineRun in-memory state 重寫版）。"""
 
 from __future__ import annotations
 
@@ -11,7 +11,13 @@ import pytest
 from fastapi.testclient import TestClient
 
 import src.web.app as app_module
-from src.web.app import app, _run_stage_pipeline
+from src.web.app import (
+    app,
+    PipelineRun,
+    StageInfo,
+    _finalize_run,
+    _run_stage_pipeline,
+)
 
 
 # ──────────────────────────────────────────────────────────
@@ -45,6 +51,12 @@ def mock_config_manager(monkeypatch):
     return mock_cm
 
 
+@pytest.fixture(autouse=True)
+def clean_runs(monkeypatch):
+    """每次測試前清空 _runs，避免跨測試污染。"""
+    monkeypatch.setattr(app_module, "_runs", {})
+
+
 @pytest.fixture
 def client():
     """建立 FastAPI TestClient。"""
@@ -68,7 +80,9 @@ def test_run_stage_invalid(client):
 
 def test_run_stage_409_when_running(client, monkeypatch):
     """POST /api/run/{date}/stage/{stage} 當 pipeline 在執行中時回 409"""
-    monkeypatch.setattr(app_module, "RUNNING_TASKS", {"2026-01-01"})
+    monkeypatch.setattr(app_module, "_runs", {
+        "2026-01-01": PipelineRun(status="running"),
+    })
     res = client.post("/api/run/2026-01-01/stage/collect")
     assert res.status_code == 409
 
@@ -112,21 +126,16 @@ def test_stage_log_parses_entries(client, tmp_path, monkeypatch):
 
 
 # ──────────────────────────────────────────────────────────
-# 測試 5：stage-info 回傳 item_count
+# 測試 5：stage-info 從 in-memory _runs 回傳（有完成的 PipelineRun）
 # ──────────────────────────────────────────────────────────
 
-def test_stage_info_item_count(client, tmp_path, monkeypatch):
-    """GET /api/logs/{date}/stage-info 回傳正確的 item_count"""
-    monkeypatch.setattr(app_module, "LOGS_DIR", tmp_path)
-
-    log_lines = [
-        json.dumps({"pipeline_stage": "collect", "stage_action": "start"}),
-        json.dumps({"pipeline_stage": "collect", "stage_action": "end", "elapsed": 3.0, "item_count": 15}),
-        json.dumps({"pipeline_stage": "score", "stage_action": "start"}),
-        json.dumps({"pipeline_stage": "score", "stage_action": "end", "elapsed": 20.0, "item_count": 0}),
-    ]
-    log_file = tmp_path / "2026-01-01.log"
-    log_file.write_text("\n".join(log_lines), encoding="utf-8")
+def test_stage_info_from_memory(client, monkeypatch):
+    """stage-info 應直接從 _runs 回傳完成的 pipeline 狀態"""
+    run = PipelineRun(status="done", log_offset=0)
+    run.stages["collect"] = StageInfo(status="done", elapsed=3.0, item_count=15)
+    run.stages["score"] = StageInfo(status="done", elapsed=20.0, item_count=0)
+    run.stages["generate"] = StageInfo(status="done", elapsed=10.0, item_count=3)
+    monkeypatch.setattr(app_module, "_runs", {"2026-01-01": run})
 
     res = client.get("/api/logs/2026-01-01/stage-info")
     assert res.status_code == 200
@@ -134,10 +143,49 @@ def test_stage_info_item_count(client, tmp_path, monkeypatch):
     stages = {s["name"]: s for s in data["stages"]}
     assert stages["collect"]["item_count"] == 15
     assert stages["score"]["item_count"] == 0
+    assert stages["generate"]["item_count"] == 3
+    assert data["pipeline_status"] == "done"
+    assert "log_offset" not in data  # done 時不回傳 log_offset
 
 
 # ──────────────────────────────────────────────────────────
-# 測試 6：day_detail 路由使用 list_day_contents
+# 測試 6：stage-info fallback 到 data files（無 _runs entry）
+# ──────────────────────────────────────────────────────────
+
+def test_stage_info_fallback_to_data_files(client, mock_data_service, monkeypatch):
+    """stage-info 無 _runs entry 時應 fallback 到 data file 推算"""
+    monkeypatch.setattr(app_module, "_runs", {})
+    mock_data_service.get_pipeline_state.return_value = "scored"
+
+    res = client.get("/api/logs/2026-01-01/stage-info")
+    assert res.status_code == 200
+    data = res.json()
+    stages = {s["name"]: s for s in data["stages"]}
+    assert stages["collect"]["status"] == "done"
+    assert stages["score"]["status"] == "done"
+    assert stages["generate"]["status"] == "pending"
+    assert data["pipeline_status"] == "scored"
+
+
+# ──────────────────────────────────────────────────────────
+# 測試 7：stage-info running 時回傳 log_offset
+# ──────────────────────────────────────────────────────────
+
+def test_stage_info_running_returns_log_offset(client, monkeypatch):
+    """stage-info running 狀態應包含 log_offset"""
+    run = PipelineRun(status="running", log_offset=1234)
+    run.stages["collect"] = StageInfo(status="running")
+    monkeypatch.setattr(app_module, "_runs", {"2026-01-01": run})
+
+    res = client.get("/api/logs/2026-01-01/stage-info")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["pipeline_status"] == "running"
+    assert data["log_offset"] == 1234
+
+
+# ──────────────────────────────────────────────────────────
+# 測試 8：day_detail 路由使用 list_day_contents
 # ──────────────────────────────────────────────────────────
 
 def test_day_detail_uses_contents(client, mock_data_service):
@@ -165,23 +213,20 @@ def test_day_detail_uses_contents(client, mock_data_service):
     ]
     res = client.get("/day/2026-01-01")
     assert res.status_code == 200
-    # 產出 badge 在評分列表中顯示
     assert "content-badge-blog" in res.text
     assert "Test Post" in res.text
-    # 確認不再使用 list_posts / list_notes
     mock_data_service.list_posts.assert_not_called()
     mock_data_service.list_notes.assert_not_called()
 
 
 # ──────────────────────────────────────────────────────────
-# 測試 7：generate stage 重跑時刪除舊輸出檔案
+# 測試 9：generate stage 重跑時刪除舊輸出檔案
 # ──────────────────────────────────────────────────────────
 
 def test_run_stage_generate_deletes_old_files(tmp_path: Path, monkeypatch):
-    """_run_stage_pipeline 執行 generate stage 時，應刪除 POSTS_DIR/NOTES_DIR/PROMPTS_DIR 中符合 {date}*.md 的舊檔案。"""
+    """_run_stage_pipeline 執行 generate stage 時，應刪除舊輸出。"""
     date_str = "2026-03-02"
 
-    # 建立三個模擬輸出目錄
     posts_dir = tmp_path / "posts"
     notes_dir = tmp_path / "notes"
     prompts_dir = tmp_path / "prompts"
@@ -189,58 +234,48 @@ def test_run_stage_generate_deletes_old_files(tmp_path: Path, monkeypatch):
     for d in (posts_dir, notes_dir, prompts_dir, logs_dir):
         d.mkdir(parents=True)
 
-    # 在每個目錄中建立符合 {date}*.md 的舊檔案（應被刪除）
     old_post = posts_dir / f"{date_str}_old-post.md"
     old_note = notes_dir / f"{date_str}_old-note.md"
     old_prompt = prompts_dir / f"{date_str}_old-prompt.md"
-    # 另外放一個不符合日期的檔案（不應被刪除）
     other_post = posts_dir / "2026-01-01_other-post.md"
     for f in (old_post, old_note, old_prompt, other_post):
         f.write_text("dummy content", encoding="utf-8")
 
-    # 替換 app 模組的目錄常數
     monkeypatch.setattr(app_module, "POSTS_DIR", posts_dir)
     monkeypatch.setattr(app_module, "NOTES_DIR", notes_dir)
     monkeypatch.setattr(app_module, "PROMPTS_DIR", prompts_dir)
     monkeypatch.setattr(app_module, "LOGS_DIR", logs_dir)
 
-    # 確保 RUNNING_TASKS 初始為空（避免跨測試污染）
-    monkeypatch.setattr(app_module, "RUNNING_TASKS", set())
-    monkeypatch.setattr(app_module, "RUNNING_PROCS", {})
+    # 設定 _runs 中的 PipelineRun（由 api_run_stage 預先建立）
+    run = PipelineRun(status="running", log_offset=0)
+    monkeypatch.setattr(app_module, "_runs", {date_str: run})
 
-    # mock subprocess.Popen，模擬 CLI 立即成功退出（returncode=0）
     mock_proc = MagicMock()
     mock_proc.wait.return_value = None
     mock_proc.returncode = 0
     mock_proc.poll.return_value = 0
 
-    # 在背景執行緒中呼叫，與正式使用方式一致；等待完成後再斷言
     with patch("subprocess.Popen", return_value=mock_proc):
         thread = threading.Thread(target=_run_stage_pipeline, args=(date_str, "generate"))
         thread.start()
         thread.join(timeout=5)
 
-    # 符合 {date}*.md 的舊檔案應已被刪除
     assert not old_post.exists(), "舊 post 檔案應被刪除"
     assert not old_note.exists(), "舊 note 檔案應被刪除"
     assert not old_prompt.exists(), "舊 prompt 檔案應被刪除"
-
-    # 不符合日期的檔案不應被刪除
     assert other_post.exists(), "其他日期的 post 檔案不應被刪除"
 
-    # RUNNING_TASKS 在 finally 中應被清空
-    assert date_str not in app_module.RUNNING_TASKS
+    # run 應被 finalize 為 done
+    assert app_module._runs[date_str].status == "done"
 
 
 # ──────────────────────────────────────────────────────────
-# 測試 8：api_run_stage 成功時回傳 log_offset（無 log 檔）
+# 測試 10：api_run_stage 成功時回傳 log_offset（無 log 檔）
 # ──────────────────────────────────────────────────────────
 
 def test_run_stage_returns_log_offset_zero_when_no_log(client, tmp_path, monkeypatch):
     """POST /api/run/{date}/stage/{stage} 無 log 檔時 log_offset 為 0"""
-    import src.web.app as app_module
     monkeypatch.setattr(app_module, "LOGS_DIR", tmp_path)
-    monkeypatch.setattr(app_module, "RUNNING_TASKS", set())
     with patch("src.web.app._run_stage_pipeline"):
         res = client.post("/api/run/2026-01-01/stage/collect")
     assert res.status_code == 200
@@ -250,14 +285,12 @@ def test_run_stage_returns_log_offset_zero_when_no_log(client, tmp_path, monkeyp
 
 
 # ──────────────────────────────────────────────────────────
-# 測試 9：api_run_stage 成功時回傳 log_offset（有 log 檔）
+# 測試 11：api_run_stage 成功時回傳 log_offset（有 log 檔）
 # ──────────────────────────────────────────────────────────
 
 def test_run_stage_returns_log_offset_when_log_exists(client, tmp_path, monkeypatch):
     """POST /api/run/{date}/stage/{stage} 有 log 檔時 log_offset 為 log 大小"""
-    import src.web.app as app_module
     monkeypatch.setattr(app_module, "LOGS_DIR", tmp_path)
-    monkeypatch.setattr(app_module, "RUNNING_TASKS", set())
     log_file = tmp_path / "2026-01-01.log"
     log_file.write_text("existing content", encoding="utf-8")
     expected_offset = log_file.stat().st_size
@@ -269,10 +302,131 @@ def test_run_stage_returns_log_offset_when_log_exists(client, tmp_path, monkeypa
 
 
 # ──────────────────────────────────────────────────────────
-# 測試 10：負數 offset 應回傳 422
+# 測試 12：負數 offset 應回傳 422
 # ──────────────────────────────────────────────────────────
 
 def test_logs_stream_rejects_negative_offset(client):
     """GET /api/logs/{date}/stream?from=-1 應回傳 422 驗證錯誤"""
     res = client.get("/api/logs/2026-01-01/stream?from=-1")
     assert res.status_code == 422
+
+
+# ──────────────────────────────────────────────────────────
+# 測試 13：triggerRun 409 不應觸發 SSE（回歸測試需要前端，這裡測 API）
+# ──────────────────────────────────────────────────────────
+
+def test_api_run_returns_409_with_detail(client, monkeypatch):
+    """POST /api/run/{date} 在 pipeline 執行中應回 409 含 detail"""
+    monkeypatch.setattr(app_module, "_runs", {
+        "2026-01-01": PipelineRun(status="running"),
+    })
+    res = client.post("/api/run/2026-01-01")
+    assert res.status_code == 409
+    data = res.json()
+    assert "detail" in data
+    assert "已在執行中" in data["detail"]
+
+
+# ──────────────────────────────────────────────────────────
+# 測試 14：_finalize_run 正確解析 pipeline_stage JSON
+# ──────────────────────────────────────────────────────────
+
+def test_finalize_run_parses_log(tmp_path, monkeypatch, mock_data_service):
+    """_finalize_run 應從 log 解析 stage elapsed 和 item_count"""
+    log_path = tmp_path / "2026-01-01.log"
+    log_lines = [
+        "=== Pipeline started: 2026-01-01 (force=False) ===",
+        json.dumps({"pipeline_stage": "collect", "stage_action": "start"}),
+        json.dumps({"pipeline_stage": "collect", "stage_action": "end", "elapsed": 3.5, "item_count": 12}),
+        json.dumps({"pipeline_stage": "score", "stage_action": "start"}),
+        json.dumps({"pipeline_stage": "score", "stage_action": "end", "elapsed": 18.2, "item_count": 8}),
+        "=== Pipeline finished: exit_code=0 ===",
+    ]
+    log_path.write_text("\n".join(log_lines), encoding="utf-8")
+
+    run = PipelineRun(status="running", log_offset=0)
+    _finalize_run(run, log_path, "2026-01-01", "done")
+
+    assert run.status == "done"
+    assert run.proc is None
+    assert run.stages["collect"].status == "done"
+    assert run.stages["collect"].elapsed == 3.5
+    assert run.stages["collect"].item_count == 12
+    assert run.stages["score"].status == "done"
+    assert run.stages["score"].elapsed == 18.2
+    assert run.stages["score"].item_count == 8
+    assert run.stages["generate"].status == "pending"
+
+
+# ──────────────────────────────────────────────────────────
+# 測試 15：_finalize_run 呼叫 3 個 cache invalidation 函數
+# ──────────────────────────────────────────────────────────
+
+def test_finalize_run_invalidates_caches(tmp_path, monkeypatch, mock_data_service):
+    """_finalize_run 應呼叫 3 個 cache invalidation 函數"""
+    log_path = tmp_path / "2026-01-01.log"
+    log_path.write_text("=== Pipeline finished: exit_code=0 ===\n", encoding="utf-8")
+
+    run = PipelineRun(status="running", log_offset=0)
+    _finalize_run(run, log_path, "2026-01-01", "done")
+
+    mock_data_service.invalidate_scored_cache.assert_called_once_with("2026-01-01")
+    mock_data_service.invalidate_sidebar_cache.assert_called_once()
+    mock_data_service.invalidate_search_index.assert_called_once()
+
+
+# ──────────────────────────────────────────────────────────
+# 測試 16：_finalize_run 失敗時標記 running stages 為 failed
+# ──────────────────────────────────────────────────────────
+
+def test_finalize_run_marks_running_stages_on_failure(tmp_path, monkeypatch, mock_data_service):
+    """_finalize_run 以 failed 狀態完成時，running stages 應被標為 failed"""
+    log_path = tmp_path / "2026-01-01.log"
+    log_path.write_text("", encoding="utf-8")
+
+    run = PipelineRun(status="running", log_offset=0)
+    run.stages["collect"] = StageInfo(status="done", elapsed=3.0, item_count=10)
+    run.stages["score"] = StageInfo(status="running")  # 仍在 running
+    _finalize_run(run, log_path, "2026-01-01", "failed")
+
+    assert run.status == "failed"
+    assert run.stages["collect"].status == "done"  # 已完成的不受影響
+    assert run.stages["score"].status == "failed"  # running → failed
+    assert run.stages["generate"].status == "pending"  # pending 不受影響
+
+
+# ──────────────────────────────────────────────────────────
+# 測試 17：api_run 建立 eager PipelineRun
+# ──────────────────────────────────────────────────────────
+
+def test_api_run_creates_eager_pipeline_run(client, monkeypatch):
+    """POST /api/run/{date} 應在 _runs 中建立 PipelineRun（eager）"""
+    with patch("src.web.app._run_pipeline"):
+        res = client.post("/api/run/2026-01-01")
+    assert res.status_code == 200
+    assert "2026-01-01" in app_module._runs
+    assert app_module._runs["2026-01-01"].status == "running"
+
+
+# ──────────────────────────────────────────────────────────
+# 測試 18：api_run_stage 重用已存在的 PipelineRun
+# ──────────────────────────────────────────────────────────
+
+def test_api_run_stage_reuses_existing_run(client, tmp_path, monkeypatch):
+    """api_run_stage 應重用已完成的 PipelineRun，只重設目標 stage"""
+    monkeypatch.setattr(app_module, "LOGS_DIR", tmp_path)
+    existing_run = PipelineRun(status="done", log_offset=0)
+    existing_run.stages["collect"] = StageInfo(status="done", elapsed=3.0, item_count=10)
+    existing_run.stages["score"] = StageInfo(status="done", elapsed=20.0, item_count=5)
+    existing_run.stages["generate"] = StageInfo(status="done", elapsed=10.0, item_count=3)
+    monkeypatch.setattr(app_module, "_runs", {"2026-01-01": existing_run})
+
+    with patch("src.web.app._run_stage_pipeline"):
+        res = client.post("/api/run/2026-01-01/stage/collect")
+    assert res.status_code == 200
+
+    run = app_module._runs["2026-01-01"]
+    assert run.status == "running"
+    assert run.stages["collect"].status == "pending"  # 重設
+    assert run.stages["score"].status == "done"  # 保留
+    assert run.stages["generate"].status == "done"  # 保留

@@ -6,6 +6,7 @@ import json
 import os
 import subprocess
 import sys
+from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
 from typing import Any, Optional
@@ -33,9 +34,74 @@ async def startup_event():
     cm.init_config()
 
 
-_proc_lock = threading.Lock()
-RUNNING_TASKS: set[str] = set()
-RUNNING_PROCS: dict[str, subprocess.Popen] = {}
+@dataclass
+class StageInfo:
+    status: str = "pending"     # pending | running | done | failed | cancelled
+    elapsed: float | None = None
+    item_count: int | None = None
+
+
+@dataclass
+class PipelineRun:
+    status: str = "running"     # running | done | failed | cancelled
+    proc: subprocess.Popen | None = None
+    log_offset: int = 0
+    stages: dict[str, StageInfo] = field(default_factory=lambda: {
+        "collect": StageInfo(),
+        "score": StageInfo(),
+        "generate": StageInfo(),
+    })
+
+
+_lock = threading.Lock()
+_runs: dict[str, PipelineRun] = {}
+
+
+def _is_running(date_str: str) -> bool:
+    with _lock:
+        run = _runs.get(date_str)
+        return run is not None and run.status == "running"
+
+
+def _get_running_dates() -> set[str]:
+    with _lock:
+        return {d for d, r in _runs.items() if r.status == "running"}
+
+
+def _finalize_run(run: PipelineRun, log_path: Path, date_str: str, final_status: str) -> None:
+    """proc.wait() 後呼叫一次——解析 log、invalidate caches、設定最終狀態。"""
+    # ① 解析 log 填充 stage 狀態（只讀本次 run 的 log）
+    try:
+        content = log_path.read_text(encoding="utf-8", errors="replace")
+        for line in content[run.log_offset:].splitlines():
+            try:
+                parsed = json.loads(line)
+                if "pipeline_stage" in parsed:
+                    name = parsed["pipeline_stage"]
+                    action = parsed["stage_action"]
+                    if name in run.stages:
+                        if action == "start":
+                            run.stages[name].status = "running"
+                        elif action == "end":
+                            run.stages[name].status = "done"
+                            run.stages[name].elapsed = parsed.get("elapsed")
+                            run.stages[name].item_count = parsed.get("item_count")
+            except (json.JSONDecodeError, KeyError):
+                pass
+    except OSError:
+        pass
+    # ② Invalidate caches（在設 status 之前！確保 reload 時 cache 已清空）
+    ds.invalidate_scored_cache(date_str)
+    ds.invalidate_sidebar_cache()
+    ds.invalidate_search_index()
+    # ③ 設定最終狀態
+    with _lock:
+        run.status = final_status
+        if final_status in ("cancelled", "failed"):
+            for s in run.stages.values():
+                if s.status == "running":
+                    s.status = final_status
+        run.proc = None
 
 # B5: 改用 pathlib 建構路徑，避免 str.replace 脆弱性
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
@@ -76,7 +142,7 @@ async def index():
 
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard(request: Request):
-    week_status = ds.get_week_status(7, running_dates=RUNNING_TASKS)
+    week_status = ds.get_week_status(7, running_dates=_get_running_dates())
     top_items = ds.get_week_top_items(7, top_k=10)
     charts = ds.get_dashboard_charts(30)
     return templates.TemplateResponse(
@@ -116,7 +182,7 @@ async def day_detail(request: Request, date_str: str):
             }
 
     state = ds.get_pipeline_state(d)
-    if RUNNING_TASKS and date_str in RUNNING_TASKS:
+    if _is_running(date_str):
         state = "running"
 
     return templates.TemplateResponse(
@@ -547,7 +613,7 @@ async def writing_queue(request: Request):
 @app.get("/api/status")
 async def api_status():
     """JSON 格式的 7 天狀態（除錯用）。"""
-    return JSONResponse(content={"week": ds.get_week_status(7, running_dates=RUNNING_TASKS)})
+    return JSONResponse(content={"week": ds.get_week_status(7, running_dates=_get_running_dates())})
 
 
 @app.get("/api/logs/{date_str}", response_class=PlainTextResponse)
@@ -566,97 +632,38 @@ async def api_logs(date_str: str):
 
 @app.get("/api/logs/{date_str}/stage-info")
 async def api_logs_stage_info(date_str: str):
-    """解析 log 檔，回傳 pipeline 各階段狀態摘要。"""
+    """回傳 pipeline 各階段狀態摘要。優先從 in-memory _runs 讀取，無則 fallback 到 data 檔案。"""
     try:
         d = date.fromisoformat(date_str)
     except ValueError:
         raise HTTPException(status_code=400, detail="日期格式錯誤")
 
-    log_path = LOGS_DIR / f"{date_str}.log"
     stages_order = ["collect", "score", "generate"]
-    stages = {n: {"name": n, "status": "pending", "elapsed": None, "item_count": None} for n in stages_order}
 
-    # Step 1：用資料檔推算基礎狀態（最可靠的 fallback）
+    run = _runs.get(date_str)
+    if run:
+        stages = [{"name": n, "status": run.stages[n].status,
+                   "elapsed": run.stages[n].elapsed,
+                   "item_count": run.stages[n].item_count} for n in stages_order]
+        result: dict[str, Any] = {"stages": stages, "pipeline_status": run.status}
+        if run.status == "running":
+            result["log_offset"] = run.log_offset
+        return JSONResponse(result)
+
+    # Fallback：無 in-memory state → 從 data 檔案推算
     data_state = ds.get_pipeline_state(d)
-    if data_state in ("collected", "scored", "done"):
-        stages["collect"]["status"] = "done"
-    if data_state in ("scored", "done"):
-        stages["score"]["status"] = "done"
-    if data_state == "done":
-        stages["generate"]["status"] = "done"
-
+    stages_list = []
+    for n in stages_order:
+        status = "pending"
+        if data_state in ("collected", "scored", "done") and n == "collect":
+            status = "done"
+        if data_state in ("scored", "done") and n == "score":
+            status = "done"
+        if data_state == "done" and n == "generate":
+            status = "done"
+        stages_list.append({"name": n, "status": status, "elapsed": None, "item_count": None})
     pipeline_status = data_state if data_state != "none" else "idle"
-
-    # Step 2：若正在執行中，標記 pipeline_status = running
-    if date_str in RUNNING_TASKS:
-        pipeline_status = "running"
-
-    # Step 3：解析 log 取得精確 elapsed 與即時 stage 狀態（覆蓋 Step 1）
-    content = log_path.read_text(encoding="utf-8", errors="replace") if log_path.exists() else ""
-    if content:
-        has_stage_markers = False
-
-        for line in content.splitlines():
-            if "=== Pipeline started" in line:
-                # 新一輪執行：重置 stage 狀態（log 是每次覆寫的）
-                stages = {n: {"name": n, "status": "pending", "elapsed": None, "item_count": None} for n in stages_order}
-                if date_str not in RUNNING_TASKS:
-                    pipeline_status = "running"
-                continue
-            if "Pipeline cancelled by user" in line:
-                pipeline_status = "cancelled"
-                # 將仍為 running 的 stage 標為 cancelled
-                for n in stages_order:
-                    if stages[n]["status"] == "running":
-                        stages[n]["status"] = "cancelled"
-                continue
-            for s in ["collect", "score", "generate"]:
-                if f"Stage {s} cancelled by user" in line:
-                    if stages[s]["status"] == "running":
-                        stages[s]["status"] = "cancelled"
-            if "=== Pipeline finished" in line:
-                if date_str not in RUNNING_TASKS:
-                    pipeline_status = "done" if "exit_code=0" in line else "failed"
-                    # 若 pipeline 結束但有 stage 仍為 running → 標為 failed
-                    for s in stages.values():
-                        if s["status"] == "running":
-                            s["status"] = "failed"
-                continue
-            try:
-                parsed = json.loads(line)
-                if "pipeline_stage" in parsed:
-                    has_stage_markers = True
-                    name = parsed["pipeline_stage"]
-                    action = parsed["stage_action"]
-                    if action == "start":
-                        stages[name]["status"] = "running"
-                    elif action == "end":
-                        stages[name]["status"] = "done"
-                        stages[name]["elapsed"] = parsed.get("elapsed")
-                        if "item_count" in parsed:
-                            stages[name]["item_count"] = parsed["item_count"]
-            except Exception:
-                _logger.debug("SSE log parse error", exc_info=True)
-
-        # 若 log 沒有 stage markers（舊格式），回退到 data_state 推算結果
-        if not has_stage_markers:
-            if data_state in ("collected", "scored", "done"):
-                stages["collect"]["status"] = "done"
-            if data_state in ("scored", "done"):
-                stages["score"]["status"] = "done"
-            if data_state == "done":
-                stages["generate"]["status"] = "done"
-
-    result = {"stages": [stages[n] for n in stages_order], "pipeline_status": pipeline_status}
-    if date_str in RUNNING_TASKS and content:
-        log_offset = 0
-        markers = ["=== Pipeline started"] + [f"=== Stage {s} re-run" for s in VALID_STAGES]
-        for marker in markers:
-            pos = content.rfind(marker)
-            if pos > log_offset:
-                log_offset = pos
-        result["log_offset"] = log_offset
-    return JSONResponse(result)
+    return JSONResponse({"stages": stages_list, "pipeline_status": pipeline_status})
 
 
 @app.get("/api/logs/{date_str}/stream")
@@ -675,22 +682,49 @@ async def api_logs_stream(date_str: str, from_: int = Query(0, alias="from", ge=
         current_stage = None
         # 最多串流 10 分鐘（600 次 × 1s）
         for _ in range(600):
+            # 檢查 run 狀態
+            run = _runs.get(date_str)
+            if run and run.status in ("done", "failed"):
+                # Drain 殘餘 log 再結束
+                if log_path.exists():
+                    try:
+                        content = log_path.read_text(encoding="utf-8", errors="replace")
+                        if len(content) > offset:
+                            for line in content[offset:].splitlines():
+                                stripped = line.strip()
+                                if not stripped:
+                                    continue
+                                display = _format_sse_line(stripped, current_stage)
+                                if display is None:
+                                    continue
+                                stage_name, text = display
+                                yield f"data: {stage_name}|{text}\n\n"
+                    except OSError:
+                        pass
+                yield "event: done\ndata: done\n\n"
+                return
+            if run and run.status == "cancelled":
+                yield "event: cancelled\ndata: {}\n\n"
+                return
+
+            # 讀 log 檔新內容
             if log_path.exists():
                 try:
                     content = log_path.read_text(encoding="utf-8", errors="replace")
                     if len(content) > offset:
                         new_text = content[offset:]
-                        offset_new = len(content)
+                        offset = len(content)
                         for line in new_text.splitlines():
-                            if not line.strip():
+                            stripped = line.strip()
+                            if not stripped:
                                 continue
-                            display = line
+                            # 嘗試解析 stage event
                             try:
-                                parsed = json.loads(line)
+                                parsed = json.loads(stripped)
                                 if "pipeline_stage" in parsed:
                                     name = parsed["pipeline_stage"]
                                     action = parsed["stage_action"]
-                                    current_stage = name if action == "start" else None
+                                    current_stage = name if action == "start" else current_stage
                                     stage_payload: dict = {
                                         "name": name,
                                         "action": action,
@@ -698,37 +732,31 @@ async def api_logs_stream(date_str: str, from_: int = Query(0, alias="from", ge=
                                     }
                                     if action == "end" and "item_count" in parsed:
                                         stage_payload["item_count"] = parsed["item_count"]
+                                    # 即時更新 run.stages（SSE 讀到的 stage event）
+                                    if run and name in run.stages:
+                                        if action == "start":
+                                            run.stages[name].status = "running"
+                                        elif action == "end":
+                                            run.stages[name].status = "done"
+                                            run.stages[name].elapsed = parsed.get("elapsed")
+                                            run.stages[name].item_count = parsed.get("item_count")
                                     yield f"event: stage\ndata: {json.dumps(stage_payload)}\n\n"
-                                    continue  # 不輸出為普通 log 行
+                                    continue
                                 if "msg" in parsed:
                                     level = parsed.get("level", "INFO")
                                     msg = _fmt_log_msg(parsed)
                                     ts_str = parsed.get("ts", "")
                                     ts_display = ts_str[11:19] if len(ts_str) >= 19 else ""
-                                    prefix = f"[{ts_display}] " if ts_display else ""
-                                    display = f"{prefix}[{level}] {msg}"
+                                    prefix_ts = f"[{ts_display}] " if ts_display else ""
+                                    display_text = f"{prefix_ts}[{level}] {msg}"
+                                    prefix_stage = current_stage or "pipeline"
+                                    yield f"data: {prefix_stage}|{display_text}\n\n"
+                                    continue
                             except Exception:
                                 _logger.debug("SSE log parse error", exc_info=True)
-                            # 偵測 pipeline 取消
-                            if "Pipeline cancelled by user" in display or any(
-                                f"Stage {s} cancelled by user" in display for s in VALID_STAGES
-                            ):
-                                yield f"event: cancelled\ndata: {{}}\n\n"
-                                return
-                            # 若偵測到 pipeline 結束行，立即送 done event
-                            if "=== Pipeline finished" in line:
-                                yield f"data: pipeline|{display}\n\n"
-                                yield "event: done\ndata: done\n\n"
-                                return
-                            # 偵測單一 stage 重跑結束行
-                            for _sname in VALID_STAGES:
-                                if f"=== Stage {_sname} finished" in line:
-                                    yield f"data: pipeline|{display}\n\n"
-                                    yield "event: done\ndata: done\n\n"
-                                    return
-                            prefix = current_stage or "pipeline"
-                            yield f"data: {prefix}|{display}\n\n"
-                        offset = offset_new
+                            # 非 JSON 行（marker 行等）
+                            prefix_stage = current_stage or "pipeline"
+                            yield f"data: {prefix_stage}|{stripped}\n\n"
                         consecutive_idle = 0
                     else:
                         consecutive_idle += 1
@@ -737,32 +765,43 @@ async def api_logs_stream(date_str: str, from_: int = Query(0, alias="from", ge=
             else:
                 consecutive_idle += 1
                 if consecutive_idle == 1:
-                    yield f"data: pipeline|[等待 pipeline 啟動...]\n\n"
+                    yield "data: pipeline|[等待 pipeline 啟動...]\n\n"
 
-            # 若 pipeline 結束且 30 秒無新輸出，斷開連線
-            if consecutive_idle >= 30 and log_path.exists():
-                content = log_path.read_text(encoding="utf-8", errors="replace")
-                new_content = content[offset:]  # 只看未讀過的部分
-                if "Pipeline cancelled by user" in new_content or any(f"Stage {s} cancelled" in new_content for s in VALID_STAGES):
-                    yield f"event: cancelled\ndata: {{}}\n\n"
-                    return
-                if "=== Pipeline finished" in new_content or any(f"=== Stage {s} finished" in new_content for s in VALID_STAGES):
-                    yield "data: [Pipeline 已結束]\n\n"
-                    yield "event: done\ndata: done\n\n"
-                    return
+            # 若無 run 且 idle 10 秒 → emit done
+            if not run and consecutive_idle >= 10:
+                yield "event: done\ndata: done\n\n"
+                return
 
             await asyncio.sleep(1)
 
-        yield "data: [串流逾時，請直接查看 /api/logs/{date_str}]\n\n"
+        yield f"data: pipeline|[串流逾時，請直接查看 /api/logs/{date_str}]\n\n"
 
     return StreamingResponse(
         event_generator(),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no",  # 停用 nginx 緩衝
+            "X-Accel-Buffering": "no",
         },
     )
+
+
+def _format_sse_line(stripped: str, current_stage: str | None) -> tuple[str, str] | None:
+    """將一行 log 轉為 (stage_name, display_text) tuple，或 None 跳過。"""
+    try:
+        parsed = json.loads(stripped)
+        if "pipeline_stage" in parsed:
+            return None  # stage events 由呼叫端處理
+        if "msg" in parsed:
+            level = parsed.get("level", "INFO")
+            msg = _fmt_log_msg(parsed)
+            ts_str = parsed.get("ts", "")
+            ts_display = ts_str[11:19] if len(ts_str) >= 19 else ""
+            prefix = f"[{ts_display}] " if ts_display else ""
+            return (current_stage or "pipeline", f"{prefix}[{level}] {msg}")
+    except Exception:
+        pass
+    return (current_stage or "pipeline", stripped)
 
 
 @app.get("/api/health")
@@ -783,7 +822,7 @@ async def api_health():
     return JSONResponse({
         "status": "ok",
         "today": today_str,
-        "running_pipelines": list(RUNNING_TASKS),
+        "running_pipelines": list(_get_running_dates()),
         "last_completed_date": last_done,
         "logs_dir": str(LOGS_DIR),
     })
@@ -791,11 +830,10 @@ async def api_health():
 
 def _run_pipeline(date_str: str, force: bool) -> None:
     """在背景執行 pipeline，並將 stdout/stderr 寫入 logs/{date_str}.log。"""
-    with _proc_lock:
-        if date_str in RUNNING_TASKS:
-            return  # 防止同一日期重複執行
-        RUNNING_TASKS.add(date_str)
-
+    with _lock:
+        run = _runs.get(date_str)
+        if not run or run.status != "running":
+            return  # 不應發生，但防禦性檢查
     log_path = LOGS_DIR / f"{date_str}.log"
     try:
         cmd = [sys.executable, "-m", "src.cli", "run", "--date", date_str]
@@ -813,32 +851,34 @@ def _run_pipeline(date_str: str, force: bool) -> None:
                 encoding="utf-8",
                 env=env,
             )
-            with _proc_lock:
-                RUNNING_PROCS[date_str] = proc
+            with _lock:
+                run.proc = proc
             proc.wait()
             exit_code = proc.returncode
             if exit_code in (-15, -9):  # SIGTERM / SIGKILL
                 log_file.write(f"\n=== Pipeline cancelled by user: exit_code={exit_code} ===\n")
+                final_status = "cancelled"
             else:
                 log_file.write(f"\n=== Pipeline finished: exit_code={exit_code} ===\n")
+                final_status = "done" if exit_code == 0 else "failed"
+        _finalize_run(run, log_path, date_str, final_status)
     except Exception as e:
         _logger.error("Pipeline failed to start", extra={"date": date_str, "error": str(e)})
         try:
             log_path.write_text(f"Pipeline failed to start: {e}\n", encoding="utf-8")
         except OSError:
             pass
-    finally:
-        with _proc_lock:
-            RUNNING_TASKS.discard(date_str)
-            RUNNING_PROCS.pop(date_str, None)
+        with _lock:
+            run.status = "failed"
+            run.proc = None
 
 
 def _run_stage_pipeline(date_str: str, stage_name: str) -> None:
     """在背景執行單一 pipeline stage，並將 stdout/stderr 附加至 logs/{date_str}.log。"""
-    with _proc_lock:
-        if date_str in RUNNING_TASKS:
+    with _lock:
+        run = _runs.get(date_str)
+        if not run or run.status != "running":
             return
-        RUNNING_TASKS.add(date_str)
     log_path = LOGS_DIR / f"{date_str}.log"
     try:
         if stage_name in ("collect", "score"):
@@ -865,14 +905,17 @@ def _run_stage_pipeline(date_str: str, stage_name: str) -> None:
             env = {**os.environ, "AUTOPB_LOG_FORMAT": "json"}
             proc = subprocess.Popen(cmd, stdout=log_file, stderr=subprocess.STDOUT,
                                     text=True, encoding="utf-8", env=env)
-            with _proc_lock:
-                RUNNING_PROCS[date_str] = proc
+            with _lock:
+                run.proc = proc
             proc.wait()
             exit_code = proc.returncode
             if exit_code in (-15, -9):
                 log_file.write(f"\n=== Stage {stage_name} cancelled by user: exit_code={exit_code} ===\n")
+                final_status = "cancelled"
             else:
                 log_file.write(f"\n=== Stage {stage_name} finished: exit_code={exit_code} ===\n")
+                final_status = "done" if exit_code == 0 else "failed"
+        _finalize_run(run, log_path, date_str, final_status)
     except Exception as e:
         _logger.error("Stage pipeline failed", extra={"date": date_str, "stage": stage_name, "error": str(e)})
         try:
@@ -880,10 +923,9 @@ def _run_stage_pipeline(date_str: str, stage_name: str) -> None:
                 lf.write(f"\n=== Stage {stage_name} finished: exit_code=1 ===\n")
         except OSError:
             pass
-    finally:
-        with _proc_lock:
-            RUNNING_TASKS.discard(date_str)
-            RUNNING_PROCS.pop(date_str, None)
+        with _lock:
+            run.status = "failed"
+            run.proc = None
 
 
 @app.post("/api/run/{date_str}")
@@ -893,9 +935,11 @@ async def api_run(date_str: str, background_tasks: BackgroundTasks):
         date.fromisoformat(date_str)
     except ValueError:
         raise HTTPException(status_code=400, detail="日期格式錯誤")
-    with _proc_lock:
-        if date_str in RUNNING_TASKS:
+    with _lock:
+        existing = _runs.get(date_str)
+        if existing and existing.status == "running":
             raise HTTPException(status_code=409, detail=f"Pipeline 已在執行中（{date_str}）")
+        _runs[date_str] = PipelineRun(status="running", log_offset=0)
     background_tasks.add_task(_run_pipeline, date_str, False)
     return JSONResponse({"message": f"Pipeline 已啟動（{date_str}），可透過 /api/logs/{date_str} 查看進度", "date": date_str})
 
@@ -907,9 +951,11 @@ async def api_run_force(date_str: str, background_tasks: BackgroundTasks):
         date.fromisoformat(date_str)
     except ValueError:
         raise HTTPException(status_code=400, detail="日期格式錯誤")
-    with _proc_lock:
-        if date_str in RUNNING_TASKS:
+    with _lock:
+        existing = _runs.get(date_str)
+        if existing and existing.status == "running":
             raise HTTPException(status_code=409, detail=f"Pipeline 已在執行中（{date_str}）")
+        _runs[date_str] = PipelineRun(status="running", log_offset=0)
     background_tasks.add_task(_run_pipeline, date_str, True)
     return JSONResponse({"message": f"強制重跑已啟動（{date_str}），可透過 /api/logs/{date_str} 查看進度", "date": date_str})
 
@@ -922,14 +968,14 @@ async def api_run_stop(date_str: str):
     except ValueError:
         raise HTTPException(status_code=400, detail="日期格式錯誤")
 
-    with _proc_lock:
-        proc = RUNNING_PROCS.get(date_str)
+    with _lock:
+        run = _runs.get(date_str)
+        proc = run.proc if run else None
 
     if proc is None:
         raise HTTPException(status_code=404, detail="找不到執行中的 pipeline")
 
     if proc.poll() is not None:
-        # 已結束但尚未從 dict 清除
         return JSONResponse({"message": f"Pipeline 已結束（{date_str}）", "date": date_str})
 
     proc.terminate()
@@ -955,10 +1001,18 @@ async def api_run_stage(date_str: str, stage_name: str, background_tasks: Backgr
     except ValueError:
         raise HTTPException(status_code=400, detail="日期格式錯誤")
     log_path = LOGS_DIR / f"{date_str}.log"
-    with _proc_lock:
-        if date_str in RUNNING_TASKS:
+    log_offset = log_path.stat().st_size if log_path.exists() else 0
+    with _lock:
+        existing = _runs.get(date_str)
+        if existing and existing.status == "running":
             raise HTTPException(status_code=409, detail=f"Pipeline 已在執行中（{date_str}）")
-        log_offset = log_path.stat().st_size if log_path.exists() else 0
+        if existing:
+            # 重用：保留其他 stage 狀態，只重設目標 stage
+            existing.status = "running"
+            existing.stages[stage_name] = StageInfo(status="pending")
+            existing.log_offset = log_offset
+        else:
+            _runs[date_str] = PipelineRun(status="running", log_offset=log_offset)
     background_tasks.add_task(_run_stage_pipeline, date_str, stage_name)
     return JSONResponse({"status": "started", "date": date_str, "stage": stage_name, "log_offset": log_offset})
 
