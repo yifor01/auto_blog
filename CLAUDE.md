@@ -49,7 +49,7 @@ python -m src.cli web                    # 啟動監控網頁 http://127.0.0.1:8
 autopb run
 
 # Testing
-pytest tests/                            # 116 tests
+pytest tests/                            # 145 tests
 ```
 
 ## Architecture
@@ -126,6 +126,7 @@ scoring:
 - Collectors 採 lazy init：只在 `collect`/`run` 指令實際執行時才實例化
 - 日期參數統一透過 `_parse_date()` 解析，提供友善錯誤訊息
 - Web pipeline log 寫入 `logs/{date}.log`，可透過 `GET /api/logs/{date}` 查看
+- Pipeline 狀態管理：`PipelineRun` dataclass + `_runs: dict[str, PipelineRun]` + `_lock` 為唯一權威狀態來源；`_finalize_run()` 在 `proc.wait()` 後主動 invalidate 3 個 cache（scored/sidebar/search），確保 reload 後資料 fresh
 
 ## Web API Endpoints
 
