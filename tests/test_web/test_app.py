@@ -430,3 +430,41 @@ def test_api_run_stage_reuses_existing_run(client, tmp_path, monkeypatch):
     assert run.stages["collect"].status == "pending"  # 重設
     assert run.stages["score"].status == "done"  # 保留
     assert run.stages["generate"].status == "done"  # 保留
+
+
+# ──────────────────────────────────────────────────────────
+# 測試 19：day_detail 傳遞 bookmarked_indices 到模板
+# ──────────────────────────────────────────────────────────
+
+def test_day_detail_passes_bookmarked_indices(client, mock_data_service):
+    """GET /day/{date} 應傳遞 bookmarked_indices，並在表格渲染星號"""
+    mock_data_service.get_day_stats.return_value = {
+        "date": "2026-01-01",
+        "raw_count": 10,
+        "scored_count": 3,
+        "posts_count": 0,
+        "notes_count": 0,
+        "score_dist": [0, 0, 1, 1, 1],
+        "score_dist_labels": ["0-20", "20-40", "40-60", "60-80", "80+"],
+        "source_counts": {"arXiv": 2, "HN": 1},
+    }
+    mock_data_service.get_day_items.return_value = [
+        {"title": "Bookmarked Item", "url": "https://a.com", "source": "arXiv",
+         "source_name": "arXiv", "total_score": 90, "rule_score": 40,
+         "llm_score": 50, "llm_reason": None, "tags": [], "authors": [], "index": 0},
+        {"title": "Normal Item", "url": "https://b.com", "source": "HN",
+         "source_name": "Hacker News", "total_score": 70, "rule_score": 30,
+         "llm_score": 40, "llm_reason": None, "tags": [], "authors": [], "index": 1},
+    ]
+    mock_data_service.list_day_contents.return_value = []
+    mock_data_service.get_bookmarked_indices.return_value = {0}
+
+    res = client.get("/day/2026-01-01")
+    assert res.status_code == 200
+    # Index 0 已收藏 → ★ + starred class
+    assert "starred" in res.text
+    assert "★" in res.text
+    # Index 1 未收藏 → ☆
+    assert "☆" in res.text
+    # 確認 toggleDayBookmark JS 函數存在
+    assert "toggleDayBookmark" in res.text

@@ -49,7 +49,7 @@ python -m src.cli web                    # 啟動監控網頁 http://127.0.0.1:8
 autopb run
 
 # Testing
-pytest tests/                            # 145 tests
+pytest tests/                            # 146 tests
 ```
 
 ## Architecture
@@ -127,6 +127,8 @@ scoring:
 - 日期參數統一透過 `_parse_date()` 解析，提供友善錯誤訊息
 - Web pipeline log 寫入 `logs/{date}.log`，可透過 `GET /api/logs/{date}` 查看
 - Pipeline 狀態管理：`PipelineRun` dataclass + `_runs: dict[str, PipelineRun]` + `_lock` 為唯一權威狀態來源；`_finalize_run()` 在 `proc.wait()` 後主動 invalidate 3 個 cache（scored/sidebar/search），確保 reload 後資料 fresh
+- Sidebar 待寫清單 badge：只計算 `bookmarked` + `writing`（排除 `written`/`published`）；書籤 API 回傳 `bookmarks_count`，前端 `updateSidebarBadge()` 即時更新 DOM
+- 待寫清單排序：`(date_str, total_score)` 雙欄降序（先日期新→舊，同日分數高→低）
 
 ## Web API Endpoints
 
@@ -144,9 +146,9 @@ scoring:
 | GET | `/post/{date}/{slug}` | 部落格文渲染 |
 | GET | `/note/{date}/{slug}` | AI 筆記渲染 |
 | GET | `/api/search` | 素材搜尋（q, source, min_score, date_from/to, page）|
-| POST | `/api/bookmark/{date}/{index}` | 收藏素材 |
-| DELETE | `/api/bookmark/{date}/{index}` | 取消收藏 |
-| PATCH | `/api/bookmark/{date}/{index}/status` | 更新書籤狀態 |
+| POST | `/api/bookmark/{date}/{index}` | 收藏素材（回傳 `bookmarks_count`） |
+| DELETE | `/api/bookmark/{date}/{index}` | 取消收藏（回傳 `bookmarks_count`） |
+| PATCH | `/api/bookmark/{date}/{index}/status` | 更新書籤狀態（回傳 `bookmarks_count`） |
 | GET | `/api/bookmark/{date}/{index}/check` | 檢查是否已收藏 |
 | GET | `/api/bookmarks?status=` | 列出書籤 |
 | GET | `/api/logs/{date}` | 查看 pipeline 執行 log |
@@ -163,7 +165,7 @@ scoring:
 
 - **Pipeline Stages**：GitLab 圓角膠囊（Pill）風格，3 個 `.stage-pill`（收集/評分/生成）+ `.stage-connector` 連接線/chevron，狀態色系統（done=綠、running=藍 pulse、failed=紅、cancelled=橘、pending=半透明），連接線隨上游完成變綠（CSS adjacent sibling）
 - **Charts Strip**：分數分佈 + 來源佔比水平並列（grid 1fr 1fr，110px），位於 pipeline card 下方、評分列表上方
-- **評分列表含「產出」欄**：`content_map`（title→Blog/Note 映射）由後端傳入，表格內嵌 Blog/Note badge 連結，不再有獨立「產出內容」區塊
+- **評分列表含「產出」欄**：`content_map`（title→Blog/Note 映射）由後端傳入，表格內嵌 Blog/Note badge 連結，不再有獨立「產出內容」區塊；**收藏星號**：`bookmarked_indices`（set）由後端傳入，已收藏顯示 ★（`.starred`）
 - **Log Panel**：點擊 pill 展開 log，再點同一顆收合（toggle）；live log 格式 `[HH:MM:SS] [LEVEL] [source] msg (N 筆)`（UTC+8），歷史 log `ts` 欄同為 UTC+8，`msg` 包含 blog/feed 名稱與計數
 - **Emoji 字體**：base.html 引入 Noto Color Emoji（Google Fonts）
 

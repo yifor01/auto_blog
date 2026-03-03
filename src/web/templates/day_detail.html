@@ -268,6 +268,21 @@
 }
 .content-badge-blog { border: 1px solid rgba(52,199,89,0.3); background: rgba(52,199,89,0.06); color: #34C759; }
 .content-badge-note { border: 1px solid rgba(50,173,230,0.3); background: rgba(50,173,230,0.06); color: #32ADE6; }
+
+/* Bookmark star button */
+.bm-star {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: transform 0.15s var(--spring-bounce), color 0.15s;
+  color: var(--t5);
+  line-height: 1;
+}
+.bm-star:hover { transform: scale(1.25); }
+.bm-star.starred { color: var(--ay); }
 </style>
 
 <!-- Charts Strip -->
@@ -297,8 +312,9 @@
       <thead>
         <tr>
           <th style="width:32px;">#</th>
+          <th style="width:30px;"></th>
           <th style="width:70px;">分數</th>
-          <th style="width:90px;">來源</th>
+          <th style="width:120px;">來源</th>
           <th>標題 / 資訊</th>
           <th style="width:80px;">產出</th>
           <th style="width:50px;"></th>
@@ -311,6 +327,11 @@
             {{ loop.index }}
           </td>
           <td>
+            <button class="bm-star{% if it.index in bookmarked_indices %} starred{% endif %}"
+                    onclick="toggleDayBookmark(this, '{{ date_str }}', {{ it.index }})"
+                    title="收藏">{{ '★' if it.index in bookmarked_indices else '☆' }}</button>
+          </td>
+          <td>
             <div style="display:flex; flex-direction:column; gap:2px;">
               <span class="score-badge">{{ "%.0f"|format(it.total_score) }}</span>
               <span style="font-size:10px; color:var(--t5); font-family:'JetBrains Mono',monospace;">
@@ -319,8 +340,7 @@
             </div>
           </td>
           <td>
-            <span class="chip" style="display:inline-block; max-width:80px;
-                  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:10.5px;">
+            <span class="chip" style="display:inline-block; white-space:nowrap; font-size:10.5px;">
               {{ it.source_name or it.source }}
             </span>
           </td>
@@ -824,5 +844,28 @@ async function loadInitialStageInfo() {
   } catch(e) { /* 靜默失敗 */ }
 }
 document.addEventListener('DOMContentLoaded', loadInitialStageInfo);
+
+// ---- Bookmark toggle ----
+async function toggleDayBookmark(btn, dateStr, index) {
+  var isStarred = btn.classList.contains('starred');
+  var method = isStarred ? 'DELETE' : 'POST';
+  try {
+    var res = await fetch('/api/bookmark/' + dateStr + '/' + index, { method: method });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    var data = await res.json();
+    if (isStarred) {
+      btn.classList.remove('starred');
+      btn.textContent = '☆';
+      showToast('已取消收藏', '🗑️');
+    } else {
+      btn.classList.add('starred');
+      btn.textContent = '★';
+      showToast('已收藏', '⭐');
+    }
+    if (data.bookmarks_count !== undefined) updateSidebarBadge(data.bookmarks_count);
+  } catch(e) {
+    showToast('操作失敗', '❌');
+  }
+}
 </script>
 {% endblock %}

@@ -417,7 +417,10 @@ def get_sidebar_stats() -> dict:
     if bookmarks_path.exists():
         bm_data = load_json(bookmarks_path)
         if isinstance(bm_data, dict):
-            bookmarks_count = len(bm_data)
+            bookmarks_count = sum(
+                1 for v in bm_data.values()
+                if v.get("status") not in ("written", "published")
+            )
 
     result = {
         "total_posts": total_posts,
@@ -945,6 +948,20 @@ def get_all_bookmarks() -> dict:
     return _load_bookmarks()
 
 
+def get_bookmarked_indices(date_str: str) -> set[int]:
+    """回傳指定日期所有已收藏的 index 集合。"""
+    bm = _load_bookmarks()
+    result: set[int] = set()
+    prefix = f"{date_str}_"
+    for key in bm:
+        if key.startswith(prefix):
+            try:
+                result.add(int(key[len(prefix):]))
+            except ValueError:
+                continue
+    return result
+
+
 def set_bookmark(date_str: str, index: int, title: str = "", notes: str = "") -> None:
     """收藏一筆素材。"""
     from datetime import datetime
@@ -1006,7 +1023,11 @@ def list_bookmarked_items(status: str = "") -> list[dict]:
             entry["url"] = detail.get("url", "")
         result.append(entry)
 
-    return sorted(result, key=lambda x: x.get("starred_at", ""), reverse=True)
+    return sorted(
+        result,
+        key=lambda x: (x.get("date_str", ""), x.get("total_score", 0)),
+        reverse=True,
+    )
 
 
 # ──────────────────────────────────────────────────────────

@@ -185,6 +185,8 @@ async def day_detail(request: Request, date_str: str):
     if _is_running(date_str):
         state = "running"
 
+    bookmarked_indices = ds.get_bookmarked_indices(date_str)
+
     return templates.TemplateResponse(
         "day_detail.html",
         {
@@ -194,6 +196,7 @@ async def day_detail(request: Request, date_str: str):
             "items": items,
             "content_map": content_map,
             "state": state,
+            "bookmarked_indices": bookmarked_indices,
             "sidebar_stats": ds.get_sidebar_stats(),
         },
     )
@@ -532,14 +535,18 @@ async def api_bookmark_add(date_str: str, index: int):
     detail = ds.get_item_detail(d, index)
     title = detail["title"] if detail else ""
     ds.set_bookmark(date_str, index, title=title)
-    return JSONResponse({"message": "已收藏"})
+    ds.invalidate_sidebar_cache()
+    stats = ds.get_sidebar_stats()
+    return JSONResponse({"message": "已收藏", "bookmarks_count": stats["bookmarks_count"]})
 
 
 @app.delete("/api/bookmark/{date_str}/{index}")
 async def api_bookmark_remove(date_str: str, index: int):
     """取消收藏。"""
     ds.remove_bookmark(date_str, index)
-    return JSONResponse({"message": "已取消收藏"})
+    ds.invalidate_sidebar_cache()
+    stats = ds.get_sidebar_stats()
+    return JSONResponse({"message": "已取消收藏", "bookmarks_count": stats["bookmarks_count"]})
 
 
 @app.patch("/api/bookmark/{date_str}/{index}/status")
@@ -550,7 +557,9 @@ async def api_bookmark_status(request: Request, date_str: str, index: int):
     if status not in ("bookmarked", "writing", "written", "published"):
         raise HTTPException(status_code=400, detail="無效的狀態")
     ds.update_bookmark_status(date_str, index, status)
-    return JSONResponse({"message": "已更新"})
+    ds.invalidate_sidebar_cache()
+    stats = ds.get_sidebar_stats()
+    return JSONResponse({"message": "已更新", "bookmarks_count": stats["bookmarks_count"]})
 
 
 @app.get("/api/bookmark/{date_str}/{index}/check")

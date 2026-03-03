@@ -171,10 +171,11 @@ function onDragLeave(e) {
 
 function onDrop(e) {
   e.preventDefault();
-  e.currentTarget.classList.remove('drag-over');
+  var dropZone = e.currentTarget;
+  dropZone.classList.remove('drag-over');
   if (!draggedEl) return;
 
-  var newStatus = e.currentTarget.dataset.status;
+  var newStatus = dropZone.dataset.status;
   var dateStr = draggedEl.dataset.date;
   var index = draggedEl.dataset.index;
 
@@ -183,17 +184,20 @@ function onDrop(e) {
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({status: newStatus})
   })
-  .then(function(res){ return res.json(); })
-  .then(function(){
-    e.currentTarget.appendChild(draggedEl);
+  .then(function(res){
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.json();
+  })
+  .then(function(data){
+    dropZone.appendChild(draggedEl);
     draggedEl.classList.remove('dragging');
     draggedEl = null;
-    // 更新計數
     updateCounts();
+    if (data.bookmarks_count !== undefined) updateSidebarBadge(data.bookmarks_count);
     showToast('狀態已更新', '✅');
   })
   .catch(function(err){
-    draggedEl.classList.remove('dragging');
+    if (draggedEl) draggedEl.classList.remove('dragging');
     showToast('更新失敗', '❌');
   });
 }
@@ -202,10 +206,11 @@ function removeBookmark(dateStr, index, btn) {
   if (!confirm('確定移除此收藏？')) return;
   fetch('/api/bookmark/' + dateStr + '/' + index, { method: 'DELETE' })
     .then(function(res){ return res.json(); })
-    .then(function(){
+    .then(function(data){
       var card = btn.closest('.kb-card');
       card.remove();
       updateCounts();
+      if (data.bookmarks_count !== undefined) updateSidebarBadge(data.bookmarks_count);
       showToast('已移除收藏', '🗑️');
     });
 }

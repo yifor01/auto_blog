@@ -72,7 +72,7 @@ def generate_note(item: ScoredItem) -> GeneratedContent:
 
     full_prompt = f"[SYSTEM]\n{NOTE_SYSTEM_PROMPT}\n\n[USER]\n{user_msg}"
 
-    _logger.info("Generating note", extra={"title": item.item.title[:80]})
+    _logger.debug("LLM note generation started", extra={"title": item.item.title[:80]})
     content = llm_chat(
         messages=[
             {"role": "system", "content": NOTE_SYSTEM_PROMPT},
@@ -111,7 +111,7 @@ generated_at: {gen.generated_at.isoformat()}
 """
     note_path.write_text(note_content, encoding="utf-8")
 
-    _logger.info("Note saved", extra={"output_file": note_path.name})
+    _logger.debug("Note file written", extra={"output_file": note_path.name})
     return str(note_path)
 
 
@@ -122,15 +122,29 @@ def generate_and_save_notes(items: list[ScoredItem], target_date: date | None = 
     config = load_config()
     delay = config.get("llm", {}).get("request_delay_seconds", 10)
 
-    _logger.info("Starting note generation", extra={"count": len(items)})
+    _logger.info(f"Note generation started ({len(items)} 篇)", extra={"count": len(items)})
     paths: list[str] = []
     for i, item in enumerate(items):
         try:
             gen = generate_note(item)
             path = save_note(gen, target_date)
             paths.append(path)
+            _logger.info(
+                f"({i+1}/{len(items)}) [{item.item.source.value}] "
+                f"{item.item.title[:50]} → Note 已儲存",
+                extra={
+                    "title": item.item.title[:80],
+                    "source": item.item.source.value,
+                    "total_score": round(item.total_score),
+                    "output_file": path.rsplit("/", 1)[-1],
+                },
+            )
         except Exception as e:
-            _logger.error("Note generation error", extra={"title": item.item.title[:80], "error": str(e)})
+            _logger.error(
+                f"({i+1}/{len(items)}) [{item.item.source.value}] "
+                f"{item.item.title[:50]} → Note 生成失敗: {str(e)[:80]}",
+                extra={"title": item.item.title[:80], "source": item.item.source.value, "error": str(e)},
+            )
         if i < len(items) - 1:
             time.sleep(delay)
     return paths

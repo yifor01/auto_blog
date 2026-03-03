@@ -200,7 +200,7 @@ def generate_blog_post(item: ScoredItem) -> GeneratedContent:
 
     full_prompt = f"[SYSTEM]\n{BLOG_SYSTEM_PROMPT}\n\n[USER]\n{user_msg}"
 
-    _logger.info("Generating blog post", extra={"title": item.item.title[:80]})
+    _logger.debug("LLM blog generation started", extra={"title": item.item.title[:80]})
     content = llm_chat(
         messages=[
             {"role": "system", "content": BLOG_SYSTEM_PROMPT},
@@ -244,7 +244,7 @@ generated_at: {gen.generated_at.isoformat()}
     prompt_path = PROMPTS_DIR / f"{date_str}_{slug}_prompt.md"
     prompt_path.write_text(gen.prompt_used, encoding="utf-8")
 
-    _logger.info("Blog post saved", extra={"output_file": post_path.name})
+    _logger.debug("Blog post file written", extra={"output_file": post_path.name})
     return str(post_path)
 
 
@@ -255,13 +255,14 @@ def generate_and_save_posts(items: list[ScoredItem], target_date: date | None = 
     config = load_config()
     delay = config.get("llm", {}).get("request_delay_seconds", 10)
 
-    _logger.info("Starting blog post generation", extra={"count": len(items)})
+    _logger.info(f"Blog post generation started ({len(items)} 篇)", extra={"count": len(items)})
     paths: list[str] = []
     for i, item in enumerate(items):
         abstract_len = len(item.item.abstract.strip())
         if abstract_len < ABSTRACT_MIN_LEN_FOR_GENERATION:
             _logger.warning(
-                "Skipping blog post generation: abstract too short",
+                f"({i+1}/{len(items)}) [{item.item.source.value}] "
+                f"{item.item.title[:50]} → 跳過 (摘要過短 {abstract_len} 字)",
                 extra={"title": item.item.title[:80], "source": item.item.source.value, "abstract_len": abstract_len},
             )
             continue
@@ -269,8 +270,22 @@ def generate_and_save_posts(items: list[ScoredItem], target_date: date | None = 
             gen = generate_blog_post(item)
             path = save_blog_post(gen, target_date)
             paths.append(path)
+            _logger.info(
+                f"({i+1}/{len(items)}) [{item.item.source.value}] "
+                f"{item.item.title[:50]} → Blog 已儲存",
+                extra={
+                    "title": item.item.title[:80],
+                    "source": item.item.source.value,
+                    "total_score": round(item.total_score),
+                    "output_file": path.rsplit("/", 1)[-1],
+                },
+            )
         except Exception as e:
-            _logger.error("Blog post generation error", extra={"title": item.item.title[:80], "error": str(e)})
+            _logger.error(
+                f"({i+1}/{len(items)}) [{item.item.source.value}] "
+                f"{item.item.title[:50]} → Blog 生成失敗: {str(e)[:80]}",
+                extra={"title": item.item.title[:80], "source": item.item.source.value, "error": str(e)},
+            )
         if i < len(items) - 1:
             time.sleep(delay)
     return paths
