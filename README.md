@@ -25,13 +25,14 @@
 - **🖥️ 現代化 Web Dashboard**：
   - 內建精美的 Dark/Light 主題切換。
   - 支援 SSE (Server-Sent Events) 即時日誌串流，隨時掌握 Pipeline 執行進度；支援 Force Stop 中途取消執行。
-  - 圖表化呈現來源佔比、歷史分數趨勢與 Collector 健康度狀態。
+  - 圖表化呈現來源佔比（Doughnut）、分數分佈（動態區間 Bar Chart）與歷史趨勢。
   - 素材庫（合併 posts + notes，可搜尋、收藏）。
   - 書籤系統與 Kanban 待寫清單（四欄拖曳）。
   - 主題聚合視圖（8 個 topic cluster + 趨勢 sparkline）。
   - 每日摘要（模板式，不需 LLM）。
   - Settings 頁面：可在 UI 直接調整 LLM、評分、Collectors 等所有參數，不需重啟 server。
   - Pipeline Card（GitLab CI/CD 風格）：stage 節點狀態追蹤（running / done / failed / cancelled），支援強制停止、查看各 stage 展開 log。
+  - 評分列表來源篩選：Chip 式篩選器，可依資料來源即時過濾評分清單。
 
 ## 🏗️ 系統架構 (Architecture)
 
