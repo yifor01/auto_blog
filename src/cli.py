@@ -378,10 +378,19 @@ def collect(
     force: bool = typer.Option(False, "--force", "-f", help="強制重新收集"),
 ):
     """只收集資料 (已有快取則跳過)。"""
+    import time as _time
+
     d = _parse_date(target_date)
     if force and _get_raw_path(d).exists():
         _get_raw_path(d).unlink()
-    _collect(d)
+    _t0 = _time.time()
+    _logger.info("Stage started", extra={"pipeline_stage": "collect", "stage_action": "start"})
+    items = _collect(d)
+    _logger.info("Stage ended", extra={
+        "pipeline_stage": "collect", "stage_action": "end",
+        "elapsed": round(_time.time() - _t0, 1),
+        "item_count": len(items),
+    })
 
 
 @app.command()
@@ -390,6 +399,8 @@ def score(
     force: bool = typer.Option(False, "--force", "-f", help="強制重新篩選"),
 ):
     """對已收集的資料進行篩選 (已有快取則跳過)。"""
+    import time as _time
+
     d = _parse_date(target_date)
     raw_path = _get_raw_path(d)
     if not raw_path.exists():
@@ -401,7 +412,14 @@ def score(
 
     raw_data = load_json(raw_path)
     items = [ContentItem(**item) for item in raw_data]
-    _score(items, d)
+    _t0 = _time.time()
+    _logger.info("Stage started", extra={"pipeline_stage": "score", "stage_action": "start"})
+    scored = _score(items, d)
+    _logger.info("Stage ended", extra={
+        "pipeline_stage": "score", "stage_action": "end",
+        "elapsed": round(_time.time() - _t0, 1),
+        "item_count": len(scored),
+    })
 
 
 @app.command()
@@ -410,6 +428,8 @@ def generate(
     top_k: int = typer.Option(None, "--top-k", "-k", help="生成數量，預設使用 config 的 final_top_k"),
 ):
     """對已篩選的 top items 生成內容。"""
+    import time as _time
+
     d = _parse_date(target_date)
     scored_path = _get_scored_path(d)
     if not scored_path.exists():
@@ -419,7 +439,14 @@ def generate(
     scored_data = load_json(scored_path)
     limit = top_k or len(scored_data)
     top_items = [ScoredItem(**item) for item in scored_data[:limit]]
-    _generate(top_items, d)
+    _t0 = _time.time()
+    _logger.info("Stage started", extra={"pipeline_stage": "generate", "stage_action": "start"})
+    post_paths, note_paths = _generate(top_items, d)
+    _logger.info("Stage ended", extra={
+        "pipeline_stage": "generate", "stage_action": "end",
+        "elapsed": round(_time.time() - _t0, 1),
+        "item_count": len(post_paths) + len(note_paths),
+    })
 
 
 @app.command()
