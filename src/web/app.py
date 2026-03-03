@@ -412,6 +412,38 @@ async def digest_view(request: Request, date_str: str):
     )
 
 
+@app.get("/docs", response_class=HTMLResponse)
+async def docs_page(request: Request):
+    """專案文件瀏覽頁面。"""
+    from markdown_it import MarkdownIt
+
+    md = MarkdownIt().enable("table")
+    project_root = Path(__file__).resolve().parent.parent.parent
+
+    doc_files = [
+        ("README.md", project_root / "README.md"),
+        ("CLAUDE.md", project_root / "CLAUDE.md"),
+        ("TODO.md", project_root / "TODO.md"),
+        ("review.md", project_root / "review.md"),
+    ]
+    docs = []
+    for name, path in doc_files:
+        if path.exists():
+            raw = path.read_text(encoding="utf-8", errors="replace")
+            docs.append({"name": name, "html": md.render(raw)})
+        else:
+            docs.append({"name": name, "html": f"<p style='color:var(--t4)'>{name} 不存在</p>"})
+
+    return templates.TemplateResponse(
+        "docs.html",
+        {
+            "request": request,
+            "docs": docs,
+            "sidebar_stats": ds.get_sidebar_stats(),
+        },
+    )
+
+
 @app.get("/settings", response_class=HTMLResponse)
 async def settings_page(request: Request, saved: str = ""):
     cfg = cm.get_config()
