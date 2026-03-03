@@ -119,7 +119,6 @@ def batch_llm_score(
     scored = []
     if _json_mode:
         for i, item in enumerate(candidates):
-            _logger.debug("Item scored", extra={"index": i + 1, "total": len(candidates)})
             abstract_len = len(item.item.abstract.strip())
             if abstract_len < ABSTRACT_MIN_LEN_FOR_LLM:
                 _logger.warning(
@@ -129,6 +128,17 @@ def batch_llm_score(
                 scored.append(item)
                 continue
             scored_item = llm_score_item(item)
+            _logger.debug(
+                f"({i+1}/{len(candidates)}) [{scored_item.item.source.value}] "
+                f"{scored_item.item.title[:50]} → LLM {scored_item.llm_score}, "
+                f"總分 {round(scored_item.total_score)}",
+                extra={
+                    "title": scored_item.item.title[:80],
+                    "source": scored_item.item.source.value,
+                    "llm_score": scored_item.llm_score,
+                    "total_score": round(scored_item.total_score),
+                },
+            )
             scored.append(scored_item)
             if i < len(candidates) - 1:
                 time.sleep(delay)
