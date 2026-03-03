@@ -283,6 +283,23 @@
 }
 .bm-star:hover { transform: scale(1.25); }
 .bm-star.starred { color: var(--ay); }
+
+/* Source Filter */
+.source-filter { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+.sf-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border-radius: 12px; border: 1px solid var(--br2);
+  background: var(--bg-in); color: var(--t4); font-size: 11.5px; font-weight: 500;
+  cursor: pointer; transition: all .15s ease; white-space: nowrap; line-height: 1.4;
+}
+.sf-chip:hover { border-color: var(--av); color: var(--t2); }
+.sf-chip.sf-active { background: rgba(0,122,255,0.1); border-color: rgba(0,122,255,0.4); color: var(--av); }
+.sf-chip.sf-active:hover { background: rgba(0,122,255,0.05); }
+.sf-count {
+  font-size: 10px; font-family: 'JetBrains Mono', monospace;
+  background: rgba(0,122,255,0.12); color: var(--av); padding: 0 5px; border-radius: 8px; font-weight: 600;
+}
+.sf-chip:not(.sf-active) .sf-count { background: var(--br2); color: var(--t5); }
 </style>
 
 <!-- Charts Strip -->
@@ -305,7 +322,24 @@
 
 <!-- Scored items table -->
 <section>
-  <h3 style="font-size:14px; font-weight:600; color:var(--t2); margin:0 0 10px;">評分列表</h3>
+  <div style="display:flex; align-items:center; justify-content:space-between; margin:0 0 10px; flex-wrap:wrap; gap:8px;">
+    <h3 style="font-size:14px; font-weight:600; color:var(--t2); margin:0;">評分列表</h3>
+    {% if items %}
+    <div class="source-filter" id="source-filter">
+      <button class="sf-chip sf-active" data-source="__all__" onclick="toggleSourceFilter(this)">全部<span class="sf-count">{{ items|length }}</span></button>
+      {% set ns = namespace(seen=[]) %}
+      {% for it in items %}
+        {% if it.source not in ns.seen %}
+          {% set ns.seen = ns.seen + [it.source] %}
+        {% endif %}
+      {% endfor %}
+      {% for src in ns.seen %}
+        {% set cnt = items|selectattr('source','equalto',src)|list|length %}
+        <button class="sf-chip" data-source="{{ src }}" onclick="toggleSourceFilter(this)">{{ items|selectattr('source','equalto',src)|map(attribute='source_name')|first or src }}<span class="sf-count">{{ cnt }}</span></button>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
   {% if items %}
   <div class="card" style="overflow:hidden;">
     <table class="data-table">
@@ -322,7 +356,7 @@
       </thead>
       <tbody>
         {% for it in items %}
-        <tr>
+        <tr data-source="{{ it.source }}">
           <td style="color:var(--t5); font-family:'JetBrains Mono',monospace; font-size:12px;">
             {{ loop.index }}
           </td>
@@ -844,6 +878,52 @@ async function loadInitialStageInfo() {
   } catch(e) { /* 靜默失敗 */ }
 }
 document.addEventListener('DOMContentLoaded', loadInitialStageInfo);
+
+// ---- Source Filter ----
+// 邏輯：預設「全部」亮 → 點個別 chip 進入篩選模式 → 點「全部」回到全顯示
+function toggleSourceFilter(btn) {
+  const src = btn.getAttribute('data-source');
+  const allBtn = document.querySelector('.sf-chip[data-source="__all__"]');
+  const chips = Array.from(document.querySelectorAll('.sf-chip:not([data-source="__all__"])'));
+
+  if (src === '__all__') {
+    // 點「全部」→ 清除所有個別選取，回到全顯示
+    chips.forEach(function(c) { c.classList.remove('sf-active'); });
+    allBtn.classList.add('sf-active');
+  } else {
+    // 點個別 chip → 離開「全部」模式
+    allBtn.classList.remove('sf-active');
+    btn.classList.toggle('sf-active');
+    // 若所有個別 chip 都取消 → 自動回「全部」
+    if (!chips.some(function(c) { return c.classList.contains('sf-active'); })) {
+      allBtn.classList.add('sf-active');
+    }
+  }
+  applySourceFilter();
+}
+
+function applySourceFilter() {
+  const allBtn = document.querySelector('.sf-chip[data-source="__all__"]');
+  const isAllMode = allBtn.classList.contains('sf-active');
+  const chips = Array.from(document.querySelectorAll('.sf-chip:not([data-source="__all__"])'));
+  const activeSources = isAllMode
+    ? null  // null = 全顯示
+    : new Set(chips.filter(function(c) { return c.classList.contains('sf-active'); }).map(function(c) { return c.getAttribute('data-source'); }));
+
+  const rows = document.querySelectorAll('.data-table tbody tr[data-source]');
+  var idx = 0;
+  rows.forEach(function(row) {
+    var show = isAllMode || activeSources.has(row.getAttribute('data-source'));
+    row.style.display = show ? '' : 'none';
+    if (show) {
+      idx++;
+      var numCell = row.querySelector('td:first-child');
+      if (numCell) numCell.textContent = idx;
+    }
+  });
+  // 更新「全部」計數
+  allBtn.querySelector('.sf-count').textContent = idx;
+}
 
 // ---- Bookmark toggle ----
 async function toggleDayBookmark(btn, dateStr, index) {

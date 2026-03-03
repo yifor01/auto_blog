@@ -164,8 +164,9 @@ scoring:
 ### Day Detail 頁面（`/day/{date}`）
 
 - **Pipeline Stages**：GitLab 圓角膠囊（Pill）風格，3 個 `.stage-pill`（收集/評分/生成）+ `.stage-connector` 連接線/chevron，狀態色系統（done=綠、running=藍 pulse、failed=紅、cancelled=橘、pending=半透明），連接線隨上游完成變綠（CSS adjacent sibling）
-- **Charts Strip**：分數分佈 + 來源佔比水平並列（grid 1fr 1fr，110px），位於 pipeline card 下方、評分列表上方
-- **評分列表含「產出」欄**：`content_map`（title→Blog/Note 映射）由後端傳入，表格內嵌 Blog/Note badge 連結，不再有獨立「產出內容」區塊；**收藏星號**：`bookmarked_indices`（set）由後端傳入，已收藏顯示 ★（`.starred`）
+- **Charts Strip**：分數分佈（動態區間，依實際資料範圍自動計算）+ 來源佔比水平並列（grid 1fr 1fr，110px），位於 pipeline card 下方、評分列表上方
+- **來源篩選**：評分列表上方 `.source-filter` chip 列，預設「全部」亮起；點個別來源進入篩選模式（可多選），取消所有個別選取或點「全部」回到全顯示；行號自動重新編號
+- **評分列表含「產出」欄**：`content_map`（title→Blog/Note 映射）由後端傳入，表格內嵌 Blog/Note badge 連結，不再有獨立「產出內容」區塊；**收藏星號**：`bookmarked_indices`（set）由後端傳入，已收藏顯示 ★（`.starred`）；每行 `<tr data-source>` 用於前端篩選
 - **Log Panel**：點擊 pill 展開 log，再點同一顆收合（toggle）；live log 格式 `[HH:MM:SS] [LEVEL] [source] msg (N 筆)`（UTC+8），歷史 log `ts` 欄同為 UTC+8，`msg` 包含 blog/feed 名稱與計數
 - **Emoji 字體**：base.html 引入 Noto Color Emoji（Google Fonts）
 

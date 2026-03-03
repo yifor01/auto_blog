@@ -198,15 +198,31 @@ def get_day_stats(d: date) -> dict:
     posts_count = len(list(POSTS_DIR.glob(f"{prefix}*.md")))
     notes_count = len(list(NOTES_DIR.glob(f"{prefix}*.md")))
 
-    # LLM 分數分佈（0-20, 20-40, 40-60, 60-80, 80-100）
-    score_dist = [0, 0, 0, 0, 0]
+    # 分數分佈（動態區間，根據實際資料範圍）
     source_counts: dict[str, int] = {}
+    scores = []
     for it in items:
-        total = it["total_score"]
-        bucket = min(int(total // 20), 4)
-        score_dist[bucket] += 1
+        scores.append(it["total_score"])
         src = it["source_name"] or it["source"]
         source_counts[src] = source_counts.get(src, 0) + 1
+
+    if scores:
+        lo = int(min(scores) // 10) * 10
+        hi = int(max(scores) // 10 + 1) * 10
+        # 確保至少 5 個區間，最多 8 個
+        step = max(10, (hi - lo + 4) // 5 // 5 * 5) if hi - lo > 50 else 10
+        bins = list(range(lo, hi + step, step))
+        if len(bins) > 9:
+            step = max(10, (hi - lo + 4) // 6 // 5 * 5 or 10)
+            bins = list(range(lo, hi + step, step))
+        score_dist_labels = [f"{bins[i]}-{bins[i+1]}" for i in range(len(bins) - 1)]
+        score_dist = [0] * (len(bins) - 1)
+        for s in scores:
+            idx = min(int((s - lo) // step), len(score_dist) - 1)
+            score_dist[idx] += 1
+    else:
+        score_dist_labels = []
+        score_dist = []
 
     return {
         "date": d.isoformat(),
@@ -215,7 +231,7 @@ def get_day_stats(d: date) -> dict:
         "posts_count": posts_count,
         "notes_count": notes_count,
         "score_dist": score_dist,
-        "score_dist_labels": ["0-20", "20-40", "40-60", "60-80", "80+"],
+        "score_dist_labels": score_dist_labels,
         "source_counts": source_counts,
     }
 
