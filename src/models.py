@@ -17,6 +17,8 @@ class SourceType(str, Enum):
     BLOG = "blog"
     GITHUB = "github"
     HACKERNEWS = "hackernews"
+    REDDIT = "reddit"
+    NEWSAPI = "newsapi"
 
 
 class ContentItem(BaseModel):

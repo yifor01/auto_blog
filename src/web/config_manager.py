@@ -35,6 +35,7 @@ def get_env_values() -> dict[str, str]:
     return {
         "api_key": vals.get("OPENROUTER_API_KEY", os.getenv("OPENROUTER_API_KEY", "")),
         "api_url": vals.get("OPENROUTER_API_URL", os.getenv("OPENROUTER_API_URL", "")),
+        "newsapi_key": vals.get("NEWSAPI_KEY", os.getenv("NEWSAPI_KEY", "")),
     }
 
 

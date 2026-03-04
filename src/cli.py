@@ -49,6 +49,8 @@ def _get_collectors():
     from src.collectors.github_trending import GitHubTrendingCollector
     from src.collectors.hackernews_collector import HackerNewsCollector
     from src.collectors.hf_papers import HFPapersCollector
+    from src.collectors.newsapi_collector import NewsAPICollector
+    from src.collectors.reddit_collector import RedditCollector
     from src.collectors.rss_collector import RSSCollector
     return [
         ArxivCollector(),
@@ -58,6 +60,8 @@ def _get_collectors():
         BlogCollector(),
         GitHubTrendingCollector(),
         HackerNewsCollector(),
+        RedditCollector(),
+        NewsAPICollector(),
     ]
 
 
@@ -657,7 +661,7 @@ def digest(
 @app.command()
 def web(
     host: str = typer.Option("127.0.0.1", "--host", help="監聽 host"),
-    port: int = typer.Option(8080, "--port", "-p", help="監聽 port"),
+    port: int = typer.Option(8555, "--port", "-p", help="監聽 port"),
     reload: bool = typer.Option(False, "--reload", help="開發模式（自動重載）"),
 ):
     """啟動內容品質監控網頁。"""

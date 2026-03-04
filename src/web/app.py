@@ -490,17 +490,42 @@ async def settings_save(
     hackernews_queries: str = Form(""),
     hackernews_min_points: int = Form(50, ge=0, le=1000),
     hackernews_max_results: int = Form(30, ge=1, le=200),
+    reddit_enabled: Optional[str] = Form(None),
+    reddit_subreddits: str = Form(""),
+    reddit_min_upvotes: int = Form(50, ge=0, le=10000),
+    reddit_max_results: int = Form(30, ge=1, le=200),
+    newsapi_enabled: Optional[str] = Form(None),
+    newsapi_key: str = Form(""),
+    newsapi_query: str = Form(""),
+    newsapi_max_results: int = Form(20, ge=1, le=100),
+    # Source weights
+    sw_arxiv: int = Form(0, ge=0, le=50),
+    sw_chatpaper: int = Form(5, ge=0, le=50),
+    sw_hf_papers: int = Form(0, ge=0, le=50),
+    sw_rss: int = Form(15, ge=0, le=50),
+    sw_blog: int = Form(15, ge=0, le=50),
+    sw_github: int = Form(0, ge=0, le=50),
+    sw_hackernews: int = Form(0, ge=0, le=50),
+    sw_reddit: int = Form(0, ge=0, le=50),
+    sw_newsapi: int = Form(15, ge=0, le=50),
 ):
     env_updates: dict[str, str] = {}
     if api_key.strip():
         env_updates["OPENROUTER_API_KEY"] = api_key.strip()
     if api_url.strip():
         env_updates["OPENROUTER_API_URL"] = api_url.strip()
+    if newsapi_key.strip():
+        env_updates["NEWSAPI_KEY"] = newsapi_key.strip()
 
     # 解析 hackernews queries（逗號分隔 → list）
     hn_queries = [q.strip() for q in hackernews_queries.split(",") if q.strip()]
     if not hn_queries:
         hn_queries = ["AI", "LLM", "GPT"]
+
+    # 解析 reddit subreddits（逗號分隔 → list）
+    reddit_subs = [s.strip() for s in reddit_subreddits.split(",") if s.strip()]
+    if not reddit_subs:
+        reddit_subs = ["LocalLLaMA", "MachineLearning"]
 
     config_updates: dict = {
         "llm.model": llm_model.strip() or cm.get_config().get("llm", {}).get("model", ""),
@@ -528,6 +553,23 @@ async def settings_save(
         "collectors.hackernews.queries": hn_queries,
         "collectors.hackernews.min_points": hackernews_min_points,
         "collectors.hackernews.max_results": hackernews_max_results,
+        "collectors.reddit.enabled": reddit_enabled is not None,
+        "collectors.reddit.subreddits": reddit_subs,
+        "collectors.reddit.min_upvotes": reddit_min_upvotes,
+        "collectors.reddit.max_results": reddit_max_results,
+        "collectors.newsapi.enabled": newsapi_enabled is not None,
+        "collectors.newsapi.query": newsapi_query.strip() or "generative AI OR LLM OR large language model",
+        "collectors.newsapi.max_results": newsapi_max_results,
+        # Source weights
+        "scoring.source_weights.arxiv": sw_arxiv,
+        "scoring.source_weights.chatpaper": sw_chatpaper,
+        "scoring.source_weights.hf_papers": sw_hf_papers,
+        "scoring.source_weights.rss": sw_rss,
+        "scoring.source_weights.blog": sw_blog,
+        "scoring.source_weights.github": sw_github,
+        "scoring.source_weights.hackernews": sw_hackernews,
+        "scoring.source_weights.reddit": sw_reddit,
+        "scoring.source_weights.newsapi": sw_newsapi,
     }
     try:
         cm.update_and_save(config_updates, env_updates)

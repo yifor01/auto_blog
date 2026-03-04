@@ -129,6 +129,21 @@
         <span class="form-hint">Free tier 建議 ≥ 7.5 秒（8 req/min）</span>
       </div>
 
+      <div class="form-field" style="grid-column: 1/-1;">
+        <label class="form-label">NewsAPI Key</label>
+        <div class="pw-wrap">
+          <input type="password" name="newsapi_key" id="newsapi-key-input"
+            class="form-input" placeholder="留空則不修改目前的 NewsAPI Key"
+            autocomplete="off" />
+          <button type="button" class="pw-toggle"
+            onclick="togglePw('newsapi-key-input', this)" title="顯示/隱藏">👁</button>
+        </div>
+        <span class="form-hint">
+          目前狀態：{{ '✅ 已設定' if env.newsapi_key else '❌ 未設定' }}。
+          <a href="https://newsapi.org/register" target="_blank" style="color:var(--av);">申請 API Key</a>
+        </span>
+      </div>
+
     </div>
   </div>
 
@@ -180,6 +195,74 @@
         <input type="number" name="github_stars_medium" class="form-input"
           value="{{ cfg.scoring.github_stars_medium if cfg.scoring is defined else 50 }}"
           min="1" max="100000" required />
+      </div>
+
+      <div class="form-field" style="grid-column: 1/-1;">
+        <label class="form-label" style="font-size:12.5px; font-weight:600; margin-bottom:4px;">來源權重（Source Weights）</label>
+        <span class="form-hint" style="margin-bottom:8px;">各來源的保底加分，0 表示不額外加分</span>
+      </div>
+
+      <div class="form-field">
+        <label class="form-label">📄 arXiv</label>
+        <input type="number" name="sw_arxiv" class="form-input"
+          value="{{ cfg.scoring.source_weights.arxiv if cfg.scoring is defined and cfg.scoring.source_weights is defined and cfg.scoring.source_weights.arxiv is defined else 0 }}"
+          min="0" max="50" />
+      </div>
+
+      <div class="form-field">
+        <label class="form-label">📑 ChatPaper</label>
+        <input type="number" name="sw_chatpaper" class="form-input"
+          value="{{ cfg.scoring.source_weights.chatpaper if cfg.scoring is defined and cfg.scoring.source_weights is defined and cfg.scoring.source_weights.chatpaper is defined else 5 }}"
+          min="0" max="50" />
+      </div>
+
+      <div class="form-field">
+        <label class="form-label">🤗 HF Papers</label>
+        <input type="number" name="sw_hf_papers" class="form-input"
+          value="{{ cfg.scoring.source_weights.hf_papers if cfg.scoring is defined and cfg.scoring.source_weights is defined and cfg.scoring.source_weights.hf_papers is defined else 0 }}"
+          min="0" max="50" />
+      </div>
+
+      <div class="form-field">
+        <label class="form-label">📡 RSS</label>
+        <input type="number" name="sw_rss" class="form-input"
+          value="{{ cfg.scoring.source_weights.rss if cfg.scoring is defined and cfg.scoring.source_weights is defined and cfg.scoring.source_weights.rss is defined else 15 }}"
+          min="0" max="50" />
+      </div>
+
+      <div class="form-field">
+        <label class="form-label">✍️ Blog</label>
+        <input type="number" name="sw_blog" class="form-input"
+          value="{{ cfg.scoring.source_weights.blog if cfg.scoring is defined and cfg.scoring.source_weights is defined and cfg.scoring.source_weights.blog is defined else 15 }}"
+          min="0" max="50" />
+      </div>
+
+      <div class="form-field">
+        <label class="form-label">🌟 GitHub</label>
+        <input type="number" name="sw_github" class="form-input"
+          value="{{ cfg.scoring.source_weights.github if cfg.scoring is defined and cfg.scoring.source_weights is defined and cfg.scoring.source_weights.github is defined else 0 }}"
+          min="0" max="50" />
+      </div>
+
+      <div class="form-field">
+        <label class="form-label">🔶 Hacker News</label>
+        <input type="number" name="sw_hackernews" class="form-input"
+          value="{{ cfg.scoring.source_weights.hackernews if cfg.scoring is defined and cfg.scoring.source_weights is defined and cfg.scoring.source_weights.hackernews is defined else 0 }}"
+          min="0" max="50" />
+      </div>
+
+      <div class="form-field">
+        <label class="form-label">🤖 Reddit</label>
+        <input type="number" name="sw_reddit" class="form-input"
+          value="{{ cfg.scoring.source_weights.reddit if cfg.scoring is defined and cfg.scoring.source_weights is defined and cfg.scoring.source_weights.reddit is defined else 0 }}"
+          min="0" max="50" />
+      </div>
+
+      <div class="form-field">
+        <label class="form-label">📰 NewsAPI</label>
+        <input type="number" name="sw_newsapi" class="form-input"
+          value="{{ cfg.scoring.source_weights.newsapi if cfg.scoring is defined and cfg.scoring.source_weights is defined and cfg.scoring.source_weights.newsapi is defined else 15 }}"
+          min="0" max="50" />
       </div>
 
     </div>
@@ -361,6 +444,54 @@
           <input type="number" name="hackernews_max_results" class="collector-param-input"
             value="{{ cfg.collectors.hackernews.max_results if cfg.collectors is defined and cfg.collectors.hackernews is defined else 30 }}"
             min="1" max="200">
+        </div>
+      </div>
+    </div>
+
+    <!-- Reddit -->
+    <div class="collector-row">
+      <div class="collector-name">🤖 Reddit</div>
+      <div class="collector-params" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+        <label class="toggle-wrap">
+          <input type="checkbox" name="reddit_enabled"
+            {{ 'checked' if cfg.collectors is defined and cfg.collectors.reddit is defined and cfg.collectors.reddit.enabled else '' }}>
+          <span class="toggle-track"><span class="toggle-thumb"></span></span>
+          <span class="toggle-label">啟用</span>
+        </label>
+        <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
+          <span class="collector-param-label">Subreddits（逗號分隔）:</span>
+          <input type="text" name="reddit_subreddits" class="collector-param-input wide"
+            value="{{ cfg.collectors.reddit.subreddits | join(', ') if cfg.collectors is defined and cfg.collectors.reddit is defined and cfg.collectors.reddit.subreddits is defined else 'LocalLLaMA, MachineLearning' }}">
+          <span class="collector-param-label">Min Upvotes:</span>
+          <input type="number" name="reddit_min_upvotes" class="collector-param-input"
+            value="{{ cfg.collectors.reddit.min_upvotes if cfg.collectors is defined and cfg.collectors.reddit is defined else 50 }}"
+            min="0" max="10000">
+          <span class="collector-param-label">Max Results:</span>
+          <input type="number" name="reddit_max_results" class="collector-param-input"
+            value="{{ cfg.collectors.reddit.max_results if cfg.collectors is defined and cfg.collectors.reddit is defined else 30 }}"
+            min="1" max="200">
+        </div>
+      </div>
+    </div>
+
+    <!-- NewsAPI -->
+    <div class="collector-row">
+      <div class="collector-name">📰 NewsAPI</div>
+      <div class="collector-params" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+        <label class="toggle-wrap">
+          <input type="checkbox" name="newsapi_enabled"
+            {{ 'checked' if cfg.collectors is defined and cfg.collectors.newsapi is defined and cfg.collectors.newsapi.enabled else '' }}>
+          <span class="toggle-track"><span class="toggle-thumb"></span></span>
+          <span class="toggle-label">啟用</span>
+        </label>
+        <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
+          <span class="collector-param-label">Query:</span>
+          <input type="text" name="newsapi_query" class="collector-param-input wide"
+            value="{{ cfg.collectors.newsapi.query if cfg.collectors is defined and cfg.collectors.newsapi is defined and cfg.collectors.newsapi.query is defined else 'generative AI OR LLM OR large language model' }}">
+          <span class="collector-param-label">Max Results:</span>
+          <input type="number" name="newsapi_max_results" class="collector-param-input"
+            value="{{ cfg.collectors.newsapi.max_results if cfg.collectors is defined and cfg.collectors.newsapi is defined else 20 }}"
+            min="1" max="100">
         </div>
       </div>
     </div>

@@ -38,6 +38,7 @@ def rule_score(item: ContentItem, config: dict | None = None) -> ScoredItem:
     hf_upvote_threshold = scoring_cfg.get("hf_upvote_bonus_threshold", 10)
     github_stars_high = scoring_cfg.get("github_stars_high", 100)
     github_stars_medium = scoring_cfg.get("github_stars_medium", 50)
+    source_weights = scoring_cfg.get("source_weights", {})
 
     score = 0.0
     reasons: list[str] = []
@@ -91,14 +92,28 @@ def rule_score(item: ContentItem, config: dict | None = None) -> ScoredItem:
             score += 5
             reasons.append(f"📰 Hacker News: {hn_points} points")
 
-    # 6. 來源類型保底加分
-    # 為了讓文章、新聞來源不容易被論文海淹沒，給予基礎加分
-    if item.source.value in ("rss", "blog"):
-        score += 15
-        reasons.append("📰 文章/新聞來源加分")
-    elif item.source.value == "chatpaper":
-        score += 5
-        reasons.append("📄 ChatPaper 收錄")
+    # 6. Reddit upvotes 加分
+    if item.source.value == "reddit":
+        reddit_score = item.raw_metadata.get("score", 0)
+        num_comments = item.raw_metadata.get("num_comments", 0)
+        if reddit_score > 500:
+            score += 15
+            reasons.append(f"🔥 Reddit 高讚: {reddit_score} upvotes")
+        elif reddit_score > 200:
+            score += 10
+            reasons.append(f"⬆️ Reddit 熱門: {reddit_score} upvotes")
+        else:
+            score += 5
+            reasons.append(f"💬 Reddit: {reddit_score} upvotes")
+        if num_comments > 100:
+            score += 5
+            reasons.append(f"💬 Reddit 高討論: {num_comments} comments")
+
+    # 7. 來源權重加分（從 config 讀取，取代 hardcoded 保底）
+    sw = source_weights.get(item.source.value, 0)
+    if sw > 0:
+        score += sw
+        reasons.append(f"⚖️ 來源權重: {item.source.value} +{sw}")
 
     # 7. 標題品質加分 (有數字、比較、新方法等訊號)
     title_lower = item.title.lower()
@@ -114,7 +129,7 @@ def rule_score(item: ContentItem, config: dict | None = None) -> ScoredItem:
     # 8. 摘要長度品質 (太短可能是低質量)
     if len(item.abstract) > 500:
         score += 3
-    elif len(item.abstract) < 50 and item.source.value not in ("github", "blog"):
+    elif len(item.abstract) < 50 and item.source.value not in ("github", "blog", "reddit"):
         score -= 5
         reasons.append("⚠️ 摘要過短")
 
