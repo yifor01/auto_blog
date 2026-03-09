@@ -166,7 +166,7 @@ async def day_detail(request: Request, date_str: str):
         raise HTTPException(status_code=400, detail="日期格式錯誤，請使用 YYYY-MM-DD")
 
     stats = ds.get_day_stats(d)
-    items = ds.get_day_items(d)
+    items = ds.get_all_day_items(d)
     contents = ds.list_day_contents(date_str)
 
     # Build title → content mapping for inline badges in scored items table
@@ -801,43 +801,39 @@ async def api_logs_stream(date_str: str, from_: int = Query(0, alias="from", ge=
                             stripped = line.strip()
                             if not stripped:
                                 continue
-                            # 嘗試解析 stage event
-                            try:
-                                parsed = json.loads(stripped)
-                                if "pipeline_stage" in parsed:
-                                    name = parsed["pipeline_stage"]
-                                    action = parsed["stage_action"]
-                                    current_stage = name if action == "start" else current_stage
-                                    stage_payload: dict = {
-                                        "name": name,
-                                        "action": action,
-                                        "elapsed": parsed.get("elapsed"),
-                                    }
-                                    if action == "end" and "item_count" in parsed:
-                                        stage_payload["item_count"] = parsed["item_count"]
-                                    # 即時更新 run.stages（SSE 讀到的 stage event）
-                                    if run and name in run.stages:
-                                        if action == "start":
-                                            run.stages[name].status = "running"
-                                        elif action == "end":
-                                            run.stages[name].status = "done"
-                                            run.stages[name].elapsed = parsed.get("elapsed")
-                                            run.stages[name].item_count = parsed.get("item_count")
-                                    yield f"event: stage\ndata: {json.dumps(stage_payload)}\n\n"
-                                    continue
-                                if "msg" in parsed:
-                                    level = parsed.get("level", "INFO")
-                                    msg = _fmt_log_msg(parsed)
-                                    ts_str = parsed.get("ts", "")
-                                    ts_display = ts_str[11:19] if len(ts_str) >= 19 else ""
-                                    prefix_ts = f"[{ts_display}] " if ts_display else ""
-                                    display_text = f"{prefix_ts}[{level}] {msg}"
-                                    prefix_stage = current_stage or "pipeline"
-                                    yield f"data: {prefix_stage}|{display_text}\n\n"
-                                    continue
-                            except Exception:
-                                _logger.debug("SSE log parse error", exc_info=True)
-                            # 非 JSON 行（marker 行等）
+                            # 嘗試解析 JSON log 行
+                            if stripped.startswith("{"):
+                                try:
+                                    parsed = json.loads(stripped)
+                                    if "pipeline_stage" in parsed:
+                                        name = parsed["pipeline_stage"]
+                                        action = parsed["stage_action"]
+                                        current_stage = name if action == "start" else current_stage
+                                        stage_payload: dict = {
+                                            "name": name,
+                                            "action": action,
+                                            "elapsed": parsed.get("elapsed"),
+                                        }
+                                        if action == "end" and "item_count" in parsed:
+                                            stage_payload["item_count"] = parsed["item_count"]
+                                        # 即時更新 run.stages（SSE 讀到的 stage event）
+                                        if run and name in run.stages:
+                                            if action == "start":
+                                                run.stages[name].status = "running"
+                                            elif action == "end":
+                                                run.stages[name].status = "done"
+                                                run.stages[name].elapsed = parsed.get("elapsed")
+                                                run.stages[name].item_count = parsed.get("item_count")
+                                        yield f"event: stage\ndata: {json.dumps(stage_payload)}\n\n"
+                                        continue
+                                    if "msg" in parsed:
+                                        display_text = _format_log_display(parsed)
+                                        prefix_stage = current_stage or "pipeline"
+                                        yield f"data: {prefix_stage}|{display_text}\n\n"
+                                        continue
+                                except json.JSONDecodeError:
+                                    pass  # malformed JSON, fall through to plain text
+                            # 非 JSON 行（marker 行、Rich CLI 輸出等）
                             prefix_stage = current_stage or "pipeline"
                             yield f"data: {prefix_stage}|{stripped}\n\n"
                         consecutive_idle = 0
@@ -869,21 +865,27 @@ async def api_logs_stream(date_str: str, from_: int = Query(0, alias="from", ge=
     )
 
 
+def _format_log_display(parsed: dict[str, Any]) -> str:
+    """將 JSON log entry 格式化為 [HH:MM:SS] [LEVEL] msg 顯示文字。"""
+    level = parsed.get("level", "INFO")
+    msg = _fmt_log_msg(parsed)
+    ts_str = parsed.get("ts", "")
+    ts_display = ts_str[11:19] if len(ts_str) >= 19 else ""
+    prefix = f"[{ts_display}] " if ts_display else ""
+    return f"{prefix}[{level}] {msg}"
+
+
 def _format_sse_line(stripped: str, current_stage: str | None) -> tuple[str, str] | None:
     """將一行 log 轉為 (stage_name, display_text) tuple，或 None 跳過。"""
-    try:
-        parsed = json.loads(stripped)
-        if "pipeline_stage" in parsed:
-            return None  # stage events 由呼叫端處理
-        if "msg" in parsed:
-            level = parsed.get("level", "INFO")
-            msg = _fmt_log_msg(parsed)
-            ts_str = parsed.get("ts", "")
-            ts_display = ts_str[11:19] if len(ts_str) >= 19 else ""
-            prefix = f"[{ts_display}] " if ts_display else ""
-            return (current_stage or "pipeline", f"{prefix}[{level}] {msg}")
-    except Exception:
-        pass
+    if stripped.startswith("{"):
+        try:
+            parsed = json.loads(stripped)
+            if "pipeline_stage" in parsed:
+                return None  # stage events 由呼叫端處理
+            if "msg" in parsed:
+                return (current_stage or "pipeline", _format_log_display(parsed))
+        except json.JSONDecodeError:
+            pass
     return (current_stage or "pipeline", stripped)
 
 

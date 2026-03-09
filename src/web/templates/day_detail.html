@@ -323,7 +323,12 @@
 <!-- Scored items table -->
 <section>
   <div style="display:flex; align-items:center; justify-content:space-between; margin:0 0 10px; flex-wrap:wrap; gap:8px;">
-    <h3 style="font-size:14px; font-weight:600; color:var(--t2); margin:0;">評分列表</h3>
+    <h3 style="font-size:14px; font-weight:600; color:var(--t2); margin:0;">
+      收集文章
+      <span style="font-size:11px; font-weight:400; color:var(--t4); margin-left:6px;">
+        已評分 {{ items|selectattr('scored')|list|length }} / 共 {{ items|length }} 筆
+      </span>
+    </h3>
     {% if items %}
     <div class="source-filter" id="source-filter">
       <button class="sf-chip sf-active" data-source="__all__" onclick="toggleSourceFilter(this)">全部<span class="sf-count">{{ items|length }}</span></button>
@@ -356,22 +361,29 @@
       </thead>
       <tbody>
         {% for it in items %}
-        <tr data-source="{{ it.source }}">
+        <tr data-source="{{ it.source }}"{% if not it.scored %} style="opacity:0.7;"{% endif %}>
           <td style="color:var(--t5); font-family:'JetBrains Mono',monospace; font-size:12px;">
             {{ loop.index }}
           </td>
           <td>
-            <button class="bm-star{% if it.index in bookmarked_indices %} starred{% endif %}"
-                    onclick="toggleDayBookmark(this, '{{ date_str }}', {{ it.index }})"
-                    title="收藏">{{ '★' if it.index in bookmarked_indices else '☆' }}</button>
+            <button class="bm-star{% if it.scored and it.index in bookmarked_indices %} starred{% endif %}"
+                    onclick="{% if it.scored %}toggleDayBookmark(this, '{{ date_str }}', {{ it.index }}){% endif %}"
+                    title="收藏"
+                    {% if not it.scored %}style="opacity:0.3; cursor:not-allowed;" disabled{% endif %}>
+              {{ '★' if (it.scored and it.index in bookmarked_indices) else '☆' }}
+            </button>
           </td>
           <td>
+            {% if it.scored %}
             <div style="display:flex; flex-direction:column; gap:2px;">
               <span class="score-badge">{{ "%.0f"|format(it.total_score) }}</span>
               <span style="font-size:10px; color:var(--t5); font-family:'JetBrains Mono',monospace;">
                 R:{{ "%.0f"|format(it.rule_score) }}{% if it.llm_score is not none %} L:{{ "%.0f"|format(it.llm_score) }}{% endif %}
               </span>
             </div>
+            {% else %}
+            <span style="color:var(--t5); font-size:12px;">—</span>
+            {% endif %}
           </td>
           <td>
             <span class="chip" style="display:inline-block; white-space:nowrap; font-size:10.5px;">
@@ -402,10 +414,18 @@
                   {{ it.llm_reason }}
                 </div>
               </details>
+              {% elif not it.scored and it.abstract %}
+              <details open style="font-size:11px; color:var(--t4); margin-top:1px;">
+                <summary style="cursor:pointer; opacity:0.7;">摘要</summary>
+                <div style="margin-top:3px; padding:6px 8px; background:var(--bg-in); border-radius:5px; line-height:1.5; font-size:11.5px;">
+                  {{ it.abstract[:300] }}{% if it.abstract|length > 300 %}…{% endif %}
+                </div>
+              </details>
               {% endif %}
             </div>
           </td>
           <td>
+            {% if it.scored %}
             {% set ckey = (it.title or '')|lower|trim %}
             {% if ckey in content_map %}
               {% set cm = content_map[ckey] %}
@@ -418,8 +438,10 @@
                 {% endif %}
               </div>
             {% endif %}
+            {% endif %}
           </td>
           <td>
+            {% if it.scored and it.index is not none %}
             <a href="/item/{{ date_str }}/{{ it.index }}" class="link-v"
                style="display:inline-flex; align-items:center; gap:2px;
                       font-size:12px; white-space:nowrap;">
@@ -428,6 +450,16 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
               </svg>
             </a>
+            {% else %}
+            <a href="{{ it.url }}" target="_blank" class="link-v"
+               style="display:inline-flex; align-items:center; gap:2px;
+                      font-size:12px; white-space:nowrap;">
+              原文
+              <svg style="width:11px; height:11px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+              </svg>
+            </a>
+            {% endif %}
           </td>
         </tr>
         {% endfor %}

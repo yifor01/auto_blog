@@ -7,8 +7,11 @@ import time as _time
 from datetime import date, timedelta
 from pathlib import Path
 
+from src.logger import get_logger
 from src.models import ContentItem, ScoredItem
 from src.utils import NOTES_DIR, POSTS_DIR, RAW_DIR, SCORED_DIR, FEEDBACK_DIR, HEALTH_DIR, DIGESTS_DIR, DATA_DIR, load_json, save_json, slugify
+
+_logger = get_logger("web.data_service")
 
 
 def _get_raw_path(d: date) -> Path:
@@ -103,10 +106,36 @@ def get_week_top_items(days: int = 7, top_k: int = 5) -> list[dict]:
                     }
                 )
             except Exception:
+                _logger.debug("Skipping malformed scored item in weekly top", extra={"date": d.isoformat()})
                 continue
 
     all_items.sort(key=lambda x: x["total_score"], reverse=True)
     return all_items[:top_k]
+
+
+def _serialize_scored_item(idx: int, si: ScoredItem) -> dict:
+    """將 ScoredItem 投影為 dict，供 get_day_items / get_all_day_items 共用。"""
+    total = si.rule_score + (si.llm_score or 0)
+    return {
+        "index": idx,
+        "title": si.item.title,
+        "url": si.item.url,
+        "source": si.item.source.value,
+        "source_name": si.item.source_name,
+        "organization": si.item.organization,
+        "rule_score": si.rule_score,
+        "llm_score": si.llm_score,
+        "total_score": total,
+        "llm_reason": si.llm_reason,
+        "novelty": si.novelty,
+        "impact": si.impact,
+        "trending": si.trending,
+        "practicality": si.practicality,
+        "blog_worthiness": si.blog_worthiness,
+        "tags": si.item.tags,
+        "authors": si.item.authors,
+        "abstract": si.item.abstract,
+    }
 
 
 def get_day_items(d: date) -> list[dict]:
@@ -122,33 +151,81 @@ def get_day_items(d: date) -> list[dict]:
     for idx, raw in enumerate(data):
         try:
             item = ScoredItem(**raw)
-            total = item.rule_score + (item.llm_score or 0)
-            items.append(
-                {
-                    "index": idx,
-                    "title": item.item.title,
-                    "url": item.item.url,
-                    "source": item.item.source.value,
-                    "source_name": item.item.source_name,
-                    "organization": item.item.organization,
-                    "rule_score": item.rule_score,
-                    "llm_score": item.llm_score,
-                    "total_score": total,
-                    "llm_reason": item.llm_reason,
-                    "novelty": item.novelty,
-                    "impact": item.impact,
-                    "trending": item.trending,
-                    "practicality": item.practicality,
-                    "blog_worthiness": item.blog_worthiness,
-                    "tags": item.item.tags,
-                    "authors": item.item.authors,
-                    "abstract": item.item.abstract,
-                }
-            )
+            items.append(_serialize_scored_item(idx, item))
         except Exception:
+            _logger.debug("Skipping malformed scored item", extra={"date": d.isoformat(), "index": idx})
             continue
 
     items.sort(key=lambda x: x["total_score"], reverse=True)
+    return items
+
+
+def get_all_day_items(d: date) -> list[dict]:
+    """取得指定日期所有收集文章（raw + scored 合併）。
+    已評分文章顯示完整分數，未評分文章 scored=False。
+    排序：已評分 by total_score desc，未評分附後（by title）。
+    """
+    raw_path = _get_raw_path(d)
+    scored_path = _get_scored_path(d)
+
+    # 建立 URL → scored info mapping（保留原始 index 給 bookmark/detail 用）
+    scored_by_url: dict[str, dict] = {}
+    if scored_path.exists():
+        scored_data = load_json(scored_path)
+        if isinstance(scored_data, list):
+            for idx, raw_scored in enumerate(scored_data):
+                try:
+                    si = ScoredItem(**raw_scored)
+                    scored_by_url[si.item.url] = _serialize_scored_item(idx, si)
+                except Exception:
+                    _logger.debug("Skipping malformed scored item", extra={"date": d.isoformat(), "index": idx})
+                    continue
+
+    # 若 raw 不存在，fallback 到 scored only（相容舊資料）
+    if not raw_path.exists():
+        return get_day_items(d)
+
+    raw_data = load_json(raw_path)
+    if not isinstance(raw_data, list):
+        return get_day_items(d)
+
+    items: list[dict] = []
+    for raw_dict in raw_data:
+        try:
+            ci = ContentItem(**raw_dict)
+            si = scored_by_url.get(ci.url, {})
+            scored = bool(si)
+            if scored:
+                entry = {**si, "scored": True}
+            else:
+                entry = {
+                    "index": None,
+                    "title": ci.title,
+                    "url": ci.url,
+                    "source": ci.source.value,
+                    "source_name": ci.source_name,
+                    "organization": ci.organization,
+                    "rule_score": None,
+                    "llm_score": None,
+                    "total_score": 0,
+                    "llm_reason": None,
+                    "novelty": None,
+                    "impact": None,
+                    "trending": None,
+                    "practicality": None,
+                    "blog_worthiness": None,
+                    "tags": ci.tags,
+                    "authors": ci.authors,
+                    "abstract": ci.abstract,
+                    "scored": False,
+                }
+            items.append(entry)
+        except Exception:
+            _logger.debug("Skipping malformed raw item", extra={"date": d.isoformat()})
+            continue
+
+    # 排序：已評分 by total_score desc，未評分 by title
+    items.sort(key=lambda x: (not x["scored"], -x["total_score"]))
     return items
 
 
