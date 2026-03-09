@@ -233,11 +233,26 @@ def extract_full_text_from_html(html: str, max_chars: int = 2000) -> str:
 
 
 def fetch_article_text(url: str, client: httpx.Client, max_chars: int = 2000) -> str:
-    """GET 文章 URL，返回純文字。失敗時靜默返回空字串。"""
+    """GET 文章 URL，返回純文字。失敗時返回空字串並記錄 debug log。"""
     try:
-        resp = client.get(url)
-        if resp.status_code == 200:
-            return extract_full_text_from_html(resp.text, max_chars)
-    except Exception:
-        pass
+        resp = client.get(url, timeout=8)
+        if resp.status_code != 200:
+            _logger.debug("fetch_article_text non-200", extra={"url": url, "status_code": resp.status_code})
+            return ""
+        text = extract_full_text_from_html(resp.text, max_chars)
+        if not text:
+            _logger.debug("fetch_article_text empty extraction", extra={"url": url, "html_len": len(resp.text)})
+        return text
+    except Exception as e:
+        _logger.debug("fetch_article_text request failed", extra={"url": url, "error": str(e)})
     return ""
+
+
+def build_link_abstract(
+    url: str, client: httpx.Client, engagement: str, fallback_domain: str, max_chars: int = 1500
+) -> str:
+    """Link post 共用 helper：嘗試抓取外部文章內容，失敗時 fallback 到 domain + engagement。"""
+    fetched = fetch_article_text(url, client, max_chars)
+    if fetched:
+        return f"{fetched}\n\n({engagement})"
+    return f"{fallback_domain} — {engagement}"
