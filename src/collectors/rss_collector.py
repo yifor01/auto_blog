@@ -44,11 +44,15 @@ class RSSCollector(BaseCollector):
                     for entry in parsed.entries:
                         # 解析發布日期
                         pub_date = self._parse_date(entry)
-                        if pub_date and pub_date != target_date:
-                            # 只取今天的，但給 1 天的容差
-                            delta = abs((pub_date - target_date).days)
-                            if delta > 1:
-                                continue
+                        if pub_date is None:
+                            _logger.debug(
+                                "Skipping entry: cannot parse date",
+                                extra={"feed": feed_name, "title": entry.get("title", "")[:80]},
+                            )
+                            continue
+                        # 只取今天的，但給 1 天的容差
+                        if abs((pub_date - target_date).days) > 1:
+                            continue
 
                         article_url = entry.get("link", "")
                         abstract = self._extract_abstract(entry, article_url, client)
@@ -65,7 +69,7 @@ class RSSCollector(BaseCollector):
                                 if hasattr(entry, "authors")
                                 else [],
                                 abstract=abstract,
-                                published_date=pub_date or target_date,
+                                published_date=pub_date,
                                 tags=self._extract_tags(entry),
                                 raw_metadata={
                                     "feed_name": feed_name,

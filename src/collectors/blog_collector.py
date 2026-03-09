@@ -97,10 +97,15 @@ class BlogCollector(BaseCollector):
     ) -> list[ContentItem]:
         items: list[ContentItem] = []
         for entry in entries[:10]:  # 最多看 10 篇
-            pub_date = self._parse_entry_date(entry) or target_date
+            pub_date = self._parse_entry_date(entry)
+            if pub_date is None:
+                _logger.debug(
+                    "Skipping blog entry: cannot parse date",
+                    extra={"blog": name, "title": entry.get("title", "")[:80]},
+                )
+                continue
             # 只取最近 7 天的（blog 更新慢）
-            delta = abs((pub_date - target_date).days)
-            if delta > 7:
+            if abs((pub_date - target_date).days) > 7:
                 continue
 
             raw_html = ""
