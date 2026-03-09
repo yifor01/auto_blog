@@ -11,7 +11,7 @@ from zoneinfo import ZoneInfo
 from src.collectors.base import BaseCollector
 from src.models import ContentItem, SourceType
 from src.logger import get_logger
-from src.utils import get_http_client, load_config
+from src.utils import build_link_abstract, get_http_client, load_config
 
 _logger = get_logger("collectors.hackernews")
 
@@ -84,10 +84,12 @@ class HackerNewsCollector(BaseCollector):
 
                     if story_text:
                         abstract = story_text
+                    elif raw_url:
+                        engagement = f"{points} points, {num_comments} comments on Hacker News"
+                        domain = urlparse(raw_url).netloc.replace("www.", "")
+                        abstract = build_link_abstract(url, client, engagement, domain)
                     else:
-                        # link post：從 URL domain + engagement 組裝摘要
-                        domain = urlparse(raw_url).netloc.replace("www.", "") if raw_url else "news.ycombinator.com"
-                        abstract = f"{domain} — {points} points, {num_comments} comments on Hacker News"
+                        abstract = f"news.ycombinator.com — {points} points, {num_comments} comments on Hacker News"
 
                     items.append(
                         ContentItem(

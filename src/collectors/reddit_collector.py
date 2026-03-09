@@ -9,7 +9,7 @@ from zoneinfo import ZoneInfo
 from src.collectors.base import BaseCollector
 from src.logger import get_logger
 from src.models import ContentItem, SourceType
-from src.utils import get_http_client, load_config
+from src.utils import build_link_abstract, get_http_client, load_config
 
 _logger = get_logger("collectors.reddit")
 
@@ -89,9 +89,12 @@ class RedditCollector(BaseCollector):
 
                     if selftext:
                         abstract = selftext[:500]
-                    else:
+                    elif not is_self:
+                        engagement = f"{score} upvotes, {num_comments} comments on r/{sub}"
                         domain = post.get("domain", "reddit.com")
-                        abstract = f"{domain} — {score} upvotes, {num_comments} comments on r/{sub}"
+                        abstract = build_link_abstract(final_url, client, engagement, domain)
+                    else:
+                        abstract = f"reddit.com — {score} upvotes, {num_comments} comments on r/{sub}"
 
                     items.append(
                         ContentItem(
