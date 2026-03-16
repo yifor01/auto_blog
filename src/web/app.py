@@ -336,7 +336,7 @@ async def material_library(request: Request):
 
 
 @app.get("/material/{date_str}/{index}", response_class=HTMLResponse)
-async def material_detail(request: Request, date_str: str, index: int, **kwargs):
+async def material_detail(request: Request, date_str: str, index: int):
     try:
         date.fromisoformat(date_str)
     except ValueError:
