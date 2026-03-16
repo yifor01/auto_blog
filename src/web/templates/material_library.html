@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}素材庫 — Auto Post Blog Monitor{% endblock %}
+{% block title %}📦 素材庫 — Auto Post Blog Monitor{% endblock %}
 
 {% block page_title %}
 <nav style="display:flex; align-items:center; gap:8px; font-size:13.5px;">
@@ -179,6 +179,8 @@
     {% endif %}
     {% endfor %}
   </select>
+  <input type="number" id="min-score-input" class="filter-select" style="width:80px;"
+         placeholder="最低分" oninput="filterCards()" min="0" max="200" />
   <select id="sort-select" class="filter-select" onchange="rebuildGroups()">
     <option value="newest">最新優先</option>
     <option value="oldest">最早優先</option>
@@ -227,12 +229,17 @@
        data-has-post="{{ 'yes' if m.has_post else 'no' }}"
        data-has-note="{{ 'yes' if m.has_note else 'no' }}">
 
-      <!-- Header: source -->
+      <!-- Header: source + bookmark -->
       <div class="mc-header">
         <span class="mc-source">{{ m.source_name or m.source or '—' }}</span>
-        {% if m.organization %}
-        <span style="font-size:10px; color:var(--t5);">{{ m.organization }}</span>
-        {% endif %}
+        <div style="display:flex; align-items:center; gap:6px;">
+          {% if (m.date_str ~ '_' ~ m.index) in bookmarked_keys %}
+          <span style="color:var(--ay); font-size:13px;" title="已收藏">★</span>
+          {% endif %}
+          {% if m.organization %}
+          <span style="font-size:10px; color:var(--t5);">{{ m.organization }}</span>
+          {% endif %}
+        </div>
       </div>
 
       <!-- Title + Abstract -->
@@ -330,6 +337,8 @@ function filterCards() {
   if (!allCards) initCards();
   var query = document.getElementById('search-input').value.toLowerCase().trim();
   var sourceFilter = document.getElementById('source-select').value.toLowerCase();
+  var minScoreVal = document.getElementById('min-score-input').value;
+  var minScore = minScoreVal ? parseFloat(minScoreVal) : 0;
 
   var total = 0;
   allCards.forEach(function(card) {
@@ -337,12 +346,13 @@ function filterCards() {
     var queryMatch = !query || combined.indexOf(query) >= 0;
     var tagMatch = !activeTag || combined.indexOf(activeTag.toLowerCase()) >= 0;
     var sourceMatch = !sourceFilter || (card.dataset.source || '').indexOf(sourceFilter) >= 0;
+    var scoreMatch = parseFloat(card.dataset.score || 0) >= minScore;
 
     var srcMatch = true;
     if (activeSrc === 'post') srcMatch = card.dataset.hasPost === 'yes';
     if (activeSrc === 'note') srcMatch = card.dataset.hasNote === 'yes';
 
-    var show = queryMatch && tagMatch && sourceMatch && srcMatch;
+    var show = queryMatch && tagMatch && sourceMatch && srcMatch && scoreMatch;
     card.style.display = show ? '' : 'none';
     if (show) total++;
   });

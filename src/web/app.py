@@ -20,7 +20,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, Red
 from fastapi.templating import Jinja2Templates
 
 from src.logger import get_logger
-from src.utils import NOTES_DIR, POSTS_DIR, PROMPTS_DIR
+from src.utils import NOTES_DIR, POSTS_DIR, PROMPTS_DIR, RAW_DIR, SCORED_DIR, load_json
 from src.web import data_service as ds
 from src.web import config_manager as cm
 
@@ -32,6 +32,15 @@ app = FastAPI(title="Auto Post Blog Monitor", docs_url=None, redoc_url=None)
 @app.on_event("startup")
 async def startup_event():
     cm.init_config()
+    # 自動觸發當天 pipeline（背景執行）
+    today = date.today().isoformat()
+    with _lock:
+        existing = _runs.get(today)
+        if existing and existing.status == "running":
+            return  # 已在執行中，跳過
+        _runs[today] = PipelineRun(status="running", log_offset=0)
+    threading.Thread(target=_run_pipeline, args=(today, False), daemon=True).start()
+    _logger.info("Auto-triggered pipeline on startup", extra={"date": today})
 
 
 @dataclass
@@ -101,6 +110,12 @@ def _finalize_run(run: PipelineRun, log_path: Path, date_str: str, final_status:
             for s in run.stages.values():
                 if s.status == "running":
                     s.status = final_status
+        # ④ 若 pipeline 成功但所有 stage 仍 pending → checkpoint 跳過，全部標記 done
+        if final_status == "done":
+            all_pending = all(s.status == "pending" for s in run.stages.values())
+            if all_pending:
+                for s in run.stages.values():
+                    s.status = "done"
         run.proc = None
 
 # B5: 改用 pathlib 建構路徑，避免 str.replace 脆弱性
@@ -152,6 +167,7 @@ async def dashboard(request: Request):
             "week_status": week_status,
             "top_items": top_items,
             "today": date.today().isoformat(),
+            "today_str": date.today().isoformat(),
             "charts": charts,
             "sidebar_stats": ds.get_sidebar_stats(),
         },
@@ -177,8 +193,10 @@ async def day_detail(request: Request, date_str: str):
             content_map[key] = {
                 "has_post": c.get("has_post", False),
                 "has_note": c.get("has_note", False),
+                "has_blog": c.get("has_blog", False),
                 "post_slug": c.get("post_slug"),
                 "note_slug": c.get("note_slug"),
+                "blog_slug": c.get("blog_slug"),
             }
 
     state = ds.get_pipeline_state(d)
@@ -303,18 +321,22 @@ async def note_view(request: Request, date_str: str, slug: str):
 @app.get("/materials", response_class=HTMLResponse)
 async def material_library(request: Request):
     materials = ds.list_all_materials()
+    # 已收藏的 key 集合（用於 card 上顯示星號）
+    bm = ds.get_all_bookmarks()
+    bookmarked_keys = set(bm.keys())
     return templates.TemplateResponse(
         "material_library.html",
         {
             "request": request,
             "materials": materials,
+            "bookmarked_keys": bookmarked_keys,
             "sidebar_stats": ds.get_sidebar_stats(),
         },
     )
 
 
 @app.get("/material/{date_str}/{index}", response_class=HTMLResponse)
-async def material_detail(request: Request, date_str: str, index: int):
+async def material_detail(request: Request, date_str: str, index: int, **kwargs):
     try:
         date.fromisoformat(date_str)
     except ValueError:
@@ -324,14 +346,26 @@ async def material_detail(request: Request, date_str: str, index: int):
     if detail is None:
         raise HTTPException(status_code=404, detail="找不到該素材")
 
+    # Context-aware breadcrumb
+    from_param = request.query_params.get("from", "")
+    if from_param == "queue":
+        back_url = "/queue"
+        back_label = "待寫清單"
+    elif from_param == "day":
+        back_url = f"/day/{date_str}"
+        back_label = date_str
+    else:
+        back_url = "/materials"
+        back_label = "素材庫"
+
     return templates.TemplateResponse(
         "material_detail.html",
         {
             "request": request,
             "date_str": date_str,
             "item": detail,
-            "back_url": "/materials",
-            "back_label": "素材庫",
+            "back_url": back_url,
+            "back_label": back_label,
             "sidebar_stats": ds.get_sidebar_stats(),
         },
     )
@@ -409,6 +443,34 @@ async def digest_view(request: Request, date_str: str):
             "digest_html": digest_html,
             "sidebar_stats": ds.get_sidebar_stats(),
         },
+    )
+
+
+@app.get("/blogs", response_class=HTMLResponse)
+async def blogs_list(request: Request):
+    blogs = ds.list_all_blogs()
+    return templates.TemplateResponse(
+        "blogs.html",
+        {"request": request, "blogs": blogs,
+         "sidebar_stats": ds.get_sidebar_stats()},
+    )
+
+
+@app.get("/blog/{date_str}/{slug}", response_class=HTMLResponse)
+async def blog_view(request: Request, date_str: str, slug: str):
+    blog = ds.get_blog(date_str, slug)
+    if blog is None:
+        raise HTTPException(status_code=404, detail="找不到該 Blog 文章")
+    from markdown_it import MarkdownIt
+    md = MarkdownIt()
+    content_html = md.render(blog["body"])
+    content_fb = blog.get("body_fb", "")
+    return templates.TemplateResponse(
+        "blog_view.html",
+        {"request": request, "date_str": date_str, "slug": slug,
+         "frontmatter": blog["frontmatter"], "content_html": content_html,
+         "content_fb": content_fb,
+         "sidebar_stats": ds.get_sidebar_stats()},
     )
 
 
@@ -649,6 +711,53 @@ async def api_bookmarks(status: str = ""):
     return JSONResponse(content={"items": items})
 
 
+@app.post("/api/bookmark/batch")
+async def api_bookmark_batch(request: Request):
+    """批量收藏素材。"""
+    body = await request.json()
+    items_to_bookmark = body.get("items", [])
+    if not items_to_bookmark:
+        raise HTTPException(status_code=400, detail="items 不可為空")
+
+    count = 0
+    for entry in items_to_bookmark:
+        d_str = entry.get("date_str", "")
+        idx = entry.get("index")
+        if not d_str or idx is None:
+            continue
+        try:
+            d = date.fromisoformat(d_str)
+            detail = ds.get_item_detail(d, int(idx))
+            title = detail["title"] if detail else ""
+        except Exception:
+            title = ""
+        ds.set_bookmark(d_str, int(idx), title=title)
+        count += 1
+
+    # 計算書籤數
+    bm = ds.get_all_bookmarks()
+    bookmarks_count = sum(1 for v in bm.values() if v.get("status") not in ("written", "published"))
+    ds.invalidate_sidebar_cache()
+
+    return JSONResponse(content={"bookmarked": count, "bookmarks_count": bookmarks_count})
+
+
+@app.post("/api/promote-to-blog/{date_str}/{index}")
+async def api_promote_to_blog(date_str: str, index: int):
+    """將 Blog Draft 推送為正式 Blog 文章。"""
+    try:
+        date.fromisoformat(date_str)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="日期格式錯誤")
+
+    try:
+        result = ds.promote_to_blog(date_str, index)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    return JSONResponse(content=result)
+
+
 @app.get("/queue", response_class=HTMLResponse)
 async def writing_queue(request: Request):
     """待寫清單（Kanban 視圖）。"""
@@ -681,6 +790,29 @@ async def writing_queue(request: Request):
             entry["source_name"] = detail.get("source_name", "")
             entry["total_score"] = detail.get("total_score", 0)
             entry["tags"] = detail.get("tags", [])
+            entry["abstract"] = detail.get("abstract", "")
+
+            # 檢查是否有 Blog Draft
+            from src.utils import slugify as _slugify
+            _title_slug = _slugify(detail["title"])
+            entry["has_post"] = any(
+                _title_slug in f.stem[len(d_str) + 1:] or f.stem[len(d_str) + 1:] in _title_slug
+                for f in POSTS_DIR.glob(f"{d_str}*.md")
+            )
+
+            # 為 published 項目查找 blog_slug
+            if status == "published":
+                from src.utils import BLOGS_DIR, slugify
+                title_slug = slugify(detail["title"])
+                for bf in BLOGS_DIR.glob(f"{d_str}*.md"):
+                    bslug = bf.stem[len(d_str) + 1:]
+                    bparsed = ds._parse_markdown_file(bf)
+                    if bparsed:
+                        bfm = bparsed["frontmatter"]
+                        bpt = slugify((bfm.get("paper_title") or bfm.get("title") or ""))
+                        if bpt and (title_slug in bpt or bpt in title_slug):
+                            entry["blog_slug"] = bslug
+                            break
         columns[status].append(entry)
 
     return templates.TemplateResponse(
@@ -1102,6 +1234,63 @@ async def api_run_stage(date_str: str, stage_name: str, background_tasks: Backgr
     return JSONResponse({"status": "started", "date": date_str, "stage": stage_name, "log_offset": log_offset})
 
 
+def _build_checkpoint_summary(d: date, stage_name: str) -> list[dict] | None:
+    """從 data 檔案產生 checkpoint 摘要條目（無 log 時 fallback）。"""
+    from datetime import datetime as _dt
+
+    entries: list[dict] = []
+
+    def _mtime_str(p: Path) -> str:
+        try:
+            mt = p.stat().st_mtime
+            return _dt.fromtimestamp(mt).strftime("%H:%M:%S")
+        except OSError:
+            return "--:--:--"
+
+    prefix = d.isoformat()
+    raw_path = RAW_DIR / f"{prefix}.json"
+    scored_path = SCORED_DIR / f"{prefix}.json"
+
+    if stage_name == "collect":
+        if not raw_path.exists():
+            return None
+        data = load_json(raw_path)
+        count = len(data) if isinstance(data, list) else 0
+        ts = _mtime_str(raw_path)
+        entries.append({"ts": ts, "level": "INFO", "msg": f"checkpoint 跳過：raw 資料已存在（{count} 篇）"})
+        entries.append({"ts": ts, "level": "INFO", "msg": f"檔案：{raw_path.name}"})
+
+    elif stage_name == "score":
+        if not scored_path.exists():
+            return None
+        data = load_json(scored_path)
+        count = len(data) if isinstance(data, list) else 0
+        ts = _mtime_str(scored_path)
+        entries.append({"ts": ts, "level": "INFO", "msg": f"checkpoint 跳過：scored 資料已存在（{count} 篇）"})
+        # 摘要：分數範圍
+        if isinstance(data, list) and data:
+            scores = [it.get("total_score", 0) for it in data if isinstance(it, dict)]
+            if scores:
+                entries.append({"ts": ts, "level": "INFO", "msg": f"分數範圍：{min(scores):.0f} ~ {max(scores):.0f}，平均 {sum(scores)/len(scores):.1f}"})
+
+    elif stage_name == "generate":
+        posts = list(POSTS_DIR.glob(f"{prefix}*.md"))
+        notes = list(NOTES_DIR.glob(f"{prefix}*.md"))
+        if not posts and not notes:
+            return None
+        # 取最晚的 mtime
+        all_files = posts + notes
+        latest = max(all_files, key=lambda f: f.stat().st_mtime)
+        ts = _mtime_str(latest)
+        entries.append({"ts": ts, "level": "INFO", "msg": f"checkpoint 跳過：產出已存在（{len(posts)} 篇 blog, {len(notes)} 篇 note）"})
+        for p in sorted(posts):
+            entries.append({"ts": ts, "level": "INFO", "msg": f"  Blog: {p.name}"})
+        for n in sorted(notes):
+            entries.append({"ts": ts, "level": "INFO", "msg": f"  Note: {n.name}"})
+
+    return entries if entries else None
+
+
 @app.get("/api/logs/{date_str}/stage/{stage_name}")
 async def api_stage_log(date_str: str, stage_name: str):
     """回傳指定 stage 最後一次執行的 log 條目。"""
@@ -1113,39 +1302,47 @@ async def api_stage_log(date_str: str, stage_name: str):
         raise HTTPException(status_code=400, detail="日期格式錯誤")
 
     log_path = LOGS_DIR / f"{date_str}.log"
-    if not log_path.exists():
-        return {"stage": stage_name, "entries": [], "item_count": None}
 
+    # 先嘗試從 log 檔解析 stage 條目
     item_count = None
     in_stage = False
     all_entries: list[dict] = []
     temp_entries: list[dict] = []
 
-    for line in log_path.read_text(encoding="utf-8").splitlines():
-        try:
-            obj = json.loads(line)
-            if obj.get("pipeline_stage") == stage_name:
-                if obj.get("stage_action") == "start":
-                    temp_entries = []
-                    in_stage = True
-                elif obj.get("stage_action") == "end":
-                    in_stage = False
-                    item_count = obj.get("item_count")
-                    all_entries = list(temp_entries)
-            elif in_stage:
-                ts_full = obj.get("ts", "")
-                ts = ts_full[11:19] if len(ts_full) >= 19 else ts_full
-                temp_entries.append({
-                    "ts": ts,
-                    "level": obj.get("level", "INFO"),
-                    "msg": _fmt_log_msg(obj),
-                })
-        except (json.JSONDecodeError, ValueError):
-            pass
+    if log_path.exists():
+        for line in log_path.read_text(encoding="utf-8").splitlines():
+            try:
+                obj = json.loads(line)
+                if obj.get("pipeline_stage") == stage_name:
+                    if obj.get("stage_action") == "start":
+                        temp_entries = []
+                        in_stage = True
+                    elif obj.get("stage_action") == "end":
+                        in_stage = False
+                        item_count = obj.get("item_count")
+                        all_entries = list(temp_entries)
+                elif in_stage:
+                    ts_full = obj.get("ts", "")
+                    ts = ts_full[11:19] if len(ts_full) >= 19 else ts_full
+                    temp_entries.append({
+                        "ts": ts,
+                        "level": obj.get("level", "INFO"),
+                        "msg": _fmt_log_msg(obj),
+                    })
+            except (json.JSONDecodeError, ValueError):
+                pass
 
     if in_stage:
         return {"stage": stage_name, "entries": temp_entries, "item_count": None, "in_progress": True}
-    return {"stage": stage_name, "entries": all_entries, "item_count": item_count}
+    if all_entries:
+        return {"stage": stage_name, "entries": all_entries, "item_count": item_count}
+
+    # Fallback：無 log 但資料檔存在 → 產生 checkpoint 摘要
+    d = date.fromisoformat(date_str)
+    summary = _build_checkpoint_summary(d, stage_name)
+    if summary:
+        return {"stage": stage_name, "entries": summary, "item_count": None, "checkpoint": True}
+    return {"stage": stage_name, "entries": [], "item_count": None}
 
 
 @app.post("/api/feedback/{date_str}/{slug}/{rating}")

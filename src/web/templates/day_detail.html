@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ date_str }} — Auto Post Blog Monitor{% endblock %}
+{% block title %}📅 {{ date_str }} — Auto Post Blog Monitor{% endblock %}
 
 {% block page_title %}
 <nav style="display:flex; align-items:center; gap:8px; font-size:13.5px;">
@@ -10,80 +10,47 @@
 {% endblock %}
 
 {% block content %}
-<!-- Page Header -->
-<div style="margin-bottom:20px;">
-  <h2 style="font-size:20px; font-weight:700; color:var(--t1); margin:0 0 4px;">{{ date_str }}</h2>
-  <p style="font-size:13px; color:var(--t4); margin:0;">
-    {% if stats.scored_count > 0 %}共 {{ stats.scored_count }} 筆評分資料{% else %}尚無資料{% endif %}
-  </p>
-</div>
-
-<!-- GitLab-style Pipeline Card -->
-<div class="pipeline-card" id="pipeline-card">
-  <!-- 標頭：狀態 + 重跑按鈕 -->
-  <div class="pipeline-header">
-    <div class="pipeline-meta">
-      <span class="pipeline-title">Pipeline</span>
-      <span id="pipeline-badge" class="pipeline-badge badge-{{ state }}">
-        {% if state == 'done' %}✓ 完成
-        {% elif state == 'running' %}⟳ 執行中
-        {% elif state == 'scored' %}評分完成
-        {% elif state == 'collected' %}已收集
-        {% else %}尚未執行{% endif %}
-      </span>
-      <span id="pipeline-duration" class="pipeline-duration"></span>
-    </div>
-    <div class="split-btn-wrap">
-      <button class="btn-run-main" id="btn-run-main"
-              onclick="triggerRun(dateStr, true)">↻ 重跑</button>
-      <button class="btn-run-caret" id="btn-run-caret"
-              onclick="toggleRunDropdown(event)">▾</button>
-      <div class="run-dropdown" id="run-dropdown" style="display:none;">
-        <button onclick="triggerRun(dateStr, true); closeRunDropdown()">強制重跑（清除快取）</button>
-        <button onclick="triggerRun(dateStr, false); closeRunDropdown()">續跑（保留已有進度）</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Pipeline Stages（Pill 風格） -->
-  <div class="pipeline-stages">
-    {% for stage_name, stage_label, default_count in [('collect','收集', stats.raw_count),('score','評分', stats.scored_count),('generate','生成', stats.posts_count)] %}
-    {% if not loop.first %}
-    <div class="stage-connector"><div class="connector-line"></div><span class="connector-chevron">›</span><div class="connector-line"></div></div>
-    {% endif %}
-    <div class="stage-pill stage-pending" id="scard-{{ stage_name }}"
-         data-default-count="{{ default_count }}"
-         onclick="selectStage('{{ stage_name }}')">
-      <span class="pill-icon" id="sicon-{{ stage_name }}">⬜</span>
-      <div class="pill-body">
-        <span class="pill-label">{{ stage_label }}</span>
-        <span class="pill-meta">
-          <span class="pill-count" id="scount-{{ stage_name }}">{{ default_count if default_count else '-' }}</span>
-          <span class="pill-elapsed" id="selapsed-{{ stage_name }}">-</span>
-        </span>
-      </div>
-      <span class="pill-warn" id="swarn-{{ stage_name }}" style="display:none">⚠</span>
-      <span class="pill-actions">
-        <button class="stage-rerun-btn" id="srerun-{{ stage_name }}"
-                onclick="rerunStage('{{ stage_name }}', event)" title="重新執行">↺</button>
-        <button class="stage-stop-btn" id="sstop-{{ stage_name }}"
-                onclick="stopPipeline(event)" title="停止">■</button>
-      </span>
-    </div>
-    {% endfor %}
-  </div>
-
-  <!-- Log Panel -->
-  <div class="log-panel" id="log-panel" style="display:none">
-    <div class="log-panel-header">
-      <span id="log-panel-title">Log</span>
-      <button class="log-panel-close" onclick="closeLogPanel()">×</button>
-    </div>
-    <pre class="log-panel-pre" id="log-panel-pre"></pre>
-  </div>
-</div>
-
 <style>
+/* ── Hero Summary Strip ── */
+.dd-hero {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 24px;
+}
+.dd-metric {
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: var(--card-shadow);
+  animation: fadeUp 0.35s var(--spring) both;
+}
+.dd-metric:nth-child(2) { animation-delay: 50ms; }
+.dd-metric:nth-child(3) { animation-delay: 100ms; }
+.dd-metric:nth-child(4) { animation-delay: 150ms; }
+.dd-metric-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--t4);
+  margin-bottom: 6px;
+  letter-spacing: 0.02em;
+}
+.dd-metric-value {
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.1;
+  margin-bottom: 4px;
+}
+.dd-metric-sub {
+  font-size: 11.5px;
+  color: var(--t5);
+}
+@media (max-width: 900px) {
+  .dd-hero { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 600px) {
+  .dd-hero { grid-template-columns: 1fr; }
+}
+
 /* Pipeline Card */
 .pipeline-card { background: var(--bg-c); border: none; border-radius: 14px; margin-bottom: 1.5rem; overflow: hidden; box-shadow: var(--card-shadow); }
 .pipeline-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 1.25rem; border-bottom: 1px solid var(--br2); }
@@ -243,20 +210,31 @@
 .run-dropdown button { display: block; width: 100%; text-align: left; padding: 8px 14px; background: none; border: none; cursor: pointer; font-size: 0.85rem; color: var(--t2); }
 .run-dropdown button:hover { background: var(--bg-in); }
 
-/* Charts Strip */
+/* ── Charts Strip ── */
 .charts-strip {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 14px;
   margin-bottom: 16px;
 }
-.charts-strip .card { padding: 12px; }
+.charts-strip .card { padding: 16px; }
 .charts-strip canvas { height: 110px !important; }
+.section-title-sm {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--t2);
+  margin: 0 0 4px;
+}
+.chart-subtitle {
+  font-size: 12px;
+  color: var(--t5);
+  margin: 0 0 10px;
+}
 @media(max-width:700px) {
   .charts-strip { grid-template-columns: 1fr; }
 }
 
-/* Content badge in table */
+/* ── Content badge ── */
 .content-badge {
   display: inline-block;
   font-size: 10px;
@@ -268,8 +246,9 @@
 }
 .content-badge-blog { border: 1px solid rgba(52,199,89,0.3); background: rgba(52,199,89,0.06); color: #34C759; }
 .content-badge-note { border: 1px solid rgba(50,173,230,0.3); background: rgba(50,173,230,0.06); color: #32ADE6; }
+.content-badge-article { border: 1px solid rgba(88,86,214,0.3); background: rgba(88,86,214,0.06); color: #5856D6; }
 
-/* Bookmark star button */
+/* ── Bookmark star button ── */
 .bm-star {
   background: none;
   border: none;
@@ -284,35 +263,240 @@
 .bm-star:hover { transform: scale(1.25); }
 .bm-star.starred { color: var(--ay); }
 
-/* Source Filter */
+/* ── Source Filter ── */
 .source-filter { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
 .sf-chip {
   display: inline-flex; align-items: center; gap: 4px;
   padding: 3px 10px; border-radius: 12px; border: 1px solid var(--br2);
   background: var(--bg-in); color: var(--t4); font-size: 11.5px; font-weight: 500;
-  cursor: pointer; transition: all .15s ease; white-space: nowrap; line-height: 1.4;
+  cursor: pointer; transition: all .15s ease, transform .15s ease; white-space: nowrap; line-height: 1.4;
 }
-.sf-chip:hover { border-color: var(--av); color: var(--t2); }
-.sf-chip.sf-active { background: rgba(0,122,255,0.1); border-color: rgba(0,122,255,0.4); color: var(--av); }
+.sf-chip:hover { border-color: var(--av); color: var(--t2); transform: scale(1.02); }
+.sf-chip.sf-active { background: rgba(0,122,255,0.1); border-color: rgba(0,122,255,0.4); color: var(--av); box-shadow: 0 1px 4px rgba(0,122,255,0.15); }
 .sf-chip.sf-active:hover { background: rgba(0,122,255,0.05); }
 .sf-count {
   font-size: 10px; font-family: 'JetBrains Mono', monospace;
   background: rgba(0,122,255,0.12); color: var(--av); padding: 0 5px; border-radius: 8px; font-weight: 600;
 }
 .sf-chip:not(.sf-active) .sf-count { background: var(--br2); color: var(--t5); }
+
+/* ── Card-style Items List ── */
+.dd-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--br4);
+  transition: background 0.1s;
+  animation: fadeUp 0.3s var(--spring) both;
+}
+.dd-item:last-child { border-bottom: none; }
+.dd-item:hover { background: var(--bg-hv); }
+.dd-item.dd-unscored { opacity: 0.7; }
+.dd-item-top { border-left: 3px solid var(--av); }
+.dd-item-top .dd-item-rank { background: var(--av-d); color: var(--av); border: 1px solid var(--av-b); }
+
+.dd-item-left {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  width: 32px;
+}
+.dd-item-rank {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--bg-in);
+  color: var(--t4);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.dd-item-body {
+  flex: 1;
+  min-width: 0;
+}
+.dd-item-title {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--t2);
+  text-decoration: none;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  transition: color 0.12s;
+}
+.dd-item-title:hover { color: var(--av); }
+.dd-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+.dd-item-reason {
+  font-size: 12px;
+  color: var(--t5);
+  line-height: 1.5;
+  margin-top: 4px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.dd-item-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.dd-item-score-detail {
+  font-size: 10px;
+  color: var(--t5);
+  font-family: 'JetBrains Mono', monospace;
+  white-space: nowrap;
+}
+.dd-item-actions {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* ── Batch mode ── */
+.batch-mode .dd-item-left { position: relative; }
+.batch-cb {
+  display: none;
+  position: absolute; top: 0; left: 0;
+  width: 28px; height: 28px;
+  accent-color: var(--av);
+  cursor: pointer;
+}
+.batch-mode .dd-item.dd-unscored .batch-cb { display: none !important; }
+.batch-mode .batch-cb { display: block; }
+.batch-mode .dd-item-rank { display: none; }
+.batch-bar {
+  position: fixed; bottom: 0; left: 240px; right: 0;
+  background: var(--bg-hd); backdrop-filter: blur(20px);
+  border-top: 1px solid var(--br2); padding: 10px 28px;
+  display: none; align-items: center; gap: 12px; z-index: 50;
+}
+.batch-bar.visible { display: flex; }
+@media(max-width:768px) { .batch-bar { left: 0; } }
 </style>
+
+<!-- ── Hero Summary Strip ── -->
+<section class="dd-hero">
+  <div class="dd-metric stat-c">
+    <div class="dd-metric-label">收集</div>
+    <div class="dd-metric-value" style="color:var(--ac);">{{ stats.raw_count }}</div>
+    <div class="dd-metric-sub">篇原始素材</div>
+  </div>
+  <div class="dd-metric stat-v">
+    <div class="dd-metric-label">評分</div>
+    <div class="dd-metric-value" style="color:var(--av);">{{ stats.scored_count }}</div>
+    <div class="dd-metric-sub">篇已評分</div>
+  </div>
+  <div class="dd-metric stat-g">
+    <div class="dd-metric-label">產出</div>
+    <div class="dd-metric-value" style="color:var(--ag);">{{ stats.posts_count + stats.notes_count }}</div>
+    <div class="dd-metric-sub">篇文章 / 筆記</div>
+  </div>
+  <div class="dd-metric stat-n">
+    <div class="dd-metric-label">平均分數</div>
+    <div class="dd-metric-value" id="dd-avg-score" style="color:var(--t2);">--</div>
+    <div class="dd-metric-sub">當日平均</div>
+  </div>
+</section>
+
+<!-- GitLab-style Pipeline Card -->
+<div class="pipeline-card" id="pipeline-card">
+  <!-- 標頭：狀態 + 重跑按鈕 -->
+  <div class="pipeline-header">
+    <div class="pipeline-meta">
+      <span class="pipeline-title">Pipeline</span>
+      <span id="pipeline-badge" class="pipeline-badge badge-{{ state }}">
+        {% if state == 'done' %}✓ 完成
+        {% elif state == 'running' %}⟳ 執行中
+        {% elif state == 'scored' %}評分完成
+        {% elif state == 'collected' %}已收集
+        {% else %}尚未執行{% endif %}
+      </span>
+      <span id="pipeline-duration" class="pipeline-duration"></span>
+    </div>
+    <div class="split-btn-wrap">
+      <button class="btn-run-main" id="btn-run-main"
+              onclick="triggerRun(dateStr, true)">↻ 重跑</button>
+      <button class="btn-run-caret" id="btn-run-caret"
+              onclick="toggleRunDropdown(event)">▾</button>
+      <div class="run-dropdown" id="run-dropdown" style="display:none;">
+        <button onclick="triggerRun(dateStr, true); closeRunDropdown()">強制重跑（清除快取）</button>
+        <button onclick="triggerRun(dateStr, false); closeRunDropdown()">續跑（保留已有進度）</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pipeline Stages（Pill 風格） -->
+  <div class="pipeline-stages">
+    {% for stage_name, stage_label, default_count in [('collect','收集', stats.raw_count),('score','評分', stats.scored_count),('generate','生成', stats.posts_count)] %}
+    {% if not loop.first %}
+    <div class="stage-connector"><div class="connector-line"></div><span class="connector-chevron">›</span><div class="connector-line"></div></div>
+    {% endif %}
+    <div class="stage-pill stage-pending" id="scard-{{ stage_name }}"
+         data-default-count="{{ default_count }}"
+         onclick="selectStage('{{ stage_name }}')">
+      <span class="pill-icon" id="sicon-{{ stage_name }}">⬜</span>
+      <div class="pill-body">
+        <span class="pill-label">{{ stage_label }}</span>
+        <span class="pill-meta">
+          <span class="pill-count" id="scount-{{ stage_name }}">{{ default_count if default_count else '-' }}</span>
+          <span class="pill-elapsed" id="selapsed-{{ stage_name }}">-</span>
+        </span>
+      </div>
+      <span class="pill-warn" id="swarn-{{ stage_name }}" style="display:none">⚠</span>
+      <span class="pill-actions">
+        <button class="stage-rerun-btn" id="srerun-{{ stage_name }}"
+                onclick="rerunStage('{{ stage_name }}', event)" title="重新執行">↺</button>
+        <button class="stage-stop-btn" id="sstop-{{ stage_name }}"
+                onclick="stopPipeline(event)" title="停止">■</button>
+      </span>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Log Panel -->
+  <div class="log-panel" id="log-panel" style="display:none">
+    <div class="log-panel-header">
+      <span id="log-panel-title">Log</span>
+      <button class="log-panel-close" onclick="closeLogPanel()">×</button>
+    </div>
+    <pre class="log-panel-pre" id="log-panel-pre"></pre>
+  </div>
+</div>
 
 <!-- Charts Strip -->
 {% if stats.scored_count > 0 %}
 <div class="charts-strip">
   <div class="card">
-    <h3 style="font-size:11px; font-weight:600; color:var(--t3); margin:0 0 8px;">分數分佈</h3>
+    <div class="section-title-sm">分數分佈</div>
+    <div class="chart-subtitle">各區間篇數</div>
     <div style="position:relative; height:110px;">
       <canvas id="scoreChart"></canvas>
     </div>
   </div>
   <div class="card">
-    <h3 style="font-size:11px; font-weight:600; color:var(--t3); margin:0 0 8px;">來源佔比</h3>
+    <div class="section-title-sm">來源佔比</div>
+    <div class="chart-subtitle">Top Sources</div>
     <div style="position:relative; height:110px;">
       <canvas id="sourceChart"></canvas>
     </div>
@@ -320,16 +504,27 @@
 </div>
 {% endif %}
 
-<!-- Scored items table -->
+<!-- Scored items (card-style list) -->
 <section>
   <div style="display:flex; align-items:center; justify-content:space-between; margin:0 0 10px; flex-wrap:wrap; gap:8px;">
-    <h3 style="font-size:14px; font-weight:600; color:var(--t2); margin:0;">
+    <h3 class="section-title-sm" style="margin:0;">
       收集文章
       <span style="font-size:11px; font-weight:400; color:var(--t4); margin-left:6px;">
         已評分 {{ items|selectattr('scored')|list|length }} / 共 {{ items|length }} 筆
       </span>
+      <span id="bm-count" style="font-size:11px; color:var(--ay); font-weight:600; margin-left:8px;">
+        {% if bookmarked_indices|length > 0 %}★ {{ bookmarked_indices|length }} 已收藏{% endif %}
+      </span>
     </h3>
     {% if items %}
+    <div style="display:flex; gap:8px; align-items:center; margin-bottom:6px;">
+      <button id="batch-toggle" onclick="toggleBatchMode()"
+              style="font-size:11px; padding:3px 10px; border-radius:6px; border:1px solid var(--br2);
+                     background:var(--bg-in); color:var(--t4); cursor:pointer; transition:all 0.15s;">
+        ☐ 批量收藏
+      </button>
+      <span id="batch-count" style="font-size:11px; color:var(--t5); display:none;">已選 0 筆</span>
+    </div>
     <div class="source-filter" id="source-filter">
       <button class="sf-chip sf-active" data-source="__all__" onclick="toggleSourceFilter(this)">全部<span class="sf-count">{{ items|length }}</span></button>
       {% set ns = namespace(seen=[]) %}
@@ -347,163 +542,162 @@
   </div>
   {% if items %}
   <div class="card" style="overflow:hidden;">
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th style="width:32px;">#</th>
-          <th style="width:30px;"></th>
-          <th style="width:70px;">分數</th>
-          <th style="width:120px;">來源</th>
-          <th>標題 / 資訊</th>
-          <th style="width:80px;">產出</th>
-          <th style="width:50px;"></th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for it in items %}
-        <tr data-source="{{ it.source }}"{% if not it.scored %} style="opacity:0.7;"{% endif %}>
-          <td style="color:var(--t5); font-family:'JetBrains Mono',monospace; font-size:12px;">
-            {{ loop.index }}
-          </td>
-          <td>
-            <button class="bm-star{% if it.scored and it.index in bookmarked_indices %} starred{% endif %}"
-                    onclick="{% if it.scored %}toggleDayBookmark(this, '{{ date_str }}', {{ it.index }}){% endif %}"
-                    title="收藏"
-                    {% if not it.scored %}style="opacity:0.3; cursor:not-allowed;" disabled{% endif %}>
-              {{ '★' if (it.scored and it.index in bookmarked_indices) else '☆' }}
-            </button>
-          </td>
-          <td>
-            {% if it.scored %}
-            <div style="display:flex; flex-direction:column; gap:2px;">
-              <span class="score-badge">{{ "%.0f"|format(it.total_score) }}</span>
-              <span style="font-size:10px; color:var(--t5); font-family:'JetBrains Mono',monospace;">
-                R:{{ "%.0f"|format(it.rule_score) }}{% if it.llm_score is not none %} L:{{ "%.0f"|format(it.llm_score) }}{% endif %}
-              </span>
-            </div>
-            {% else %}
-            <span style="color:var(--t5); font-size:12px;">—</span>
-            {% endif %}
-          </td>
-          <td>
-            <span class="chip" style="display:inline-block; white-space:nowrap; font-size:10.5px;">
-              {{ it.source_name or it.source }}
-            </span>
-          </td>
-          <td>
-            <div style="display:flex; flex-direction:column; gap:4px;">
-              <a href="{{ it.url }}" target="_blank" class="link-v"
-                 style="font-size:13px; font-weight:500; line-height:1.35; color:var(--t2);"
-                 onmouseover="this.style.color='var(--av)'" onmouseout="this.style.color='var(--t2)'">
-                {{ it.title }}
-              </a>
-              {% if it.tags or it.authors %}
-              <div style="display:flex; gap:4px; flex-wrap:wrap; align-items:center;">
-                {% for t in (it.tags or [])[:3] %}
-                <span class="tag-v" style="font-size:10px; padding:1px 5px;">{{ t }}</span>
-                {% endfor %}
-                {% if it.authors %}
-                <span style="font-size:10.5px; color:var(--t4);">{{ it.authors[0] }}{% if it.authors|length > 1 %} et al.{% endif %}</span>
-                {% endif %}
-              </div>
-              {% endif %}
-              {% if it.llm_reason %}
-              <details open style="font-size:11px; color:var(--t4); margin-top:1px;">
-                <summary style="cursor:pointer; opacity:0.7;">評語</summary>
-                <div style="margin-top:3px; padding:6px 8px; background:var(--bg-in); border-radius:5px; line-height:1.5; font-size:11.5px;">
-                  {{ it.llm_reason }}
-                </div>
-              </details>
-              {% elif not it.scored and it.abstract %}
-              <details open style="font-size:11px; color:var(--t4); margin-top:1px;">
-                <summary style="cursor:pointer; opacity:0.7;">摘要</summary>
-                <div style="margin-top:3px; padding:6px 8px; background:var(--bg-in); border-radius:5px; line-height:1.5; font-size:11.5px;">
-                  {{ it.abstract[:300] }}{% if it.abstract|length > 300 %}…{% endif %}
-                </div>
-              </details>
-              {% endif %}
-            </div>
-          </td>
-          <td>
-            {% if it.scored %}
+    {% set ns2 = namespace(divider_shown=False) %}
+    {% for it in items %}
+    {% if not it.scored and not ns2.divider_shown %}
+      {% set ns2.divider_shown = True %}
+      <div style="border-top:2px dashed var(--br2); padding:10px 18px; color:var(--t5); font-size:12px; display:flex; align-items:center; gap:6px;">
+        <span style="opacity:0.5;">⬇</span> 以下為未評分文章（{{ items|rejectattr('scored')|list|length }} 筆）
+      </div>
+    {% endif %}
+    <div class="dd-item{% if not it.scored %} dd-unscored{% endif %}{% if it.scored and loop.index <= 3 %} dd-item-top{% endif %}"
+         data-source="{{ it.source }}"
+         style="animation-delay:{{ [loop.index0 * 30, 600]|min }}ms;">
+      <!-- Left: rank + star -->
+      <div class="dd-item-left">
+        <div class="dd-item-rank">{{ loop.index }}</div>
+        {% if it.scored %}<input type="checkbox" class="batch-cb" data-date="{{ date_str }}" data-index="{{ it.index }}" onchange="updateBatchCount()">{% endif %}
+        <button class="bm-star{% if it.scored and it.index in bookmarked_indices %} starred{% endif %}"
+                onclick="{% if it.scored %}toggleDayBookmark(this, '{{ date_str }}', {{ it.index }}){% endif %}"
+                title="收藏"
+                {% if not it.scored %}style="opacity:0.3; cursor:not-allowed;" disabled{% endif %}>
+          {{ '★' if (it.scored and it.index in bookmarked_indices) else '☆' }}
+        </button>
+      </div>
+
+      <!-- Middle: title + meta + reason -->
+      <div class="dd-item-body">
+        <a href="{{ it.url }}" target="_blank" class="dd-item-title">
+          {{ it.title }}
+        </a>
+        <div class="dd-item-meta">
+          <span class="chip" style="font-size:10.5px;">{{ it.source_name or it.source }}</span>
+          {% for t in (it.tags or [])[:3] %}
+          <span class="tag-v" style="font-size:10px; padding:1px 5px;">{{ t }}</span>
+          {% endfor %}
+          {% if it.authors %}
+          <span style="font-size:10.5px; color:var(--t4);">{{ it.authors[0] }}{% if it.authors|length > 1 %} et al.{% endif %}</span>
+          {% endif %}
+          {% if it.scored %}
             {% set ckey = (it.title or '')|lower|trim %}
             {% if ckey in content_map %}
               {% set cm = content_map[ckey] %}
-              <div style="display:flex; gap:3px; flex-wrap:wrap;">
-                {% if cm.has_post and cm.post_slug %}
-                <a href="/post/{{ date_str }}/{{ cm.post_slug }}" class="content-badge content-badge-blog">Blog</a>
-                {% endif %}
-                {% if cm.has_note and cm.note_slug %}
-                <a href="/note/{{ date_str }}/{{ cm.note_slug }}" class="content-badge content-badge-note">Note</a>
-                {% endif %}
-              </div>
+              {% if cm.has_post and cm.post_slug %}
+              <a href="/post/{{ date_str }}/{{ cm.post_slug }}" class="content-badge content-badge-blog">Blog</a>
+              {% endif %}
+              {% if cm.has_note and cm.note_slug %}
+              <a href="/note/{{ date_str }}/{{ cm.note_slug }}" class="content-badge content-badge-note">Note</a>
+              {% endif %}
+              {% if cm.has_blog and cm.blog_slug %}
+              <a href="/blog/{{ date_str }}/{{ cm.blog_slug }}" class="content-badge content-badge-article">文章</a>
+              {% endif %}
             {% endif %}
-            {% endif %}
-          </td>
-          <td>
-            {% if it.scored and it.index is not none %}
-            <a href="/item/{{ date_str }}/{{ it.index }}" class="link-v"
-               style="display:inline-flex; align-items:center; gap:2px;
-                      font-size:12px; white-space:nowrap;">
-              詳細
-              <svg style="width:11px; height:11px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-              </svg>
-            </a>
-            {% else %}
-            <a href="{{ it.url }}" target="_blank" class="link-v"
-               style="display:inline-flex; align-items:center; gap:2px;
-                      font-size:12px; white-space:nowrap;">
-              原文
-              <svg style="width:11px; height:11px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
-              </svg>
-            </a>
-            {% endif %}
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+          {% endif %}
+        </div>
+        {% if it.llm_reason %}
+        <div class="dd-item-reason">{{ it.llm_reason }}</div>
+        {% elif not it.scored and it.abstract %}
+        <div class="dd-item-reason">{{ it.abstract[:300] }}{% if it.abstract|length > 300 %}…{% endif %}</div>
+        {% endif %}
+      </div>
+
+      <!-- Right: score + link -->
+      <div class="dd-item-right">
+        {% if it.scored %}
+        <span class="score-badge">{{ "%.0f"|format(it.total_score) }}</span>
+        <span class="dd-item-score-detail">
+          R:{{ "%.0f"|format(it.rule_score) }}{% if it.llm_score is not none %} L:{{ "%.0f"|format(it.llm_score) }}{% endif %}
+        </span>
+        {% else %}
+        <span style="color:var(--t5); font-size:13px;">—</span>
+        {% endif %}
+        {% if it.scored and it.index is not none %}
+        <a href="/item/{{ date_str }}/{{ it.index }}" class="link-v"
+           style="display:inline-flex; align-items:center; gap:2px; font-size:12px; white-space:nowrap;">
+          詳細
+          <svg style="width:11px; height:11px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+          </svg>
+        </a>
+        {% else %}
+        <a href="{{ it.url }}" target="_blank" class="link-v"
+           style="display:inline-flex; align-items:center; gap:2px; font-size:12px; white-space:nowrap;">
+          原文
+          <svg style="width:11px; height:11px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+          </svg>
+        </a>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
   </div>
   {% else %}
-  <div class="card" style="padding:40px; text-align:center;">
-    <div style="font-size:28px; margin-bottom:10px;">📭</div>
-    <p style="color:var(--t4); font-size:13px; margin:0;">{{ date_str }} 尚無評分資料</p>
+  <div class="card" style="padding:48px; text-align:center;">
+    <p style="color:var(--t4); font-size:14px; margin:0;">{{ date_str }} 尚無評分資料</p>
+    <p style="color:var(--t5); font-size:12px; margin:8px 0 0;">可點擊上方「重跑」執行 Pipeline</p>
   </div>
   {% endif %}
 </section>
+
+<!-- Batch action bar -->
+<div class="batch-bar" id="batch-bar">
+  <span style="font-size:13px; color:var(--t2); font-weight:600;" id="batch-bar-count">已選 0 筆</span>
+  <button onclick="batchBookmark()"
+          style="padding:6px 14px; border-radius:7px; border:1px solid var(--ay);
+                 background:rgba(255,149,0,0.1); color:var(--ay); font-size:12px;
+                 font-weight:600; cursor:pointer;">
+    ⭐ 收藏選取
+  </button>
+  <button onclick="toggleBatchMode()"
+          style="padding:6px 14px; border-radius:7px; border:1px solid var(--br2);
+                 background:var(--bg-in); color:var(--t4); font-size:12px; cursor:pointer;">
+    取消
+  </button>
+</div>
 {% endblock %}
 
 {% block scripts %}
 {% if stats.scored_count > 0 %}
 <script>
 window.__charts = window.__charts || [];
-var isDark = !document.documentElement.classList.contains('light');
-Chart.defaults.color = isDark ? '#64748b' : '#94a3b8';
-Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
+var isLight = document.documentElement.classList.contains('light');
+var gridColor = isLight ? 'rgba(60,60,67,0.2)' : 'rgba(84,84,88,0.4)';
+var textColor = isLight ? 'rgba(60,60,67,0.36)' : 'rgba(255,255,255,0.3)';
 
-var gridColor = isDark ? 'rgba(51,65,85,0.4)' : 'rgba(203,213,225,0.5)';
-var textColor = isDark ? '#64748b' : '#94a3b8';
+var tooltipStyle = {
+  backgroundColor: isLight ? 'rgba(255,255,255,0.95)' : 'rgba(28,28,30,0.95)',
+  titleColor: isLight ? '#000' : '#fff',
+  bodyColor: isLight ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)',
+  borderColor: isLight ? 'rgba(60,60,67,0.2)' : 'rgba(84,84,88,0.4)',
+  borderWidth: 1,
+  padding: 10,
+  cornerRadius: 8
+};
 
 var scoreCtx = document.getElementById('scoreChart');
 if (scoreCtx) {
+  var ctx2d = scoreCtx.getContext('2d');
+  var barGrad = ctx2d.createLinearGradient(0, 0, 0, 110);
+  barGrad.addColorStop(0, 'rgba(0,122,255,0.45)');
+  barGrad.addColorStop(1, 'rgba(0,122,255,0.08)');
+
   var c1 = new Chart(scoreCtx, {
     type: 'bar',
     data: {
       labels: {{ stats.score_dist_labels | tojson }},
       datasets: [{
         data: {{ stats.score_dist | tojson }},
-        backgroundColor: 'rgba(0,122,255,0.25)',
+        backgroundColor: barGrad,
         borderColor: 'rgba(0,122,255,0.7)',
         borderWidth: 1.5,
-        borderRadius: 5,
-        hoverBackgroundColor: 'rgba(0,122,255,0.4)',
+        borderRadius: 6,
+        hoverBackgroundColor: 'rgba(0,122,255,0.55)',
       }]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
+      plugins: { legend: { display: false }, tooltip: tooltipStyle },
       scales: {
         x: { grid: { color: gridColor }, ticks: { color: textColor, font: { size: 11 } } },
         y: { grid: { color: gridColor }, ticks: { color: textColor, font: { size: 11 }, precision: 0 }, beginAtZero: true }
@@ -516,16 +710,21 @@ if (scoreCtx) {
 var srcCtx = document.getElementById('sourceChart');
 if (srcCtx) {
   var srcData = {{ stats.source_counts | tojson }};
-  var sorted = Object.entries(srcData).sort(function(a,b){ return b[1]-a[1]; }).slice(0,7);
-  var palette = ['#007AFF','#32ADE6','#34C759','#FF9500','#FF3B30','#007AFF','#32ADE6'];
+  var sorted = Object.entries(srcData).sort(function(a,b){ return b[1]-a[1]; }).slice(0,10);
+  var applePalette = [
+    '#007AFF','#34C759','#FF9500','#FF3B30','#5856D6',
+    '#32ADE6','#FF2D55','#AF52DE','#00C7BE','#A2845E'
+  ];
   var c2 = new Chart(srcCtx, {
     type: 'doughnut',
     data: {
       labels: sorted.map(function(x){ return x[0]; }),
       datasets: [{
         data: sorted.map(function(x){ return x[1]; }),
-        backgroundColor: palette.map(function(c){ return c+'aa'; }),
-        borderColor: palette, borderWidth: 1.5, hoverOffset: 4,
+        backgroundColor: applePalette.slice(0, sorted.length),
+        borderColor: isLight ? '#fff' : '#1C1C1E',
+        borderWidth: 2,
+        hoverOffset: 4,
       }]
     },
     options: {
@@ -533,8 +732,9 @@ if (srcCtx) {
       plugins: {
         legend: {
           position: 'right',
-          labels: { color: textColor, font: { size: 11 }, boxWidth: 11, padding: 7 }
-        }
+          labels: { color: textColor, font: { size: 11 }, boxWidth: 10, padding: 8 }
+        },
+        tooltip: tooltipStyle
       }
     }
   });
@@ -556,6 +756,18 @@ const stageState = {
 };
 let _selectedStage = null;
 const _liveLogs = { collect: [], score: [], generate: [] };
+
+// ---- Hero avg score ----
+(function() {
+  var items = document.querySelectorAll('.dd-item:not(.dd-unscored) .score-badge');
+  if (items.length > 0) {
+    var sum = 0;
+    items.forEach(function(el) { sum += parseFloat(el.textContent) || 0; });
+    var avg = sum / items.length;
+    var el = document.getElementById('dd-avg-score');
+    if (el) el.textContent = avg.toFixed(1);
+  }
+})();
 
 // ---- Helpers ----
 function escapeHtml(text) {
@@ -912,21 +1124,17 @@ async function loadInitialStageInfo() {
 document.addEventListener('DOMContentLoaded', loadInitialStageInfo);
 
 // ---- Source Filter ----
-// 邏輯：預設「全部」亮 → 點個別 chip 進入篩選模式 → 點「全部」回到全顯示
 function toggleSourceFilter(btn) {
   const src = btn.getAttribute('data-source');
   const allBtn = document.querySelector('.sf-chip[data-source="__all__"]');
   const chips = Array.from(document.querySelectorAll('.sf-chip:not([data-source="__all__"])'));
 
   if (src === '__all__') {
-    // 點「全部」→ 清除所有個別選取，回到全顯示
     chips.forEach(function(c) { c.classList.remove('sf-active'); });
     allBtn.classList.add('sf-active');
   } else {
-    // 點個別 chip → 離開「全部」模式
     allBtn.classList.remove('sf-active');
     btn.classList.toggle('sf-active');
-    // 若所有個別 chip 都取消 → 自動回「全部」
     if (!chips.some(function(c) { return c.classList.contains('sf-active'); })) {
       allBtn.classList.add('sf-active');
     }
@@ -939,21 +1147,20 @@ function applySourceFilter() {
   const isAllMode = allBtn.classList.contains('sf-active');
   const chips = Array.from(document.querySelectorAll('.sf-chip:not([data-source="__all__"])'));
   const activeSources = isAllMode
-    ? null  // null = 全顯示
+    ? null
     : new Set(chips.filter(function(c) { return c.classList.contains('sf-active'); }).map(function(c) { return c.getAttribute('data-source'); }));
 
-  const rows = document.querySelectorAll('.data-table tbody tr[data-source]');
+  const items = document.querySelectorAll('.dd-item[data-source]');
   var idx = 0;
-  rows.forEach(function(row) {
-    var show = isAllMode || activeSources.has(row.getAttribute('data-source'));
-    row.style.display = show ? '' : 'none';
+  items.forEach(function(item) {
+    var show = isAllMode || activeSources.has(item.getAttribute('data-source'));
+    item.style.display = show ? '' : 'none';
     if (show) {
       idx++;
-      var numCell = row.querySelector('td:first-child');
-      if (numCell) numCell.textContent = idx;
+      var rankEl = item.querySelector('.dd-item-rank');
+      if (rankEl) rankEl.textContent = idx;
     }
   });
-  // 更新「全部」計數
   allBtn.querySelector('.sf-count').textContent = idx;
 }
 
@@ -972,11 +1179,101 @@ async function toggleDayBookmark(btn, dateStr, index) {
     } else {
       btn.classList.add('starred');
       btn.textContent = '★';
-      showToast('已收藏', '⭐');
+      if (typeof showToastHtml === 'function') {
+        showToastHtml('已收藏 <a href="/queue" class="link-toast">前往待寫清單 →</a>', '⭐');
+      } else {
+        showToast('已收藏', '⭐');
+      }
     }
-    if (data.bookmarks_count !== undefined) updateSidebarBadge(data.bookmarks_count);
+    if (data.bookmarks_count !== undefined) {
+      updateSidebarBadge(data.bookmarks_count);
+      // 更新頁面收藏計數
+      var bmCountEl = document.getElementById('bm-count');
+      if (bmCountEl) {
+        var stars = document.querySelectorAll('.bm-star.starred').length;
+        bmCountEl.textContent = stars > 0 ? ('★ ' + stars + ' 已收藏') : '';
+      }
+    }
   } catch(e) {
     showToast('操作失敗', '❌');
+  }
+}
+
+// ---- Batch mode ----
+var _batchMode = false;
+function toggleBatchMode() {
+  _batchMode = !_batchMode;
+  var card = document.querySelector('.card');
+  var btn = document.getElementById('batch-toggle');
+  var bar = document.getElementById('batch-bar');
+  if (_batchMode) {
+    if (card) card.classList.add('batch-mode');
+    btn.style.background = 'var(--av-d)';
+    btn.style.borderColor = 'var(--av-b)';
+    btn.style.color = 'var(--av)';
+    btn.textContent = '☑ 批量選取中';
+    bar.classList.add('visible');
+  } else {
+    if (card) card.classList.remove('batch-mode');
+    btn.style.background = '';
+    btn.style.borderColor = '';
+    btn.style.color = '';
+    btn.textContent = '☐ 批量收藏';
+    bar.classList.remove('visible');
+    document.querySelectorAll('.batch-cb').forEach(function(cb) { cb.checked = false; });
+  }
+  updateBatchCount();
+}
+
+function updateBatchCount() {
+  var checked = document.querySelectorAll('.batch-cb:checked').length;
+  var countEl = document.getElementById('batch-count');
+  var barCount = document.getElementById('batch-bar-count');
+  if (countEl) {
+    countEl.textContent = '已選 ' + checked + ' 筆';
+    countEl.style.display = checked > 0 ? '' : 'none';
+  }
+  if (barCount) barCount.textContent = '已選 ' + checked + ' 筆';
+}
+
+async function batchBookmark() {
+  var checked = document.querySelectorAll('.batch-cb:checked');
+  if (checked.length === 0) { showToast('請先勾選要收藏的項目', '⚠️'); return; }
+  var items = [];
+  checked.forEach(function(cb) {
+    items.push({ date_str: cb.dataset.date, index: parseInt(cb.dataset.index) });
+  });
+  try {
+    var res = await fetch('/api/bookmark/batch', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ items: items })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    var data = await res.json();
+    // 更新星號
+    checked.forEach(function(cb) {
+      var row = cb.closest('.dd-item');
+      var star = row ? row.querySelector('.bm-star') : null;
+      if (star && !star.classList.contains('starred')) {
+        star.classList.add('starred');
+        star.textContent = '★';
+      }
+    });
+    if (data.bookmarks_count !== undefined) updateSidebarBadge(data.bookmarks_count);
+    var bmCountEl = document.getElementById('bm-count');
+    if (bmCountEl) {
+      var stars = document.querySelectorAll('.bm-star.starred').length;
+      bmCountEl.textContent = stars > 0 ? ('★ ' + stars + ' 已收藏') : '';
+    }
+    if (typeof showToastHtml === 'function') {
+      showToastHtml('已收藏 ' + data.bookmarked + ' 筆 <a href="/queue" class="link-toast">前往待寫清單 →</a>', '⭐');
+    } else {
+      showToast('已收藏 ' + data.bookmarked + ' 筆', '⭐');
+    }
+    toggleBatchMode();
+  } catch(e) {
+    showToast('批量收藏失敗', '❌');
   }
 }
 </script>

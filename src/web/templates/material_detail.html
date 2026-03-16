@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ item.title[:40] }} — 素材詳情{% endblock %}
+{% block title %}🔍 {{ item.title[:40] }} — 素材詳情{% endblock %}
 
 {% block page_title %}
 <nav style="display:flex; align-items:center; gap:8px; font-size:13.5px;">
@@ -143,11 +143,31 @@
           <span class="tab-status {{ 'tab-status-green' if item.has_note else 'tab-status-gray' }}"></span>
           Note Summary
         </button>
+        <button class="tab-btn" onclick="switchTab('article')">
+          <span class="tab-status {{ 'tab-status-green' if item.has_blog else 'tab-status-gray' }}"></span>
+          Blog 文章
+        </button>
       </div>
       <div style="padding:20px 24px;">
         <div id="tab-blog" class="tab-panel active">
           {% if item.post_content %}
           <div class="prose">{{ item.post_content | safe }}</div>
+          {% if not item.has_blog %}
+          <div style="margin-top:16px; padding-top:14px; border-top:1px solid var(--br2);">
+            <button id="btn-promote" onclick="promoteToBlog()"
+                    style="display:inline-flex; align-items:center; gap:7px; padding:8px 18px;
+                           border-radius:9px; border:1px solid rgba(88,86,214,0.4);
+                           background:rgba(88,86,214,0.1); color:#5856D6;
+                           font-size:13px; font-weight:600; cursor:pointer;
+                           transition:all 0.15s;">
+              <svg style="width:15px; height:15px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/>
+              </svg>
+              推送為 Blog 文章
+            </button>
+          </div>
+          {% endif %}
           {% else %}
           <div class="empty-tab">
             <div style="font-size:28px; margin-bottom:10px;">📝</div>
@@ -162,6 +182,28 @@
           <div class="empty-tab">
             <div style="font-size:28px; margin-bottom:10px;">📓</div>
             <p style="margin:0;">尚未生成 Note Summary</p>
+          </div>
+          {% endif %}
+        </div>
+        <div id="tab-article" class="tab-panel">
+          {% if item.blog_content %}
+          <div class="prose">{{ item.blog_content | safe }}</div>
+          {% if item.blog_slug %}
+          <div style="margin-top:16px; padding-top:14px; border-top:1px solid var(--br2);">
+            <a href="/blog/{{ date_str }}/{{ item.blog_slug }}" class="link-v"
+               style="display:inline-flex; align-items:center; gap:5px; font-size:13px;">
+              <svg style="width:13px; height:13px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+              </svg>
+              查看完整 Blog 文章
+            </a>
+          </div>
+          {% endif %}
+          {% else %}
+          <div class="empty-tab">
+            <div style="font-size:28px; margin-bottom:10px;">📄</div>
+            <p style="margin:0;">尚未撰寫 Blog 文章</p>
           </div>
           {% endif %}
         </div>
@@ -268,11 +310,14 @@
 {% block scripts %}
 <script>
 function switchTab(tab) {
+  var tabs = ['blog', 'note', 'article'];
   document.querySelectorAll('.tab-btn').forEach(function(b, i){
-    b.classList.toggle('active', (tab === 'blog' && i === 0) || (tab === 'note' && i === 1));
+    b.classList.toggle('active', tabs[i] === tab);
   });
-  document.getElementById('tab-blog').classList.toggle('active', tab === 'blog');
-  document.getElementById('tab-note').classList.toggle('active', tab === 'note');
+  tabs.forEach(function(t) {
+    var panel = document.getElementById('tab-' + t);
+    if (panel) panel.classList.toggle('active', t === tab);
+  });
 }
 
 function toggleBookmark() {
@@ -295,6 +340,39 @@ function toggleBookmark() {
       if (data.bookmarks_count !== undefined) updateSidebarBadge(data.bookmarks_count);
     })
     .catch(function(err){ showToast('操作失敗', '❌'); });
+}
+
+// Promote to Blog
+function promoteToBlog() {
+  var btn = document.getElementById('btn-promote');
+  if (!btn) return;
+  if (!confirm('確定要將此 Blog Draft 推送為正式 Blog 文章嗎？')) return;
+  btn.disabled = true;
+  btn.textContent = '推送中...';
+  fetch('/api/promote-to-blog/{{ date_str }}/{{ item.index }}', { method: 'POST' })
+    .then(function(res) {
+      if (!res.ok) return res.json().then(function(d) { throw new Error(d.detail || 'Failed'); });
+      return res.json();
+    })
+    .then(function(data) {
+      showToast('已推送為 Blog 文章', '🚀');
+      btn.style.background = 'rgba(52,199,89,0.1)';
+      btn.style.borderColor = 'rgba(52,199,89,0.4)';
+      btn.style.color = '#34C759';
+      btn.innerHTML = '✓ 已推送 — <a href="' + data.blog_url + '" style="color:#34C759; margin-left:4px;">查看文章</a>';
+      btn.disabled = false;
+      btn.onclick = null;
+      // 更新 article tab 狀態
+      var tabBtns = document.querySelectorAll('.tab-btn');
+      if (tabBtns.length >= 3) {
+        tabBtns[2].querySelector('.tab-status').className = 'tab-status tab-status-green';
+      }
+    })
+    .catch(function(err) {
+      showToast('推送失敗: ' + err.message, '❌');
+      btn.disabled = false;
+      btn.textContent = '推送為 Blog 文章';
+    });
 }
 
 // Check initial bookmark state

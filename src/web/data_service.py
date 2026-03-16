@@ -9,7 +9,7 @@ from pathlib import Path
 
 from src.logger import get_logger
 from src.models import ContentItem, ScoredItem
-from src.utils import NOTES_DIR, POSTS_DIR, RAW_DIR, SCORED_DIR, FEEDBACK_DIR, HEALTH_DIR, DIGESTS_DIR, DATA_DIR, load_json, save_json, slugify
+from src.utils import NOTES_DIR, POSTS_DIR, RAW_DIR, SCORED_DIR, FEEDBACK_DIR, HEALTH_DIR, DIGESTS_DIR, BLOGS_DIR, DATA_DIR, load_json, save_json, slugify
 
 _logger = get_logger("web.data_service")
 
@@ -504,6 +504,9 @@ def get_sidebar_stats() -> dict:
         if isinstance(data, list):
             total_materials += len(data)
 
+    # Blog 文章數
+    total_blogs = len(list(BLOGS_DIR.glob("*.md")))
+
     # 書籤數
     bookmarks_count = 0
     bookmarks_path = DATA_DIR / "bookmarks.json"
@@ -522,6 +525,7 @@ def get_sidebar_stats() -> dict:
         "today_notes": today_notes,
         "total_materials": total_materials,
         "bookmarks_count": bookmarks_count,
+        "total_blogs": total_blogs,
     }
     _sidebar_cache = result
     _sidebar_cache_ts = _time.time()
@@ -577,6 +581,52 @@ def get_note(date_str: str, slug: str) -> dict | None:
     return _parse_markdown_file(path)
 
 
+def get_blog(date_str: str, slug: str) -> dict | None:
+    """取得指定精選 Blog 文章（支援雙版本：Web md + FB 純文字）。"""
+    path = BLOGS_DIR / f"{date_str}_{slug}.md"
+    if not path.exists():
+        matches = list(BLOGS_DIR.glob(f"{date_str}*{slug}*.md"))
+        if not matches:
+            return None
+        path = matches[0]
+    parsed = _parse_markdown_file(path)
+    if not parsed:
+        return None
+    body = parsed["body"]
+    body_fb = ""
+    if "<!-- fb -->" in body:
+        parts = body.split("<!-- fb -->", 1)
+        body = parts[0].strip()
+        body_fb = parts[1].strip()
+    return {**parsed, "body": body, "body_fb": body_fb}
+
+
+def list_all_blogs() -> list[dict]:
+    """列出所有精選 Blog 文章，依日期由新到舊。"""
+    result = []
+    for f in BLOGS_DIR.glob("*.md"):
+        parts = f.stem.split("_", 1)
+        if len(parts) < 2:
+            continue
+        date_str = parts[0]
+        if len(date_str) != 10 or date_str.count("-") != 2:
+            continue
+        slug = parts[1]
+        parsed = _parse_markdown_file(f)
+        if parsed:
+            fm = parsed["frontmatter"]
+            result.append({
+                "date_str": date_str,
+                "slug": slug,
+                "title": fm.get("title", slug),
+                "paper_url": fm.get("paper_url", ""),
+                "paper_title": fm.get("paper_title", ""),
+                "tags": fm.get("tags", []),
+                "tldr": fm.get("tldr", ""),
+            })
+    return sorted(result, key=lambda x: x["date_str"], reverse=True)
+
+
 def list_posts(date_str: str) -> list[dict]:
     """列出指定日期的所有 posts。"""
     result = []
@@ -619,8 +669,10 @@ def list_day_contents(date_str: str) -> list[dict]:
             **p,
             "has_post": True,
             "has_note": False,
+            "has_blog": False,
             "post_slug": p.get("slug"),
             "note_slug": None,
+            "blog_slug": None,
         }
 
     for n in notes:
@@ -634,9 +686,28 @@ def list_day_contents(date_str: str) -> list[dict]:
                 **n,
                 "has_post": False,
                 "has_note": True,
+                "has_blog": False,
                 "post_slug": None,
                 "note_slug": n.get("slug"),
+                "blog_slug": None,
             }
+
+    # 掃描 blogs，用 paper_title 做 title matching
+    for f in BLOGS_DIR.glob(f"{date_str}*.md"):
+        blog_slug = f.stem[len(date_str) + 1:]
+        parsed = _parse_markdown_file(f)
+        if not parsed:
+            continue
+        fm = parsed["frontmatter"]
+        paper_title = (fm.get("paper_title") or fm.get("title") or "").strip().lower()
+        if not paper_title:
+            continue
+        blog_title_slug = slugify(paper_title)
+        for key, val in merged.items():
+            if key in paper_title or paper_title in key or (blog_title_slug and (blog_title_slug in slugify(key) or slugify(key) in blog_title_slug)):
+                val["has_blog"] = True
+                val["blog_slug"] = blog_slug
+                break
 
     result = list(merged.values())
     # 用 rule_score + llm_score 排序（取自 _enrich_with_scored 填入的欄位）
@@ -703,6 +774,17 @@ def list_all_materials(days: int = 90) -> list[dict]:
         post_slugs = {f.stem[len(date_str) + 1:] for f in POSTS_DIR.glob(f"{date_str}*.md")}
         note_slugs = {f.stem[len(date_str) + 1:] for f in NOTES_DIR.glob(f"{date_str}*.md")}
 
+        # 預先載入該日期的 blog paper_title → slug 映射
+        blog_map: dict[str, str] = {}  # paper_title_slug → blog_slug
+        for bf in BLOGS_DIR.glob(f"{date_str}*.md"):
+            bslug = bf.stem[len(date_str) + 1:]
+            bparsed = _parse_markdown_file(bf)
+            if bparsed:
+                bfm = bparsed["frontmatter"]
+                bpt = (bfm.get("paper_title") or bfm.get("title") or "").strip()
+                if bpt:
+                    blog_map[slugify(bpt)] = bslug
+
         for idx, raw in enumerate(data):
             try:
                 item = ScoredItem(**raw)
@@ -715,6 +797,9 @@ def list_all_materials(days: int = 90) -> list[dict]:
             has_note = any(title_slug in s or s in title_slug for s in note_slugs) if note_slugs else False
             matched_post_slug = next((s for s in post_slugs if title_slug in s or s in title_slug), None)
             matched_note_slug = next((s for s in note_slugs if title_slug in s or s in title_slug), None)
+
+            # 匹配 blog
+            matched_blog_slug = next((bs for bts, bs in blog_map.items() if title_slug in bts or bts in title_slug), None)
 
             total = item.rule_score + (item.llm_score or 0)
             result.append({
@@ -739,8 +824,10 @@ def list_all_materials(days: int = 90) -> list[dict]:
                 "llm_reason": item.llm_reason,
                 "has_post": has_post,
                 "has_note": has_note,
+                "has_blog": matched_blog_slug is not None,
                 "post_slug": matched_post_slug,
                 "note_slug": matched_note_slug,
+                "blog_slug": matched_blog_slug,
             })
 
     result.sort(key=lambda x: (x["date_str"], x["total_score"]), reverse=True)
@@ -788,12 +875,33 @@ def get_material_detail(date_str: str, index: int) -> dict | None:
                 note_slug = slug
             break
 
+    # 尋找對應的 blog 文章
+    blog_content = None
+    blog_slug = None
+    for f in BLOGS_DIR.glob(f"{date_str}*.md"):
+        slug = f.stem[len(date_str) + 1:]
+        blog_data = get_blog(date_str, slug)
+        if not blog_data:
+            continue
+        fm = blog_data["frontmatter"]
+        paper_title = (fm.get("paper_title") or fm.get("title") or "").strip().lower()
+        paper_slug = slugify(paper_title) if paper_title else ""
+        if paper_title and (title_slug in paper_slug or paper_slug in title_slug or paper_title in detail["title"].lower() or detail["title"].lower() in paper_title):
+            from markdown_it import MarkdownIt as _MdIt
+            md = _MdIt()
+            blog_content = md.render(blog_data["body"])
+            blog_slug = slug
+            break
+
     detail["post_content"] = post_content
     detail["note_content"] = note_content
+    detail["blog_content"] = blog_content
     detail["post_slug"] = post_slug
     detail["note_slug"] = note_slug
+    detail["blog_slug"] = blog_slug
     detail["has_post"] = post_content is not None
     detail["has_note"] = note_content is not None
+    detail["has_blog"] = blog_content is not None
 
     return detail
 
@@ -1121,6 +1229,95 @@ def list_bookmarked_items(status: str = "") -> list[dict]:
         key=lambda x: (x.get("date_str", ""), x.get("total_score", 0)),
         reverse=True,
     )
+
+
+# ──────────────────────────────────────────────────────────
+# Promote to Blog（推送為 Blog 文章）
+# ──────────────────────────────────────────────────────────
+
+def promote_to_blog(date_str: str, index: int) -> dict:
+    """將 Blog Draft (output/posts/) 推送為 Blog 文章 (output/blogs/)。
+
+    1. 讀取 scored item metadata
+    2. 讀取 Blog Draft body
+    3. 組合 frontmatter + md body + <!-- fb --> + 純文字 body
+    4. 寫入 output/blogs/{date}_{slug}.md
+    5. 若已收藏，自動更新狀態為 published
+    6. invalidate sidebar cache
+    7. 回傳新 blog URL
+    """
+    import yaml
+
+    d = date.fromisoformat(date_str)
+    detail = get_item_detail(d, index)
+    if detail is None:
+        raise ValueError("找不到該素材")
+
+    title = detail["title"]
+    title_slug = slugify(title)
+
+    # 找 Blog Draft 檔案
+    post_path = None
+    post_slug = None
+    for f in POSTS_DIR.glob(f"{date_str}*.md"):
+        slug = f.stem[len(date_str) + 1:]
+        if title_slug in slug or slug in title_slug:
+            post_path = f
+            post_slug = slug
+            break
+
+    if post_path is None:
+        raise ValueError("找不到對應的 Blog Draft")
+
+    parsed = _parse_markdown_file(post_path)
+    if not parsed:
+        raise ValueError("無法解析 Blog Draft")
+
+    post_body = parsed["body"]
+
+    # 產生純文字版本（去除 markdown 標記）
+    plain_body = re.sub(r"[#*`>\[\]()]+", "", post_body)
+    plain_body = re.sub(r"!\[.*?\]\(.*?\)", "", plain_body)
+    plain_body = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", plain_body)
+    plain_body = re.sub(r"\n{3,}", "\n\n", plain_body).strip()
+
+    # 組合 frontmatter
+    fm = {
+        "title": title,
+        "paper_title": title,
+        "paper_url": detail.get("url", ""),
+        "tags": detail.get("tags", []),
+        "source": detail.get("source_name", ""),
+        "score": detail.get("total_score", 0),
+        "tldr": (detail.get("llm_reason") or "")[:200],
+    }
+
+    blog_content = "---\n" + yaml.dump(fm, allow_unicode=True, default_flow_style=False) + "---\n\n"
+    blog_content += post_body
+    blog_content += "\n\n<!-- fb -->\n\n"
+    blog_content += plain_body
+
+    # 寫入 blog 檔案
+    blog_path = BLOGS_DIR / f"{date_str}_{post_slug}.md"
+    BLOGS_DIR.mkdir(parents=True, exist_ok=True)
+    blog_path.write_text(blog_content, encoding="utf-8")
+
+    # 若已收藏，自動更新狀態為 written（使用者自行移到 published 代表已發佈到 FB）
+    bm = _load_bookmarks()
+    key = f"{date_str}_{index}"
+    if key in bm:
+        bm[key]["status"] = "written"
+        _save_bookmarks(bm)
+
+    # Invalidate caches
+    invalidate_sidebar_cache()
+
+    _logger.info("Promoted to blog", extra={"date": date_str, "index": index, "slug": post_slug})
+
+    return {
+        "blog_url": f"/blog/{date_str}/{post_slug}",
+        "slug": post_slug,
+    }
 
 
 # ──────────────────────────────────────────────────────────

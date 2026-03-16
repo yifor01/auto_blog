@@ -161,17 +161,17 @@ python -m src.cli digest --date 2026-02-28  # 指定日期
 ### 啟動 Web 監控介面
 
 ```bash
-# 啟動 FastAPI Server（預設 port 8080）
+# 啟動 FastAPI Server（預設 port 8555）
 python -m src.cli web
 ```
 
-瀏覽器開啟 `http://127.0.0.1:8080/dashboard` 即可進入系統戰情室。
+瀏覽器開啟 `http://127.0.0.1:8555/dashboard` 即可進入系統戰情室。
 
 ---
 
 ## ⚙️ 動態設定（Settings UI）
 
-啟動 Web server 後，前往 `http://127.0.0.1:8080/settings` 即可在瀏覽器中即時調整所有參數：
+啟動 Web server 後，前往 `http://127.0.0.1:8555/settings` 即可在瀏覽器中即時調整所有參數：
 
 | 區塊 | 可調整項目 |
 |------|-----------|
