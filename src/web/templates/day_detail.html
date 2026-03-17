@@ -285,7 +285,7 @@
   display: flex;
   align-items: flex-start;
   gap: 14px;
-  padding: 14px 18px;
+  padding: 16px 20px;
   border-bottom: 1px solid var(--br4);
   transition: background 0.1s;
   animation: fadeUp 0.3s var(--spring) both;
@@ -323,9 +323,9 @@
   min-width: 0;
 }
 .dd-item-title {
-  font-size: 13.5px;
-  font-weight: 500;
-  color: var(--t2);
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--t1);
   text-decoration: none;
   line-height: 1.4;
   display: -webkit-box;
@@ -339,14 +339,34 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-top: 4px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+.dd-org {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--t3);
+  font-weight: 500;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dd-org svg { width: 11px; height: 11px; opacity: 0.5; }
+.dd-item-meta-secondary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
   flex-wrap: wrap;
 }
 .dd-item-reason {
   font-size: 12px;
-  color: var(--t5);
+  color: var(--t3);
   line-height: 1.5;
-  margin-top: 4px;
+  margin-top: 6px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -373,26 +393,6 @@
   justify-content: flex-end;
 }
 
-/* ── Batch mode ── */
-.batch-mode .dd-item-left { position: relative; }
-.batch-cb {
-  display: none;
-  position: absolute; top: 0; left: 0;
-  width: 28px; height: 28px;
-  accent-color: var(--av);
-  cursor: pointer;
-}
-.batch-mode .dd-item.dd-unscored .batch-cb { display: none !important; }
-.batch-mode .batch-cb { display: block; }
-.batch-mode .dd-item-rank { display: none; }
-.batch-bar {
-  position: fixed; bottom: 0; left: 240px; right: 0;
-  background: var(--bg-hd); backdrop-filter: blur(20px);
-  border-top: 1px solid var(--br2); padding: 10px 28px;
-  display: none; align-items: center; gap: 12px; z-index: 50;
-}
-.batch-bar.visible { display: flex; }
-@media(max-width:768px) { .batch-bar { left: 0; } }
 </style>
 
 <!-- ── Hero Summary Strip ── -->
@@ -517,14 +517,6 @@
       </span>
     </h3>
     {% if items %}
-    <div style="display:flex; gap:8px; align-items:center; margin-bottom:6px;">
-      <button id="batch-toggle" onclick="toggleBatchMode()"
-              style="font-size:11px; padding:3px 10px; border-radius:6px; border:1px solid var(--br2);
-                     background:var(--bg-in); color:var(--t4); cursor:pointer; transition:all 0.15s;">
-        ☐ 批量收藏
-      </button>
-      <span id="batch-count" style="font-size:11px; color:var(--t5); display:none;">已選 0 筆</span>
-    </div>
     <div class="source-filter" id="source-filter">
       <button class="sf-chip sf-active" data-source="__all__" onclick="toggleSourceFilter(this)">全部<span class="sf-count">{{ items|length }}</span></button>
       {% set ns = namespace(seen=[]) %}
@@ -556,7 +548,6 @@
       <!-- Left: rank + star -->
       <div class="dd-item-left">
         <div class="dd-item-rank">{{ loop.index }}</div>
-        {% if it.scored %}<input type="checkbox" class="batch-cb" data-date="{{ date_str }}" data-index="{{ it.index }}" onchange="updateBatchCount()">{% endif %}
         <button class="bm-star{% if it.scored and it.index in bookmarked_indices %} starred{% endif %}"
                 onclick="{% if it.scored %}toggleDayBookmark(this, '{{ date_str }}', {{ it.index }}){% endif %}"
                 title="收藏"
@@ -570,14 +561,15 @@
         <a href="{{ it.url }}" target="_blank" class="dd-item-title">
           {{ it.title }}
         </a>
+        <!-- 行 2: 機構 + 來源 + badges -->
         <div class="dd-item-meta">
-          <span class="chip" style="font-size:10.5px;">{{ it.source_name or it.source }}</span>
-          {% for t in (it.tags or [])[:3] %}
-          <span class="tag-v" style="font-size:10px; padding:1px 5px;">{{ t }}</span>
-          {% endfor %}
-          {% if it.authors %}
-          <span style="font-size:10.5px; color:var(--t4);">{{ it.authors[0] }}{% if it.authors|length > 1 %} et al.{% endif %}</span>
+          {% if it.organization %}
+          <span class="dd-org" title="{{ it.organization }}">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+            {{ it.organization }}
+          </span>
           {% endif %}
+          <span class="chip" style="font-size:10.5px;">{{ it.source_name or it.source }}</span>
           {% if it.scored %}
             {% set ckey = (it.title or '')|lower|trim %}
             {% if ckey in content_map %}
@@ -594,6 +586,17 @@
             {% endif %}
           {% endif %}
         </div>
+        <!-- 行 3: tags + authors -->
+        {% if (it.tags or [])[:3] or it.authors %}
+        <div class="dd-item-meta-secondary">
+          {% for t in (it.tags or [])[:3] %}
+          <span class="tag-v" style="font-size:10px; padding:1px 5px;">{{ t }}</span>
+          {% endfor %}
+          {% if it.authors %}
+          <span style="font-size:10.5px; color:var(--t4);">{{ it.authors[0] }}{% if it.authors|length > 1 %} et al.{% endif %}</span>
+          {% endif %}
+        </div>
+        {% endif %}
         {% if it.llm_reason %}
         <div class="dd-item-reason">{{ it.llm_reason }}</div>
         {% elif not it.scored and it.abstract %}
@@ -640,21 +643,6 @@
   {% endif %}
 </section>
 
-<!-- Batch action bar -->
-<div class="batch-bar" id="batch-bar">
-  <span style="font-size:13px; color:var(--t2); font-weight:600;" id="batch-bar-count">已選 0 筆</span>
-  <button onclick="batchBookmark()"
-          style="padding:6px 14px; border-radius:7px; border:1px solid var(--ay);
-                 background:rgba(255,149,0,0.1); color:var(--ay); font-size:12px;
-                 font-weight:600; cursor:pointer;">
-    ⭐ 收藏選取
-  </button>
-  <button onclick="toggleBatchMode()"
-          style="padding:6px 14px; border-radius:7px; border:1px solid var(--br2);
-                 background:var(--bg-in); color:var(--t4); font-size:12px; cursor:pointer;">
-    取消
-  </button>
-</div>
 {% endblock %}
 
 {% block scripts %}
@@ -1199,82 +1187,5 @@ async function toggleDayBookmark(btn, dateStr, index) {
   }
 }
 
-// ---- Batch mode ----
-var _batchMode = false;
-function toggleBatchMode() {
-  _batchMode = !_batchMode;
-  var card = document.querySelector('.card');
-  var btn = document.getElementById('batch-toggle');
-  var bar = document.getElementById('batch-bar');
-  if (_batchMode) {
-    if (card) card.classList.add('batch-mode');
-    btn.style.background = 'var(--av-d)';
-    btn.style.borderColor = 'var(--av-b)';
-    btn.style.color = 'var(--av)';
-    btn.textContent = '☑ 批量選取中';
-    bar.classList.add('visible');
-  } else {
-    if (card) card.classList.remove('batch-mode');
-    btn.style.background = '';
-    btn.style.borderColor = '';
-    btn.style.color = '';
-    btn.textContent = '☐ 批量收藏';
-    bar.classList.remove('visible');
-    document.querySelectorAll('.batch-cb').forEach(function(cb) { cb.checked = false; });
-  }
-  updateBatchCount();
-}
-
-function updateBatchCount() {
-  var checked = document.querySelectorAll('.batch-cb:checked').length;
-  var countEl = document.getElementById('batch-count');
-  var barCount = document.getElementById('batch-bar-count');
-  if (countEl) {
-    countEl.textContent = '已選 ' + checked + ' 筆';
-    countEl.style.display = checked > 0 ? '' : 'none';
-  }
-  if (barCount) barCount.textContent = '已選 ' + checked + ' 筆';
-}
-
-async function batchBookmark() {
-  var checked = document.querySelectorAll('.batch-cb:checked');
-  if (checked.length === 0) { showToast('請先勾選要收藏的項目', '⚠️'); return; }
-  var items = [];
-  checked.forEach(function(cb) {
-    items.push({ date_str: cb.dataset.date, index: parseInt(cb.dataset.index) });
-  });
-  try {
-    var res = await fetch('/api/bookmark/batch', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ items: items })
-    });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    var data = await res.json();
-    // 更新星號
-    checked.forEach(function(cb) {
-      var row = cb.closest('.dd-item');
-      var star = row ? row.querySelector('.bm-star') : null;
-      if (star && !star.classList.contains('starred')) {
-        star.classList.add('starred');
-        star.textContent = '★';
-      }
-    });
-    if (data.bookmarks_count !== undefined) updateSidebarBadge(data.bookmarks_count);
-    var bmCountEl = document.getElementById('bm-count');
-    if (bmCountEl) {
-      var stars = document.querySelectorAll('.bm-star.starred').length;
-      bmCountEl.textContent = stars > 0 ? ('★ ' + stars + ' 已收藏') : '';
-    }
-    if (typeof showToastHtml === 'function') {
-      showToastHtml('已收藏 ' + data.bookmarked + ' 筆 <a href="/queue" class="link-toast">前往待寫清單 →</a>', '⭐');
-    } else {
-      showToast('已收藏 ' + data.bookmarked + ' 筆', '⭐');
-    }
-    toggleBatchMode();
-  } catch(e) {
-    showToast('批量收藏失敗', '❌');
-  }
-}
 </script>
 {% endblock %}

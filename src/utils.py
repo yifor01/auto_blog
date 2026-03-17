@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import itertools
 import json
 import os
 from datetime import date, datetime
@@ -43,14 +44,49 @@ def load_config() -> dict:
         return yaml.safe_load(f)
 
 
+# ──────────────────────────────────────────────────────────
+# Multi-key round-robin
+# ──────────────────────────────────────────────────────────
+
+_API_KEYS: list[str] = []
+for _i in range(1, 10):  # 支援最多 9 組
+    _k = os.getenv(f"AIHUBMIX_API_KEY_{_i}", "")
+    if _k:
+        _API_KEYS.append(_k)
+
+# fallback 到舊的 OPENROUTER_API_KEY
+if not _API_KEYS:
+    _old_key = os.getenv("OPENROUTER_API_KEY", "")
+    if _old_key:
+        _API_KEYS.append(_old_key)
+
+if not _API_KEYS:
+    raise ValueError("No API keys configured (set AIHUBMIX_API_KEY_* or OPENROUTER_API_KEY)")
+
+_key_cycle = itertools.cycle(_API_KEYS)
+_logger.info("API keys loaded", extra={"key_count": len(_API_KEYS)})
+
+
+def _get_api_base_url() -> str:
+    """取得 API base URL：AIHUBMIX_API_URL > OPENROUTER_API_URL > config.yaml。"""
+    url = os.getenv("AIHUBMIX_API_URL") or os.getenv("OPENROUTER_API_URL")
+    if url:
+        return url
+    config = load_config()
+    return config.get("llm", {}).get("api_url", "https://openrouter.ai/api/v1")
+
+
+def get_next_api_key() -> str:
+    """Round-robin 取得下一個 API key。"""
+    return next(_key_cycle)
+
+
 def get_llm_client() -> OpenAI:
-    """建立 OpenRouter 相容的 OpenAI client."""
-    api_key = os.getenv("OPENROUTER_API_KEY")
-    if not api_key:
-        raise ValueError("OPENROUTER_API_KEY 未設定，請在 .env 檔案中配置")
+    """建立帶有輪替 key 的 OpenAI-compatible client。每次呼叫使用下一個 key。"""
+    api_key = get_next_api_key()
     return OpenAI(
         api_key=api_key,
-        base_url=os.getenv("OPENROUTER_API_URL", "https://openrouter.ai/api/v1"),
+        base_url=_get_api_base_url(),
     )
 
 
@@ -73,6 +109,7 @@ def llm_chat(
     max_tokens: int | None = None,
     temperature: float = 0.7,
     max_retries: int = 2,
+    fallback_model: str | None = None,
 ) -> str:
     """呼叫 LLM 並返回回應文字。失敗時嘗試 fallback model。含 rate limit retry。"""
     import time
@@ -81,12 +118,11 @@ def llm_chat(
     llm_cfg = config["llm"]
     model = model or llm_cfg["model"]
     max_tokens = max_tokens or llm_cfg.get("max_tokens", 8192)
-    fallback = llm_cfg.get("fallback_model")
+    fallback = fallback_model or llm_cfg.get("fallback_model")
 
-    client = get_llm_client()
-
-    # 嘗試主模型
+    # 嘗試主模型（每次 attempt 輪替 key）
     for attempt in range(max_retries + 1):
+        client = get_llm_client()
         try:
             resp = client.chat.completions.create(
                 model=model,
@@ -106,7 +142,7 @@ def llm_chat(
             err_str = str(e)
             if "429" in err_str and attempt < max_retries:
                 wait = (attempt + 1) * 5
-                _logger.warning("Rate limited, retrying", extra={"model": model, "wait_seconds": wait, "attempt": attempt + 1})
+                _logger.warning("Rate limited, retrying with next key", extra={"model": model, "wait_seconds": wait, "attempt": attempt + 1})
                 time.sleep(wait)
                 continue
             if fallback and fallback != model:
@@ -117,6 +153,7 @@ def llm_chat(
     # Fallback 模型
     if fallback and fallback != model:
         for attempt in range(max_retries + 1):
+            client = get_llm_client()
             try:
                 resp = client.chat.completions.create(
                     model=fallback,
@@ -128,7 +165,7 @@ def llm_chat(
             except Exception as e:
                 if "429" in str(e) and attempt < max_retries:
                     wait = (attempt + 1) * 5
-                    _logger.warning("Fallback rate limited, retrying", extra={"model": fallback, "wait_seconds": wait, "attempt": attempt + 1})
+                    _logger.warning("Fallback rate limited, retrying with next key", extra={"model": fallback, "wait_seconds": wait, "attempt": attempt + 1})
                     time.sleep(wait)
                     continue
                 raise

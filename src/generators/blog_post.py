@@ -183,7 +183,8 @@ Anthropic 先前的觀察性研究顯示，AI 可以讓某些任務加速 80%。
 def generate_blog_post(item: ScoredItem) -> GeneratedContent:
     """為單一高分 item 生成 Facebook 部落格貼文。"""
     config = load_config()
-    model = config["llm"]["model"]
+    llm_cfg = config["llm"]
+    model = llm_cfg.get("generation_model", llm_cfg["model"])
 
     user_msg = f"""請根據以下內容，撰寫一篇 Facebook 科技部落格貼文：
 
@@ -200,7 +201,8 @@ def generate_blog_post(item: ScoredItem) -> GeneratedContent:
 
     full_prompt = f"[SYSTEM]\n{BLOG_SYSTEM_PROMPT}\n\n[USER]\n{user_msg}"
 
-    _logger.debug("LLM blog generation started", extra={"title": item.item.title[:80]})
+    gen_fallback = llm_cfg.get("generation_fallback_model", llm_cfg.get("fallback_model"))
+    _logger.debug("LLM blog generation started", extra={"title": item.item.title[:80], "model": model})
     content = llm_chat(
         messages=[
             {"role": "system", "content": BLOG_SYSTEM_PROMPT},
@@ -208,6 +210,7 @@ def generate_blog_post(item: ScoredItem) -> GeneratedContent:
         ],
         model=model,
         temperature=0.7,
+        fallback_model=gen_fallback,
     )
 
     return GeneratedContent(
@@ -249,7 +252,7 @@ generated_at: {gen.generated_at.isoformat()}
 
 
 def generate_and_save_posts(items: list[ScoredItem], target_date: date | None = None) -> list[str]:
-    """批量生成並儲存 blog posts。"""
+    """批量生成並儲存 blog posts。新 top-K 全部生成（覆寫同名舊文），不在 top-K 的舊文保留不動。"""
     import time
 
     config = load_config()

@@ -160,6 +160,7 @@ async def dashboard(request: Request):
     week_status = ds.get_week_status(7, running_dates=_get_running_dates())
     top_items = ds.get_week_top_items(7, top_k=10)
     charts = ds.get_dashboard_charts(30)
+    recent_blogs = ds.list_all_blogs()[:5]
     return templates.TemplateResponse(
         "dashboard.html",
         {
@@ -169,6 +170,7 @@ async def dashboard(request: Request):
             "today": date.today().isoformat(),
             "today_str": date.today().isoformat(),
             "charts": charts,
+            "recent_blogs": recent_blogs,
             "sidebar_stats": ds.get_sidebar_stats(),
         },
     )
@@ -465,11 +467,31 @@ async def blog_view(request: Request, date_str: str, slug: str):
     md = MarkdownIt()
     content_html = md.render(blog["body"])
     content_fb = blog.get("body_fb", "")
+
+    # 比對 scored JSON 找對應 material index
+    material_index = None
+    fm = blog["frontmatter"]
+    paper_title = (fm.get("paper_title") or fm.get("title") or "").strip()
+    if paper_title:
+        from src.utils import slugify as _slugify
+        target_slug = _slugify(paper_title)
+        try:
+            d = date.fromisoformat(date_str)
+            items = ds.get_day_items(d)
+            for item in items:
+                item_slug = _slugify(item.get("title", ""))
+                if item_slug and (target_slug in item_slug or item_slug in target_slug):
+                    material_index = item["index"]
+                    break
+        except Exception:
+            pass
+
     return templates.TemplateResponse(
         "blog_view.html",
         {"request": request, "date_str": date_str, "slug": slug,
          "frontmatter": blog["frontmatter"], "content_html": content_html,
          "content_fb": content_fb,
+         "material_index": material_index,
          "sidebar_stats": ds.get_sidebar_stats()},
     )
 
@@ -690,7 +712,7 @@ async def api_bookmark_status(request: Request, date_str: str, index: int):
     """更新書籤狀態。"""
     body = await request.json()
     status = body.get("status", "")
-    if status not in ("bookmarked", "writing", "written", "published"):
+    if status not in ("bookmarked", "written", "published"):
         raise HTTPException(status_code=400, detail="無效的狀態")
     ds.update_bookmark_status(date_str, index, status)
     ds.invalidate_sidebar_cache()
@@ -711,35 +733,6 @@ async def api_bookmarks(status: str = ""):
     return JSONResponse(content={"items": items})
 
 
-@app.post("/api/bookmark/batch")
-async def api_bookmark_batch(request: Request):
-    """批量收藏素材。"""
-    body = await request.json()
-    items_to_bookmark = body.get("items", [])
-    if not items_to_bookmark:
-        raise HTTPException(status_code=400, detail="items 不可為空")
-
-    count = 0
-    for entry in items_to_bookmark:
-        d_str = entry.get("date_str", "")
-        idx = entry.get("index")
-        if not d_str or idx is None:
-            continue
-        try:
-            d = date.fromisoformat(d_str)
-            detail = ds.get_item_detail(d, int(idx))
-            title = detail["title"] if detail else ""
-        except Exception:
-            title = ""
-        ds.set_bookmark(d_str, int(idx), title=title)
-        count += 1
-
-    # 計算書籤數
-    bm = ds.get_all_bookmarks()
-    bookmarks_count = sum(1 for v in bm.values() if v.get("status") not in ("written", "published"))
-    ds.invalidate_sidebar_cache()
-
-    return JSONResponse(content={"bookmarked": count, "bookmarks_count": bookmarks_count})
 
 
 @app.post("/api/promote-to-blog/{date_str}/{index}")
@@ -763,15 +756,16 @@ async def writing_queue(request: Request):
     """待寫清單（Kanban 視圖）。"""
     bookmarks = ds.get_all_bookmarks()
 
-    # 按狀態分組
+    # 按狀態分組（writing 已移除，自動歸入 bookmarked）
     columns = {
         "bookmarked": [],
-        "writing": [],
         "written": [],
         "published": [],
     }
     for key, val in bookmarks.items():
         status = val.get("status", "bookmarked")
+        if status == "writing":
+            status = "bookmarked"
         if status not in columns:
             status = "bookmarked"
 
@@ -787,10 +781,12 @@ async def writing_queue(request: Request):
         entry = {**val, "key": key}
         if detail:
             entry["title"] = detail["title"]
+            entry["url"] = detail.get("url", "")
             entry["source_name"] = detail.get("source_name", "")
             entry["total_score"] = detail.get("total_score", 0)
             entry["tags"] = detail.get("tags", [])
             entry["abstract"] = detail.get("abstract", "")
+            entry["llm_reason"] = detail.get("llm_reason", "")
 
             # 檢查是否有 Blog Draft
             from src.utils import slugify as _slugify

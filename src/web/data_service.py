@@ -89,24 +89,46 @@ def get_week_top_items(days: int = 7, top_k: int = 5) -> list[dict]:
         data = load_json(scored_path)
         if not isinstance(data, list):
             continue
-        for raw in data:
+
+        date_str = d.isoformat()
+        # 建立該日 blog paper_title → slug 映射
+        blog_map: dict[str, str] = {}
+        for bf in BLOGS_DIR.glob(f"{date_str}*.md"):
+            bslug = bf.stem[len(date_str) + 1:]
+            bparsed = _parse_markdown_file(bf)
+            if bparsed:
+                bfm = bparsed["frontmatter"]
+                bpt = (bfm.get("paper_title") or bfm.get("title") or "").strip()
+                if bpt:
+                    blog_map[slugify(bpt)] = bslug
+
+        for idx, raw in enumerate(data):
             try:
                 item = ScoredItem(**raw)
+                title_slug = slugify(item.item.title)
+                matched_blog_slug = next(
+                    (bs for bts, bs in blog_map.items() if title_slug in bts or bts in title_slug),
+                    None,
+                )
                 all_items.append(
                     {
-                        "date": d.isoformat(),
+                        "date": date_str,
+                        "index": idx,
                         "title": item.item.title,
                         "source_name": item.item.source_name,
+                        "organization": item.item.organization,
                         "total_score": item.rule_score + (item.llm_score or 0),
                         "llm_reason": item.llm_reason,
                         "url": item.item.url,
                         "tags": item.item.tags,
                         "authors": item.item.authors,
                         "abstract": item.item.abstract,
+                        "has_blog": matched_blog_slug is not None,
+                        "blog_slug": matched_blog_slug,
                     }
                 )
             except Exception:
-                _logger.debug("Skipping malformed scored item in weekly top", extra={"date": d.isoformat()})
+                _logger.debug("Skipping malformed scored item in weekly top", extra={"date": date_str})
                 continue
 
     all_items.sort(key=lambda x: x["total_score"], reverse=True)
@@ -515,7 +537,7 @@ def get_sidebar_stats() -> dict:
         if isinstance(bm_data, dict):
             bookmarks_count = sum(
                 1 for v in bm_data.values()
-                if v.get("status") not in ("written", "published")
+                if v.get("status") in ("bookmarked", "writing")
             )
 
     result = {

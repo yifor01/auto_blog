@@ -13,12 +13,11 @@
 <style>
 .kanban {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: 2fr 1fr 1fr;
   gap: 16px;
   min-height: 400px;
 }
-@media(max-width:1024px) { .kanban { grid-template-columns: repeat(2, 1fr); } }
-@media(max-width:640px)  { .kanban { grid-template-columns: 1fr; } }
+@media(max-width:1024px) { .kanban { grid-template-columns: 1fr; } }
 
 .kanban-col {
   background: var(--bg-s);
@@ -51,6 +50,13 @@
   outline: 2px dashed var(--av-b);
 }
 
+/* ── 已完成/已發布 欄可捲動 ── */
+.col-written .kanban-drop,
+.col-published .kanban-drop {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
 .kb-card {
   background: var(--bg-c); border: 1px solid var(--br);
   border-radius: 10px; padding: 12px; margin-bottom: 10px;
@@ -78,9 +84,18 @@ body.is-dragging .kb-card:not(.dragging) { pointer-events: none; }
 }
 .kb-remove:hover { color: var(--ar); background: rgba(255,59,48,0.1); }
 
+/* ── 精簡卡片（已完成/已發布）── */
+.col-written .kb-card,
+.col-published .kb-card {
+  padding: 8px 12px;
+}
+.col-written .kb-card .kb-detail,
+.col-published .kb-card .kb-detail {
+  display: none;
+}
+
 /* 狀態顏色 */
 .col-bookmarked .kanban-header { border-bottom-color: var(--ay); }
-.col-writing .kanban-header { border-bottom-color: var(--av); }
 .col-written .kanban-header { border-bottom-color: var(--ag); }
 .col-published .kanban-header { border-bottom-color: var(--ac); }
 </style>
@@ -94,7 +109,7 @@ body.is-dragging .kb-card:not(.dragging) { pointer-events: none; }
   </p>
 </div>
 
-{% set total_count = (columns.bookmarked|length) + (columns.writing|length) + (columns.written|length) + (columns.published|length) %}
+{% set total_count = (columns.bookmarked|length) + (columns.written|length) + (columns.published|length) %}
 
 {% if total_count == 0 %}
 <div class="card" style="padding:48px; text-align:center;">
@@ -109,7 +124,6 @@ body.is-dragging .kb-card:not(.dragging) { pointer-events: none; }
 <div class="kanban">
   {% set col_config = [
     ('bookmarked', '已收藏', '☆'),
-    ('writing',    '撰寫中', '✏️'),
     ('written',    '已完成', '✅'),
     ('published',  '已發布', '🚀'),
   ] %}
@@ -129,15 +143,33 @@ body.is-dragging .kb-card:not(.dragging) { pointer-events: none; }
            data-index="{{ item.index }}"
            ondragstart="onDragStart(event)" ondragend="onDragEnd(event)">
         <button class="kb-remove" onclick="removeBookmark('{{ item.date_str }}', {{ item.index }}, this)" title="移除收藏">✕</button>
-        <a href="/material/{{ item.date_str }}/{{ item.index }}?from=queue" class="kb-title" style="text-decoration:none; display:block;">
-          {{ item.title or item.key }}
-        </a>
-        {% if item.abstract %}
-        <div style="font-size:11px; color:var(--t5); line-height:1.5; margin:4px 0 6px;
-                    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">
-          {{ item.abstract[:120] }}{% if item.abstract|length > 120 %}…{% endif %}
+        <div style="display:flex; align-items:center; gap:5px;">
+          <a href="/material/{{ item.date_str }}/{{ item.index }}?from=queue" class="kb-title" style="text-decoration:none; display:block; flex:1; min-width:0;">
+            {{ item.title or item.key }}
+          </a>
+          {% if item.url %}
+          <a href="{{ item.url }}" target="_blank" rel="noopener" style="flex-shrink:0; color:var(--t5); opacity:0.6;" title="開啟原文"
+             onclick="event.stopPropagation();">
+            <svg style="width:12px; height:12px;" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+          </a>
+          {% endif %}
         </div>
-        {% endif %}
+        <!-- 詳細資訊：已完成/已發布欄隱藏 -->
+        <div class="kb-detail">
+          {% if item.abstract %}
+          <div style="font-size:11px; color:var(--t5); line-height:1.5; margin:4px 0 6px;
+                      display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">
+            {{ item.abstract[:120] }}{% if item.abstract|length > 120 %}…{% endif %}
+          </div>
+          {% endif %}
+          {% if item.llm_reason %}
+          <div style="font-size:11px; color:var(--t3); line-height:1.5; margin:2px 0 6px;
+                      display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+                      padding:4px 8px; background:var(--bg-hv); border-radius:6px; border-left:2px solid var(--av);">
+            {{ item.llm_reason }}
+          </div>
+          {% endif %}
+        </div>
         <div class="kb-meta">
           <span>{{ item.date_str }}</span>
           {% if item.source_name %}<span>{{ item.source_name }}</span>{% endif %}
@@ -155,7 +187,7 @@ body.is-dragging .kb-card:not(.dragging) { pointer-events: none; }
           </a>
           {% endif %}
         </div>
-        {% if item.tags %}
+        {% if item.tags and status == 'bookmarked' %}
         <div style="display:flex; gap:4px; flex-wrap:wrap; margin-top:6px;">
           {% for t in item.tags[:3] %}
           <span class="tag-v" style="font-size:9px; padding:1px 5px;">{{ t }}</span>

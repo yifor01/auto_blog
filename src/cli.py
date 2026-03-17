@@ -99,16 +99,16 @@ def _has_posts(d: date) -> bool:
 
 
 def _clear_outputs(d: date) -> None:
-    """清除指定日期的所有輸出檔案（posts, notes, prompts）。"""
+    """清除指定日期的 prompts。Posts 保留（force 重跑只補生成新的，不刪舊文章）。"""
     prefix = d.isoformat()
     cleared = 0
-    for dir_path in [POSTS_DIR, NOTES_DIR, PROMPTS_DIR]:
+    for dir_path in [PROMPTS_DIR]:
         for f in dir_path.glob(f"{prefix}*.md"):
             f.unlink()
             console.print(f"  🗑️  刪除 {f.name}")
             cleared += 1
     if cleared == 0:
-        console.print("  （無已生成的輸出檔案）")
+        console.print("  （無需清除的輸出檔案）")
 
 
 def _get_pipeline_state(d: date) -> str:
@@ -231,27 +231,15 @@ def _score(items: list[ContentItem], target_date: date | None = None) -> list[Sc
     return top_items
 
 
-def _generate(top_items: list[ScoredItem], target_date: date | None = None) -> tuple[list[str], list[str]]:
-    """生成 blog posts 和 notes。已生成則跳過。"""
+def _generate(top_items: list[ScoredItem], target_date: date | None = None) -> list[str]:
+    """生成 blog posts。逐篇檢查，已有 post 的跳過，新的才生成。"""
     from src.generators.blog_post import generate_and_save_posts
-    from src.generators.note import generate_and_save_notes
 
     target_date = target_date or date.today()
 
-    if _has_posts(target_date):
-        console.print(
-            f"[cyan]♻️  {target_date} 已有生成結果, 跳過生成[/cyan]"
-        )
-        prefix = target_date.isoformat()
-        existing = [str(f) for f in POSTS_DIR.glob(f"{prefix}*.md")]
-        return existing, []
-
     console.rule("[bold blue]✍️ 生成階段[/bold blue]")
 
-    post_paths = generate_and_save_posts(top_items, target_date)
-    note_paths = generate_and_save_notes(top_items, target_date)
-
-    return post_paths, note_paths
+    return generate_and_save_posts(top_items, target_date)
 
 
 # ──────────────────────────────────────────────────────────
@@ -322,18 +310,17 @@ def run(
 
     _t0 = _time.time()
     _logger.info("Stage started", extra={"pipeline_stage": "generate", "stage_action": "start"})
-    post_paths, note_paths = _generate(top_items, d)
+    post_paths = _generate(top_items, d)
     _logger.info("Stage ended", extra={
         "pipeline_stage": "generate", "stage_action": "end",
         "elapsed": round(_time.time() - _t0, 1),
-        "item_count": len(post_paths) + len(note_paths),
+        "item_count": len(post_paths),
     })
 
     console.rule("[bold green]📋 每日報告[/bold green]")
     console.print(f"  📡 收集: {len(items)} unique items")
     console.print(f"  🏆 Top-{len(top_items)} selected")
     console.print(f"  📝 Blog posts: {len(post_paths)}")
-    console.print(f"  📓 Notes: {len(note_paths)}")
     for p in post_paths:
         console.print(f"    → {p}")
 
@@ -445,11 +432,11 @@ def generate(
     top_items = [ScoredItem(**item) for item in scored_data[:limit]]
     _t0 = _time.time()
     _logger.info("Stage started", extra={"pipeline_stage": "generate", "stage_action": "start"})
-    post_paths, note_paths = _generate(top_items, d)
+    post_paths = _generate(top_items, d)
     _logger.info("Stage ended", extra={
         "pipeline_stage": "generate", "stage_action": "end",
         "elapsed": round(_time.time() - _t0, 1),
-        "item_count": len(post_paths) + len(note_paths),
+        "item_count": len(post_paths),
     })
 
 

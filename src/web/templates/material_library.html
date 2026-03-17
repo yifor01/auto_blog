@@ -149,8 +149,10 @@
 .pill {
   font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 600;
 }
-.pill-active-green { background: rgba(52,199,89,0.15); color: var(--ag); border: 1px solid rgba(52,199,89,0.3); }
-.pill-active-cyan  { background: rgba(50,173,230,0.15); color: var(--ac); border: 1px solid rgba(50,173,230,0.3); }
+.pill-active-green  { background: rgba(52,199,89,0.15); color: var(--ag); border: 1px solid rgba(52,199,89,0.3); }
+.pill-active-cyan   { background: rgba(50,173,230,0.15); color: var(--ac); border: 1px solid rgba(50,173,230,0.3); }
+.pill-active-purple { background: rgba(88,86,214,0.15); color: #5856D6; border: 1px solid rgba(88,86,214,0.3); text-decoration: none; }
+.pill-active-purple:hover { background: rgba(88,86,214,0.25); }
 .pill-inactive { background: var(--bg-hv); color: var(--t5); border: 1px solid var(--br3); opacity: 0.5; }
 </style>
 
@@ -198,6 +200,7 @@
   <span style="width:1px; height:18px; background:var(--br3); margin:0 4px;"></span>
   <span class="src-tag" data-src="post" onclick="toggleSrc(this,'post')">有 Blog</span>
   <span class="src-tag" data-src="note" onclick="toggleSrc(this,'note')">有 Note</span>
+  <span class="src-tag" data-src="blog" onclick="toggleSrc(this,'blog')">有 Article</span>
 </div>
 
 {% if not materials %}
@@ -227,7 +230,9 @@
        data-tags="{{ (m.tags or []) | join(' ') | lower }}"
        data-source="{{ (m.source_name or '') | lower }}"
        data-has-post="{{ 'yes' if m.has_post else 'no' }}"
-       data-has-note="{{ 'yes' if m.has_note else 'no' }}">
+       data-has-note="{{ 'yes' if m.has_note else 'no' }}"
+       data-has-blog="{{ 'yes' if m.has_blog else 'no' }}"
+       data-blog-url="{{ '/blog/' ~ m.date_str ~ '/' ~ m.blog_slug if m.blog_slug else '' }}">
 
       <!-- Header: source + bookmark -->
       <div class="mc-header">
@@ -290,6 +295,12 @@
         <div class="mc-pills">
           <span class="pill {{ 'pill-active-green' if m.has_post else 'pill-inactive' }}">Blog</span>
           <span class="pill {{ 'pill-active-cyan' if m.has_note else 'pill-inactive' }}">Note</span>
+          {% if m.blog_slug %}
+          <span class="pill pill-active-purple" style="cursor:pointer;"
+                onclick="event.preventDefault(); event.stopPropagation(); window.location.href='/blog/{{ m.date_str }}/{{ m.blog_slug }}';">Article</span>
+          {% else %}
+          <span class="pill pill-inactive">Article</span>
+          {% endif %}
         </div>
       </div>
     </a>
@@ -351,6 +362,7 @@ function filterCards() {
     var srcMatch = true;
     if (activeSrc === 'post') srcMatch = card.dataset.hasPost === 'yes';
     if (activeSrc === 'note') srcMatch = card.dataset.hasNote === 'yes';
+    if (activeSrc === 'blog') srcMatch = card.dataset.hasBlog === 'yes';
 
     var show = queryMatch && tagMatch && sourceMatch && srcMatch && scoreMatch;
     card.style.display = show ? '' : 'none';
