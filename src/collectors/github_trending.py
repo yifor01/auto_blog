@@ -19,11 +19,20 @@ class GitHubTrendingCollector(BaseCollector):
 
     # AI 相關的關鍵字，用來過濾 trending repos
     AI_KEYWORDS = {
+        # 核心 GenAI
         "llm", "gpt", "transformer", "diffusion", "agent", "rag",
         "langchain", "embedding", "fine-tune", "finetune", "lora",
-        "rlhf", "chat", "multimodal", "vision", "nlp", "ml",
+        "rlhf", "dpo", "grpo", "multimodal", "nlp",
         "machine-learning", "deep-learning", "neural", "ai",
-        "inference", "model", "tokenizer", "benchmark",
+        "inference", "tokenizer", "benchmark",
+        # 模型與框架
+        "ollama", "vllm", "sglang", "mlx", "gguf", "onnx",
+        "deepseek", "qwen", "gemma", "mistral", "llama",
+        # 2025-2026 熱門
+        "mcp", "reasoning", "agentic", "text-to-video",
+        "speculative-decoding", "quantiz", "reward-model",
+        "tts", "whisper", "speech", "vision-language",
+        "flow-matching", "moe", "alignment", "safety",
     }
 
     def collect(self, target_date: date | None = None) -> list[ContentItem]:

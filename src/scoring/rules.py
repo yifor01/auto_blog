@@ -121,6 +121,9 @@ def rule_score(item: ContentItem, config: dict | None = None) -> ScoredItem:
         "novel", "new", "first", "state-of-the-art", "sota",
         "surpass", "outperform", "efficient", "scalable",
         "beyond", "rethinking", "revisiting",
+        "unified", "zero-shot", "few-shot", "open-source",
+        "real-time", "faster", "lightweight", "on-device",
+        "breakthrough", "improved",
     ]
     if any(sig in title_lower for sig in novelty_signals):
         score += 5

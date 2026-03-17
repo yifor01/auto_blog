@@ -19,8 +19,8 @@
   - arXiv / ChatPaper API — 每日最新 AI 論文
   - HuggingFace Daily Papers — 社群投票熱門論文
   - GitHub Trending — AI 相關熱門開源專案
-  - 精選 AI Tech Blogs — Karpathy、Simon Willison 等
-  - 主流科技媒體 RSS Feeds — TechCrunch、OpenAI、Anthropic、Google Research 等
+  - 精選 AI Tech Blogs — Karpathy、Simon Willison、Eugene Yan、Latent Space 等
+  - 主流科技媒體 RSS Feeds — TechCrunch、OpenAI、Google Research、VentureBeat、MarkTechPost 等
   - Hacker News — Algolia API，依 upvotes 篩選 AI 熱門討論
   - Reddit — r/LocalLLaMA、r/MachineLearning
   - NewsAPI — 主流科技新聞聚合
@@ -208,7 +208,7 @@ Kanban 三欄（已收藏 → 已完成 → 已發布），拖曳卡片即可切
 - **原文 ↗ 連結**：一鍵開啟原始論文/文章
 - **分數 badge**、來源、日期、tags
 
-> **操作**：看 LLM 評語決定今天先寫哪篇 → 拖到「撰寫中」
+> **操作**：看 LLM 評語決定今天先寫哪篇 → 拖到「已完成」
 
 ### Step 4：撰寫與 Fact-check
 
@@ -244,7 +244,7 @@ Kanban 三欄（已收藏 → 已完成 → 已發布），拖曳卡片即可切
 | 找今天值得寫的文章 | Dashboard | 點擊無 Article badge 的高分標題 | 素材頁 |
 | 閱讀已有的 Blog | Dashboard | 點擊紫色 Article badge | Blog View |
 | 收藏高分文章 | Day Detail | 點擊 ☆ 星號收藏 | Queue |
-| 決定今天先寫哪篇 | Queue | 看 LLM 評語 + 分數 | 拖到「撰寫中」|
+| 決定今天先寫哪篇 | Queue | 看 LLM 評語 + 分數 | 拖到「已完成」|
 | Blog 發布後做 fact-check | Blog View | 點「查看評分詳情」 | 素材頁 |
 | 查看哪些文章還沒寫 | 素材庫 | 反選「有 Article」filter | 未寫文章清單 |
 
@@ -267,14 +267,12 @@ Kanban 三欄（已收藏 → 已完成 → 已發布），拖曳卡片即可切
 
 ## ⏱️ 自動化排程 (Cron Setup)
 
-系統內建排程腳本，可輕易整合進 Linux 系統排程，實現「每天起床就有整理好的前沿 AI 資訊」。
+Web server 啟動時會自動觸發當天的 pipeline（`force=False`，checkpoint 機制保護不重跑已完成階段）。若需透過 cron 排程 CLI 執行：
 
 ```bash
-chmod +x setup_cron.sh
-./setup_cron.sh
+# 範例：每日早上 10:00 執行完整 pipeline（配合 HuggingFace Daily Papers 更新時區）
+0 10 * * * cd /path/to/auto_post_blog && .venv/bin/python -m src.cli run >> logs/cron.log 2>&1
 ```
-
-_註：預設排程設定為每日早上 10:00 執行（配合 HuggingFace Daily Papers 的更新時區）。_
 
 ---
 
