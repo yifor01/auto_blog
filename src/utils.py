@@ -103,6 +103,48 @@ def _extract_content(resp) -> str:
     return ""
 
 
+def _try_model(client: OpenAI, model: str, messages: list[dict], max_tokens: int, temperature: float, max_retries: int) -> str | None:
+    """嘗試用指定 client + model 呼叫 LLM，429 時 retry。成功回傳 content，全部失敗回傳 None。"""
+    import time
+    for attempt in range(max_retries + 1):
+        try:
+            resp = client.chat.completions.create(
+                model=model, messages=messages,
+                max_tokens=max_tokens, temperature=temperature,
+            )
+            content = _extract_content(resp)
+            if content:
+                return content
+            return None  # empty → 讓外層嘗試下個選項
+        except Exception as e:
+            if "429" in str(e) and attempt < max_retries:
+                wait = (attempt + 1) * 5
+                _logger.warning("Rate limited, retrying", extra={"model": model, "wait_seconds": wait, "attempt": attempt + 1})
+                time.sleep(wait)
+                continue
+            return None  # 非 429 或 retry 用盡 → 回傳 None
+    return None
+
+
+_OR_KEYS: list[str] = []
+for _i in ["", "_2", "_3", "_4", "_5"]:
+    _k = os.getenv(f"OPENROUTER_API_KEY{_i}", "")
+    if _k:
+        _OR_KEYS.append(_k)
+_or_key_cycle = itertools.cycle(_OR_KEYS) if _OR_KEYS else None
+
+
+def _get_openrouter_client() -> OpenAI | None:
+    """建立 OpenRouter client（多 key 輪替）。"""
+    if not _or_key_cycle:
+        return None
+    key = next(_or_key_cycle)
+    config = load_config()
+    or_cfg = config.get("llm", {}).get("openrouter_fallback", {})
+    url = or_cfg.get("api_url") or os.getenv("OPENROUTER_API_URL") or "https://openrouter.ai/api/v1"
+    return OpenAI(api_key=key, base_url=url)
+
+
 def llm_chat(
     messages: list[dict],
     model: str | None = None,
@@ -110,65 +152,41 @@ def llm_chat(
     temperature: float = 0.7,
     max_retries: int = 2,
     fallback_model: str | None = None,
+    is_generation: bool = False,
 ) -> str:
-    """呼叫 LLM 並返回回應文字。失敗時嘗試 fallback model。含 rate limit retry。"""
-    import time
-
+    """呼叫 LLM 並返回回應文字。三層 fallback：primary → fallback model → OpenRouter provider。"""
     config = load_config()
     llm_cfg = config["llm"]
     model = model or llm_cfg["model"]
     max_tokens = max_tokens or llm_cfg.get("max_tokens", 8192)
     fallback = fallback_model or llm_cfg.get("fallback_model")
 
-    # 嘗試主模型（每次 attempt 輪替 key）
-    for attempt in range(max_retries + 1):
-        client = get_llm_client()
-        try:
-            resp = client.chat.completions.create(
-                model=model,
-                messages=messages,
-                max_tokens=max_tokens,
-                temperature=temperature,
-            )
-            content = _extract_content(resp)
-            if content:
-                return content
-            # content 為空, 換 fallback
-            if fallback and fallback != model:
-                _logger.warning("LLM returned empty, trying fallback", extra={"model": model})
-                break
-            return ""
-        except Exception as e:
-            err_str = str(e)
-            if "429" in err_str and attempt < max_retries:
-                wait = (attempt + 1) * 5
-                _logger.warning("Rate limited, retrying with next key", extra={"model": model, "wait_seconds": wait, "attempt": attempt + 1})
-                time.sleep(wait)
-                continue
-            if fallback and fallback != model:
-                _logger.warning("Primary model failed, switching to fallback", extra={"model": model, "fallback": fallback, "error": str(e)})
-                break
-            raise
+    # Layer 1: Primary model（輪替 key）
+    client = get_llm_client()
+    result = _try_model(client, model, messages, max_tokens, temperature, max_retries)
+    if result:
+        return result
 
-    # Fallback 模型
+    # Layer 2: Fallback model（輪替 key）
     if fallback and fallback != model:
-        for attempt in range(max_retries + 1):
-            client = get_llm_client()
-            try:
-                resp = client.chat.completions.create(
-                    model=fallback,
-                    messages=messages,
-                    max_tokens=max_tokens,
-                    temperature=temperature,
-                )
-                return _extract_content(resp)
-            except Exception as e:
-                if "429" in str(e) and attempt < max_retries:
-                    wait = (attempt + 1) * 5
-                    _logger.warning("Fallback rate limited, retrying with next key", extra={"model": fallback, "wait_seconds": wait, "attempt": attempt + 1})
-                    time.sleep(wait)
-                    continue
-                raise
+        _logger.warning("Primary failed, trying fallback model", extra={"model": model, "fallback": fallback})
+        client = get_llm_client()
+        result = _try_model(client, fallback, messages, max_tokens, temperature, max_retries)
+        if result:
+            return result
+
+    # Layer 3: OpenRouter provider fallback
+    or_cfg = llm_cfg.get("openrouter_fallback", {})
+    or_client = _get_openrouter_client()
+    if or_client and or_cfg:
+        or_model = or_cfg.get("generation_model" if is_generation else "model", or_cfg.get("model", ""))
+        if or_model:
+            _logger.warning("Provider fallback to OpenRouter", extra={"model": or_model})
+            result = _try_model(or_client, or_model, messages, max_tokens, temperature, max_retries)
+            if result:
+                return result
+            _logger.error("OpenRouter fallback also failed", extra={"model": or_model})
+
     return ""
 
 
@@ -259,21 +277,51 @@ def slugify(text: str, max_len: int = 60) -> str:
 
 
 def extract_full_text_from_html(html: str, max_chars: int = 2000) -> str:
-    """從 HTML 提取純文字，優先選取語意容器標籤。"""
+    """從 HTML 提取純文字，優先選取語意容器標籤，fallback 到 <p> 聚合。"""
     import re
 
     from bs4 import BeautifulSoup
 
     soup = BeautifulSoup(html, "html.parser")
-    body = soup.select_one("article, .post-content, .entry-content, main, .content")
-    text = body.get_text(separator=" ", strip=True) if body else soup.get_text(separator=" ", strip=True)
+
+    # 移除干擾元素
+    for tag in soup.select("script, style, nav, footer, header, aside, .sidebar, .comments, .nav, .menu"):
+        tag.decompose()
+
+    # 嘗試語意容器（擴充 selector）
+    body = soup.select_one(
+        "article, .post-content, .entry-content, main, .content, "
+        "[role='main'], .article-body, .c-entry-content, .post-body, "
+        ".blog-post, .hentry, .h-entry, .e-content, #content, #main"
+    )
+    if body:
+        text = body.get_text(separator=" ", strip=True)
+        text = re.sub(r"\s{2,}", " ", text)
+        if len(text) >= 200:
+            return text[:max_chars]
+
+    # Fallback: 聚合所有 <p> 標籤（排除過短段落）
+    paragraphs = soup.find_all("p")
+    p_texts = []
+    for p in paragraphs:
+        t = p.get_text(separator=" ", strip=True)
+        if len(t) >= 30:  # 跳過極短段落（廣告、版權等）
+            p_texts.append(t)
+    if p_texts:
+        text = " ".join(p_texts)
+        text = re.sub(r"\s{2,}", " ", text)
+        if len(text) >= 100:
+            return text[:max_chars]
+
+    # 最終 fallback: 整頁文字
+    text = soup.get_text(separator=" ", strip=True)
     return re.sub(r"\s{2,}", " ", text)[:max_chars]
 
 
 def fetch_article_text(url: str, client: httpx.Client, max_chars: int = 2000) -> str:
     """GET 文章 URL，返回純文字。失敗時返回空字串並記錄 debug log。"""
     try:
-        resp = client.get(url, timeout=8)
+        resp = client.get(url, timeout=12)
         if resp.status_code != 200:
             _logger.debug("fetch_article_text non-200", extra={"url": url, "status_code": resp.status_code})
             return ""

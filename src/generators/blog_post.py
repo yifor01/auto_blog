@@ -219,6 +219,7 @@ def generate_blog_post(item: ScoredItem) -> GeneratedContent:
         model=model,
         temperature=0.7,
         fallback_model=gen_fallback,
+        is_generation=True,
     )
 
     return GeneratedContent(
