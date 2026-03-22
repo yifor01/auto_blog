@@ -93,7 +93,7 @@ class RSSCollector(BaseCollector):
         entry,
         article_url: str,
         client,
-        min_len: int = 500,
+        min_len: int = 1000,
         max_len: int = 2000,
     ) -> str:
         """三段 priority 提取 abstract：content:encoded > summary > HTTP fetch。"""

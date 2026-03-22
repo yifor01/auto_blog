@@ -50,7 +50,7 @@ def test_priority3_fetch_when_short(monkeypatch):
     mock_response.text = "<p>" + "word " * 100 + "</p>"
     mock_client.get.return_value = mock_response
 
-    result = RSSCollector._extract_abstract(entry, "http://example.com", mock_client, min_len=500)
+    result = RSSCollector._extract_abstract(entry, "http://example.com", mock_client, min_len=1000)
     mock_client.get.assert_called_once_with("http://example.com", timeout=12)
     assert len(result) > len("too short")
 
@@ -59,10 +59,10 @@ def test_no_fetch_when_long_enough():
     """abstract >= min_len 時不觸發補抓。"""
     from src.collectors.rss_collector import RSSCollector
 
-    long_content = "<p>" + "word " * 120 + "</p>"  # 120 * 5 = 600 chars > 500
+    long_content = "<p>" + "word " * 250 + "</p>"  # 250 * 5 = 1250 chars > 1000
     entry = _make_entry(content_val=long_content)
     client = MagicMock()
-    result = RSSCollector._extract_abstract(entry, "http://example.com", client, min_len=500)
+    result = RSSCollector._extract_abstract(entry, "http://example.com", client, min_len=1000)
     client.get.assert_not_called()
     assert len(result) > 0
 

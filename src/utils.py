@@ -8,6 +8,8 @@ import os
 from datetime import date, datetime
 from pathlib import Path
 
+import time
+
 import httpx
 import yaml
 from dotenv import load_dotenv
@@ -105,7 +107,6 @@ def _extract_content(resp) -> str:
 
 def _try_model(client: OpenAI, model: str, messages: list[dict], max_tokens: int, temperature: float, max_retries: int) -> str | None:
     """嘗試用指定 client + model 呼叫 LLM，429 時 retry。成功回傳 content，全部失敗回傳 None。"""
-    import time
     for attempt in range(max_retries + 1):
         try:
             resp = client.chat.completions.create(
@@ -134,13 +135,11 @@ for _i in ["", "_2", "_3", "_4", "_5"]:
 _or_key_cycle = itertools.cycle(_OR_KEYS) if _OR_KEYS else None
 
 
-def _get_openrouter_client() -> OpenAI | None:
+def _get_openrouter_client(or_cfg: dict) -> OpenAI | None:
     """建立 OpenRouter client（多 key 輪替）。"""
     if not _or_key_cycle:
         return None
     key = next(_or_key_cycle)
-    config = load_config()
-    or_cfg = config.get("llm", {}).get("openrouter_fallback", {})
     url = or_cfg.get("api_url") or os.getenv("OPENROUTER_API_URL") or "https://openrouter.ai/api/v1"
     return OpenAI(api_key=key, base_url=url)
 
@@ -177,7 +176,7 @@ def llm_chat(
 
     # Layer 3: OpenRouter provider fallback
     or_cfg = llm_cfg.get("openrouter_fallback", {})
-    or_client = _get_openrouter_client()
+    or_client = _get_openrouter_client(or_cfg)
     if or_client and or_cfg:
         or_model = or_cfg.get("generation_model" if is_generation else "model", or_cfg.get("model", ""))
         if or_model:

@@ -119,7 +119,7 @@ class BlogCollector(BaseCollector):
 
             # Priority 3: 短摘要補抓
             article_url = entry.get("link", "")
-            if len(abstract) < 500 and article_url:
+            if len(abstract) < 1000 and article_url:
                 fetched = fetch_article_text(article_url, client, 2000)
                 if len(fetched) > len(abstract):
                     abstract = fetched
