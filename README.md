@@ -265,12 +265,41 @@ Kanban 三欄（已收藏 → 已完成 → 已發布），拖曳卡片即可切
 
 ---
 
-## ⏱️ 自動化排程 (Cron Setup)
+## ⏱️ 自動化排程 (Automation)
 
-Web server 啟動時會自動觸發當天的 pipeline（`force=False`，checkpoint 機制保護不重跑已完成階段）。若需透過 cron 排程 CLI 執行：
+### GitHub Actions（推薦）
+
+專案內建兩個 GitHub Actions workflow，push 上 repo 即可啟用：
+
+| Workflow | 排程 | 說明 |
+|----------|------|------|
+| **Daily Pipeline** | 每日台灣 02:00 | 自動執行 collect → score → generate，結果 commit 回 repo |
+| **Monthly Cleanup** | 每月 1 號 | 自動清理 90 天前的歷史資料 |
+
+**設定步驟**：
+
+1. 在 GitHub repo Settings → Secrets → Actions 新增以下 Secrets：
+   - `AIHUBMIX_API_KEY_1` ~ `AIHUBMIX_API_KEY_4`、`AIHUBMIX_API_URL`
+   - `OPENROUTER_API_KEY`、`OPENROUTER_API_KEY_2`（fallback 用）
+   - `NEWSAPI_KEY`（選用）
+2. Push 程式碼後，Daily Pipeline 會自動按排程執行
+3. 也可在 Actions 頁面手動觸發（`workflow_dispatch`），支援指定日期與 `--force` 重跑
+
+**本地 Dashboard 搭配使用**：
 
 ```bash
-# 範例：每日早上 10:00 執行完整 pipeline（配合 HuggingFace Daily Papers 更新時區）
+git pull                    # 拉取 Actions 產出的最新 data/output
+python -m src.cli web       # 啟動 Dashboard，直接讀本地檔案
+```
+
+> Dashboard 啟動時會嘗試觸發當天 pipeline，但因 Actions 已跑過（checkpoint 檔案存在），會自動跳過不重跑。
+
+### 本地 Cron（替代方案）
+
+若不使用 GitHub Actions，也可透過 cron 在本地排程：
+
+```bash
+# 範例：每日早上 10:00 執行完整 pipeline
 0 10 * * * cd /path/to/auto_post_blog && .venv/bin/python -m src.cli run >> logs/cron.log 2>&1
 ```
 
