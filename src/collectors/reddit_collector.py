@@ -55,7 +55,7 @@ class RedditCollector(BaseCollector):
                     resp.raise_for_status()
                     data = resp.json()
                 except Exception as e:
-                    _logger.warning("Reddit fetch error", extra={"subreddit": sub, "error": str(e)})
+                    _logger.warning(f"Reddit fetch error: r/{sub} — {e}")
                     continue
 
                 for child in data.get("data", {}).get("children", []):
