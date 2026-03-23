@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import time
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
@@ -23,6 +24,11 @@ class RedditCollector(BaseCollector):
         config = load_config()
         cfg = config.get("collectors", {}).get("reddit", {})
         if not cfg.get("enabled", True):
+            return []
+
+        # GitHub Actions datacenter IP 被 Reddit 封鎖（403 Blocked），自動跳過
+        if os.getenv("GITHUB_ACTIONS") == "true":
+            _logger.info("Skipping Reddit collector on GitHub Actions (datacenter IP blocked)")
             return []
 
         target_date = target_date or date.today()
