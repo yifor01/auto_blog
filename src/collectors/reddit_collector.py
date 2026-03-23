@@ -46,11 +46,11 @@ class RedditCollector(BaseCollector):
                     time.sleep(2.0)
 
                 try:
-                    url = f"https://www.reddit.com/r/{sub}/top/.json"
+                    url = f"https://old.reddit.com/r/{sub}/top/.json"
                     resp = client.get(
                         url,
                         params={"t": time_filter, "limit": 100},
-                        headers={"User-Agent": "autopb:v1.0 (by /u/autopb_collector)"},
+                        headers={"User-Agent": "Mozilla/5.0 (compatible; autopb/1.0)"},
                     )
                     resp.raise_for_status()
                     data = resp.json()
