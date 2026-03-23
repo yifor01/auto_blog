@@ -153,39 +153,39 @@ def llm_chat(
     fallback_model: str | None = None,
     is_generation: bool = False,
 ) -> str:
-    """呼叫 LLM 並返回回應文字。三層 fallback：primary → fallback model → OpenRouter provider。"""
+    """呼叫 LLM 並返回回應文字。三層 fallback：OpenRouter → aihubmix primary → aihubmix fallback。"""
     config = load_config()
     llm_cfg = config["llm"]
-    model = model or llm_cfg["model"]
     max_tokens = max_tokens or llm_cfg.get("max_tokens", 8192)
-    fallback = fallback_model or llm_cfg.get("fallback_model")
 
-    # Layer 1: Primary model（輪替 key）
-    client = get_llm_client()
-    result = _try_model(client, model, messages, max_tokens, temperature, max_retries)
-    if result:
-        return result
-
-    # Layer 2: Fallback model（輪替 key）
-    if fallback and fallback != model:
-        _logger.warning("Primary failed, trying fallback model", extra={"model": model, "fallback": fallback})
-        client = get_llm_client()
-        result = _try_model(client, fallback, messages, max_tokens, temperature, max_retries)
-        if result:
-            return result
-
-    # Layer 3: OpenRouter provider fallback
+    # Layer 1: OpenRouter（優先，免費額度較寬裕）
     or_cfg = llm_cfg.get("openrouter_fallback", {})
     or_client = _get_openrouter_client(or_cfg)
     if or_client and or_cfg:
         or_model = or_cfg.get("generation_model" if is_generation else "model", or_cfg.get("model", ""))
         if or_model:
-            _logger.warning("Provider fallback to OpenRouter", extra={"model": or_model})
             result = _try_model(or_client, or_model, messages, max_tokens, temperature, max_retries)
             if result:
                 return result
-            _logger.error("OpenRouter fallback also failed", extra={"model": or_model})
+            _logger.warning("OpenRouter failed, falling back to aihubmix", extra={"model": or_model})
 
+    # Layer 2: aihubmix primary model（輪替 key）
+    ah_model = model or llm_cfg["model"]
+    client = get_llm_client()
+    result = _try_model(client, ah_model, messages, max_tokens, temperature, max_retries)
+    if result:
+        return result
+
+    # Layer 3: aihubmix fallback model（輪替 key）
+    ah_fallback = fallback_model or llm_cfg.get("fallback_model")
+    if ah_fallback and ah_fallback != ah_model:
+        _logger.warning("aihubmix primary failed, trying fallback", extra={"model": ah_model, "fallback": ah_fallback})
+        client = get_llm_client()
+        result = _try_model(client, ah_fallback, messages, max_tokens, temperature, max_retries)
+        if result:
+            return result
+
+    _logger.error("All LLM providers failed")
     return ""
 
 
