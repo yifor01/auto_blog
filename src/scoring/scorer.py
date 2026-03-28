@@ -78,16 +78,22 @@ def llm_score_item(item: ScoredItem) -> ScoredItem:
 """
 
     try:
-        response = llm_chat(
-            messages=[
-                {"role": "system", "content": SCORING_SYSTEM_PROMPT},
-                {"role": "user", "content": user_msg},
-            ],
-            temperature=0.3,
-            max_tokens=500,
-        )
+        scores = None
+        for _parse_attempt in range(2):
+            response = llm_chat(
+                messages=[
+                    {"role": "system", "content": SCORING_SYSTEM_PROMPT},
+                    {"role": "user", "content": user_msg},
+                ],
+                temperature=0.3,
+                max_tokens=500,
+            )
+            scores = _parse_score_json(response)
+            if scores:
+                break
+            if _parse_attempt == 0:
+                _logger.debug("LLM score parse failed, retrying", extra={"title": item.item.title[:80]})
 
-        scores = _parse_score_json(response)
         if scores:
             item.llm_reason = scores.get("reason", "")
             item.novelty = scores.get("novelty", 0)

@@ -158,9 +158,9 @@ def llm_chat(
     llm_cfg = config["llm"]
     max_tokens = max_tokens or llm_cfg.get("max_tokens", 8192)
 
-    # Layer 1: OpenRouter（優先，免費額度較寬裕）
+    # Layer 1: OpenRouter（優先，免費額度較寬裕；SKIP_OPENROUTER=1 可跳過）
     or_cfg = llm_cfg.get("openrouter_fallback", {})
-    or_client = _get_openrouter_client(or_cfg)
+    or_client = _get_openrouter_client(or_cfg) if not os.getenv("SKIP_OPENROUTER") else None
     if or_client and or_cfg:
         or_model = or_cfg.get("generation_model" if is_generation else "model", or_cfg.get("model", ""))
         if or_model:
