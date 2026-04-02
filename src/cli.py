@@ -12,7 +12,7 @@ from rich.markdown import Markdown
 from rich.table import Table
 
 from src.logger import get_logger, setup_logging
-from src.models import ContentItem, ScoredItem
+from src.models import ContentItem, ScoredItem, SourceType
 from src.scoring.rules import batch_rule_score
 from src.scoring.scorer import batch_llm_score
 from src.utils import (
@@ -130,6 +130,23 @@ def _get_pipeline_state(d: date) -> str:
 
 
 # ──────────────────────────────────────────────────────────
+# Collector → SourceType 對應表（用於 supplement 偵測缺失 source）
+# ──────────────────────────────────────────────────────────
+
+_COLLECTOR_SOURCE_MAP: dict[str, SourceType] = {
+    "arxiv": SourceType.ARXIV,
+    "chatpaper": SourceType.CHATPAPER,
+    "hf_papers": SourceType.HF_PAPERS,
+    "rss": SourceType.RSS,
+    "blogs": SourceType.BLOG,
+    "github": SourceType.GITHUB,
+    "hackernews": SourceType.HACKERNEWS,
+    "reddit": SourceType.REDDIT,
+    "newsapi": SourceType.NEWSAPI,
+}
+
+
+# ──────────────────────────────────────────────────────────
 # Pipeline stages
 # ──────────────────────────────────────────────────────────
 
@@ -208,6 +225,130 @@ def _collect(target_date: date | None = None) -> list[ContentItem]:
     return unique
 
 
+def _supplement(target_date: date | None = None) -> tuple[list[ContentItem], bool]:
+    """補收現有 raw data 中缺失的 source，回傳 (items, changed)。
+
+    - raw 不存在 → fallback 到完整 _collect()
+    - 所有 source 皆在 → 回傳快取，changed=False
+    - 有缺失 → 只跑缺失 collector → 合併去重 → 覆寫 raw
+    """
+    target_date = target_date or date.today()
+    raw_path = _get_raw_path(target_date)
+
+    if not raw_path.exists():
+        return _collect(target_date), True
+
+    raw_data = load_json(raw_path)
+    existing_items = [ContentItem(**item) for item in raw_data]
+    present_sources = {item.source for item in existing_items}
+
+    all_collectors = _get_collectors()
+    missing = [
+        c for c in all_collectors
+        if _COLLECTOR_SOURCE_MAP.get(c.name) not in present_sources
+    ]
+
+    if not missing:
+        console.print(f"[cyan]♻️  {raw_path.name} 已包含所有 source，無需補收[/cyan]")
+        return existing_items, False
+
+    missing_names = [c.name for c in missing]
+    console.rule(f"[bold blue]🔄 補收缺失 source — {target_date}[/bold blue]")
+    console.print(f"  缺失: [yellow]{', '.join(missing_names)}[/yellow]")
+
+    import time
+    new_items: list[ContentItem] = []
+    for collector in missing:
+        start_time = time.time()
+        try:
+            items = collector.collect(target_date)
+            new_items.extend(items)
+            console.print(
+                f"  [green]✓ {collector.name}: {len(items)} items "
+                f"({time.time() - start_time:.1f}s)[/green]"
+            )
+        except Exception as e:
+            _logger.error("Supplement collector failed",
+                         extra={"collector": collector.name, "error": str(e)})
+            console.print(f"  [red]✗ {collector.name} failed: {e}[/red]")
+
+    if not new_items:
+        console.print("[cyan]  補收來源無新項目[/cyan]")
+        return existing_items, False
+
+    # 單日去重合併
+    seen = {item.dedup_key() for item in existing_items}
+    added = 0
+    for item in new_items:
+        key = item.dedup_key()
+        if key not in seen:
+            seen.add(key)
+            existing_items.append(item)
+            added += 1
+
+    # 跨日去重
+    config = load_config()
+    lookback_days = config.get("dedup", {}).get("lookback_days", 0)
+    if lookback_days > 0 and added > 0:
+        cross_day_seen = get_seen_urls(exclude_date=target_date, lookback_days=lookback_days)
+        before = len(existing_items)
+        existing_items = [item for item in existing_items if item.dedup_key() not in cross_day_seen]
+        skipped = before - len(existing_items)
+        if skipped > 0:
+            console.print(
+                f"  [cyan]🔄 跨日去重: 排除 {skipped} 筆 → {len(existing_items)}[/cyan]"
+            )
+
+    save_json([item.model_dump() for item in existing_items], raw_path)
+    console.print(f"[bold green]✅ 補收完成: +{added} 新項目 (總計 {len(existing_items)})[/bold green]")
+
+    return existing_items, added > 0
+
+
+def _score_incremental(
+    all_items: list[ContentItem],
+    target_date: date,
+) -> list[ScoredItem]:
+    """增量評分：只對新項目評分，與既有 scored 合併排名。"""
+    scored_path = _get_scored_path(target_date)
+
+    if not scored_path.exists():
+        # 無既有 scored → 走正常全量評分
+        return _score(all_items, target_date)
+
+    scored_data = load_json(scored_path)
+    existing_scored = [ScoredItem(**item) for item in scored_data]
+    scored_urls = {si.item.dedup_key() for si in existing_scored}
+
+    # 找出新增的 items
+    new_items = [item for item in all_items if item.dedup_key() not in scored_urls]
+
+    if not new_items:
+        console.print(f"[cyan]♻️  無新項目需要評分[/cyan]")
+        return existing_scored
+
+    console.rule(f"[bold blue]🔍 增量評分 — {len(new_items)} 新項目[/bold blue]")
+    config = load_config()
+
+    # 只對新項目跑 rule + LLM scoring
+    new_rule_passed = batch_rule_score(new_items, config)
+    new_scored = batch_llm_score(new_rule_passed, config) if new_rule_passed else []
+
+    # 合併排名
+    merged = existing_scored + new_scored
+    merged.sort(key=lambda x: x.total_score, reverse=True)
+    final_top_k = config.get("scoring", {}).get("final_top_k", 30)
+    merged = merged[:final_top_k]
+
+    save_json([item.model_dump() for item in merged], scored_path)
+    console.print(
+        f"[bold green]✅ 增量評分完成: +{len(new_scored)} 新評分項目, "
+        f"最終 top-{len(merged)}[/bold green]"
+    )
+
+    return merged
+
+
 def _score(items: list[ContentItem], target_date: date | None = None) -> list[ScoredItem]:
     """Rule-based 預篩 + LLM 深度評分。支援斷點續跑。"""
     target_date = target_date or date.today()
@@ -243,6 +384,65 @@ def _generate(top_items: list[ScoredItem], target_date: date | None = None) -> l
 
 
 # ──────────────────────────────────────────────────────────
+# Supplement 流程（供 run --supplement 使用）
+# ──────────────────────────────────────────────────────────
+
+def _run_supplement(d: date, dry_run: bool = False, top_k: int | None = None) -> None:
+    """Supplement 模式：補收 → 增量評分 → 生成。"""
+    import time as _time
+
+    _t0 = _time.time()
+    _logger.info("Stage started", extra={"pipeline_stage": "collect", "stage_action": "start"})
+    items, changed = _supplement(d)
+    _logger.info("Stage ended", extra={
+        "pipeline_stage": "collect", "stage_action": "end",
+        "elapsed": round(_time.time() - _t0, 1),
+        "item_count": len(items),
+    })
+
+    if not items:
+        console.print("[yellow]⚠ No items. Exiting.[/yellow]")
+        return
+
+    _t0 = _time.time()
+    _logger.info("Stage started", extra={"pipeline_stage": "score", "stage_action": "start"})
+    if changed:
+        top_items = _score_incremental(items, d)
+    else:
+        top_items = _score(items, d)
+    _logger.info("Stage ended", extra={
+        "pipeline_stage": "score", "stage_action": "end",
+        "elapsed": round(_time.time() - _t0, 1),
+        "item_count": len(top_items),
+    })
+
+    if top_k:
+        top_items = top_items[:top_k]
+
+    if dry_run:
+        console.print("\n[yellow]🏁 Dry run 完成 — 跳過內容生成[/yellow]")
+        _print_summary(top_items)
+        return
+
+    if not top_items:
+        console.print("[yellow]⚠ No items passed scoring. Exiting.[/yellow]")
+        return
+
+    # 有新評分項目或尚未生成 posts → 生成
+    if changed or not _has_posts(d):
+        _t0 = _time.time()
+        _logger.info("Stage started", extra={"pipeline_stage": "generate", "stage_action": "start"})
+        post_paths = _generate(top_items, d)
+        _logger.info("Stage ended", extra={
+            "pipeline_stage": "generate", "stage_action": "end",
+            "elapsed": round(_time.time() - _t0, 1),
+            "item_count": len(post_paths),
+        })
+    else:
+        console.print(f"[green]✅ {d} 無新項目且已有 posts, 跳過生成[/green]")
+
+
+# ──────────────────────────────────────────────────────────
 # CLI Commands
 # ──────────────────────────────────────────────────────────
 
@@ -252,6 +452,7 @@ def run(
     dry_run: bool = typer.Option(False, "--dry-run", help="只收集和篩選，不生成內容"),
     top_k: int = typer.Option(None, "--top-k", "-k", help="覆蓋 config 中的 final_top_k"),
     force: bool = typer.Option(False, "--force", "-f", help="強制重新執行, 清除所有快取與生成結果"),
+    supplement: bool = typer.Option(False, "--supplement", "-s", help="補收缺失 source 並增量評分"),
 ):
     """完整 pipeline: 收集 → 篩選 → 生成 (支援斷點續跑)"""
     d = _parse_date(target_date)
@@ -267,6 +468,10 @@ def run(
                 p.unlink()
                 console.print(f"  🗑️  刪除 {p.name}")
         _clear_outputs(d)
+
+    # --supplement: 補收缺失 source + 增量評分
+    if supplement and not force:
+        return _run_supplement(d, dry_run, top_k)
 
     if state == "done" and not force:
         console.print(f"[green]✅ {d} 已完成所有階段, 不需重跑 (用 --force 強制重跑)[/green]")

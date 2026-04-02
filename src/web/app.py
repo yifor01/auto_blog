@@ -1049,9 +1049,14 @@ def _run_pipeline(date_str: str, force: bool) -> None:
             return  # 不應發生，但防禦性檢查
     log_path = LOGS_DIR / f"{date_str}.log"
     try:
-        cmd = [sys.executable, "-m", "src.cli", "run", "--date", date_str]
-        if force:
-            cmd.append("--force")
+        # raw 已存在且非 force → supplement 模式（補收缺失 source + 增量評分）
+        raw_path = RAW_DIR / f"{date_str}.json"
+        if raw_path.exists() and not force:
+            cmd = [sys.executable, "-m", "src.cli", "run", "--supplement", "--date", date_str]
+        else:
+            cmd = [sys.executable, "-m", "src.cli", "run", "--date", date_str]
+            if force:
+                cmd.append("--force")
         with open(log_path, "w", encoding="utf-8") as log_file:
             log_file.write(f"=== Pipeline started: {date_str} (force={force}) ===\n")
             log_file.flush()
