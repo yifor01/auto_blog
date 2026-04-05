@@ -4,7 +4,7 @@ source: ChatPaper/AI
 url: https://arxiv.org/abs/2604.02006
 score: 43
 model: gpt-4o-free
-generated_at: 2026-04-03T19:00:43.630864
+generated_at: 2026-04-03T11:12:01.874408
 ---
 
 

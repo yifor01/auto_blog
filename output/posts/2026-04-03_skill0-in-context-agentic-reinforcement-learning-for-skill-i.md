@@ -4,7 +4,7 @@ source: HuggingFace Daily Papers
 url: https://huggingface.co/papers/2604.02268
 score: 30
 model: gpt-4o-free
-generated_at: 2026-04-03T19:04:05.934350
+generated_at: 2026-04-03T11:14:13.681870
 ---
 
 
