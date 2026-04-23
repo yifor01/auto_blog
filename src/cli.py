@@ -472,6 +472,8 @@ def run(
             console.print(f"    [cyan]🔍 Auto-discovered {len(pf['discovered'])} free model(s):[/cyan]")
             for m in pf["discovered"]:
                 console.print(f"      [cyan]+ {m}[/cyan]")
+        if pf.get("last_resort"):
+            console.print("    [magenta]🛟 Fallback to openrouter/free (慢但保底)[/magenta]")
         for m in pf["scoring"]:
             console.print(f"    [green]✓ scoring:[/green] {m}")
         for m in pf["generation"]:

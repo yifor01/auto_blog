@@ -187,6 +187,10 @@ def discover_free_models(min_context: int = 32000, limit: int = 12) -> list[str]
     return [mid for mid, _ in free[:limit]]
 
 
+_LAST_RESORT_MODEL = "openrouter/free"
+"""OpenRouter 官方 meta-model，pricing 0，能力弱但穩定。chain 全空時的最後保底。"""
+
+
 def preflight_models(
     timeout: float = 15.0,
     auto_discover: bool = True,
@@ -194,9 +198,12 @@ def preflight_models(
 ) -> dict:
     """Pipeline 起頭 probe 所有配置的 model，失效者從 chain 移除。
     若任一 chain（scoring / generation）全空，且 `auto_discover=True`，
-    會查 OpenRouter 免費池補上可用 model。
+    依序嘗試補救：
+      1. 查 OpenRouter 免費池（`discover_free_models`）找替補
+      2. 若仍空，加上 `openrouter/free` meta-model 保底（慢但穩定）
 
-    回傳 {'scoring': [...], 'generation': [...], 'dead': [...], 'discovered': [...]}。
+    回傳 {'scoring': [...], 'generation': [...], 'dead': [...],
+           'discovered': [...], 'last_resort': bool}。
     """
     global _scoring_chain, _generation_chain
     scoring, generation = _load_default_chains()
@@ -239,6 +246,22 @@ def preflight_models(
         if not generation_alive:
             generation_alive = list(discovered)
 
+    # Last resort：仍然空 → 試 openrouter/free meta-model（保底）
+    last_resort = False
+    if auto_discover and (not scoring_alive or not generation_alive):
+        _logger.info("Last resort: probing openrouter/free meta-model")
+        ok, err = _probe_model(_LAST_RESORT_MODEL, timeout)
+        if ok:
+            last_resort = True
+            _logger.info("Last resort: openrouter/free alive")
+            if not scoring_alive:
+                scoring_alive = [_LAST_RESORT_MODEL]
+            if not generation_alive:
+                generation_alive = [_LAST_RESORT_MODEL]
+        else:
+            dead.append((_LAST_RESORT_MODEL, err))
+            _logger.error("Last resort dead — pipeline 無可用 model", extra={"error": err[:160]})
+
     _scoring_chain = scoring_alive
     _generation_chain = generation_alive
     return {
@@ -246,6 +269,7 @@ def preflight_models(
         "generation": list(_generation_chain),
         "dead": dead,
         "discovered": discovered,
+        "last_resort": last_resort,
     }
 
 
