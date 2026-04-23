@@ -149,41 +149,103 @@ def _get_chain(is_generation: bool) -> list[str]:
     return _generation_chain if is_generation else _scoring_chain
 
 
-def preflight_models(timeout: float = 15.0) -> dict:
-    """在 pipeline 起頭 probe 所有配置的 model，把失效的從 chain 移除。
-    回傳 {'scoring': [...], 'generation': [...], 'dead': [...]}。"""
+def _probe_model(model: str, timeout: float = 15.0) -> tuple[bool, str]:
+    """對單一 model 送最小 probe call。回傳 (alive, err_msg)。"""
+    client = get_llm_client()
+    try:
+        resp = client.with_options(timeout=timeout).chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": "ping"}],
+            max_tokens=5, temperature=0.0,
+        )
+        _ = _extract_content(resp)
+        return True, ""
+    except Exception as e:
+        return False, str(e)[:200]
+
+
+def discover_free_models(min_context: int = 32000, limit: int = 12) -> list[str]:
+    """向 OpenRouter /models 查詢 pricing 全為 0 的 model，按 context 降序排序。
+    用於 preflight 發現 configured chain 全死時的 auto-fallback 池。"""
+    try:
+        url = _get_api_base_url().rstrip("/") + "/models"
+        key = get_next_api_key()
+        r = httpx.get(url, headers={"Authorization": f"Bearer {key}"}, timeout=15)
+        data = r.json().get("data", [])
+    except Exception as e:
+        _logger.warning("discover_free_models: API call failed", extra={"error": str(e)[:160]})
+        return []
+
+    free = []
+    for m in data:
+        pricing = m.get("pricing") or {}
+        if pricing.get("prompt") == "0" and pricing.get("completion") == "0":
+            ctx = m.get("context_length") or 0
+            if ctx >= min_context:
+                free.append((m["id"], ctx))
+    free.sort(key=lambda x: -x[1])
+    return [mid for mid, _ in free[:limit]]
+
+
+def preflight_models(
+    timeout: float = 15.0,
+    auto_discover: bool = True,
+    discover_probe_limit: int = 4,
+) -> dict:
+    """Pipeline 起頭 probe 所有配置的 model，失效者從 chain 移除。
+    若任一 chain（scoring / generation）全空，且 `auto_discover=True`，
+    會查 OpenRouter 免費池補上可用 model。
+
+    回傳 {'scoring': [...], 'generation': [...], 'dead': [...], 'discovered': [...]}。
+    """
     global _scoring_chain, _generation_chain
     scoring, generation = _load_default_chains()
-    candidates = list(dict.fromkeys(scoring + generation))  # dedupe，保留順序
-    if not candidates:
-        _logger.error("Preflight: no models configured")
-        _scoring_chain, _generation_chain = [], []
-        return {"scoring": [], "generation": [], "dead": []}
+    candidates = list(dict.fromkeys(scoring + generation))
 
     alive: set[str] = set()
     dead: list[tuple[str, str]] = []
-    probe_msg = [{"role": "user", "content": "ping"}]
 
     for m in candidates:
-        client = get_llm_client()
-        try:
-            resp = client.with_options(timeout=timeout).chat.completions.create(
-                model=m, messages=probe_msg, max_tokens=5, temperature=0.0,
-            )
-            _ = _extract_content(resp)
+        ok, err = _probe_model(m, timeout)
+        if ok:
             alive.add(m)
             _logger.info("Preflight OK", extra={"model": m})
-        except Exception as e:
-            err = str(e)[:160]
+        else:
             dead.append((m, err))
-            _logger.warning("Preflight failed", extra={"model": m, "error": err})
+            _logger.warning("Preflight failed", extra={"model": m, "error": err[:160]})
 
-    _scoring_chain = [m for m in scoring if m in alive]
-    _generation_chain = [m for m in generation if m in alive]
+    scoring_alive = [m for m in scoring if m in alive]
+    generation_alive = [m for m in generation if m in alive]
+    discovered: list[str] = []
+
+    # Auto-discover：任一 chain 全空時去 OpenRouter 免費池找替補
+    if auto_discover and (not scoring_alive or not generation_alive):
+        _logger.info("Auto-discover: chain empty, querying free pool")
+        pool = discover_free_models()
+        # 排除已 probe 過的 candidates，避免重複 probe
+        pool = [m for m in pool if m not in candidates][:discover_probe_limit]
+        for m in pool:
+            ok, err = _probe_model(m, timeout)
+            if ok:
+                discovered.append(m)
+                _logger.info("Auto-discover: model alive", extra={"model": m})
+            else:
+                dead.append((m, err))
+                _logger.debug("Auto-discover: model dead", extra={"model": m, "error": err[:160]})
+
+        # 把探索到的附在對應 chain 末端（不覆蓋 configured 偏好）
+        if not scoring_alive:
+            scoring_alive = list(discovered)
+        if not generation_alive:
+            generation_alive = list(discovered)
+
+    _scoring_chain = scoring_alive
+    _generation_chain = generation_alive
     return {
         "scoring": list(_scoring_chain),
         "generation": list(_generation_chain),
         "dead": dead,
+        "discovered": discovered,
     }
 
 

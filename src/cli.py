@@ -468,12 +468,16 @@ def run(
         if pf["dead"]:
             for m, err in pf["dead"]:
                 console.print(f"    [yellow]✗ {m}[/yellow] — {err[:80]}")
+        if pf.get("discovered"):
+            console.print(f"    [cyan]🔍 Auto-discovered {len(pf['discovered'])} free model(s):[/cyan]")
+            for m in pf["discovered"]:
+                console.print(f"      [cyan]+ {m}[/cyan]")
         for m in pf["scoring"]:
             console.print(f"    [green]✓ scoring:[/green] {m}")
         for m in pf["generation"]:
             console.print(f"    [green]✓ generation:[/green] {m}")
         if not pf["scoring"] and not pf["generation"]:
-            console.print("[red]❌ 全部 model 都無法使用，中止 pipeline[/red]")
+            console.print("[red]❌ 全部 model 都無法使用（含 auto-discover），中止 pipeline[/red]")
             _logger.error("Preflight: all models dead", extra={"dead": [m for m, _ in pf["dead"]]})
             raise typer.Exit(code=1)
 
