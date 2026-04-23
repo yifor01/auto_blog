@@ -209,7 +209,6 @@ def generate_blog_post(item: ScoredItem) -> GeneratedContent:
 
     full_prompt = f"[SYSTEM]\n{BLOG_SYSTEM_PROMPT}\n\n[USER]\n{user_msg}"
 
-    gen_fallback = llm_cfg.get("generation_fallback_model", llm_cfg.get("fallback_model"))
     _logger.debug("LLM blog generation started", extra={"title": item.item.title[:80], "model": model})
     content = llm_chat(
         messages=[
@@ -218,7 +217,6 @@ def generate_blog_post(item: ScoredItem) -> GeneratedContent:
         ],
         model=model,
         temperature=0.7,
-        fallback_model=gen_fallback,
         is_generation=True,
     )
 

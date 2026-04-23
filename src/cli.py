@@ -27,6 +27,7 @@ from src.utils import (
     console,
     get_seen_urls,
     load_config,
+    preflight_models,
     save_json,
     load_json,
     today_str,
@@ -459,6 +460,22 @@ def run(
     state = _get_pipeline_state(d)
     console.rule(f"[bold magenta]🚀 Auto Post Blog — {d}[/bold magenta]")
     console.print(f"  📌 Pipeline 狀態: [bold]{state}[/bold]")
+
+    # Preflight：probe 所有 configured models，把失效的從 chain 移除
+    if state != "done" or force:
+        console.print("  🩺 Preflight: 檢查 LLM model 可用性...")
+        pf = preflight_models()
+        if pf["dead"]:
+            for m, err in pf["dead"]:
+                console.print(f"    [yellow]✗ {m}[/yellow] — {err[:80]}")
+        for m in pf["scoring"]:
+            console.print(f"    [green]✓ scoring:[/green] {m}")
+        for m in pf["generation"]:
+            console.print(f"    [green]✓ generation:[/green] {m}")
+        if not pf["scoring"] and not pf["generation"]:
+            console.print("[red]❌ 全部 model 都無法使用，中止 pipeline[/red]")
+            _logger.error("Preflight: all models dead", extra={"dead": [m for m, _ in pf["dead"]]})
+            raise typer.Exit(code=1)
 
     # --force: 清除所有快取與輸出（含 posts/notes/prompts）
     if force:

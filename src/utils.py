@@ -47,31 +47,28 @@ def load_config() -> dict:
 
 
 # ──────────────────────────────────────────────────────────
-# Multi-key round-robin
+# OpenRouter 多 key 輪替 + 多 model 降級
 # ──────────────────────────────────────────────────────────
 
 _API_KEYS: list[str] = []
-for _i in range(1, 10):  # 支援最多 9 組
-    _k = os.getenv(f"AIHUBMIX_API_KEY_{_i}", "")
+for _suffix in ["", "_2", "_3", "_4", "_5", "_6", "_7", "_8", "_9"]:
+    _k = os.getenv(f"OPENROUTER_API_KEY{_suffix}", "")
     if _k:
         _API_KEYS.append(_k)
 
-# fallback 到舊的 OPENROUTER_API_KEY
 if not _API_KEYS:
-    _old_key = os.getenv("OPENROUTER_API_KEY", "")
-    if _old_key:
-        _API_KEYS.append(_old_key)
-
-if not _API_KEYS:
-    raise ValueError("No API keys configured (set AIHUBMIX_API_KEY_* or OPENROUTER_API_KEY)")
+    raise ValueError("No OpenRouter API keys configured (set OPENROUTER_API_KEY[_2..9])")
 
 _key_cycle = itertools.cycle(_API_KEYS)
-_logger.info("API keys loaded", extra={"key_count": len(_API_KEYS)})
+_logger.info("API keys loaded", extra={"provider": "openrouter", "key_count": len(_API_KEYS)})
+
+# 執行期可被 preflight 修改的 healthy model chains（初始為 None 代表尚未載入）
+_scoring_chain: list[str] | None = None
+_generation_chain: list[str] | None = None
 
 
 def _get_api_base_url() -> str:
-    """取得 API base URL：AIHUBMIX_API_URL > OPENROUTER_API_URL > config.yaml。"""
-    url = os.getenv("AIHUBMIX_API_URL") or os.getenv("OPENROUTER_API_URL")
+    url = os.getenv("OPENROUTER_API_URL")
     if url:
         return url
     config = load_config()
@@ -85,28 +82,27 @@ def get_next_api_key() -> str:
 
 def get_llm_client() -> OpenAI:
     """建立帶有輪替 key 的 OpenAI-compatible client。每次呼叫使用下一個 key。"""
-    api_key = get_next_api_key()
-    return OpenAI(
-        api_key=api_key,
-        base_url=_get_api_base_url(),
-    )
+    return OpenAI(api_key=get_next_api_key(), base_url=_get_api_base_url())
 
 
 def _extract_content(resp) -> str:
-    """從 LLM response 中提取文字內容。處理 DeepSeek R1 的 reasoning_content。"""
     msg = resp.choices[0].message
-    # 正常 content
     if msg.content:
         return msg.content
     # DeepSeek R1 有時把回答放在 reasoning_content
     reasoning = getattr(msg, "reasoning_content", None)
-    if reasoning:
-        return reasoning
-    return ""
+    return reasoning or ""
 
 
-def _try_model(client: OpenAI, model: str, messages: list[dict], max_tokens: int, temperature: float, max_retries: int) -> str | None:
-    """嘗試用指定 client + model 呼叫 LLM，429 時 retry。成功回傳 content，全部失敗回傳 None。"""
+def _try_model(
+    client: OpenAI,
+    model: str,
+    messages: list[dict],
+    max_tokens: int,
+    temperature: float,
+    max_retries: int,
+) -> str | None:
+    """單一 (client, model) 呼叫：429 retry，其他 error 或 empty 直接回 None。"""
     for attempt in range(max_retries + 1):
         try:
             resp = client.chat.completions.create(
@@ -114,34 +110,81 @@ def _try_model(client: OpenAI, model: str, messages: list[dict], max_tokens: int
                 max_tokens=max_tokens, temperature=temperature,
             )
             content = _extract_content(resp)
-            if content:
-                return content
-            return None  # empty → 讓外層嘗試下個選項
+            return content or None
         except Exception as e:
-            if "429" in str(e) and attempt < max_retries:
+            err = str(e)
+            if "429" in err and attempt < max_retries:
                 wait = (attempt + 1) * 5
                 _logger.warning("Rate limited, retrying", extra={"model": model, "wait_seconds": wait, "attempt": attempt + 1})
                 time.sleep(wait)
                 continue
-            return None  # 非 429 或 retry 用盡 → 回傳 None
+            _logger.debug("Model call failed", extra={"model": model, "error": err[:200]})
+            return None
     return None
 
 
-_OR_KEYS: list[str] = []
-for _i in ["", "_2", "_3", "_4", "_5"]:
-    _k = os.getenv(f"OPENROUTER_API_KEY{_i}", "")
-    if _k:
-        _OR_KEYS.append(_k)
-_or_key_cycle = itertools.cycle(_OR_KEYS) if _OR_KEYS else None
+def _load_default_chains() -> tuple[list[str], list[str]]:
+    """從 config.yaml 讀取 scoring_models / generation_models。缺失時退回 legacy 單 model。"""
+    cfg = load_config().get("llm", {})
+    scoring = list(cfg.get("scoring_models") or [])
+    generation = list(cfg.get("generation_models") or [])
+    # legacy fallback：舊 config 只有 model / generation_model
+    if not scoring and cfg.get("model"):
+        scoring = [cfg["model"]]
+        if cfg.get("fallback_model"):
+            scoring.append(cfg["fallback_model"])
+    if not generation and cfg.get("generation_model"):
+        generation = [cfg["generation_model"]]
+        if cfg.get("generation_fallback_model"):
+            generation.append(cfg["generation_fallback_model"])
+    return scoring, generation
 
 
-def _get_openrouter_client(or_cfg: dict) -> OpenAI | None:
-    """建立 OpenRouter client（多 key 輪替）。"""
-    if not _or_key_cycle:
-        return None
-    key = next(_or_key_cycle)
-    url = or_cfg.get("api_url") or os.getenv("OPENROUTER_API_URL") or "https://openrouter.ai/api/v1"
-    return OpenAI(api_key=key, base_url=url)
+def _get_chain(is_generation: bool) -> list[str]:
+    global _scoring_chain, _generation_chain
+    if _scoring_chain is None or _generation_chain is None:
+        s, g = _load_default_chains()
+        _scoring_chain = s
+        _generation_chain = g
+    return _generation_chain if is_generation else _scoring_chain
+
+
+def preflight_models(timeout: float = 15.0) -> dict:
+    """在 pipeline 起頭 probe 所有配置的 model，把失效的從 chain 移除。
+    回傳 {'scoring': [...], 'generation': [...], 'dead': [...]}。"""
+    global _scoring_chain, _generation_chain
+    scoring, generation = _load_default_chains()
+    candidates = list(dict.fromkeys(scoring + generation))  # dedupe，保留順序
+    if not candidates:
+        _logger.error("Preflight: no models configured")
+        _scoring_chain, _generation_chain = [], []
+        return {"scoring": [], "generation": [], "dead": []}
+
+    alive: set[str] = set()
+    dead: list[tuple[str, str]] = []
+    probe_msg = [{"role": "user", "content": "ping"}]
+
+    for m in candidates:
+        client = get_llm_client()
+        try:
+            resp = client.with_options(timeout=timeout).chat.completions.create(
+                model=m, messages=probe_msg, max_tokens=5, temperature=0.0,
+            )
+            _ = _extract_content(resp)
+            alive.add(m)
+            _logger.info("Preflight OK", extra={"model": m})
+        except Exception as e:
+            err = str(e)[:160]
+            dead.append((m, err))
+            _logger.warning("Preflight failed", extra={"model": m, "error": err})
+
+    _scoring_chain = [m for m in scoring if m in alive]
+    _generation_chain = [m for m in generation if m in alive]
+    return {
+        "scoring": list(_scoring_chain),
+        "generation": list(_generation_chain),
+        "dead": dead,
+    }
 
 
 def llm_chat(
@@ -153,39 +196,32 @@ def llm_chat(
     fallback_model: str | None = None,
     is_generation: bool = False,
 ) -> str:
-    """呼叫 LLM 並返回回應文字。三層 fallback：OpenRouter → aihubmix primary → aihubmix fallback。"""
-    config = load_config()
-    llm_cfg = config["llm"]
-    max_tokens = max_tokens or llm_cfg.get("max_tokens", 8192)
+    """走 OpenRouter 多 model chain。每個 model 嘗試一次，失敗降級。全部失敗回傳 ""。
 
-    # Layer 1: OpenRouter（優先，免費額度較寬裕；SKIP_OPENROUTER=1 可跳過）
-    or_cfg = llm_cfg.get("openrouter_fallback", {})
-    or_client = _get_openrouter_client(or_cfg) if not os.getenv("SKIP_OPENROUTER") else None
-    if or_client and or_cfg:
-        or_model = or_cfg.get("generation_model" if is_generation else "model", or_cfg.get("model", ""))
-        if or_model:
-            result = _try_model(or_client, or_model, messages, max_tokens, temperature, max_retries)
-            if result:
-                return result
-            _logger.warning("OpenRouter failed, falling back to aihubmix", extra={"model": or_model})
+    - `model` / `fallback_model`：caller 指定偏好；若不在 chain 中則前置插入。
+    - `is_generation=True` 使用 generation chain，否則使用 scoring chain。
+    """
+    cfg = load_config()["llm"]
+    max_tokens = max_tokens or cfg.get("max_tokens", 8192)
 
-    # Layer 2: aihubmix primary model（輪替 key）
-    ah_model = model or llm_cfg["model"]
-    client = get_llm_client()
-    result = _try_model(client, ah_model, messages, max_tokens, temperature, max_retries)
-    if result:
-        return result
+    chain = list(_get_chain(is_generation))
+    # caller 偏好插在最前面（去重）
+    for pref in (model, fallback_model):
+        if pref and pref not in chain:
+            chain.insert(0, pref)
 
-    # Layer 3: aihubmix fallback model（輪替 key）
-    ah_fallback = fallback_model or llm_cfg.get("fallback_model")
-    if ah_fallback and ah_fallback != ah_model:
-        _logger.warning("aihubmix primary failed, trying fallback", extra={"model": ah_model, "fallback": ah_fallback})
-        client = get_llm_client()
-        result = _try_model(client, ah_fallback, messages, max_tokens, temperature, max_retries)
+    if not chain:
+        _logger.error("llm_chat: empty model chain (preflight 可能全部失敗)")
+        return ""
+
+    for m in chain:
+        client = get_llm_client()  # key 輪替
+        result = _try_model(client, m, messages, max_tokens, temperature, max_retries)
         if result:
             return result
+        _logger.warning("Model failed, trying next in chain", extra={"model": m})
 
-    _logger.error("All LLM providers failed")
+    _logger.error("All LLM models failed", extra={"tried": chain})
     return ""
 
 
