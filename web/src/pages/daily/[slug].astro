@@ -1,0 +1,196 @@
+---
+import { getCollection, render } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import { idDate, formatDate, recentCutoff } from '../../utils';
+
+export async function getStaticPaths() {
+  const cutoff = recentCutoff();
+  const posts = await getCollection('posts');
+  // 只 build 近 N 天，與列表頁一致
+  return posts
+    .filter((p) => idDate(p.id) >= cutoff)
+    .map((post) => ({
+      params: { slug: post.id },
+      props: { post },
+    }));
+}
+
+const { post } = Astro.props;
+const { Content } = await render(post);
+const date = idDate(post.id);
+---
+
+<Base title={post.data.title} description={post.data.source}>
+  <nav class="topnav">
+    <a href="/" class="back"><span aria-hidden="true">←</span> 每日自動</a>
+  </nav>
+
+  <article>
+    <header class="post-header">
+      <div class="meta-row">
+        <time datetime={date.toISOString()}>{formatDate(date)}</time>
+        {post.data.source && <span class="source-badge">{post.data.source}</span>}
+        {
+          post.data.score != null && (
+            <span class="score">★ {Math.round(post.data.score)}</span>
+          )
+        }
+      </div>
+      <h1>{post.data.title}</h1>
+      {
+        post.data.url && (
+          <a class="src-link" href={post.data.url} target="_blank" rel="noopener">
+            <span class="src-icon">🔗</span>
+            <span class="src-text">{post.data.url}</span>
+            <span class="src-ext" aria-hidden="true">↗</span>
+          </a>
+        )
+      }
+    </header>
+
+    <div class="prose">
+      <Content />
+    </div>
+
+    {
+      post.data.model && (
+        <p class="model-note">由 <code>{post.data.model}</code> 自動生成</p>
+      )
+    }
+  </article>
+
+  <footer class="post-footer">
+    <a href="/" class="back"><span aria-hidden="true">←</span> 每日自動</a>
+  </footer>
+</Base>
+
+<style>
+  .topnav {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    margin: -3rem -1.25rem 1.5rem;
+    padding: 0.85rem 1.25rem;
+    backdrop-filter: blur(10px);
+    background: rgba(10, 12, 16, 0.72);
+    border-bottom: 1px solid var(--border);
+  }
+  .back {
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .back:hover {
+    color: var(--accent);
+  }
+  .post-header {
+    margin-bottom: 2.25rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 1.4rem;
+  }
+  .meta-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    color: var(--faint);
+  }
+  .source-badge {
+    color: var(--accent-cyan);
+    border: 1px solid var(--border-strong);
+    border-radius: 5px;
+    padding: 0 0.4rem;
+  }
+  .score {
+    color: var(--accent-2);
+  }
+  .post-header h1 {
+    margin: 0.55rem 0 0.85rem;
+    font-size: 1.8rem;
+    background: linear-gradient(180deg, var(--text), #aebdce);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .src-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    max-width: 100%;
+    font-size: 0.82rem;
+    font-family: var(--mono);
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.45rem 0.8rem;
+    transition:
+      border-color 0.18s ease,
+      box-shadow 0.18s ease;
+  }
+  .src-link:hover {
+    color: var(--text);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+  .src-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .src-ext {
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+  .prose :global(h1) {
+    margin-top: 2.25rem;
+    font-size: 1.5rem;
+  }
+  .prose :global(h2) {
+    margin-top: 2rem;
+    font-size: 1.35rem;
+    padding-bottom: 0.3rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .prose :global(h3) {
+    margin-top: 1.5rem;
+    font-size: 1.15rem;
+    color: var(--accent-cyan);
+  }
+  .prose :global(p) {
+    margin: 1.05rem 0;
+  }
+  .prose :global(ul),
+  .prose :global(ol) {
+    padding-left: 1.5rem;
+  }
+  .prose :global(li) {
+    margin: 0.4rem 0;
+  }
+  .prose :global(li::marker) {
+    color: var(--accent);
+  }
+  .prose :global(strong) {
+    color: #fff;
+  }
+  .prose :global(a) {
+    text-decoration: underline;
+    text-decoration-color: var(--border-strong);
+    text-underline-offset: 3px;
+  }
+  .prose :global(a:hover) {
+    text-decoration-color: var(--accent);
+  }
+  .model-note {
+    margin-top: 2.5rem;
+    color: var(--faint);
+    font-size: 0.8rem;
+  }
+  .post-footer {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+  }
+</style>

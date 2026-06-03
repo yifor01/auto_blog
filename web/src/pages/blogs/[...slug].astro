@@ -1,0 +1,187 @@
+---
+import { getCollection, render } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import { postDate, formatDate } from '../../utils';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('blogs');
+  return posts.map((post) => ({
+    params: { slug: post.id },
+    props: { post },
+  }));
+}
+
+const { post } = Astro.props;
+const { Content } = await render(post);
+const date = postDate(post);
+---
+
+<Base title={post.data.title} description={post.data.tldr}>
+  <nav class="topnav">
+    <a href="/curated" class="back"><span aria-hidden="true">←</span> 精選列表</a>
+  </nav>
+
+  <article>
+    <header class="post-header">
+      <time datetime={date.toISOString()}>{formatDate(date)}</time>
+      <h1>{post.data.title}</h1>
+      {
+        post.data.tags.length > 0 && (
+          <div class="post-tags">
+            {post.data.tags.map((tag) => (
+              <span class="tag">{tag}</span>
+            ))}
+          </div>
+        )
+      }
+      {
+        post.data.paper_url && (
+          <a
+            class="paper-link"
+            href={post.data.paper_url}
+            target="_blank"
+            rel="noopener"
+          >
+            <span class="paper-icon">📄</span>
+            <span class="paper-text">{post.data.paper_title ?? '原始論文'}</span>
+            <span class="paper-ext" aria-hidden="true">↗</span>
+          </a>
+        )
+      }
+    </header>
+
+    <div class="prose">
+      <Content />
+    </div>
+  </article>
+
+  <footer class="post-footer">
+    <a href="/curated" class="back"><span aria-hidden="true">←</span> 精選列表</a>
+  </footer>
+</Base>
+
+<style>
+  .topnav {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    margin: -3rem -1.25rem 1.5rem;
+    padding: 0.85rem 1.25rem;
+    backdrop-filter: blur(10px);
+    background: rgba(10, 12, 16, 0.72);
+    border-bottom: 1px solid var(--border);
+  }
+  .back {
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .back:hover {
+    color: var(--accent);
+  }
+  .post-header {
+    margin-bottom: 2.25rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 1.4rem;
+  }
+  .post-header time {
+    font-family: var(--mono);
+    color: var(--faint);
+    font-size: 0.8rem;
+    letter-spacing: 0.02em;
+  }
+  .post-header h1 {
+    margin: 0.45rem 0 0.85rem;
+    font-size: 1.85rem;
+    background: linear-gradient(180deg, var(--text), #aebdce);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .post-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: 1rem;
+  }
+  .tag {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--accent);
+    background: rgba(93, 177, 255, 0.07);
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    padding: 0.1rem 0.55rem;
+  }
+  .tag::before {
+    content: '#';
+    opacity: 0.5;
+  }
+  .paper-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.88rem;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.5rem 0.85rem;
+    transition:
+      border-color 0.18s ease,
+      box-shadow 0.18s ease;
+  }
+  .paper-link:hover {
+    color: var(--text);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+  .paper-ext {
+    color: var(--accent);
+    font-size: 0.8rem;
+  }
+  .prose :global(h1) {
+    margin-top: 2.25rem;
+    font-size: 1.5rem;
+  }
+  .prose :global(h2) {
+    margin-top: 2rem;
+    font-size: 1.35rem;
+    padding-bottom: 0.3rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .prose :global(h3) {
+    margin-top: 1.5rem;
+    font-size: 1.15rem;
+    color: var(--accent-cyan);
+  }
+  .prose :global(p) {
+    margin: 1.05rem 0;
+  }
+  .prose :global(ul),
+  .prose :global(ol) {
+    padding-left: 1.5rem;
+  }
+  .prose :global(li) {
+    margin: 0.4rem 0;
+  }
+  .prose :global(li::marker) {
+    color: var(--accent);
+  }
+  .prose :global(strong) {
+    color: #fff;
+  }
+  .prose :global(a) {
+    text-decoration: underline;
+    text-decoration-color: var(--border-strong);
+    text-underline-offset: 3px;
+  }
+  .prose :global(a:hover) {
+    text-decoration-color: var(--accent);
+  }
+  .post-footer {
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+  }
+</style>

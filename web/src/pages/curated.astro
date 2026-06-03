@@ -1,0 +1,476 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../layouts/Base.astro';
+import Nav from '../components/Nav.astro';
+import { postDate, formatDate } from '../utils';
+
+const posts = (await getCollection('blogs')).sort(
+  (a, b) => postDate(b).getTime() - postDate(a).getTime(),
+);
+
+// tag → 出現次數（降序）
+const tagCounts = new Map<string, number>();
+for (const p of posts) {
+  for (const t of p.data.tags) tagCounts.set(t, (tagCounts.get(t) ?? 0) + 1);
+}
+const tags = [...tagCounts.entries()].sort((a, b) => b[1] - a[1]);
+
+// 月份 YYYY-MM → 次數（降序）
+const monthCounts = new Map<string, number>();
+for (const p of posts) {
+  const m = postDate(p).toISOString().slice(0, 7);
+  monthCounts.set(m, (monthCounts.get(m) ?? 0) + 1);
+}
+const months = [...monthCounts.entries()].sort((a, b) => b[0].localeCompare(a[0]));
+
+// 每篇預先算好 month + 搜尋字串，塞進 data-* 供前端篩選
+const items = posts.map((p) => ({
+  id: p.id,
+  title: p.data.title,
+  tldr: p.data.tldr ?? '',
+  tags: p.data.tags,
+  date: postDate(p),
+  month: postDate(p).toISOString().slice(0, 7),
+  search: `${p.data.title} ${p.data.tldr ?? ''} ${p.data.tags.join(' ')}`.toLowerCase(),
+}));
+---
+
+<Base title="Daily AI Blog" wide>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-inner">
+        <header class="brand-block">
+          <a href="/" class="brand">Daily AI Blog</a>
+          <p class="subtitle">
+            <span class="prompt">★</span> 人工策展 · 完整長文
+          </p>
+        </header>
+
+        <div class="search-box">
+          <input
+            type="search"
+            id="search"
+            placeholder="搜尋標題 / 摘要 / 標籤…"
+            autocomplete="off"
+          />
+        </div>
+
+        <button id="reset" class="reset" hidden>✕ 清除篩選</button>
+
+        <section class="facet">
+          <h3 class="facet-title">月份</h3>
+          <ul class="facet-list">
+            {
+              months.map(([m, c]) => (
+                <li>
+                  <button class="facet-btn" data-type="month" data-value={m}>
+                    <span>{m}</span>
+                    <span class="count">{c}</span>
+                  </button>
+                </li>
+              ))
+            }
+          </ul>
+        </section>
+
+        <section class="facet">
+          <h3 class="facet-title">標籤 <span class="count">{tags.length}</span></h3>
+          <div class="tag-cloud">
+            {
+              tags.map(([t, c]) => (
+                <button class="facet-btn tag-btn" data-type="tag" data-value={t}>
+                  <span>#{t}</span>
+                  <span class="count">{c}</span>
+                </button>
+              ))
+            }
+          </div>
+        </section>
+      </div>
+    </aside>
+
+    <div class="content">
+      <Nav active="curated" />
+      <div class="result-bar">
+        <span id="result-count">{items.length}</span> 篇精選文章
+      </div>
+
+      <ul class="post-list">
+        {
+          items.map((post) => (
+            <li
+              class="post-item"
+              data-month={post.month}
+              data-tags={post.tags.join('|')}
+              data-search={post.search}
+            >
+              <a href={`/blogs/${post.id}`} class="post-link">
+                <div class="post-meta">
+                  <time datetime={post.date.toISOString()}>
+                    {formatDate(post.date)}
+                  </time>
+                </div>
+                <h2 class="post-title">{post.title}</h2>
+                {post.tldr && <p class="post-tldr">{post.tldr}</p>}
+                {post.tags.length > 0 && (
+                  <div class="post-tags">
+                    {post.tags.map((tag) => (
+                      <span class="tag">{tag}</span>
+                    ))}
+                  </div>
+                )}
+                <span class="arrow" aria-hidden="true">→</span>
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+
+      <p class="empty" hidden>沒有符合條件的文章。</p>
+    </div>
+  </div>
+</Base>
+
+<script>
+  const search = document.getElementById('search') as HTMLInputElement;
+  const reset = document.getElementById('reset') as HTMLButtonElement;
+  const resultCount = document.getElementById('result-count')!;
+  const empty = document.querySelector('.empty') as HTMLElement;
+  const items = [...document.querySelectorAll<HTMLElement>('.post-item')];
+  const facetBtns = [...document.querySelectorAll<HTMLButtonElement>('.facet-btn')];
+
+  const state = { q: '', tag: '', month: '' };
+
+  function apply() {
+    let visible = 0;
+    for (const item of items) {
+      const okSearch =
+        !state.q || (item.dataset.search ?? '').includes(state.q);
+      const okMonth = !state.month || item.dataset.month === state.month;
+      const okTag =
+        !state.tag ||
+        (item.dataset.tags ?? '').split('|').includes(state.tag);
+      const show = okSearch && okMonth && okTag;
+      item.hidden = !show;
+      if (show) visible++;
+    }
+    resultCount.textContent = String(visible);
+    empty.hidden = visible !== 0;
+
+    const filtering = !!(state.q || state.tag || state.month);
+    reset.hidden = !filtering;
+
+    for (const btn of facetBtns) {
+      const active =
+        (btn.dataset.type === 'tag' && btn.dataset.value === state.tag) ||
+        (btn.dataset.type === 'month' && btn.dataset.value === state.month);
+      btn.classList.toggle('active', active);
+    }
+  }
+
+  search.addEventListener('input', () => {
+    state.q = search.value.trim().toLowerCase();
+    apply();
+  });
+
+  for (const btn of facetBtns) {
+    btn.addEventListener('click', () => {
+      const type = btn.dataset.type as 'tag' | 'month';
+      const value = btn.dataset.value ?? '';
+      // 再次點擊同一個 = 取消
+      state[type] = state[type] === value ? '' : value;
+      apply();
+    });
+  }
+
+  reset.addEventListener('click', () => {
+    state.q = '';
+    state.tag = '';
+    state.month = '';
+    search.value = '';
+    apply();
+  });
+</script>
+
+<style>
+  .layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 3rem;
+    align-items: start;
+  }
+  .sidebar {
+    position: sticky;
+    top: 1.5rem;
+  }
+  .sidebar-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 1.4rem;
+    max-height: calc(100vh - 3rem);
+    overflow-y: auto;
+    padding-right: 0.4rem;
+  }
+  .brand {
+    display: block;
+    font-size: 1.55rem;
+    font-weight: 700;
+    background: linear-gradient(
+      100deg,
+      var(--accent) 10%,
+      var(--accent-2) 55%,
+      var(--accent-cyan) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    width: fit-content;
+  }
+  .brand:hover {
+    color: transparent;
+  }
+  .subtitle {
+    margin: 0.3rem 0 0;
+    color: var(--muted);
+    font-size: 0.82rem;
+  }
+  .prompt {
+    color: var(--accent-cyan);
+    font-weight: 700;
+  }
+  .search-box input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: 9px;
+    padding: 0.55rem 0.75rem;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 0.88rem;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .search-box input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--glow);
+  }
+  .search-box input::placeholder {
+    color: var(--faint);
+  }
+  .reset {
+    align-self: flex-start;
+    background: rgba(157, 123, 255, 0.1);
+    border: 1px solid var(--border-strong);
+    color: var(--accent-2);
+    font-family: var(--mono);
+    font-size: 0.76rem;
+    border-radius: 7px;
+    padding: 0.25rem 0.6rem;
+    cursor: pointer;
+    transition: border-color 0.15s ease;
+  }
+  .reset:hover {
+    border-color: var(--accent-2);
+  }
+  .facet-title {
+    margin: 0 0 0.6rem;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--faint);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .facet-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .facet-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    padding: 0.3rem 0.55rem;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    text-align: left;
+    cursor: pointer;
+    transition:
+      background 0.13s ease,
+      color 0.13s ease,
+      border-color 0.13s ease;
+  }
+  .facet-btn:hover {
+    background: var(--surface);
+    color: var(--text);
+  }
+  .facet-btn.active {
+    background: rgba(93, 177, 255, 0.12);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .count {
+    font-size: 0.72rem;
+    color: var(--faint);
+    background: var(--surface);
+    border-radius: 5px;
+    padding: 0 0.35rem;
+  }
+  .facet-btn.active .count {
+    color: var(--accent);
+  }
+  .tag-cloud {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+  }
+  .tag-btn {
+    width: auto;
+  }
+
+  .result-bar {
+    color: var(--muted);
+    font-size: 0.82rem;
+    font-family: var(--mono);
+    margin-bottom: 1rem;
+  }
+  .result-bar #result-count {
+    color: var(--accent);
+  }
+  .post-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+  }
+  .post-item[hidden] {
+    display: none;
+  }
+  .post-item {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    position: relative;
+    overflow: hidden;
+    transition:
+      border-color 0.18s ease,
+      box-shadow 0.18s ease,
+      transform 0.18s ease,
+      background 0.18s ease;
+  }
+  .post-item::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 3px;
+    background: linear-gradient(var(--accent), var(--accent-2));
+    opacity: 0;
+    transition: opacity 0.18s ease;
+  }
+  .post-item:hover {
+    border-color: var(--accent);
+    background: var(--surface-hover);
+    box-shadow: 0 0 0 1px var(--accent), 0 8px 30px -12px var(--glow);
+    transform: translateY(-2px);
+  }
+  .post-item:hover::before {
+    opacity: 1;
+  }
+  .post-link {
+    display: block;
+    padding: 1.3rem 1.6rem;
+    color: inherit;
+  }
+  .post-link:hover {
+    color: inherit;
+  }
+  .post-meta {
+    font-family: var(--mono);
+    color: var(--faint);
+    font-size: 0.76rem;
+    letter-spacing: 0.02em;
+    margin-bottom: 0.45rem;
+  }
+  .post-title {
+    margin: 0 0 0.5rem;
+    font-size: 1.18rem;
+    color: var(--text);
+    transition: color 0.18s ease;
+  }
+  .post-item:hover .post-title {
+    color: var(--accent);
+  }
+  .post-tldr {
+    margin: 0 0 0.7rem;
+    color: var(--muted);
+    font-size: 0.92rem;
+    line-height: 1.6;
+  }
+  .post-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+  .tag {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--accent);
+    background: rgba(93, 177, 255, 0.07);
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    padding: 0.1rem 0.55rem;
+  }
+  .tag::before {
+    content: '#';
+    opacity: 0.5;
+  }
+  .arrow {
+    position: absolute;
+    right: 1.2rem;
+    bottom: 1.15rem;
+    color: var(--accent);
+    font-size: 1.1rem;
+    opacity: 0;
+    transform: translateX(-6px);
+    transition:
+      opacity 0.18s ease,
+      transform 0.18s ease;
+  }
+  .post-item:hover .arrow {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  .empty {
+    color: var(--muted);
+    text-align: center;
+    padding: 3rem 0;
+  }
+
+  /* 窄螢幕：sidebar 收到上方、不 sticky */
+  @media (max-width: 760px) {
+    .layout {
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+    .sidebar {
+      position: static;
+    }
+    .sidebar-inner {
+      max-height: none;
+      overflow: visible;
+    }
+  }
+</style>

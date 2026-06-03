@@ -1,0 +1,474 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../layouts/Base.astro';
+import Nav from '../components/Nav.astro';
+import { idDate, formatDate, recentCutoff, RECENT_DAYS, excerpt } from '../utils';
+
+const all = await getCollection('posts');
+const cutoff = recentCutoff();
+const recent = all
+  .filter((p) => idDate(p.id) >= cutoff)
+  .sort((a, b) => idDate(b.id).getTime() - idDate(a.id).getTime());
+
+// source → 次數（降序）
+const sourceCounts = new Map<string, number>();
+for (const p of recent) {
+  const s = p.data.source ?? '其他';
+  sourceCounts.set(s, (sourceCounts.get(s) ?? 0) + 1);
+}
+const sources = [...sourceCounts.entries()].sort((a, b) => b[1] - a[1]);
+
+// 月份 → 次數（降序）
+const monthCounts = new Map<string, number>();
+for (const p of recent) {
+  const m = idDate(p.id).toISOString().slice(0, 7);
+  monthCounts.set(m, (monthCounts.get(m) ?? 0) + 1);
+}
+const months = [...monthCounts.entries()].sort((a, b) => b[0].localeCompare(a[0]));
+
+const items = recent.map((p) => {
+  const source = p.data.source ?? '其他';
+  const summary = excerpt(p.body);
+  return {
+    id: p.id,
+    title: p.data.title,
+    source,
+    score: p.data.score,
+    url: p.data.url,
+    summary,
+    date: idDate(p.id),
+    month: idDate(p.id).toISOString().slice(0, 7),
+    search: `${p.data.title} ${source} ${summary}`.toLowerCase(),
+  };
+});
+---
+
+<Base title="每日自動 — Daily AI Blog" wide>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-inner">
+        <header class="brand-block">
+          <a href="/" class="brand">Daily AI Blog</a>
+          <p class="subtitle">
+            <span class="prompt">⚡</span> 每日自動 · 近 {RECENT_DAYS} 天
+          </p>
+        </header>
+
+        <div class="search-box">
+          <input
+            type="search"
+            id="search"
+            placeholder="搜尋標題 / 來源…"
+            autocomplete="off"
+          />
+        </div>
+
+        <button id="reset" class="reset" hidden>✕ 清除篩選</button>
+
+        <section class="facet">
+          <h3 class="facet-title">月份</h3>
+          <ul class="facet-list">
+            {
+              months.map(([m, c]) => (
+                <li>
+                  <button class="facet-btn" data-type="month" data-value={m}>
+                    <span>{m}</span>
+                    <span class="count">{c}</span>
+                  </button>
+                </li>
+              ))
+            }
+          </ul>
+        </section>
+
+        <section class="facet">
+          <h3 class="facet-title">來源 <span class="count">{sources.length}</span></h3>
+          <ul class="facet-list">
+            {
+              sources.map(([s, c]) => (
+                <li>
+                  <button class="facet-btn" data-type="source" data-value={s}>
+                    <span class="src-name">{s}</span>
+                    <span class="count">{c}</span>
+                  </button>
+                </li>
+              ))
+            }
+          </ul>
+        </section>
+      </div>
+    </aside>
+
+    <div class="content">
+      <Nav active="daily" />
+      <div class="result-bar">
+        <span id="result-count">{items.length}</span> 篇 ·
+        <span class="dim">近 {RECENT_DAYS} 天（全部 {all.length} 篇）</span>
+      </div>
+
+      <ul class="post-list">
+        {
+          items.map((post) => (
+            <li
+              class="post-item"
+              data-month={post.month}
+              data-source={post.source}
+              data-search={post.search}
+            >
+              <a href={`/daily/${post.id}`} class="post-link">
+                <div class="post-meta">
+                  <time datetime={post.date.toISOString()}>
+                    {formatDate(post.date)}
+                  </time>
+                  <span class="source-badge">{post.source}</span>
+                  {post.score != null && (
+                    <span class="score">★ {Math.round(post.score)}</span>
+                  )}
+                </div>
+                <h2 class="post-title">{post.title}</h2>
+                {post.summary && <p class="post-tldr">{post.summary}</p>}
+                <span class="arrow" aria-hidden="true">→</span>
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+
+      <p class="empty" hidden>沒有符合條件的文章。</p>
+    </div>
+  </div>
+</Base>
+
+<script>
+  const search = document.getElementById('search') as HTMLInputElement;
+  const reset = document.getElementById('reset') as HTMLButtonElement;
+  const resultCount = document.getElementById('result-count')!;
+  const empty = document.querySelector('.empty') as HTMLElement;
+  const items = [...document.querySelectorAll<HTMLElement>('.post-item')];
+  const facetBtns = [...document.querySelectorAll<HTMLButtonElement>('.facet-btn')];
+
+  const state = { q: '', source: '', month: '' };
+
+  function apply() {
+    let visible = 0;
+    for (const item of items) {
+      const okSearch =
+        !state.q || (item.dataset.search ?? '').includes(state.q);
+      const okMonth = !state.month || item.dataset.month === state.month;
+      const okSource = !state.source || item.dataset.source === state.source;
+      const show = okSearch && okMonth && okSource;
+      item.hidden = !show;
+      if (show) visible++;
+    }
+    resultCount.textContent = String(visible);
+    empty.hidden = visible !== 0;
+    reset.hidden = !(state.q || state.source || state.month);
+
+    for (const btn of facetBtns) {
+      const active =
+        (btn.dataset.type === 'source' && btn.dataset.value === state.source) ||
+        (btn.dataset.type === 'month' && btn.dataset.value === state.month);
+      btn.classList.toggle('active', active);
+    }
+  }
+
+  search.addEventListener('input', () => {
+    state.q = search.value.trim().toLowerCase();
+    apply();
+  });
+
+  for (const btn of facetBtns) {
+    btn.addEventListener('click', () => {
+      const type = btn.dataset.type as 'source' | 'month';
+      const value = btn.dataset.value ?? '';
+      state[type] = state[type] === value ? '' : value;
+      apply();
+    });
+  }
+
+  reset.addEventListener('click', () => {
+    state.q = '';
+    state.source = '';
+    state.month = '';
+    search.value = '';
+    apply();
+  });
+</script>
+
+<style>
+  .layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 3rem;
+    align-items: start;
+  }
+  .sidebar {
+    position: sticky;
+    top: 1.5rem;
+  }
+  .sidebar-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 1.4rem;
+    max-height: calc(100vh - 3rem);
+    overflow-y: auto;
+    padding-right: 0.4rem;
+  }
+  .brand {
+    display: block;
+    font-size: 1.55rem;
+    font-weight: 700;
+    background: linear-gradient(
+      100deg,
+      var(--accent) 10%,
+      var(--accent-2) 55%,
+      var(--accent-cyan) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    width: fit-content;
+  }
+  .brand:hover {
+    color: transparent;
+  }
+  .subtitle {
+    margin: 0.3rem 0 0;
+    color: var(--muted);
+    font-size: 0.82rem;
+  }
+  .prompt {
+    color: var(--accent-cyan);
+    font-weight: 700;
+  }
+  .search-box input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: 9px;
+    padding: 0.55rem 0.75rem;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 0.88rem;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .search-box input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--glow);
+  }
+  .search-box input::placeholder {
+    color: var(--faint);
+  }
+  .reset {
+    align-self: flex-start;
+    background: rgba(157, 123, 255, 0.1);
+    border: 1px solid var(--border-strong);
+    color: var(--accent-2);
+    font-family: var(--mono);
+    font-size: 0.76rem;
+    border-radius: 7px;
+    padding: 0.25rem 0.6rem;
+    cursor: pointer;
+    transition: border-color 0.15s ease;
+  }
+  .reset:hover {
+    border-color: var(--accent-2);
+  }
+  .facet-title {
+    margin: 0 0 0.6rem;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--faint);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .facet-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .facet-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    padding: 0.3rem 0.55rem;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    text-align: left;
+    cursor: pointer;
+    transition:
+      background 0.13s ease,
+      color 0.13s ease,
+      border-color 0.13s ease;
+  }
+  .facet-btn:hover {
+    background: var(--surface);
+    color: var(--text);
+  }
+  .facet-btn.active {
+    background: rgba(93, 177, 255, 0.12);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .src-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .count {
+    flex-shrink: 0;
+    font-size: 0.72rem;
+    color: var(--faint);
+    background: var(--surface);
+    border-radius: 5px;
+    padding: 0 0.35rem;
+  }
+  .facet-btn.active .count {
+    color: var(--accent);
+  }
+
+  .result-bar {
+    color: var(--muted);
+    font-size: 0.82rem;
+    font-family: var(--mono);
+    margin-bottom: 1rem;
+  }
+  .result-bar #result-count {
+    color: var(--accent);
+  }
+  .result-bar .dim {
+    color: var(--faint);
+  }
+  .post-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+  }
+  .post-item[hidden] {
+    display: none;
+  }
+  .post-item {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    position: relative;
+    overflow: hidden;
+    transition:
+      border-color 0.18s ease,
+      box-shadow 0.18s ease,
+      transform 0.18s ease,
+      background 0.18s ease;
+  }
+  .post-item::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 3px;
+    background: linear-gradient(var(--accent), var(--accent-2));
+    opacity: 0;
+    transition: opacity 0.18s ease;
+  }
+  .post-item:hover {
+    border-color: var(--accent);
+    background: var(--surface-hover);
+    box-shadow: 0 0 0 1px var(--accent), 0 8px 30px -12px var(--glow);
+    transform: translateY(-2px);
+  }
+  .post-item:hover::before {
+    opacity: 1;
+  }
+  .post-link {
+    display: block;
+    padding: 1rem 1.4rem;
+    color: inherit;
+  }
+  .post-link:hover {
+    color: inherit;
+  }
+  .post-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    font-family: var(--mono);
+    color: var(--faint);
+    font-size: 0.74rem;
+    margin-bottom: 0.4rem;
+  }
+  .source-badge {
+    color: var(--accent-cyan);
+    border: 1px solid var(--border-strong);
+    border-radius: 5px;
+    padding: 0 0.4rem;
+  }
+  .score {
+    color: var(--accent-2);
+  }
+  .post-title {
+    margin: 0 0 0.4rem;
+    font-size: 1.05rem;
+    color: var(--text);
+    transition: color 0.18s ease;
+    padding-right: 1.5rem;
+  }
+  .post-item:hover .post-title {
+    color: var(--accent);
+  }
+  .post-tldr {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.88rem;
+    line-height: 1.55;
+  }
+  .arrow {
+    position: absolute;
+    right: 1.2rem;
+    top: 1rem;
+    color: var(--accent);
+    font-size: 1.1rem;
+    opacity: 0;
+    transform: translateX(-6px);
+    transition:
+      opacity 0.18s ease,
+      transform 0.18s ease;
+  }
+  .post-item:hover .arrow {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  .empty {
+    color: var(--muted);
+    text-align: center;
+    padding: 3rem 0;
+  }
+
+  @media (max-width: 760px) {
+    .layout {
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+    .sidebar {
+      position: static;
+    }
+    .sidebar-inner {
+      max-height: none;
+      overflow: visible;
+    }
+  }
+</style>
