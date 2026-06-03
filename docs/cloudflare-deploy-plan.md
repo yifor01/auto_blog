@@ -1,6 +1,6 @@
 # Daily Blog → Cloudflare 自動部署 Plan
 
-> 建立日期：2026-06-03 ｜ 狀態：**程式碼已實作（Step 1-4, 6 完成），Step 5 待手動設定**
+> 建立日期：2026-06-03 ｜ 狀態：**✅ 已上線** <https://auto-post-blog.yifor01.workers.dev/>（剩 Cloudflare Access 私人保護待設）
 > 目標：`daily-pipeline.yml` 跑完後，自動把 blog markdown 變成網站並部署到 Cloudflare，**遠端（手機/外網）私人查看**。
 
 ## 實作紀錄（2026-06-03）
