@@ -1,6 +1,6 @@
 # Daily Blog → Cloudflare 自動部署 Plan
 
-> 建立日期：2026-06-03 ｜ 狀態：**✅ 已上線** <https://auto-post-blog.yifor01.workers.dev/>（剩 Cloudflare Access 私人保護待設）
+> 建立日期：2026-06-03 ｜ 狀態：**遷移中** — 原 Workers 部署成功但 `*.workers.dev` 不支援 Access，改建 **Pages**（`*.pages.dev` 支援 Access）以做私人保護
 > 目標：`daily-pipeline.yml` 跑完後，自動把 blog markdown 變成網站並部署到 Cloudflare，**遠端（手機/外網）私人查看**。
 
 ## 實作紀錄（2026-06-03）
@@ -16,10 +16,10 @@
 - **資料 bug 修復**：`output/blogs` 是**人工策展**、不由 pipeline 產；pipeline 每日產的是 `output/posts`。發現 `src/generators/blog_post.py` 用 f-string 組 frontmatter，標題含 `"` 時產生不合法 YAML（5 個既有檔受害，已修）→ 改用 `yaml.safe_dump`。
 - **Step 4**：本機 build 814 頁通過、瀏覽器實測列表/內頁/篩選/tab 皆正常、零 console error。
 - **Step 5**：Cloudflare dashboard 設定（建 Pages project、API token、Access）仍需手動，見下。
-- **Step 5/6（改用 CF Git 整合）**：捨棄原計劃的 wrangler-action + Direct Upload，改用 **Cloudflare 連 GitHub 自動建置**——CF 偵測 push 自動 build + 部署，不需 API token/secrets、不需 workflow deploy job（已從 `daily-pipeline.yml` 移除）。每次 push 觸發重建（每日資料 commit ≈ 每日一次 build）。
-  - ⚠️ 新版 CF「Connect to Git」預設建的是 **Worker**（非 Pages），介面是 `Build command` + `Deploy command: npx wrangler deploy`（沒有 Build output directory 欄位）。故採 **Workers Static Assets**：加 `web/wrangler.toml`（`name` + `compatibility_date` + `[assets] directory=./dist`），由 `wrangler deploy` 把 `dist/` 當靜態站部署。
-  - CF build 設定：**Path/Root directory=`web`**（漏填會在 repo 根目錄跑 `pip install .` + `npm run build` 找不到 package.json 而失敗）、Build command=`npm run build`、Deploy command=`npx wrangler deploy`、Node 由 `web/.nvmrc`(=20) 控制。
-  - `wrangler.toml` 的 `name` 必須與 CF 上建立的 Worker 同名。
+- **Step 5/6（改用 CF Pages + Git 整合）**：捨棄原計劃的 wrangler-action + Direct Upload，改用 **Cloudflare Pages 連 GitHub**——CF 偵測 push 自動 build + 部署，不需 API token/secrets、不需 workflow deploy job（已從 `daily-pipeline.yml` 移除）。
+  - ⚠️ **踩雷紀錄（重要）**：新版 CF「Connect to Git」預設建的是 **Worker**（非 Pages）→ 我們一度走 Workers Static Assets（`wrangler.toml` + `[assets]`）部署成功，**但 `*.workers.dev` 無法被 Cloudflare Access 保護**（Access 只能保護你自己加入 Cloudflare 的 zone）。為了私人保護，**改用 Pages**（`*.pages.dev` 支援 Access）。`web/wrangler.toml` 已移除（Workers 專用，留著會讓 Pages build 失敗）。
+  - **Pages build 設定**：Framework preset=`Astro`、**Root directory=`web`**（漏填會在 repo 根跑 `pip install .` 而失敗）、Build command=`npm run build`、Build output directory=`dist`、Node 由 `web/.nvmrc`(=20) 控制。Pages 有 Build output directory 欄位、不需 wrangler.toml/deploy command。
+  - 找 Pages 入口：Workers & Pages → Create → 切到 **Pages** 分頁 → Connect to Git（別走預設的 Workers/Import repository）。
 
 > ⚠️ 未來新增 collection / 改 `RECENT_DAYS` 時記得：glob loader 會載入**全部** posts（日期篩選在 load 之後），所以任何一個壞 YAML 檔都會中斷 build。
 
