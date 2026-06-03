@@ -1,10 +1,10 @@
 ---
-title: "EU calls VPNs "a loophole that needs closing" in age verification push"
+title: EU calls VPNs "a loophole that needs closing" in age verification push
 source: Hacker News
 url: https://cyberinsider.com/eu-calls-vpns-a-loophole-that-needs-closing-in-age-verification-push/
 score: 49
 model: tencent/hy3-preview:free
-generated_at: 2026-05-09T19:44:02.508842
+generated_at: '2026-05-09T19:44:02.508842'
 ---
 
 📌 **歐盟警告：VPN 成為年齡驗證的漏洞**  

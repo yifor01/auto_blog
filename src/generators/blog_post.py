@@ -5,6 +5,8 @@ from __future__ import annotations
 from datetime import date
 from pathlib import Path
 
+import yaml
+
 from src.models import GeneratedContent, ScoredItem
 from src.logger import get_logger
 from src.utils import (
@@ -235,19 +237,21 @@ def save_blog_post(gen: GeneratedContent, target_date: date | None = None) -> st
     slug = slugify(gen.source_item.item.title)
     filename = f"{date_str}_{slug}.md"
 
-    # 儲存 blog post
+    # 儲存 blog post。frontmatter 用 yaml.safe_dump 序列化，避免標題含引號/冒號等
+    # 特殊字元時手動 f-string 產生不合法的 YAML（曾導致下游 Astro build 失敗）。
     post_path = POSTS_DIR / filename
-    post_content = f"""---
-title: "{gen.source_item.item.title}"
-source: {gen.source_item.item.source_name}
-url: {gen.source_item.item.url}
-score: {gen.source_item.total_score:.0f}
-model: {gen.model_used}
-generated_at: {gen.generated_at.isoformat()}
----
-
-{gen.content}
-"""
+    frontmatter = {
+        "title": gen.source_item.item.title,
+        "source": gen.source_item.item.source_name,
+        "url": gen.source_item.item.url,
+        "score": round(gen.source_item.total_score),
+        "model": gen.model_used,
+        "generated_at": gen.generated_at.isoformat(),
+    }
+    fm_yaml = yaml.safe_dump(
+        frontmatter, allow_unicode=True, sort_keys=False, default_flow_style=False
+    ).strip()
+    post_content = f"---\n{fm_yaml}\n---\n\n{gen.content}\n"
     post_path.write_text(post_content, encoding="utf-8")
 
     # 儲存 prompt (未來可重新呼叫)

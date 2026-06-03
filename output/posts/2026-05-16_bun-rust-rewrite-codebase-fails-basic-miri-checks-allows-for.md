@@ -1,10 +1,11 @@
 ---
-title: "Bun Rust rewrite: "codebase fails basic miri checks, allows for UB in safe rust""
+title: 'Bun Rust rewrite: "codebase fails basic miri checks, allows for UB in safe
+  rust"'
 source: Hacker News
 url: https://github.com/oven-sh/bun/issues/30719
 score: 66
 model: tencent/hy3-preview:free
-generated_at: 2026-05-16T19:45:08.971396
+generated_at: '2026-05-16T19:45:08.971396'
 ---
 
 📌 【Bun Rust 重寫警示】Miri 檢查失敗，安全 Rust 也可能產生未定義行為  
