@@ -100,14 +100,22 @@ cd web && npm run build && npm run preview
 # 確認列表有文章、內頁 markdown 正常渲染、tags 顯示
 ```
 
-### 5. Cloudflare 一次性設定（手動，只做一次）
-1. **建 Pages project**：Cloudflare dashboard → Workers & Pages → Create → Pages → 取名 `auto-post-blog`（先 Direct Upload，不接 Git）。
-2. **API Token**：My Profile → API Tokens → Create → 用 "Cloudflare Pages: Edit" 模板 → 複製 token。
-3. **Account ID**：dashboard 右側欄複製。
-4. **GitHub Secrets**（repo Settings → Secrets → Actions）新增：
-   - `CLOUDFLARE_API_TOKEN`
-   - `CLOUDFLARE_ACCOUNT_ID`
-5. **Cloudflare Access（私人保護）**：Zero Trust → Access → Applications → Add → Self-hosted → domain 填 `auto-post-blog.pages.dev` → Policy：Action=Allow, Include=Emails=你的 email。儲存後訪問該站需登入。
+### 5. Cloudflare 一次性設定（手動）
+
+> ⚠️ 原計劃的 Pages + API token + Direct Upload **已棄用**，實際採 Workers + Git 整合（見上方「實作紀錄」）。CF build 設定不需 token/secrets。以下只剩 **Access 私人保護**要手動做。
+
+**Cloudflare Access（私人保護，給主管 demo 用）**
+
+- **方案**：第一次進 Zero Trust 選 **Free**（最多 50 users，Access 全功能；流程可能要填信用卡但 ≤50 人 $0）
+- Zero Trust（<https://one.dash.cloudflare.com>）→ **Access** → **Applications** → **Add an application** → **Self-hosted**
+- **Application domain**：`auto-post-blog.yifor01.workers.dev`
+- **Session Duration**：設 **1 week**（= 半永久 key；登入一次後一週免重登，適合 demo）
+- **Policy**：Action=**Allow**，Include=**Emails**=`yifor0001@gmail.com` + 主管 email
+  - 主管是公司信箱、想整網域放行 → 用 **Emails ending in** `@company.com`
+- **登入方式**：
+  - 預設 **Email OTP**（輸入 email → 收 6 位數驗證碼 → 登入；每週一次）— 零額外設定，單人/少數人首選
+  - 想要「Sign in with Google」一鍵 → Zero Trust → Settings → Authentication → Login methods → Add → **Google**（需設 Google OAuth IdP）
+  - ⚠️ OTP 的「one-time」指**驗證碼**單次有效，**不是**每次都要登入；免重登時長由 Session Duration 決定
 
 ### 6. 接上 workflow（改 `daily-pipeline.yml`）
 在現有 `pipeline` job 之後新增 deploy job（checkout 會抓到剛 commit 的最新 md）：
