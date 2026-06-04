@@ -1,6 +1,6 @@
 # Daily Blog → Cloudflare 自動部署 Plan
 
-> 建立日期：2026-06-03 ｜ 狀態：**遷移中** — 原 Workers 部署成功但 `*.workers.dev` 不支援 Access，改建 **Pages**（`*.pages.dev` 支援 Access）以做私人保護
+> 建立日期：2026-06-03 ｜ 狀態：**✅ 完成上線 + 私人保護** <https://auto-post-blog.pages.dev/>（Cloudflare Pages + Access Email OTP）
 > 目標：`daily-pipeline.yml` 跑完後，自動把 blog markdown 變成網站並部署到 Cloudflare，**遠端（手機/外網）私人查看**。
 
 ## 實作紀錄（2026-06-03）
@@ -102,20 +102,23 @@ cd web && npm run build && npm run preview
 
 ### 5. Cloudflare 一次性設定（手動）
 
-> ⚠️ 原計劃的 Pages + API token + Direct Upload **已棄用**，實際採 Workers + Git 整合（見上方「實作紀錄」）。CF build 設定不需 token/secrets。以下只剩 **Access 私人保護**要手動做。
+> ⚠️ 原計劃的 API token + Direct Upload **已棄用**，實際採 **Pages + Git 整合**（見上方「實作紀錄」），CF build 設定不需 token/secrets。以下只剩 **Access 私人保護**要手動做。
 
-**Cloudflare Access（私人保護，給主管 demo 用）**
+**Cloudflare Access（私人保護，給主管 demo 用）— 已實測完成**
 
 - **方案**：第一次進 Zero Trust 選 **Free**（最多 50 users，Access 全功能；流程可能要填信用卡但 ≤50 人 $0）
 - Zero Trust（<https://one.dash.cloudflare.com>）→ **Access** → **Applications** → **Add an application** → **Self-hosted**
-- **Application domain**：`auto-post-blog.yifor01.workers.dev`
-- **Session Duration**：設 **1 week**（= 半永久 key；登入一次後一週免重登，適合 demo）
-- **Policy**：Action=**Allow**，Include=**Emails**=`yifor0001@gmail.com` + 主管 email
-  - 主管是公司信箱、想整網域放行 → 用 **Emails ending in** `@company.com`
-- **登入方式**：
-  - 預設 **Email OTP**（輸入 email → 收 6 位數驗證碼 → 登入；每週一次）— 零額外設定，單人/少數人首選
-  - 想要「Sign in with Google」一鍵 → Zero Trust → Settings → Authentication → Login methods → Add → **Google**（需設 Google OAuth IdP）
-  - ⚠️ OTP 的「one-time」指**驗證碼**單次有效，**不是**每次都要登入；免重登時長由 Session Duration 決定
+- **Application domain**：`auto-post-blog.pages.dev`（**只能是 `*.pages.dev`，不能是 `*.workers.dev`**）
+- **Session Duration**：設 **1 week / 1 month**（= 半永久 key；登入一次後免重登，適合 demo）
+- **登入方式**：**Email OTP**（輸入 email → 收 6 位數驗證碼 → 登入）。OTP 的「one-time」指**驗證碼**單次有效，**不是**每次都登入；免重登時長由 Session Duration 決定。想要 Google 一鍵 → 加 Google IdP（需 OAuth）
+- **Policy**：Action=**Allow**，Include=**Emails**=`yifor0001@gmail.com`（+ 主管 email；公司網域可用 **Emails ending in** `@company.com`）
+
+> #### ⚠️ Access 踩雷紀錄（這段卡了很久，務必照做）
+> 1. **`*.workers.dev` 無法被 Access 保護** → Access 只能保護你自己加入 Cloudflare 的 zone；workers.dev 是 CF 的、不是你的。**必須用 Pages 拿 `*.pages.dev`**（這就是從 Workers 改回 Pages 的原因）。
+> 2. **Application domain 不要填重複**：domain 那格有「subdomain 欄 + domain 下拉」，若下拉已是 `auto-post-blog.pages.dev` 還在 subdomain 填一次 → 變成 `auto-post-blog.pages.dev.auto-post-blog.pages.dev`（疊兩次）→ Access 攔不到真網址。最終只能出現**一次**。
+> 3. **【最大坑】Reusable policy 一定要「掛到 app」**：新版 Access 的 policy 是獨立的可重用物件，**建好 policy ≠ 套用**。要到 **App → Policies → Add existing policies → 勾選該 policy → Save application**。判斷法：policy 詳情頁的 **「Used by applications」若顯示 `--` 就是沒掛**，app 的 `policies` 會是 `[]`。**沒掛 policy → 登入流程不完整 → OTP 驗證碼根本不會寄出**（症狀就是「輸入 email 沒收到信」，誤以為是寄信壞掉）。
+> 4. One-time PIN 的 **「Test」按鈕不能點是正常的**（只有 OAuth/SAML IdP 才有 Test）。
+> 5. OTP 寄到「登入頁輸入且符合 policy」的 email，確認該信箱正確、翻 Gmail 的 Spam/促銷分頁、用 `from:cloudflare` 搜尋。
 
 ### 6. 接上 workflow（改 `daily-pipeline.yml`）
 在現有 `pipeline` job 之後新增 deploy job（checkout 會抓到剛 commit 的最新 md）：

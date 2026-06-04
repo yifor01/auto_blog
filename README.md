@@ -6,8 +6,8 @@
 
 **Auto Post Blog** 是一個自動化的 AI 資訊聚合與內容生成系統。每天自動從 9 個前沿資料源（arXiv、HuggingFace、GitHub、Tech Blogs、RSS、Hacker News、Reddit、NewsAPI、ChatPaper）收集最新的生成式 AI 論文與新聞，透過 Rule-based 與 LLM 雙層價值篩選機制，產出高品質的繁體中文「部落格貼文草稿」與「每日精選摘要」。配備完整的 Web Dashboard 供監控、搜尋、收藏與內容管理。支援多 API key round-robin 輪替，scoring 與 blog 生成可使用不同模型。
 
-> 🌐 **線上網站（Astro 5 + Cloudflare Workers，Cloudflare Access 私人保護）**：<https://auto-post-blog.yifor01.workers.dev/>
-> 每日 pipeline push 後由 Cloudflare Git 整合自動 build + 部署。前端原始碼見 [`web/`](web/)，部署細節見 [`docs/cloudflare-deploy-plan.md`](docs/cloudflare-deploy-plan.md)。
+> 🌐 **線上網站（Astro 5 + Cloudflare Pages，Cloudflare Access 私人保護 / Email OTP 登入）**：<https://auto-post-blog.pages.dev/>
+> 每日 pipeline push 後由 Cloudflare Pages Git 整合自動 build + 部署。前端原始碼見 [`web/`](web/)，部署與 Access 設定細節見 [`docs/cloudflare-deploy-plan.md`](docs/cloudflare-deploy-plan.md)。
 
 ---
 
