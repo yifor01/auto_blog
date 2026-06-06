@@ -3,19 +3,19 @@ llm:
   max_tokens: 8192
   request_delay_seconds: 8.0
   # 評分 chain（需穩定輸出 JSON，越快越好）— 由上而下降級
-  # 2026-04-25 更新：改用 inclusionAI Ling 2.6 系列（2026-04 新上架，<1s，JSON 乾淨）
+  # 2026-06-06 更新：inclusionAI Ling 2.6 全系列已從 OpenRouter 下架，改用實測仍在架的免費 model
   scoring_models:
-    - inclusionai/ling-2.6-1t:free           # 2026-04-23 上架, 1T params, ~1s
-    - inclusionai/ling-2.6-flash:free        # 2026-04-22 上架, flash 變體
-    - nvidia/nemotron-3-super-120b-a12b:free # 2026-03-12 上架, 120B 備援
+    - openai/gpt-oss-120b:free               # 2.8s, JSON 乾淨穩定
+    - google/gemma-4-31b-it:free             # 1.9s, 備援
+    - nvidia/nemotron-3-super-120b-a12b:free # 120B 最後備援（較慢）
   # 生成 chain（繁中品質優先）
   generation_models:
-    - tencent/hy3-preview:free               # 2026-04-23 上架, 繁中語感最佳
-    - inclusionai/ling-2.6-1t:free           # 備援，中文也流暢
+    - google/gemma-4-31b-it:free             # 繁中語感自然、快
+    - openai/gpt-oss-120b:free               # 繁中乾淨，備援
     - nvidia/nemotron-3-super-120b-a12b:free # 最後備援
   # Legacy：GeneratedContent.model_used 顯示 / UI 舊 code 仍讀這些 key
-  model: inclusionai/ling-2.6-1t:free
-  generation_model: tencent/hy3-preview:free
+  model: openai/gpt-oss-120b:free
+  generation_model: google/gemma-4-31b-it:free
 collectors:
   arxiv:
     enabled: true
@@ -232,7 +232,7 @@ scoring:
   - open weight
   rule_threshold: 20
   llm_top_k: 60
-  final_top_k: 30
+  final_top_k: 20            # 2026-06-06 30→20：縮短 generate 時間，避免 90 分鐘 CI timeout
   hf_upvote_bonus_threshold: 10
   github_stars_high: 100
   github_stars_medium: 50

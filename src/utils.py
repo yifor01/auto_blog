@@ -56,11 +56,11 @@ for _suffix in ["", "_2", "_3", "_4", "_5", "_6", "_7", "_8", "_9"]:
     if _k:
         _API_KEYS.append(_k)
 
-if not _API_KEYS:
-    raise ValueError("No OpenRouter API keys configured (set OPENROUTER_API_KEY[_2..9])")
-
-_key_cycle = itertools.cycle(_API_KEYS)
-_logger.info("API keys loaded", extra={"provider": "openrouter", "key_count": len(_API_KEYS)})
+# Lazy 檢查：不在 import 時 raise，讓不需 LLM 的指令（clean / status / list）
+# 即使沒設定 API key 也能正常執行；真正呼叫 LLM 時才在 get_next_api_key() raise。
+_key_cycle = itertools.cycle(_API_KEYS) if _API_KEYS else None
+if _API_KEYS:
+    _logger.info("API keys loaded", extra={"provider": "openrouter", "key_count": len(_API_KEYS)})
 
 # 執行期可被 preflight 修改的 healthy model chains（初始為 None 代表尚未載入）
 _scoring_chain: list[str] | None = None
@@ -76,7 +76,9 @@ def _get_api_base_url() -> str:
 
 
 def get_next_api_key() -> str:
-    """Round-robin 取得下一個 API key。"""
+    """Round-robin 取得下一個 API key。無 key 時才 raise（lazy，僅在真正呼叫 LLM 時）。"""
+    if _key_cycle is None:
+        raise ValueError("No OpenRouter API keys configured (set OPENROUTER_API_KEY[_2..9])")
     return next(_key_cycle)
 
 
@@ -151,17 +153,27 @@ def _get_chain(is_generation: bool) -> list[str]:
 
 def _probe_model(model: str, timeout: float = 15.0) -> tuple[bool, str]:
     """對單一 model 送最小 probe call。回傳 (alive, err_msg)。"""
-    client = get_llm_client()
-    try:
-        resp = client.with_options(timeout=timeout).chat.completions.create(
-            model=model,
-            messages=[{"role": "user", "content": "ping"}],
-            max_tokens=5, temperature=0.0,
-        )
-        _ = _extract_content(resp)
-        return True, ""
-    except Exception as e:
-        return False, str(e)[:200]
+    # 指令式 prompt 比 "ping" 更能穩定觸發輸出；空內容視為失效，
+    # 避免雖在架但回空字串的 model 進 chain 後生成出空白文章（06-05 timeout 教訓）。
+    # 健康 model 偶發回空，故對空回應 retry 一次以吸收抖動、避免誤殺。
+    # 429 視為 alive（「忙」非「死」）：免費 model 起頭常碰每分鐘限流，
+    # 但 runtime 有 4 key 輪替 + request_delay 間隔可吸收，不該整輪移出 chain。
+    last_err = "empty content"
+    for _attempt in range(2):
+        try:
+            resp = get_llm_client().with_options(timeout=timeout).chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": "Reply with the single word: OK"}],
+                max_tokens=16, temperature=0.0,
+            )
+            if _extract_content(resp).strip():
+                return True, ""
+        except Exception as e:
+            err = str(e)
+            if "429" in err:
+                return True, ""
+            return False, err[:200]
+    return False, last_err
 
 
 def discover_free_models(min_context: int = 32000, limit: int = 12) -> list[str]:
