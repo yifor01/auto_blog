@@ -24,15 +24,16 @@ export function formatDate(d: Date): string {
 }
 
 // posts/ 沒有 tldr，從 markdown body 抽第一段 prose 當摘要。
-// 跳過標題/引用/清單/表格/程式碼/圖片，去掉行內 markdown 標記後截斷。
+// 跳過標題（# 開頭）、frontmatter（--- 行）、引用/清單/表格/程式碼/圖片，
+// 去掉行內 markdown 標記後截斷。
+// emoji 開頭的正文行視為有效摘要，不跳過。
 export function excerpt(body: string | undefined, max = 150): string {
   if (!body) return '';
   for (const raw of body.split('\n')) {
     const line = raw.trim();
     if (!line) continue;
-    if (/^([#>*\-+|`]|!\[|\d+\.)/.test(line)) continue;
-    // 這些貼文常用 emoji 開頭的行當標題（📌🔍🤔…），跳過
-    if (/^\p{Extended_Pictographic}/u.test(line)) continue;
+    // Skip headings, frontmatter delimiters, block-level markdown syntax.
+    if (/^(---|[#>*\-+|`]|!\[|\d+\.)/.test(line)) continue;
     const t = line
       .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
       .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')

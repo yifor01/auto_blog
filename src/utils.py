@@ -96,6 +96,10 @@ def _extract_content(resp) -> str:
     return reasoning or ""
 
 
+_BACKOFF_BASE_SECONDS = 5
+_BACKOFF_CAP_SECONDS = 60
+
+
 def _try_model(
     client: OpenAI,
     model: str,
@@ -103,11 +107,18 @@ def _try_model(
     max_tokens: int,
     temperature: float,
     max_retries: int,
+    timeout: float = 60.0,
 ) -> str | None:
-    """單一 (client, model) 呼叫：429 retry，其他 error 或 empty 直接回 None。"""
+    """單一 (client, model) 呼叫。
+
+    - 429 採指數退避重試（5s → 10s → 20s，上限 60s）。
+    - 每次呼叫帶 timeout（預設 60s），timeout 視為該 model 失敗回 None，
+      讓上層繼續走 fallback 鏈，不卡死整條 pipeline。
+    - 其他 error 或 empty content 直接回 None。
+    """
     for attempt in range(max_retries + 1):
         try:
-            resp = client.chat.completions.create(
+            resp = client.with_options(timeout=timeout).chat.completions.create(
                 model=model, messages=messages,
                 max_tokens=max_tokens, temperature=temperature,
             )
@@ -116,7 +127,7 @@ def _try_model(
         except Exception as e:
             err = str(e)
             if "429" in err and attempt < max_retries:
-                wait = (attempt + 1) * 5
+                wait = min(_BACKOFF_BASE_SECONDS * (2 ** attempt), _BACKOFF_CAP_SECONDS)
                 _logger.warning("Rate limited, retrying", extra={"model": model, "wait_seconds": wait, "attempt": attempt + 1})
                 time.sleep(wait)
                 continue
@@ -293,14 +304,18 @@ def llm_chat(
     max_retries: int = 2,
     fallback_model: str | None = None,
     is_generation: bool = False,
+    timeout: float | None = None,
 ) -> str:
     """走 OpenRouter 多 model chain。每個 model 嘗試一次，失敗降級。全部失敗回傳 ""。
 
     - `model` / `fallback_model`：caller 指定偏好；若不在 chain 中則前置插入。
     - `is_generation=True` 使用 generation chain，否則使用 scoring chain。
+    - `timeout`：單次 LLM 呼叫逾時秒數；None 時讀 config `llm.timeout_seconds`（預設 60）。
     """
     cfg = load_config()["llm"]
     max_tokens = max_tokens or cfg.get("max_tokens", 8192)
+    if timeout is None:
+        timeout = cfg.get("timeout_seconds", 60)
 
     chain = list(_get_chain(is_generation))
     # caller 偏好插在最前面（去重）
@@ -314,7 +329,7 @@ def llm_chat(
 
     for m in chain:
         client = get_llm_client()  # key 輪替
-        result = _try_model(client, m, messages, max_tokens, temperature, max_retries)
+        result = _try_model(client, m, messages, max_tokens, temperature, max_retries, timeout)
         if result:
             return result
         _logger.warning("Model failed, trying next in chain", extra={"model": m})
@@ -359,6 +374,47 @@ def load_json(path: Path) -> list | dict:
         return json.load(f)
 
 
+_TRACKING_PARAM_KEYS = {"fbclid", "gclid", "msclkid", "ref"}
+
+
+def normalize_url(url: str) -> str:
+    """URL 正規化，用於跨來源 / 跨日去重比對。
+
+    - scheme 統一 https（http/空 → https）
+    - netloc 小寫並去掉 `www.` 前綴
+    - path 去尾部 `/`
+    - 移除追蹤參數（utm_*、fbclid、gclid、msclkid、ref）
+    - 其餘 query 參數按 key 排序，確保順序不影響 key
+    - 移除 fragment（#anchor 為前端錨點，不影響內容）
+
+    無法解析（空字串等）時原樣回傳。
+    """
+    if not url:
+        return url
+    from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+
+    try:
+        parts = urlsplit(url.strip())
+    except ValueError:
+        return url
+
+    scheme = "https" if parts.scheme in ("", "http", "https") else parts.scheme
+    netloc = parts.netloc.lower()
+    if netloc.startswith("www."):
+        netloc = netloc[4:]
+    path = parts.path.rstrip("/")
+
+    kept = [
+        (k, v)
+        for k, v in parse_qsl(parts.query, keep_blank_values=True)
+        if not k.lower().startswith("utm_") and k.lower() not in _TRACKING_PARAM_KEYS
+    ]
+    kept.sort(key=lambda kv: kv[0])
+    query = urlencode(kept)
+
+    return urlunsplit((scheme, netloc, path, query, ""))
+
+
 def get_seen_urls(exclude_date: date | None = None, lookback_days: int | None = None) -> set[str]:
     """載入已收集過的 URL/arxiv_id 集合，用於跨日去重。
 
@@ -391,7 +447,9 @@ def get_seen_urls(exclude_date: date | None = None, lookback_days: int | None = 
                 for item in items:
                     url = item.get("url", "")
                     if url:
-                        seen.add(url)
+                        # 與 ContentItem.dedup_key() 一致：兩側都經 normalize_url，
+                        # 否則歷史 raw JSON 的舊 URL key 會比不到當天正規化後的 key。
+                        seen.add(normalize_url(url))
                     arxiv_id = item.get("raw_metadata", {}).get("arxiv_id", "")
                     if arxiv_id:
                         seen.add(f"arxiv:{arxiv_id}")
@@ -401,12 +459,36 @@ def get_seen_urls(exclude_date: date | None = None, lookback_days: int | None = 
 
 
 def slugify(text: str, max_len: int = 60) -> str:
-    """將標題轉為檔名安全的 slug."""
+    """將標題轉為檔名安全的 slug。
+
+    - 所有非單字字元（`/`、`.`、空白、標點等）一律轉成分隔符 `-`，
+      避免 `memvid/memvid` 被直接刪成 `memvidmemvid` 這種黏字 bug。
+    - 連續 `-` 折疊成單一，並 strip 頭尾。
+    - 截斷 `max_len` 後若切在單字中間，退回最後一個完整單字，
+      避免 `...world-modeli` 這種殘字。
+    - 全特殊字元 / 空輸入回傳 fallback `untitled`。
+    - 保留 unicode 單字字元（如中文），維持既有行為。
+    """
     import re
 
-    text = re.sub(r"[^\w\s-]", "", text)
-    text = re.sub(r"[\s_]+", "-", text.strip())
-    return text[:max_len].rstrip("-").lower()
+    s = text.lower()
+    # 非單字字元（含 / . 空白 標點）→ 分隔符；保留 \w（含 unicode 中文與底線）
+    s = re.sub(r"[^\w]+", "-", s, flags=re.UNICODE)
+    # \w 含底線，依慣例底線視為分隔符
+    s = s.replace("_", "-")
+    # 折疊連續 dash + 去頭尾
+    s = re.sub(r"-{2,}", "-", s).strip("-")
+
+    if not s:
+        return "untitled"
+    if len(s) <= max_len:
+        return s
+
+    truncated = s[:max_len]
+    # 若切點仍在單字中間（下一字元非分隔符且當前結尾非分隔符），退回最後一個完整單字
+    if s[max_len] != "-" and not truncated.endswith("-") and "-" in truncated:
+        truncated = truncated.rsplit("-", 1)[0]
+    return truncated.strip("-") or "untitled"
 
 
 def extract_full_text_from_html(html: str, max_chars: int = 2000) -> str:

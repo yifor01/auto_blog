@@ -17,6 +17,37 @@ _logger = get_logger("collectors.hackernews")
 
 API_BASE = "https://hn.algolia.com/api/v1/search"
 
+_HN_429_INITIAL_DELAY = 2.0   # seconds; doubles each retry: 2 → 4 → 8
+_HN_429_MAX_RETRIES = 3
+
+
+def _hn_fetch_with_backoff(client, params: dict, query: str) -> dict | None:
+    """Fetch HN Algolia search results with 429 exponential backoff.
+
+    Returns parsed JSON dict on success, or None if all retries are exhausted
+    or a non-429 error occurs (caller should log and skip).
+    """
+    delay = _HN_429_INITIAL_DELAY
+    for attempt in range(_HN_429_MAX_RETRIES + 1):
+        resp = client.get(API_BASE, params=params)
+        if resp.status_code == 429:
+            if attempt < _HN_429_MAX_RETRIES:
+                _logger.warning(
+                    "HackerNews 429 rate limited, retrying",
+                    extra={"query": query, "wait_seconds": delay, "attempt": attempt + 1},
+                )
+                time.sleep(delay)
+                delay *= 2
+                continue
+            _logger.warning(
+                "HackerNews 429 max retries exceeded, skipping query",
+                extra={"query": query},
+            )
+            return None
+        resp.raise_for_status()
+        return resp.json()
+    return None  # unreachable; satisfies type checker
+
 
 class HackerNewsCollector(BaseCollector):
     name = "hackernews"
@@ -53,9 +84,9 @@ class HackerNewsCollector(BaseCollector):
                         "numericFilters": f"points>{min_points},created_at_i>{start_ts},created_at_i<{end_ts}",
                         "hitsPerPage": max_results,
                     }
-                    resp = client.get(API_BASE, params=params)
-                    resp.raise_for_status()
-                    data = resp.json()
+                    data = _hn_fetch_with_backoff(client, params, query)
+                    if data is None:
+                        continue
                 except Exception as e:
                     _logger.warning("HackerNews query error", extra={"query": query, "error": str(e)})
                     continue

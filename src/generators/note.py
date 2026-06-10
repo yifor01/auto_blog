@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from datetime import date
 
+import yaml
+
 from src.models import GeneratedContent, ScoredItem
 from src.logger import get_logger
 from src.utils import (
@@ -99,17 +101,20 @@ def save_note(gen: GeneratedContent, target_date: date | None = None) -> str:
     filename = f"{date_str}_{slug}.md"
 
     note_path = NOTES_DIR / filename
-    note_content = f"""---
-title: "{gen.source_item.item.title}"
-source: {gen.source_item.item.source_name}
-url: {gen.source_item.item.url}
-score: {gen.source_item.total_score:.0f}
-model: {gen.model_used}
-generated_at: {gen.generated_at.isoformat()}
----
-
-{gen.content}
-"""
+    # frontmatter 用 yaml.safe_dump 序列化，避免標題含引號/冒號/換行等特殊字元時
+    # 手動 f-string 產生不合法的 YAML（對齊 blog_post.py 的做法）。
+    frontmatter = {
+        "title": gen.source_item.item.title,
+        "source": gen.source_item.item.source_name,
+        "url": gen.source_item.item.url,
+        "score": round(gen.source_item.total_score),
+        "model": gen.model_used,
+        "generated_at": gen.generated_at.isoformat(),
+    }
+    fm_yaml = yaml.safe_dump(
+        frontmatter, allow_unicode=True, sort_keys=False, default_flow_style=False
+    ).strip()
+    note_content = f"---\n{fm_yaml}\n---\n\n{gen.content}\n"
     note_path.write_text(note_content, encoding="utf-8")
 
     _logger.debug("Note file written", extra={"output_file": note_path.name})

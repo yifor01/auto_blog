@@ -25,6 +25,20 @@ def _match_institution(inst: str, org: str, authors_str: str) -> bool:
     return bool(re.search(pattern, authors_str.lower()))
 
 
+def _term_matches(term: str, text: str) -> bool:
+    """以 word boundary 比對單一詞彙（支援多字詞與連字號）。
+
+    - 單字詞如 "new" 只匹配獨立單字，不會匹配 "renew"/"newsletter"。
+    - 多字詞如 "flow matching" / 含連字號的 "chain-of-thought" 皆可匹配，
+      詞內空白與連字號互通（"chain of thought" 也能命中 "chain-of-thought"）。
+    """
+    parts = [p for p in re.split(r"[\s\-]+", term.strip()) if p]
+    if not parts:
+        return False
+    pattern = r"\b" + r"[\s\-]+".join(re.escape(p) for p in parts) + r"\b"
+    return bool(re.search(pattern, text, re.IGNORECASE))
+
+
 def rule_score(item: ContentItem, config: dict | None = None) -> ScoredItem:
     """對單個 ContentItem 進行 rule-based 評分。"""
     if config is None:
@@ -43,18 +57,22 @@ def rule_score(item: ContentItem, config: dict | None = None) -> ScoredItem:
     score = 0.0
     reasons: list[str] = []
 
-    # 1. 頂流機構加分
+    # 1. 頂流機構加分（多機構累計，上限 2 個避免同義機構重複灌分）
     org = item.organization
     authors_str = " ".join(item.authors)
+    MAX_INSTITUTION_BONUS = 2
+    matched_inst = 0
     for inst in top_institutions:
         if _match_institution(inst, org, authors_str):
             score += 20
             reasons.append(f"🏢 頂流機構: {inst}")
-            break  # 只加一次
+            matched_inst += 1
+            if matched_inst >= MAX_INSTITUTION_BONUS:
+                break
 
-    # 2. 熱門關鍵字加分
-    text = f"{item.title} {item.abstract}".lower()
-    matched_kw = [kw for kw in hot_keywords if kw in text]
+    # 2. 熱門關鍵字加分（word boundary，避免 "new" 匹配 "renew" 等子字串誤判）
+    text = f"{item.title} {item.abstract}"
+    matched_kw = [kw for kw in hot_keywords if _term_matches(kw, text)]
     if matched_kw:
         kw_score = min(len(matched_kw) * 5, 15)  # 每個 +5, 上限 15
         score += kw_score
@@ -116,16 +134,17 @@ def rule_score(item: ContentItem, config: dict | None = None) -> ScoredItem:
         reasons.append(f"⚖️ 來源權重: {item.source.value} +{sw}")
 
     # 7. 標題品質加分 (有數字、比較、新方法等訊號)
-    title_lower = item.title.lower()
+    # 移除過度通用的 "new"/"improved"（幾乎任何標題都可能含），保留真正指示創新的詞。
+    # 用 word boundary 比對，避免 "sota" 誤匹配 "Minnesota" 之類子字串。
     novelty_signals = [
-        "novel", "new", "first", "state-of-the-art", "sota",
+        "novel", "first", "state-of-the-art", "sota",
         "surpass", "outperform", "efficient", "scalable",
         "beyond", "rethinking", "revisiting",
         "unified", "zero-shot", "few-shot", "open-source",
         "real-time", "faster", "lightweight", "on-device",
-        "breakthrough", "improved",
+        "breakthrough",
     ]
-    if any(sig in title_lower for sig in novelty_signals):
+    if any(_term_matches(sig, item.title) for sig in novelty_signals):
         score += 5
         reasons.append("💡 標題含新穎性訊號")
 

@@ -13,6 +13,30 @@ from src.utils import NOTES_DIR, POSTS_DIR, RAW_DIR, SCORED_DIR, FEEDBACK_DIR, H
 
 _logger = get_logger("web.data_service")
 
+# ──────────────────────────────────────────────────────────
+# Markdown 解析快取（Task 1）
+# key = (path, mtime)；超過上限直接 clear（LRU 過重，dict.clear 足夠）
+# ──────────────────────────────────────────────────────────
+_MD_CACHE_MAX = 2048
+_md_cache: dict[tuple, dict] = {}
+
+
+# ──────────────────────────────────────────────────────────
+# Slug 比對共用函式（Task 3）
+# ──────────────────────────────────────────────────────────
+
+def _slug_matches(slug: str, title_slug: str) -> bool:
+    """模糊比對兩個 slug：互為子串即視為相符。
+
+    Args:
+        slug: 檔案名稱衍生的 slug（post/note/blog slug）
+        title_slug: 以 item title slugify 後的字串
+
+    Returns:
+        True 若 title_slug 是 slug 的子串，或 slug 是 title_slug 的子串。
+    """
+    return title_slug in slug or slug in title_slug
+
 
 def _get_raw_path(d: date) -> Path:
     return RAW_DIR / f"{d.isoformat()}.json"
@@ -78,8 +102,30 @@ def get_week_status(days: int = 7, running_dates: set[str] | None = None) -> lis
 
 
 def get_week_top_items(days: int = 7, top_k: int = 5) -> list[dict]:
-    """取得近 N 天中 total_score 最高的 top_k 個項目（跨日聚合）。"""
+    """取得近 N 天中 total_score 最高的 top_k 個項目（跨日聚合）。
+
+    N+1 glob 優化：進函式時對 BLOGS_DIR 做一次 iterdir()，
+    建立 date_str → [(title_slug, blog_slug)] 映射，迴圈內查記憶體。
+    """
     today = date.today()
+
+    # 一次性建立 BLOGS_DIR 的 date→blog 映射，避免迴圈內重複 glob
+    blogs_by_date: dict[str, list[tuple[str, str]]] = {}
+    try:
+        for bf in BLOGS_DIR.iterdir():
+            if bf.suffix != ".md" or len(bf.stem) < 11:
+                continue
+            d_part = bf.stem[:10]
+            bslug = bf.stem[11:]
+            bparsed = _parse_markdown_file(bf)
+            if bparsed:
+                bfm = bparsed["frontmatter"]
+                bpt = (bfm.get("paper_title") or bfm.get("title") or "").strip()
+                if bpt:
+                    blogs_by_date.setdefault(d_part, []).append((slugify(bpt), bslug))
+    except OSError:
+        pass
+
     all_items = []
     for i in range(days, -1, -1):
         d = today - timedelta(days=i)
@@ -91,23 +137,14 @@ def get_week_top_items(days: int = 7, top_k: int = 5) -> list[dict]:
             continue
 
         date_str = d.isoformat()
-        # 建立該日 blog paper_title → slug 映射
-        blog_map: dict[str, str] = {}
-        for bf in BLOGS_DIR.glob(f"{date_str}*.md"):
-            bslug = bf.stem[len(date_str) + 1:]
-            bparsed = _parse_markdown_file(bf)
-            if bparsed:
-                bfm = bparsed["frontmatter"]
-                bpt = (bfm.get("paper_title") or bfm.get("title") or "").strip()
-                if bpt:
-                    blog_map[slugify(bpt)] = bslug
+        blog_entries = blogs_by_date.get(date_str, [])
 
         for idx, raw in enumerate(data):
             try:
                 item = ScoredItem(**raw)
                 title_slug = slugify(item.item.title)
                 matched_blog_slug = next(
-                    (bs for bts, bs in blog_map.items() if title_slug in bts or bts in title_slug),
+                    (bs for bts, bs in blog_entries if _slug_matches(bts, title_slug)),
                     None,
                 )
                 all_items.append(
@@ -555,8 +592,22 @@ def get_sidebar_stats() -> dict:
 
 
 def _parse_markdown_file(path: Path) -> dict | None:
-    """解析帶 YAML frontmatter 的 markdown 檔案。"""
+    """解析帶 YAML frontmatter 的 markdown 檔案（含 mtime 快取）。
+
+    以 (path, mtime) 為 key 快取解析結果；檔案未變即直接回傳快取。
+    快取上限 _MD_CACHE_MAX 筆，超過時整體清除（避免無上限成長）。
+    """
     import yaml
+
+    # 取 mtime；若 stat 失敗（檔不存在等）直接回 None
+    try:
+        mtime = path.stat().st_mtime
+    except OSError:
+        return None
+
+    cache_key = (path, mtime)
+    if cache_key in _md_cache:
+        return _md_cache[cache_key]
 
     try:
         content = path.read_text(encoding="utf-8")
@@ -575,7 +626,11 @@ def _parse_markdown_file(path: Path) -> dict | None:
                 frontmatter = {}
             body = parts[2].strip()
 
-    return {"frontmatter": frontmatter, "body": body, "filename": path.name}
+    result = {"frontmatter": frontmatter, "body": body, "filename": path.name}
+    if len(_md_cache) >= _MD_CACHE_MAX:
+        _md_cache.clear()
+    _md_cache[cache_key] = result
+    return result
 
 
 def get_post(date_str: str, slug: str) -> dict | None:
@@ -778,10 +833,52 @@ def list_all_materials(days: int = 90) -> list[dict]:
     """掃描所有 scored JSON，對每個 item 檢查是否有對應的 post/note 檔案。
 
     回傳含 has_post、has_note、post_slug、note_slug 的統一素材列表。
+
+    N+1 glob 優化：進函式時對 POSTS_DIR / NOTES_DIR / BLOGS_DIR 各做一次
+    iterdir()，建立 date_str → slug 集合/映射，迴圈內只查記憶體結構。
     """
     today = date.today()
-    result: list[dict] = []
 
+    # ── 一次性掃描三個輸出目錄 ──────────────────────────────
+    all_post_slugs: dict[str, set[str]] = {}    # date_str → {slug, ...}
+    all_note_slugs: dict[str, set[str]] = {}
+    all_blog_maps: dict[str, list[tuple[str, str]]] = {}  # date_str → [(title_slug, blog_slug)]
+
+    def _collect_slugs(directory: Path, target: dict[str, set[str]]) -> None:
+        try:
+            for f in directory.iterdir():
+                if f.suffix != ".md" or len(f.stem) < 11:
+                    continue
+                d_part = f.stem[:10]
+                if d_part.count("-") != 2:
+                    continue
+                slug = f.stem[11:]
+                target.setdefault(d_part, set()).add(slug)
+        except OSError:
+            pass
+
+    _collect_slugs(POSTS_DIR, all_post_slugs)
+    _collect_slugs(NOTES_DIR, all_note_slugs)
+
+    try:
+        for bf in BLOGS_DIR.iterdir():
+            if bf.suffix != ".md" or len(bf.stem) < 11:
+                continue
+            d_part = bf.stem[:10]
+            if d_part.count("-") != 2:
+                continue
+            bslug = bf.stem[11:]
+            bparsed = _parse_markdown_file(bf)
+            if bparsed:
+                bfm = bparsed["frontmatter"]
+                bpt = (bfm.get("paper_title") or bfm.get("title") or "").strip()
+                if bpt:
+                    all_blog_maps.setdefault(d_part, []).append((slugify(bpt), bslug))
+    except OSError:
+        pass
+    # ────────────────────────────────────────────────────────
+
+    result: list[dict] = []
     for i in range(days, -1, -1):
         d = today - timedelta(days=i)
         scored_path = _get_scored_path(d)
@@ -792,20 +889,9 @@ def list_all_materials(days: int = 90) -> list[dict]:
             continue
 
         date_str = d.isoformat()
-        # 預先載入該日期的 post/note slug 集合
-        post_slugs = {f.stem[len(date_str) + 1:] for f in POSTS_DIR.glob(f"{date_str}*.md")}
-        note_slugs = {f.stem[len(date_str) + 1:] for f in NOTES_DIR.glob(f"{date_str}*.md")}
-
-        # 預先載入該日期的 blog paper_title → slug 映射
-        blog_map: dict[str, str] = {}  # paper_title_slug → blog_slug
-        for bf in BLOGS_DIR.glob(f"{date_str}*.md"):
-            bslug = bf.stem[len(date_str) + 1:]
-            bparsed = _parse_markdown_file(bf)
-            if bparsed:
-                bfm = bparsed["frontmatter"]
-                bpt = (bfm.get("paper_title") or bfm.get("title") or "").strip()
-                if bpt:
-                    blog_map[slugify(bpt)] = bslug
+        post_slugs = all_post_slugs.get(date_str, set())
+        note_slugs = all_note_slugs.get(date_str, set())
+        blog_entries = all_blog_maps.get(date_str, [])
 
         for idx, raw in enumerate(data):
             try:
@@ -815,13 +901,13 @@ def list_all_materials(days: int = 90) -> list[dict]:
 
             title_slug = slugify(item.item.title)
             # 嘗試匹配 slug（post/note 的 slug 可能是 title 的 slugified 版本）
-            has_post = any(title_slug in s or s in title_slug for s in post_slugs) if post_slugs else False
-            has_note = any(title_slug in s or s in title_slug for s in note_slugs) if note_slugs else False
-            matched_post_slug = next((s for s in post_slugs if title_slug in s or s in title_slug), None)
-            matched_note_slug = next((s for s in note_slugs if title_slug in s or s in title_slug), None)
+            has_post = any(_slug_matches(s, title_slug) for s in post_slugs) if post_slugs else False
+            has_note = any(_slug_matches(s, title_slug) for s in note_slugs) if note_slugs else False
+            matched_post_slug = next((s for s in post_slugs if _slug_matches(s, title_slug)), None)
+            matched_note_slug = next((s for s in note_slugs if _slug_matches(s, title_slug)), None)
 
             # 匹配 blog
-            matched_blog_slug = next((bs for bts, bs in blog_map.items() if title_slug in bts or bts in title_slug), None)
+            matched_blog_slug = next((bs for bts, bs in blog_entries if _slug_matches(bts, title_slug)), None)
 
             total = item.rule_score + (item.llm_score or 0)
             result.append({
@@ -874,7 +960,7 @@ def get_material_detail(date_str: str, index: int) -> dict | None:
     post_slug = None
     for f in POSTS_DIR.glob(f"{date_str}*.md"):
         slug = f.stem[len(date_str) + 1:]
-        if title_slug in slug or slug in title_slug:
+        if _slug_matches(slug, title_slug):
             parsed = _parse_markdown_file(f)
             if parsed:
                 from markdown_it import MarkdownIt
@@ -888,7 +974,7 @@ def get_material_detail(date_str: str, index: int) -> dict | None:
     note_slug = None
     for f in NOTES_DIR.glob(f"{date_str}*.md"):
         slug = f.stem[len(date_str) + 1:]
-        if title_slug in slug or slug in title_slug:
+        if _slug_matches(slug, title_slug):
             parsed = _parse_markdown_file(f)
             if parsed:
                 from markdown_it import MarkdownIt
@@ -908,7 +994,7 @@ def get_material_detail(date_str: str, index: int) -> dict | None:
         fm = blog_data["frontmatter"]
         paper_title = (fm.get("paper_title") or fm.get("title") or "").strip().lower()
         paper_slug = slugify(paper_title) if paper_title else ""
-        if paper_title and (title_slug in paper_slug or paper_slug in title_slug or paper_title in detail["title"].lower() or detail["title"].lower() in paper_title):
+        if paper_title and (_slug_matches(paper_slug, title_slug) or paper_title in detail["title"].lower() or detail["title"].lower() in paper_title):
             from markdown_it import MarkdownIt as _MdIt
             md = _MdIt()
             blog_content = md.render(blog_data["body"])
@@ -1283,7 +1369,7 @@ def promote_to_blog(date_str: str, index: int) -> dict:
     post_slug = None
     for f in POSTS_DIR.glob(f"{date_str}*.md"):
         slug = f.stem[len(date_str) + 1:]
-        if title_slug in slug or slug in title_slug:
+        if _slug_matches(slug, title_slug):
             post_path = f
             post_slug = slug
             break

@@ -140,59 +140,8 @@ const items = recent.map((p) => {
 </Base>
 
 <script>
-  const search = document.getElementById('search') as HTMLInputElement;
-  const reset = document.getElementById('reset') as HTMLButtonElement;
-  const resultCount = document.getElementById('result-count')!;
-  const empty = document.querySelector('.empty') as HTMLElement;
-  const items = [...document.querySelectorAll<HTMLElement>('.post-item')];
-  const facetBtns = [...document.querySelectorAll<HTMLButtonElement>('.facet-btn')];
-
-  const state = { q: '', source: '', month: '' };
-
-  function apply() {
-    let visible = 0;
-    for (const item of items) {
-      const okSearch =
-        !state.q || (item.dataset.search ?? '').includes(state.q);
-      const okMonth = !state.month || item.dataset.month === state.month;
-      const okSource = !state.source || item.dataset.source === state.source;
-      const show = okSearch && okMonth && okSource;
-      item.hidden = !show;
-      if (show) visible++;
-    }
-    resultCount.textContent = String(visible);
-    empty.hidden = visible !== 0;
-    reset.hidden = !(state.q || state.source || state.month);
-
-    for (const btn of facetBtns) {
-      const active =
-        (btn.dataset.type === 'source' && btn.dataset.value === state.source) ||
-        (btn.dataset.type === 'month' && btn.dataset.value === state.month);
-      btn.classList.toggle('active', active);
-    }
-  }
-
-  search.addEventListener('input', () => {
-    state.q = search.value.trim().toLowerCase();
-    apply();
-  });
-
-  for (const btn of facetBtns) {
-    btn.addEventListener('click', () => {
-      const type = btn.dataset.type as 'source' | 'month';
-      const value = btn.dataset.value ?? '';
-      state[type] = state[type] === value ? '' : value;
-      apply();
-    });
-  }
-
-  reset.addEventListener('click', () => {
-    state.q = '';
-    state.source = '';
-    state.month = '';
-    search.value = '';
-    apply();
-  });
+  import { initFilter } from '../scripts/filter';
+  initFilter('source');
 </script>
 
 <style>

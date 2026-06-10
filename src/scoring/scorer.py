@@ -28,7 +28,7 @@ SCORING_SYSTEM_PROMPT = """你是一位 GenAI 領域的資深研究員和技術�
 2. **影響力 (Impact)** — 對 AI 產業或研究社群的潛在影響有多大？會改變大家的工作方式嗎？
 3. **話題性 (Trending)** — 社群訊號（upvotes/stars/points）越高代表越熱門。也考慮主題是否與 AI 社群近期關注的方向相關（如 Agent、推理、多模態、開源模型等）。
 4. **實用性 (Practicality)** — 工程師能否立即從中受益？有開源工具/程式碼嗎？
-5. **部落格適合度 (Blog-worthiness)** — 這個主題適合寫成引人入勝的科技部落格文章嗎？目標讀者會感興趣嗎？
+5. **部落格適合度 (Blog-worthiness)** — 這個主題適合寫成引人入勝的科技部落格文章嗎？目標讀者會感興趣嗎？有開源程式碼、可複現實驗或對工程師有直接應用價值者給高分；純行銷公告、Podcast 摘要、無技術細節的產品宣傳給低分。
 
 評分錨點：0-5 = 無/極低、6-10 = 普通、11-15 = 高、16-20 = 頂尖突破
 
@@ -63,7 +63,11 @@ def llm_score_item(item: ScoredItem) -> ScoredItem:
     if metadata.get("score"):
         signals.append(f"Reddit score: {metadata['score']}")
 
-    signals_str = f"\n**社群訊號**: {', '.join(signals)}" if signals else ""
+    signals_str = (
+        f"\n**社群訊號**: {', '.join(signals)}"
+        "\n（量級參考：HF upvotes 通常 0-100、GitHub stars 可達數萬、"
+        "HN/Reddit points 數百即算熱門；請依相對熱度判斷話題性，勿被絕對數字大小誤導）"
+    ) if signals else ""
 
     user_msg = f"""請評估以下內容的部落格寫作價值：
 
@@ -79,7 +83,8 @@ def llm_score_item(item: ScoredItem) -> ScoredItem:
 
     try:
         scores = None
-        for _parse_attempt in range(2):
+        last_response = ""
+        for _parse_attempt in range(3):
             response = llm_chat(
                 messages=[
                     {"role": "system", "content": SCORING_SYSTEM_PROMPT},
@@ -88,10 +93,11 @@ def llm_score_item(item: ScoredItem) -> ScoredItem:
                 temperature=0.3,
                 max_tokens=500,
             )
+            last_response = response
             scores = _parse_score_json(response)
             if scores:
                 break
-            if _parse_attempt == 0:
+            if _parse_attempt < 2:
                 _logger.debug("LLM score parse failed, retrying", extra={"title": item.item.title[:80]})
 
         if scores:
@@ -110,7 +116,13 @@ def llm_score_item(item: ScoredItem) -> ScoredItem:
                 item.blog_worthiness or 0,
             ])
         else:
-            _logger.warning("Failed to parse LLM score", extra={"title": item.item.title[:80]})
+            _logger.warning(
+                "Failed to parse LLM score",
+                extra={
+                    "title": item.item.title[:80],
+                    "raw_response": (last_response or "")[:500],
+                },
+            )
 
     except Exception as e:
         _logger.error("LLM scoring error", extra={"title": item.item.title[:80], "error": str(e)})

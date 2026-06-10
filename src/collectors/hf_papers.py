@@ -21,6 +21,9 @@ _ARXIV_API_URL = "https://export.arxiv.org/api/query"
 _ARXIV_NS = {"atom": "http://www.w3.org/2005/Atom"}
 _ARXIV_ID_RE = re.compile(r"^\d{4}\.\d{4,5}(v\d+)?$")
 
+# Delay between per-paper HF page fetches to be respectful to the server
+_ENRICH_DELAY_SECONDS = 0.5
+
 
 def _extract_arxiv_id(paper_url: str) -> str | None:
     """從 HF paper URL 解析 arxiv ID。"""
@@ -107,6 +110,11 @@ class HFPapersCollector(BaseCollector):
                             if len(text) > 100:  # 通常 abstract 都比較長
                                 abstract = text
                                 break
+                    else:
+                        _logger.warning(
+                            "Non-200 fetching HF paper page, skipping enrichment",
+                            extra={"url": paper_url, "status_code": p_resp.status_code},
+                        )
                 except Exception as e:
                     _logger.debug(
                         "Failed to fetch HF paper abstract",
@@ -129,7 +137,7 @@ class HFPapersCollector(BaseCollector):
                         _logger.warning("arXiv enrichment failed, keeping fallback", extra={"arxiv_id": arxiv_id})
 
                 # Sleep briefly to be nice to the server
-                time.sleep(0.5)
+                time.sleep(_ENRICH_DELAY_SECONDS)
 
                 items.append(
                     ContentItem(

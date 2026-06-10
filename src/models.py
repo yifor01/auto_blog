@@ -36,11 +36,14 @@ class ContentItem(BaseModel):
     raw_metadata: dict = Field(default_factory=dict)
 
     def dedup_key(self) -> str:
-        """用於去重的 key: 優先用 arxiv id, 否則用 URL."""
+        """用於去重的 key: 優先用 arxiv id, 否則用正規化後的 URL."""
         arxiv_id = self.raw_metadata.get("arxiv_id", "")
         if arxiv_id:
             return f"arxiv:{arxiv_id}"
-        return self.url
+        # 區域 import 避免 utils <-> models 潛在循環依賴
+        from src.utils import normalize_url
+
+        return normalize_url(self.url)
 
 
 class ScoredItem(BaseModel):

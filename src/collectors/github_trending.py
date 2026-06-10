@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from datetime import date
 
 from bs4 import BeautifulSoup
@@ -12,6 +13,17 @@ from src.logger import get_logger
 from src.utils import get_http_client, load_config
 
 _logger = get_logger("collectors.github")
+
+# Use a realistic browser UA so GitHub doesn't treat requests as bots.
+# This only applies to this collector; utils.get_http_client() keeps its own UA.
+_GITHUB_UA = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/124.0.0.0 Safari/537.36"
+)
+
+# Status codes that indicate rate-limiting; stop further README fetches on these.
+_RATE_LIMIT_CODES = frozenset([429, 403])
 
 
 class GitHubTrendingCollector(BaseCollector):
@@ -46,8 +58,13 @@ class GitHubTrendingCollector(BaseCollector):
         items: list[ContentItem] = []
 
         client = get_http_client()
+        # Override with a browser-like UA for this collector only
+        client.headers.update({"User-Agent": _GITHUB_UA})
         try:
             for lang in languages:
+                # Per-language flag: stop README fetches on 429/403 to avoid
+                # triggering cascading rate-limit across all repos in this language.
+                skip_readme_fetch = False
                 try:
                     url = f"https://github.com/trending/{lang}?since=daily"
                     resp = client.get(url)
@@ -93,18 +110,24 @@ class GitHubTrendingCollector(BaseCollector):
 
                         # 追加抓取 README 作為長篇摘要
                         readme_text = ""
-                        try:
-                            import time
-                            time.sleep(0.5)
-                            repo_url = f"https://github.com/{repo_path}"
-                            r_resp = client.get(repo_url)
-                            if r_resp.status_code == 200:
-                                r_soup = BeautifulSoup(r_resp.text, "html.parser")
-                                readme_el = r_soup.select_one("article.markdown-body")
-                                if readme_el:
-                                    readme_text = readme_el.get_text(separator=" ", strip=True)
-                        except Exception as e:
-                            _logger.warning("Could not fetch README", extra={"repo": repo_name, "error": str(e)})
+                        if not skip_readme_fetch:
+                            try:
+                                time.sleep(0.5)
+                                repo_url = f"https://github.com/{repo_path}"
+                                r_resp = client.get(repo_url)
+                                if r_resp.status_code in _RATE_LIMIT_CODES:
+                                    _logger.warning(
+                                        "GitHub README rate limited, stopping README fetches for this language",
+                                        extra={"repo": repo_name, "status_code": r_resp.status_code, "language": lang},
+                                    )
+                                    skip_readme_fetch = True
+                                elif r_resp.status_code == 200:
+                                    r_soup = BeautifulSoup(r_resp.text, "html.parser")
+                                    readme_el = r_soup.select_one("article.markdown-body")
+                                    if readme_el:
+                                        readme_text = readme_el.get_text(separator=" ", strip=True)
+                            except Exception as e:
+                                _logger.warning("Could not fetch README", extra={"repo": repo_name, "error": str(e)})
 
                         final_abstract = readme_text[:1500] if readme_text else description
 

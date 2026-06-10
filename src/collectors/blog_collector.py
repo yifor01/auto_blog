@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import httpx
 from datetime import date
 from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup
 
+from src.collectors._helpers import parse_entry_date
 from src.collectors.base import BaseCollector
 from src.models import ContentItem, SourceType
 from src.logger import get_logger
@@ -62,7 +64,7 @@ class BlogCollector(BaseCollector):
         target_date: date,
     ) -> list[ContentItem]:
         """通用部落格爬蟲：嘗試找 RSS feed，否則 scrape HTML."""
-        # 先嘗試常見 RSS 路徑
+        # 先嘗試常見 RSS 路徑；第一個成功就停，連線層錯誤立即放棄剩餘路徑
         rss_paths = ["/feed", "/rss", "/atom.xml", "/feed.xml", "/rss.xml", "/index.xml"]
         for rss_path in rss_paths:
             rss_url = url.rstrip("/") + rss_path
@@ -81,7 +83,23 @@ class BlogCollector(BaseCollector):
                         return self._parse_feed_entries(
                             parsed.entries, name, url, target_date, client
                         )
-            except Exception:
+                else:
+                    _logger.debug(
+                        "RSS path probe: non-success status",
+                        extra={"rss_url": rss_url, "status_code": resp.status_code},
+                    )
+            except (httpx.TimeoutException, httpx.ConnectError) as e:
+                # 連線層錯誤（timeout / DNS）：同一 host 其他路徑也連不上，直接放棄
+                _logger.debug(
+                    "RSS path probe: connection-level error, aborting remaining paths",
+                    extra={"rss_url": rss_url, "error": str(e)},
+                )
+                break
+            except Exception as e:
+                _logger.debug(
+                    "RSS path probe: unexpected error",
+                    extra={"rss_url": rss_url, "error": str(e)},
+                )
                 continue
 
         # Fallback: scrape HTML 找最新文章連結
@@ -97,7 +115,7 @@ class BlogCollector(BaseCollector):
     ) -> list[ContentItem]:
         items: list[ContentItem] = []
         for entry in entries[:10]:  # 最多看 10 篇
-            pub_date = self._parse_entry_date(entry)
+            pub_date = parse_entry_date(entry)
             if pub_date is None:
                 _logger.debug(
                     "Skipping blog entry: cannot parse date",
@@ -229,21 +247,3 @@ class BlogCollector(BaseCollector):
             return False
         return True
 
-    @staticmethod
-    def _parse_entry_date(entry) -> date | None:
-        from email.utils import parsedate_to_datetime
-
-        for field in ("published", "updated", "created"):
-            val = entry.get(field)
-            if val:
-                try:
-                    return parsedate_to_datetime(val).date()
-                except Exception:
-                    pass
-            parsed = entry.get(f"{field}_parsed")
-            if parsed:
-                try:
-                    return date(*parsed[:3])
-                except Exception:
-                    pass
-        return None

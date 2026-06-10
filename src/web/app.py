@@ -551,16 +551,16 @@ async def settings_save(
     api_url: str = Form(""),
     llm_model: str = Form(""),
     fallback_model: str = Form(""),
-    max_tokens: int = Form(8192, ge=256, le=131072),
-    request_delay: float = Form(0.5, ge=0.0, le=60.0),
-    rule_threshold: int = Form(25, ge=0, le=500),
-    llm_top_k: int = Form(30, ge=1, le=1000),
-    final_top_k: int = Form(10, ge=1, le=500),
-    hf_upvote_threshold: int = Form(10, ge=0, le=100000),
-    github_stars_high: int = Form(100, ge=1, le=100000),
-    github_stars_medium: int = Form(50, ge=1, le=100000),
-    dedup_lookback: int = Form(7, ge=0, le=365),
-    retention_days: int = Form(90, ge=7, le=3650),
+    max_tokens: Optional[int] = Form(None, ge=256, le=131072),
+    request_delay: Optional[float] = Form(None, ge=0.0, le=60.0),
+    rule_threshold: Optional[int] = Form(None, ge=0, le=500),
+    llm_top_k: Optional[int] = Form(None, ge=1, le=1000),
+    final_top_k: Optional[int] = Form(None, ge=1, le=500),
+    hf_upvote_threshold: Optional[int] = Form(None, ge=0, le=100000),
+    github_stars_high: Optional[int] = Form(None, ge=1, le=100000),
+    github_stars_medium: Optional[int] = Form(None, ge=1, le=100000),
+    dedup_lookback: Optional[int] = Form(None, ge=0, le=365),
+    retention_days: Optional[int] = Form(None, ge=7, le=3650),
     # Collector toggles（checkbox 未勾選時不送出，需用 Optional[str]）
     arxiv_enabled: Optional[str] = Form(None),
     arxiv_max_results: int = Form(50, ge=1, le=200),
@@ -593,6 +593,24 @@ async def settings_save(
     sw_reddit: int = Form(0, ge=0, le=50),
     sw_newsapi: int = Form(15, ge=0, le=50),
 ):
+    # ── 從 config 讀取預設值，補齊 None 欄位（Task 4） ──────
+    _cfg = cm.get_config()
+    _llm_cfg = _cfg.get("llm", {})
+    _scoring_cfg = _cfg.get("scoring", {})
+    _dedup_cfg = _cfg.get("dedup", {})
+
+    max_tokens = max_tokens if max_tokens is not None else _llm_cfg.get("max_tokens", 8192)
+    request_delay = request_delay if request_delay is not None else _llm_cfg.get("request_delay_seconds", 8.0)
+    rule_threshold = rule_threshold if rule_threshold is not None else _scoring_cfg.get("rule_threshold", 20)
+    llm_top_k = llm_top_k if llm_top_k is not None else _scoring_cfg.get("llm_top_k", 60)
+    final_top_k = final_top_k if final_top_k is not None else _scoring_cfg.get("final_top_k", 20)
+    hf_upvote_threshold = hf_upvote_threshold if hf_upvote_threshold is not None else _scoring_cfg.get("hf_upvote_bonus_threshold", 10)
+    github_stars_high = github_stars_high if github_stars_high is not None else _scoring_cfg.get("github_stars_high", 100)
+    github_stars_medium = github_stars_medium if github_stars_medium is not None else _scoring_cfg.get("github_stars_medium", 50)
+    dedup_lookback = dedup_lookback if dedup_lookback is not None else _dedup_cfg.get("lookback_days", 7)
+    retention_days = retention_days if retention_days is not None else _cfg.get("retention_days", 90)
+    # ────────────────────────────────────────────────────────
+
     env_updates: dict[str, str] = {}
     if api_key.strip():
         env_updates["OPENROUTER_API_KEY"] = api_key.strip()
@@ -612,7 +630,7 @@ async def settings_save(
         reddit_subs = ["LocalLLaMA", "MachineLearning"]
 
     config_updates: dict = {
-        "llm.model": llm_model.strip() or cm.get_config().get("llm", {}).get("model", ""),
+        "llm.model": llm_model.strip() or _llm_cfg.get("model", ""),
         "llm.fallback_model": fallback_model.strip(),
         "llm.max_tokens": max_tokens,
         "llm.request_delay_seconds": request_delay,

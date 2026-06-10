@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from datetime import date, datetime
-from email.utils import parsedate_to_datetime
 
 import feedparser
 
+from src.collectors._helpers import parse_entry_date
 from src.collectors.base import BaseCollector
 from src.models import ContentItem, SourceType
 from src.logger import get_logger
@@ -43,7 +43,7 @@ class RSSCollector(BaseCollector):
                     count = 0
                     for entry in parsed.entries:
                         # 解析發布日期
-                        pub_date = self._parse_date(entry)
+                        pub_date = parse_entry_date(entry)
                         if pub_date is None:
                             _logger.debug(
                                 "Skipping entry: cannot parse date",
@@ -114,24 +114,6 @@ class RSSCollector(BaseCollector):
                 abstract = fetched
 
         return abstract
-
-    @staticmethod
-    def _parse_date(entry) -> date | None:
-        """嘗試從 RSS entry 解析日期。"""
-        for field in ("published", "updated", "created"):
-            val = entry.get(field)
-            if val:
-                try:
-                    return parsedate_to_datetime(val).date()
-                except Exception:
-                    pass
-            parsed = entry.get(f"{field}_parsed")
-            if parsed:
-                try:
-                    return date(*parsed[:3])
-                except Exception:
-                    pass
-        return None
 
     @staticmethod
     def _extract_tags(entry) -> list[str]:
