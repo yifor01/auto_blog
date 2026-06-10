@@ -45,6 +45,13 @@ export function excerpt(body: string | undefined, max = 150): string {
   return '';
 }
 
+// 中文閱讀速度約 400-500 字/分，粗估閱讀時間（分鐘，至少 1）。
+export function readingMinutes(body: string | undefined): number {
+  if (!body) return 1;
+  const chars = body.replace(/\s/g, '').length;
+  return Math.max(1, Math.round(chars / 450));
+}
+
 // 「每日自動」分頁只 build 近 N 天，避免 2000+ 頁拖累部署。
 export const RECENT_DAYS = 30;
 

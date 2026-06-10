@@ -1,28 +1,54 @@
 ---
 import { getCollection, render } from 'astro:content';
 import Base from '../../layouts/Base.astro';
-import { idDate, formatDate, recentCutoff } from '../../utils';
+import { idDate, formatDate, recentCutoff, readingMinutes } from '../../utils';
+import { loadEnrichment, normalizeUrl, DIM_LABELS } from '../../enrich';
 
 export async function getStaticPaths() {
   const cutoff = recentCutoff();
   const posts = await getCollection('posts');
-  // 只 build 近 N 天，與列表頁一致
-  return posts
+  const enrichMap = loadEnrichment();
+  // 只 build 近 N 天，與列表頁一致；按日期新→舊排序以決定上一篇/下一篇
+  const recent = posts
     .filter((p) => idDate(p.id) >= cutoff)
-    .map((post) => ({
+    .sort((a, b) => idDate(b.id).getTime() - idDate(a.id).getTime());
+
+  return recent.map((post, i) => {
+    const e = enrichMap.get(normalizeUrl(post.data.url)) ?? null;
+    const newer = recent[i - 1];
+    const older = recent[i + 1];
+    // 同來源相關文章（排除自己，取日期最近的 3 篇）
+    const related = recent
+      .filter((p) => p.id !== post.id && (p.data.source ?? '') === (post.data.source ?? ''))
+      .slice(0, 3)
+      .map((p) => ({ id: p.id, title: p.data.title, day: idDate(p.id).toISOString().slice(0, 10) }));
+    return {
       params: { slug: post.id },
-      props: { post },
-    }));
+      props: {
+        post,
+        enrich: e,
+        newer: newer ? { id: newer.id, title: newer.data.title } : null,
+        older: older ? { id: older.id, title: older.data.title } : null,
+        related,
+      },
+    };
+  });
 }
 
-const { post } = Astro.props;
+const { post, enrich, newer, older, related } = Astro.props;
 const { Content } = await render(post);
 const date = idDate(post.id);
+const readMins = readingMinutes(post.body);
+const dims = enrich
+  ? DIM_LABELS.map(([key, label]) => ({ label, value: Number(enrich[key]) || 0 }))
+  : null;
 ---
 
 <Base title={`${date.toISOString().slice(0, 10)} · ${post.data.title}`} description={post.data.source}>
+  <div class="progress" aria-hidden="true"><div class="progress-fill" id="progress-fill"></div></div>
   <nav class="topnav">
     <a href="/" class="back"><span aria-hidden="true">←</span> 每日自動</a>
+    <span class="topnav-mins">{readMins} min read</span>
   </nav>
 
   <article>
@@ -30,13 +56,24 @@ const date = idDate(post.id);
       <div class="meta-row">
         <time datetime={date.toISOString()}>{formatDate(date)}</time>
         {post.data.source && <span class="source-badge">{post.data.source}</span>}
+        {enrich?.organization && <span class="org-badge">{enrich.organization}</span>}
         {
           post.data.score != null && (
             <span class="score">★ {Math.round(post.data.score)}</span>
           )
         }
+        <span class="mins">{readMins} min</span>
       </div>
       <h1>{post.data.title}</h1>
+      {
+        enrich && enrich.tags.length > 0 && (
+          <p class="tags-row">
+            {enrich.tags.map((t) => (
+              <a class="tag-chip" href={`/#tag=${encodeURIComponent(t.toLowerCase())}`}>{t}</a>
+            ))}
+          </p>
+        )
+      }
       {
         post.data.url && (
           <a class="src-link" href={post.data.url} target="_blank" rel="noopener">
@@ -47,6 +84,44 @@ const date = idDate(post.id);
         )
       }
     </header>
+
+    {
+      enrich && (
+        <aside class="score-card">
+          {dims && (
+            <div class="dims-grid">
+              {dims.map((d) => (
+                <div class="dim-row">
+                  <span class="dim-label">{d.label}</span>
+                  <span class="dim-track">
+                    <span class="dim-fill" style={`width:${(d.value / 20) * 100}%`} />
+                  </span>
+                  <span class="dim-val">{d.value}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          <div class="score-side">
+            {enrich.ruleReasons.length > 0 && (
+              <div class="reasons">
+                <h3>為何入選</h3>
+                <ul>
+                  {enrich.ruleReasons.map((r) => (
+                    <li>{r}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {enrich.llmReason && (
+              <div class="llm-reason">
+                <h3>LLM 評審觀點</h3>
+                <p>{enrich.llmReason}</p>
+              </div>
+            )}
+          </div>
+        </aside>
+      )
+    }
 
     <div class="prose">
       <Content />
@@ -59,12 +134,86 @@ const date = idDate(post.id);
     }
   </article>
 
+  {
+    related.length > 0 && (
+      <section class="related">
+        <h2>同來源相關文章</h2>
+        <ul>
+          {related.map((r) => (
+            <li>
+              <a href={`/daily/${r.id}`}>
+                <span class="rel-day">{r.day}</span>
+                <span class="rel-title">{r.title}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )
+  }
+
   <footer class="post-footer">
-    <a href="/" class="back"><span aria-hidden="true">←</span> 每日自動</a>
+    <div class="pager">
+      {
+        newer ? (
+          <a href={`/daily/${newer.id}`} class="pager-link prev">
+            <span class="pager-dir">← 較新</span>
+            <span class="pager-title">{newer.title}</span>
+          </a>
+        ) : (
+          <span />
+        )
+      }
+      {
+        older ? (
+          <a href={`/daily/${older.id}`} class="pager-link next">
+            <span class="pager-dir">較舊 →</span>
+            <span class="pager-title">{older.title}</span>
+          </a>
+        ) : (
+          <span />
+        )
+      }
+    </div>
+    <a href="/" class="back"><span aria-hidden="true">←</span> 回到列表</a>
   </footer>
 </Base>
 
+<script define:vars={{ postId: post.id }}>
+  // 標記已讀（與列表頁共用 localStorage key）
+  try {
+    const read = new Set(JSON.parse(localStorage.getItem('apb-read') ?? '[]'));
+    if (!read.has(postId)) {
+      read.add(postId);
+      localStorage.setItem('apb-read', JSON.stringify([...read]));
+    }
+  } catch {}
+
+  // 閱讀進度條
+  const fill = document.getElementById('progress-fill');
+  function onScroll() {
+    const h = document.documentElement;
+    const max = h.scrollHeight - h.clientHeight;
+    fill.style.width = max > 0 ? `${(h.scrollTop / max) * 100}%` : '0%';
+  }
+  document.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+</script>
+
 <style>
+  .progress {
+    position: fixed;
+    inset: 0 0 auto 0;
+    height: 2px;
+    z-index: 60;
+    background: transparent;
+  }
+  .progress-fill {
+    height: 100%;
+    width: 0;
+    background: linear-gradient(90deg, var(--accent), var(--accent-cyan));
+    transition: width 0.08s linear;
+  }
   .topnav {
     position: sticky;
     top: 0;
@@ -74,6 +223,14 @@ const date = idDate(post.id);
     backdrop-filter: blur(10px);
     background: rgba(10, 12, 16, 0.72);
     border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .topnav-mins {
+    font-family: var(--mono);
+    font-size: 0.76rem;
+    color: var(--faint);
   }
   .back {
     font-family: var(--mono);
@@ -84,7 +241,7 @@ const date = idDate(post.id);
     color: var(--accent);
   }
   .post-header {
-    margin-bottom: 2.25rem;
+    margin-bottom: 1.6rem;
     border-bottom: 1px solid var(--border);
     padding-bottom: 1.4rem;
   }
@@ -103,8 +260,17 @@ const date = idDate(post.id);
     border-radius: 5px;
     padding: 0 0.4rem;
   }
+  .org-badge {
+    color: var(--accent-2);
+    border: 1px solid var(--border-strong);
+    border-radius: 5px;
+    padding: 0 0.4rem;
+  }
   .score {
     color: var(--accent-2);
+  }
+  .mins {
+    color: var(--faint);
   }
   .post-header h1 {
     margin: 0.55rem 0 0.85rem;
@@ -113,6 +279,25 @@ const date = idDate(post.id);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
+  }
+  .tags-row {
+    margin: 0 0 0.85rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+  .tag-chip {
+    font-family: var(--mono);
+    font-size: 0.74rem;
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 0.05rem 0.45rem;
+  }
+  .tag-chip:hover {
+    color: var(--accent);
+    border-color: var(--accent);
   }
   .src-link {
     display: inline-flex;
@@ -144,6 +329,83 @@ const date = idDate(post.id);
     color: var(--accent);
     flex-shrink: 0;
   }
+
+  .score-card {
+    display: grid;
+    grid-template-columns: minmax(200px, 5fr) 7fr;
+    gap: 1.5rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.1rem 1.3rem;
+    margin-bottom: 2rem;
+  }
+  .dims-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    justify-content: center;
+  }
+  .dim-row {
+    display: grid;
+    grid-template-columns: 3.2rem 1fr 1.6rem;
+    align-items: center;
+    gap: 0.6rem;
+    font-family: var(--mono);
+    font-size: 0.76rem;
+  }
+  .dim-label {
+    color: var(--muted);
+  }
+  .dim-track {
+    height: 6px;
+    background: var(--bg-elev);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .dim-fill {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent-cyan));
+    border-radius: 3px;
+  }
+  .dim-val {
+    color: var(--accent);
+    text-align: right;
+  }
+  .score-side {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    border-left: 1px solid var(--border);
+    padding-left: 1.5rem;
+  }
+  .score-side h3 {
+    margin: 0 0 0.35rem;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--faint);
+  }
+  .reasons ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem 0.8rem;
+  }
+  .reasons li {
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  .llm-reason p {
+    margin: 0;
+    font-size: 0.82rem;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
   .prose :global(h1) {
     margin-top: 2.25rem;
     font-size: 1.5rem;
@@ -188,9 +450,96 @@ const date = idDate(post.id);
     color: var(--faint);
     font-size: 0.8rem;
   }
+
+  .related {
+    margin-top: 2.5rem;
+    border-top: 1px solid var(--border);
+    padding-top: 1.4rem;
+  }
+  .related h2 {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--faint);
+    margin: 0 0 0.8rem;
+  }
+  .related ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+  .related a {
+    display: flex;
+    align-items: baseline;
+    gap: 0.7rem;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  .related a:hover .rel-title {
+    color: var(--accent);
+  }
+  .rel-day {
+    font-family: var(--mono);
+    font-size: 0.74rem;
+    color: var(--faint);
+    flex-shrink: 0;
+  }
+
   .post-footer {
     margin-top: 2rem;
     padding-top: 1.5rem;
     border-top: 1px solid var(--border);
+  }
+  .pager {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.8rem;
+    margin-bottom: 1.4rem;
+  }
+  .pager-link {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.7rem 0.95rem;
+    color: var(--muted);
+    transition: border-color 0.15s ease;
+  }
+  .pager-link:hover {
+    border-color: var(--accent);
+    color: var(--text);
+  }
+  .pager-link.next {
+    text-align: right;
+  }
+  .pager-dir {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--faint);
+  }
+  .pager-title {
+    font-size: 0.85rem;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  @media (max-width: 700px) {
+    .score-card {
+      grid-template-columns: 1fr;
+    }
+    .score-side {
+      border-left: none;
+      padding-left: 0;
+      border-top: 1px solid var(--border);
+      padding-top: 1rem;
+    }
   }
 </style>

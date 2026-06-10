@@ -2,33 +2,27 @@
 import { getCollection } from 'astro:content';
 import Base from '../layouts/Base.astro';
 import Nav from '../components/Nav.astro';
-import { idDate, formatDate, recentCutoff, RECENT_DAYS, excerpt } from '../utils';
+import { idDate, formatDate, recentCutoff, RECENT_DAYS, excerpt, readingMinutes } from '../utils';
+import { loadEnrichment, normalizeUrl, DIM_LABELS } from '../enrich';
 
 const all = await getCollection('posts');
 const cutoff = recentCutoff();
+const enrich = loadEnrichment();
+
 const recent = all
   .filter((p) => idDate(p.id) >= cutoff)
   .sort((a, b) => idDate(b.id).getTime() - idDate(a.id).getTime());
 
-// source → 次數（降序）
-const sourceCounts = new Map<string, number>();
-for (const p of recent) {
-  const s = p.data.source ?? '其他';
-  sourceCounts.set(s, (sourceCounts.get(s) ?? 0) + 1);
-}
-const sources = [...sourceCounts.entries()].sort((a, b) => b[1] - a[1]);
-
-// 月份 → 次數（降序）
-const monthCounts = new Map<string, number>();
-for (const p of recent) {
-  const m = idDate(p.id).toISOString().slice(0, 7);
-  monthCounts.set(m, (monthCounts.get(m) ?? 0) + 1);
-}
-const months = [...monthCounts.entries()].sort((a, b) => b[0].localeCompare(a[0]));
-
 const items = recent.map((p) => {
   const source = p.data.source ?? '其他';
   const summary = excerpt(p.body);
+  const date = idDate(p.id);
+  const e = enrich.get(normalizeUrl(p.data.url));
+  const tags = e?.tags ?? [];
+  const org = e?.organization ?? '';
+  const dims = e
+    ? DIM_LABELS.map(([key, label]) => ({ label, value: Number(e[key]) || 0 }))
+    : null;
   return {
     id: p.id,
     title: p.data.title,
@@ -36,11 +30,55 @@ const items = recent.map((p) => {
     score: p.data.score,
     url: p.data.url,
     summary,
-    date: idDate(p.id),
-    month: idDate(p.id).toISOString().slice(0, 7),
-    search: `${p.data.title} ${source} ${summary}`.toLowerCase(),
+    date,
+    day: date.toISOString().slice(0, 10),
+    month: date.toISOString().slice(0, 7),
+    tags,
+    org,
+    dims,
+    readMins: readingMinutes(p.body),
+    search: [p.data.title, source, summary, org, ...tags, e?.abstract ?? '']
+      .join(' ')
+      .toLowerCase(),
   };
 });
+
+// 日期分組（保持時間序）
+const dayGroups: { day: string; date: Date; items: typeof items }[] = [];
+for (const item of items) {
+  const last = dayGroups[dayGroups.length - 1];
+  if (last && last.day === item.day) last.items.push(item);
+  else dayGroups.push({ day: item.day, date: item.date, items: [item] });
+}
+const weekdayFmt = new Intl.DateTimeFormat('zh-TW', { weekday: 'short', timeZone: 'UTC' });
+
+// facets
+const sourceCounts = new Map<string, number>();
+const monthCounts = new Map<string, number>();
+// tag 以小寫為比對鍵（不同文章大小寫不一），顯示用第一次出現的原樣
+const tagCounts = new Map<string, { label: string; count: number }>();
+for (const it of items) {
+  sourceCounts.set(it.source, (sourceCounts.get(it.source) ?? 0) + 1);
+  monthCounts.set(it.month, (monthCounts.get(it.month) ?? 0) + 1);
+  for (const t of it.tags) {
+    const key = t.toLowerCase();
+    const e = tagCounts.get(key);
+    if (e) e.count++;
+    else tagCounts.set(key, { label: t, count: 1 });
+  }
+}
+const sources = [...sourceCounts.entries()].sort((a, b) => b[1] - a[1]);
+const months = [...monthCounts.entries()].sort((a, b) => b[0].localeCompare(a[0]));
+const topTags = [...tagCounts.entries()]
+  .filter(([, e]) => e.count >= 2)
+  .sort((a, b) => b[1].count - a[1].count)
+  .slice(0, 18);
+
+// 最新一天統計
+const latest = dayGroups[0];
+const latestAvg = latest
+  ? Math.round(latest.items.reduce((s, i) => s + (i.score ?? 0), 0) / latest.items.length)
+  : 0;
 ---
 
 <Base title="每日自動 — Daily AI Blog" wide>
@@ -52,15 +90,34 @@ const items = recent.map((p) => {
           <p class="subtitle">
             <span class="prompt">⚡</span> 每日自動 · 近 {RECENT_DAYS} 天
           </p>
+          {
+            latest && (
+              <p class="stats-line">
+                最新 {latest.day.slice(5)} · {latest.items.length} 篇 · 均分 {latestAvg}
+              </p>
+            )
+          }
         </header>
 
         <div class="search-box">
           <input
             type="search"
             id="search"
-            placeholder="搜尋標題 / 來源…"
+            placeholder="搜尋標題 / 來源 / 標籤…  (/)"
             autocomplete="off"
           />
+        </div>
+
+        <div class="control-row">
+          <span class="ctrl-label">排序</span>
+          <button class="sort-btn active" data-sort="date">最新</button>
+          <button class="sort-btn" data-sort="score">分數</button>
+        </div>
+
+        <div class="control-row">
+          <button class="toggle-btn" data-toggle="unread">未讀</button>
+          <button class="toggle-btn" data-toggle="bm">★ 收藏</button>
+          <button id="density" class="toggle-btn" title="切換精簡列表">精簡</button>
         </div>
 
         <button id="reset" class="reset" hidden>✕ 清除篩選</button>
@@ -96,6 +153,26 @@ const items = recent.map((p) => {
             }
           </ul>
         </section>
+
+        {
+          topTags.length > 0 && (
+            <section class="facet">
+              <h3 class="facet-title">標籤</h3>
+              <div class="tag-cloud">
+                {topTags.map(([key, e]) => (
+                  <button class="facet-btn tag-btn" data-type="tag" data-value={key}>
+                    {e.label} <span class="count">{e.count}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )
+        }
+
+        <p class="kbd-hint">
+          <kbd>/</kbd> 搜尋 · <kbd>j</kbd><kbd>k</kbd> 移動 · <kbd>↵</kbd> 開啟 ·
+          <kbd>b</kbd> 收藏
+        </p>
       </div>
     </aside>
 
@@ -108,28 +185,63 @@ const items = recent.map((p) => {
 
       <ul class="post-list">
         {
-          items.map((post) => (
-            <li
-              class="post-item"
-              data-month={post.month}
-              data-source={post.source}
-              data-search={post.search}
-            >
-              <a href={`/daily/${post.id}`} class="post-link">
-                <div class="post-meta">
-                  <time datetime={post.date.toISOString()}>
-                    {formatDate(post.date)}
-                  </time>
-                  <span class="source-badge">{post.source}</span>
-                  {post.score != null && (
-                    <span class="score">★ {Math.round(post.score)}</span>
-                  )}
-                </div>
-                <h2 class="post-title">{post.title}</h2>
-                {post.summary && <p class="post-tldr">{post.summary}</p>}
-                <span class="arrow" aria-hidden="true">→</span>
-              </a>
-            </li>
+          dayGroups.map((g) => (
+            <>
+              <li class="day-header" data-day={g.day}>
+                <span class="day-rel" />
+                <span class="day-date">
+                  {g.day} · {weekdayFmt.format(g.date)}
+                </span>
+                <span class="day-count">{g.items.length} 篇</span>
+                <span class="day-line" />
+              </li>
+              {g.items.map((post) => (
+                <li
+                  class="post-item"
+                  data-id={post.id}
+                  data-day={post.day}
+                  data-month={post.month}
+                  data-source={post.source}
+                  data-tags={post.tags.map((t) => t.toLowerCase()).join('|')}
+                  data-score={post.score ?? 0}
+                  data-search={post.search}
+                >
+                  <a href={`/daily/${post.id}`} class="post-link">
+                    <div class="post-meta">
+                      <time datetime={post.date.toISOString()}>{formatDate(post.date)}</time>
+                      <span class="source-badge">{post.source}</span>
+                      {post.org && <span class="org-badge">{post.org}</span>}
+                      {post.score != null && <span class="score">★ {Math.round(post.score)}</span>}
+                      <span class="read-mins">{post.readMins} min</span>
+                      {post.dims && (
+                        <span
+                          class="dims"
+                          title={post.dims.map((d) => `${d.label} ${d.value}/20`).join(' · ')}
+                        >
+                          {post.dims.map((d) => (
+                            <span class="dim-bar">
+                              <span class="dim-fill" style={`height:${(d.value / 20) * 100}%`} />
+                            </span>
+                          ))}
+                        </span>
+                      )}
+                      <span class="read-check" aria-label="已讀">✓ 已讀</span>
+                    </div>
+                    <h2 class="post-title">{post.title}</h2>
+                    {post.summary && <p class="post-tldr">{post.summary}</p>}
+                    {post.tags.length > 0 && (
+                      <p class="post-tags">
+                        {post.tags.slice(0, 4).map((t) => (
+                          <span class="tag-chip">{t}</span>
+                        ))}
+                      </p>
+                    )}
+                    <span class="arrow" aria-hidden="true">→</span>
+                  </a>
+                  <button class="bm-btn" title="收藏 (b)" aria-label="收藏">★</button>
+                </li>
+              ))}
+            </>
           ))
         }
       </ul>
@@ -141,7 +253,7 @@ const items = recent.map((p) => {
 
 <script>
   import { initFilter } from '../scripts/filter';
-  initFilter('source');
+  initFilter();
 </script>
 
 <style>
@@ -158,7 +270,7 @@ const items = recent.map((p) => {
   .sidebar-inner {
     display: flex;
     flex-direction: column;
-    gap: 1.4rem;
+    gap: 1.2rem;
     max-height: calc(100vh - 3rem);
     overflow-y: auto;
     padding-right: 0.4rem;
@@ -186,6 +298,12 @@ const items = recent.map((p) => {
     color: var(--muted);
     font-size: 0.82rem;
   }
+  .stats-line {
+    margin: 0.25rem 0 0;
+    color: var(--faint);
+    font-family: var(--mono);
+    font-size: 0.74rem;
+  }
   .prompt {
     color: var(--accent-cyan);
     font-weight: 700;
@@ -208,6 +326,46 @@ const items = recent.map((p) => {
   }
   .search-box input::placeholder {
     color: var(--faint);
+  }
+  .control-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+  .ctrl-label {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--faint);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-right: 0.15rem;
+  }
+  .sort-btn,
+  .toggle-btn {
+    background: transparent;
+    border: 1px solid var(--border-strong);
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 0.76rem;
+    border-radius: 7px;
+    padding: 0.25rem 0.6rem;
+    cursor: pointer;
+    transition:
+      border-color 0.15s ease,
+      color 0.15s ease,
+      background 0.15s ease;
+  }
+  .sort-btn:hover,
+  .toggle-btn:hover {
+    border-color: var(--accent);
+    color: var(--text);
+  }
+  .sort-btn.active,
+  .toggle-btn.active {
+    background: rgba(93, 177, 255, 0.12);
+    border-color: var(--accent);
+    color: var(--accent);
   }
   .reset {
     align-self: flex-start;
@@ -272,6 +430,17 @@ const items = recent.map((p) => {
     border-color: var(--accent);
     color: var(--accent);
   }
+  .tag-cloud {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+  }
+  .tag-btn {
+    width: auto;
+    border-color: var(--border);
+    padding: 0.18rem 0.5rem;
+    font-size: 0.74rem;
+  }
   .src-name {
     overflow: hidden;
     text-overflow: ellipsis;
@@ -287,6 +456,21 @@ const items = recent.map((p) => {
   }
   .facet-btn.active .count {
     color: var(--accent);
+  }
+  .kbd-hint {
+    margin: 0;
+    color: var(--faint);
+    font-size: 0.72rem;
+    font-family: var(--mono);
+    line-height: 1.9;
+  }
+  .kbd-hint kbd {
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: 4px;
+    padding: 0 0.3rem;
+    font-family: var(--mono);
+    font-size: 0.7rem;
   }
 
   .result-bar {
@@ -308,6 +492,41 @@ const items = recent.map((p) => {
     display: flex;
     flex-direction: column;
     gap: 0.7rem;
+  }
+  .day-header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    color: var(--faint);
+    margin-top: 0.9rem;
+  }
+  .day-header:first-child {
+    margin-top: 0;
+  }
+  .day-header[hidden] {
+    display: none;
+  }
+  .day-rel {
+    color: var(--accent-cyan);
+    font-weight: 700;
+  }
+  .day-rel:empty {
+    display: none;
+  }
+  .day-date {
+    color: var(--muted);
+  }
+  .day-count {
+    background: var(--surface);
+    border-radius: 5px;
+    padding: 0 0.4rem;
+  }
+  .day-line {
+    flex: 1;
+    height: 1px;
+    background: var(--border);
   }
   .post-item[hidden] {
     display: none;
@@ -333,13 +552,15 @@ const items = recent.map((p) => {
     opacity: 0;
     transition: opacity 0.18s ease;
   }
-  .post-item:hover {
+  .post-item:hover,
+  .post-item.kbd-focus {
     border-color: var(--accent);
     background: var(--surface-hover);
     box-shadow: 0 0 0 1px var(--accent), 0 8px 30px -12px var(--glow);
     transform: translateY(-2px);
   }
-  .post-item:hover::before {
+  .post-item:hover::before,
+  .post-item.kbd-focus::before {
     opacity: 1;
   }
   .post-link {
@@ -366,17 +587,61 @@ const items = recent.map((p) => {
     border-radius: 5px;
     padding: 0 0.4rem;
   }
+  .org-badge {
+    color: var(--accent-2);
+    border: 1px solid var(--border-strong);
+    border-radius: 5px;
+    padding: 0 0.4rem;
+  }
   .score {
     color: var(--accent-2);
+  }
+  .read-mins {
+    color: var(--faint);
+  }
+  .dims {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 12px;
+    cursor: help;
+  }
+  .dim-bar {
+    display: inline-block;
+    width: 4px;
+    height: 12px;
+    background: var(--border);
+    border-radius: 1px;
+    position: relative;
+    overflow: hidden;
+  }
+  .dim-fill {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(var(--accent-cyan), var(--accent));
+    border-radius: 1px;
+  }
+  .read-check {
+    display: none;
+    color: var(--faint);
+  }
+  .post-item.is-read .read-check {
+    display: inline;
+  }
+  .post-item.is-read .post-title {
+    color: var(--muted);
   }
   .post-title {
     margin: 0 0 0.4rem;
     font-size: 1.05rem;
     color: var(--text);
     transition: color 0.18s ease;
-    padding-right: 1.5rem;
+    padding-right: 2.4rem;
   }
-  .post-item:hover .post-title {
+  .post-item:hover .post-title,
+  .post-item.kbd-focus .post-title {
     color: var(--accent);
   }
   .post-tldr {
@@ -385,10 +650,38 @@ const items = recent.map((p) => {
     font-size: 0.88rem;
     line-height: 1.55;
   }
+  .post-tags {
+    margin: 0.45rem 0 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+  }
+  .tag-chip {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--muted);
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 0 0.4rem;
+  }
+  /* 精簡模式：只留 meta + 標題 */
+  :global(body.compact) .post-tldr,
+  :global(body.compact) .post-tags,
+  :global(body.compact) .dims {
+    display: none;
+  }
+  :global(body.compact) .post-link {
+    padding: 0.6rem 1.4rem;
+  }
+  :global(body.compact) .post-title {
+    font-size: 0.95rem;
+    margin-bottom: 0;
+  }
   .arrow {
     position: absolute;
     right: 1.2rem;
-    top: 1rem;
+    bottom: 1rem;
     color: var(--accent);
     font-size: 1.1rem;
     opacity: 0;
@@ -397,9 +690,30 @@ const items = recent.map((p) => {
       opacity 0.18s ease,
       transform 0.18s ease;
   }
-  .post-item:hover .arrow {
+  .post-item:hover .arrow,
+  .post-item.kbd-focus .arrow {
     opacity: 1;
     transform: translateX(0);
+  }
+  .bm-btn {
+    position: absolute;
+    right: 0.9rem;
+    top: 0.7rem;
+    background: transparent;
+    border: none;
+    color: var(--border-strong);
+    font-size: 1.05rem;
+    cursor: pointer;
+    padding: 0.15rem 0.3rem;
+    transition: color 0.15s ease, transform 0.15s ease;
+    z-index: 2;
+  }
+  .bm-btn:hover {
+    color: var(--accent-2);
+    transform: scale(1.2);
+  }
+  .post-item.is-bm .bm-btn {
+    color: #ffce4f;
   }
   .empty {
     color: var(--muted);
@@ -418,6 +732,9 @@ const items = recent.map((p) => {
     .sidebar-inner {
       max-height: none;
       overflow: visible;
+    }
+    .kbd-hint {
+      display: none;
     }
   }
 </style>
