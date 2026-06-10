@@ -32,6 +32,9 @@ app = FastAPI(title="Auto Post Blog Monitor", docs_url=None, redoc_url=None)
 @app.on_event("startup")
 async def startup_event():
     cm.init_config()
+    # 測試環境（pytest TestClient 會觸發 startup）或明確停用時，不可 spawn 真實 pipeline
+    if os.getenv("PYTEST_CURRENT_TEST") or os.getenv("AUTOPB_WEB_AUTORUN", "1") != "1":
+        return
     # 自動觸發當天 pipeline（背景執行）
     today = date.today().isoformat()
     with _lock:
