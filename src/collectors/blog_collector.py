@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup
 
-from src.collectors._helpers import parse_entry_date
+from src.collectors._helpers import infer_organization, parse_entry_date
 from src.collectors.base import BaseCollector
 from src.models import ContentItem, SourceType
 from src.logger import get_logger
@@ -160,6 +160,7 @@ class BlogCollector(BaseCollector):
                     abstract=abstract,
                     published_date=pub_date,
                     tags=["blog"],
+                    organization=infer_organization(name, base_url),
                     raw_metadata={"blog_name": name, "blog_url": base_url},
                 )
             )
@@ -222,6 +223,7 @@ class BlogCollector(BaseCollector):
                         abstract=final_abstract,
                         published_date=target_date,
                         tags=["blog"],
+                        organization=infer_organization(name, url),
                         raw_metadata={"blog_name": name, "blog_url": url},
                     )
                 )

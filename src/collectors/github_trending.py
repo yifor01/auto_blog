@@ -25,6 +25,48 @@ _GITHUB_UA = (
 # Status codes that indicate rate-limiting; stop further README fetches on these.
 _RATE_LIMIT_CODES = frozenset([429, 403])
 
+# Known institutional GitHub account owners (lowercase) → organization name.
+# Values must match config.yaml `scoring.top_institutions` exactly so that
+# rules.py word-boundary matching on `item.organization` produces a score hit.
+# Personal / unknown accounts are simply absent — leave organization empty.
+_GITHUB_OWNER_TO_ORG: dict[str, str] = {
+    # US big tech
+    "openai": "OpenAI",
+    "anthropics": "Anthropic",
+    "google": "Google",
+    "google-deepmind": "Google DeepMind",
+    "google-research": "Google",
+    "googleapis": "Google",
+    "deepmind": "Google DeepMind",
+    "meta-llama": "Meta AI",
+    "facebookresearch": "Meta AI",
+    "microsoft": "Microsoft",
+    "huggingface": "HuggingFace",
+    "nvidia": "NVIDIA",
+    "xai-org": "xAI",
+    "mistralai": "Mistral",
+    "cohere-ai": "Cohere",
+    "apple": "Apple",
+    "amazon-science": "Amazon",
+    "allenai": "AI2",
+    # China big tech
+    "deepseek-ai": "DeepSeek",
+    "alibaba": "Alibaba",
+    "qwenlm": "Alibaba",
+    "bytedance": "ByteDance",
+    "volcengine": "ByteDance",
+    "tencent-ailab": "Tencent",
+    "baidu-research": "Baidu",
+    "zhipuai": "Zhipu AI",
+    "moonshot-ai": "Moonshot AI",
+    "internlm": "Shanghai AI Lab",
+    # Top universities
+    "stanford-crfm": "Stanford",
+    "stanford-oval": "Stanford",
+    "mit-han-lab": "MIT",
+    "berkeley-ai-research": "UC Berkeley",
+}
+
 
 class GitHubTrendingCollector(BaseCollector):
     name = "github"
@@ -131,16 +173,20 @@ class GitHubTrendingCollector(BaseCollector):
 
                         final_abstract = readme_text[:1500] if readme_text else description
 
+                        owner = repo_path.split("/")[0] if "/" in repo_path else ""
+                        organization = _GITHUB_OWNER_TO_ORG.get(owner.lower(), "")
+
                         items.append(
                             ContentItem(
                                 source=SourceType.GITHUB,
                                 source_name="GitHub Trending",
                                 title=repo_path,
                                 url=f"https://github.com/{repo_path}",
-                                authors=[repo_path.split("/")[0]] if "/" in repo_path else [],
+                                authors=[owner] if owner else [],
                                 abstract=final_abstract,
                                 published_date=target_date,
                                 tags=[language, "github", "trending"],
+                                organization=organization,
                                 raw_metadata={
                                     "stars_today": stars_today,
                                     "language": language,

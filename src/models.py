@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import date, datetime
 from enum import Enum
 from typing import Any
@@ -19,6 +20,7 @@ class SourceType(str, Enum):
     HACKERNEWS = "hackernews"
     REDDIT = "reddit"
     NEWSAPI = "newsapi"
+    SEMANTIC_SCHOLAR = "semantic_scholar"
 
 
 class ContentItem(BaseModel):
@@ -39,7 +41,10 @@ class ContentItem(BaseModel):
         """用於去重的 key: 優先用 arxiv id, 否則用正規化後的 URL."""
         arxiv_id = self.raw_metadata.get("arxiv_id", "")
         if arxiv_id:
-            return f"arxiv:{arxiv_id}"
+            # 去掉版本後綴（2606.11190v1 → 2606.11190），
+            # 讓 arxiv / hf_papers / semantic_scholar 三來源的同篇論文能互相去重
+            canonical = re.sub(r"v\d+$", "", arxiv_id)
+            return f"arxiv:{canonical}"
         # 區域 import 避免 utils <-> models 潛在循環依賴
         from src.utils import normalize_url
 

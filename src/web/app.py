@@ -321,18 +321,92 @@ async def note_view(request: Request, date_str: str, slug: str):
 
 
 @app.get("/materials", response_class=HTMLResponse)
-async def material_library(request: Request):
-    materials = ds.list_all_materials()
+async def material_library(
+    request: Request,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=50, ge=1, le=200),
+    q: str = "",
+    source: str = "",
+    min_score: float = 0.0,
+    sort: str = "newest",
+    tag: str = "",
+    content_type: str = "",
+):
+    all_materials = ds.list_all_materials()
+
+    # ── 套用篩選（在切片前）──────────────────────────────────
+    filtered = all_materials
+    if q:
+        q_lower = q.lower()
+        filtered = [
+            m for m in filtered
+            if q_lower in (m.get("title") or "").lower()
+            or q_lower in (m.get("abstract") or "").lower()
+            or q_lower in " ".join(m.get("tags") or []).lower()
+        ]
+    if source:
+        src_lower = source.lower()
+        filtered = [
+            m for m in filtered
+            if src_lower in (m.get("source_name") or "").lower()
+        ]
+    if min_score > 0:
+        filtered = [m for m in filtered if (m.get("total_score") or 0) >= min_score]
+    if tag:
+        tag_lower = tag.lower()
+        filtered = [
+            m for m in filtered
+            if tag_lower in " ".join(m.get("tags") or []).lower()
+            or tag_lower in (m.get("title") or "").lower()
+        ]
+    if content_type == "post":
+        filtered = [m for m in filtered if m.get("has_post")]
+    elif content_type == "note":
+        filtered = [m for m in filtered if m.get("has_note")]
+    elif content_type == "blog":
+        filtered = [m for m in filtered if m.get("has_blog")]
+
+    # ── 排序 ────────────────────────────────────────────────
+    if sort == "oldest":
+        filtered = sorted(filtered, key=lambda x: (x["date_str"], x["total_score"]))
+    elif sort == "score-desc":
+        filtered = sorted(filtered, key=lambda x: x["total_score"], reverse=True)
+    # "newest"：list_all_materials 已按 (date_str, total_score) desc 排好
+
+    # ── 分頁 ────────────────────────────────────────────────
+    total = len(filtered)
+    total_pages = max(1, (total + page_size - 1) // page_size)
+    page = max(1, min(page, total_pages))
+    start = (page - 1) * page_size
+    page_items = filtered[start : start + page_size]
+
+    # 來源清單取自全量資料，讓 dropdown 不因篩選縮水
+    all_sources = sorted({m.get("source_name") or "" for m in all_materials if m.get("source_name")})
+
     # 已收藏的 key 集合（用於 card 上顯示星號）
     bm = ds.get_all_bookmarks()
     bookmarked_keys = set(bm.keys())
+
     return templates.TemplateResponse(
         "material_library.html",
         {
             "request": request,
-            "materials": materials,
+            "materials": page_items,
+            "all_sources": all_sources,
             "bookmarked_keys": bookmarked_keys,
             "sidebar_stats": ds.get_sidebar_stats(),
+            # 篩選參數（回傳給模板用於 form 預填與分頁連結）
+            "q": q,
+            "source": source,
+            "min_score": min_score,
+            "sort": sort,
+            "tag": tag,
+            "content_type": content_type,
+            # 分頁資訊
+            "page": page,
+            "page_size": page_size,
+            "total": total,
+            "total_pages": total_pages,
         },
     )
 

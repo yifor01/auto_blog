@@ -6,7 +6,7 @@ from datetime import date, datetime
 
 import feedparser
 
-from src.collectors._helpers import parse_entry_date
+from src.collectors._helpers import infer_organization, parse_entry_date
 from src.collectors.base import BaseCollector
 from src.models import ContentItem, SourceType
 from src.logger import get_logger
@@ -71,6 +71,7 @@ class RSSCollector(BaseCollector):
                                 abstract=abstract,
                                 published_date=pub_date,
                                 tags=self._extract_tags(entry),
+                                organization=infer_organization(feed_name, feed_url),
                                 raw_metadata={
                                     "feed_name": feed_name,
                                     "feed_url": feed_url,

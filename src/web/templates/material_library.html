@@ -154,7 +154,32 @@
 .pill-active-purple { background: rgba(88,86,214,0.15); color: #5856D6; border: 1px solid rgba(88,86,214,0.3); text-decoration: none; }
 .pill-active-purple:hover { background: rgba(88,86,214,0.25); }
 .pill-inactive { background: var(--bg-hv); color: var(--t5); border: 1px solid var(--br3); opacity: 0.5; }
+
+/* ── 分頁控制列 ── */
+.pagination {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  margin-top: 28px; padding: 16px 0; flex-wrap: wrap;
+}
+.page-btn {
+  padding: 6px 12px; border-radius: 8px; font-size: 12.5px; cursor: pointer;
+  background: var(--bg-c); border: 1px solid var(--br2); color: var(--t3);
+  text-decoration: none; transition: all 0.12s; user-select: none;
+}
+.page-btn:hover { background: var(--bg-in); color: var(--t2); border-color: var(--br); }
+.page-btn.active {
+  background: var(--av-d); color: var(--av);
+  border-color: var(--av-b); font-weight: 700;
+}
+.page-btn.disabled {
+  opacity: 0.35; cursor: default; pointer-events: none;
+}
+.page-info {
+  font-size: 12px; color: var(--t4); padding: 0 6px;
+}
 </style>
+
+{# ── 分頁 query string 基底（不含 page） ── #}
+{% set base_qs = "q=" ~ (q | urlencode) ~ "&source=" ~ (source | urlencode) ~ "&min_score=" ~ min_score ~ "&sort=" ~ sort ~ "&tag=" ~ (tag | urlencode) ~ "&content_type=" ~ content_type ~ "&page_size=" ~ page_size %}
 
 <!-- 頁面標題 -->
 <div style="margin-bottom:18px;">
@@ -162,77 +187,164 @@
     <span class="grad-text">素材庫</span>
   </h2>
   <p style="font-size:13px; color:var(--t4); margin:0;">
-    共 {{ materials|length }} 筆素材
-    {%- set unique_dates = materials | map(attribute='date_str') | unique | list %}
-    · 來自 {{ unique_dates|length }} 天
+    共 {{ total }} 筆素材
+    {%- if total > 0 %}
+    · 第 {{ page }}/{{ total_pages }} 頁
+    {%- endif %}
   </p>
 </div>
 
-<!-- 篩選列 -->
-<div class="filter-bar">
-  <input type="text" id="search-input" class="filter-input"
-    placeholder="搜尋標題、摘要或標籤..." oninput="filterCards()" />
-  <select id="source-select" class="filter-select" onchange="filterCards()">
-    <option value="">所有來源</option>
-    {% set sources = materials | map(attribute='source_name') | unique | sort | list %}
-    {% for src in sources %}
-    {% if src %}
-    <option value="{{ src | lower }}">{{ src }}</option>
-    {% endif %}
+<!-- 篩選列（送出為 GET，換頁不掉篩選） -->
+<form method="GET" action="/materials" id="filter-form">
+  <!-- 隱藏欄位：tag / content_type 由 chip 點擊更新 -->
+  <input type="hidden" name="tag" id="tag-input" value="{{ tag }}">
+  <input type="hidden" name="content_type" id="ct-input" value="{{ content_type }}">
+  <!-- 換頁後維持 page_size -->
+  <input type="hidden" name="page_size" value="{{ page_size }}">
+
+  <div class="filter-bar">
+    <input type="text" name="q" id="search-input" class="filter-input"
+      placeholder="搜尋標題、摘要或標籤..." value="{{ q }}" />
+    <select name="source" id="source-select" class="filter-select"
+            onchange="this.form.submit()">
+      <option value="">所有來源</option>
+      {% for src in all_sources %}
+      <option value="{{ src | lower }}"
+        {{ 'selected' if source and source.lower() == src.lower() else '' }}>{{ src }}</option>
+      {% endfor %}
+    </select>
+    <input type="number" name="min_score" id="min-score-input" class="filter-select" style="width:80px;"
+           placeholder="最低分" value="{{ min_score if min_score > 0 else '' }}" min="0" max="200" />
+    <select name="sort" id="sort-select" class="filter-select"
+            onchange="this.form.submit()">
+      <option value="newest" {{ 'selected' if sort == 'newest' }}>最新優先</option>
+      <option value="oldest" {{ 'selected' if sort == 'oldest' }}>最早優先</option>
+      <option value="score-desc" {{ 'selected' if sort == 'score-desc' }}>分數高→低</option>
+    </select>
+    <button type="submit"
+      style="padding:8px 14px; background:var(--av-d); color:var(--av);
+             border:1px solid var(--av-b); border-radius:9px; font-size:12.5px; cursor:pointer;">
+      搜尋
+    </button>
+    <span class="count-label">{{ total }} 筆</span>
+  </div>
+
+  <!-- 快速 tag chips -->
+  <div class="quick-tags" id="quick-tags">
+    <span class="qtag {{ 'active' if not tag }}" onclick="setTag('')">全部</span>
+    {% for t in ['LLM','Agent','RAG','Fine-tuning','Multimodal','Reasoning','Code','Safety'] %}
+    <span class="qtag {{ 'active' if tag == t }}"
+          onclick="setTag('{{ t }}')">{{ t }}</span>
     {% endfor %}
-  </select>
-  <input type="number" id="min-score-input" class="filter-select" style="width:80px;"
-         placeholder="最低分" oninput="filterCards()" min="0" max="200" />
-  <select id="sort-select" class="filter-select" onchange="rebuildGroups()">
-    <option value="newest">最新優先</option>
-    <option value="oldest">最早優先</option>
-    <option value="score-desc">分數高→低</option>
-  </select>
-  <span class="count-label" id="count-label">{{ materials|length }} 筆</span>
-</div>
+    <span style="width:1px; height:18px; background:var(--br3); margin:0 4px;"></span>
+    <span class="src-tag {{ 'active' if content_type == 'post' }}"
+          onclick="setCt('post')">有 Blog</span>
+    <span class="src-tag {{ 'active' if content_type == 'note' }}"
+          onclick="setCt('note')">有 Note</span>
+    <span class="src-tag {{ 'active' if content_type == 'blog' }}"
+          onclick="setCt('blog')">有 Article</span>
+  </div>
+</form>
 
-<!-- 快速 tag chips -->
-<div class="quick-tags" id="quick-tags">
-  <span class="qtag active" data-tag="" onclick="toggleTag(this,'')">全部</span>
-  {% for tag in ['LLM','Agent','RAG','Fine-tuning','Multimodal','Reasoning','Code','Safety'] %}
-  <span class="qtag" data-tag="{{ tag }}" onclick="toggleTag(this,'{{ tag }}')">{{ tag }}</span>
-  {% endfor %}
-  <span style="width:1px; height:18px; background:var(--br3); margin:0 4px;"></span>
-  <span class="src-tag" data-src="post" onclick="toggleSrc(this,'post')">有 Blog</span>
-  <span class="src-tag" data-src="note" onclick="toggleSrc(this,'note')">有 Note</span>
-  <span class="src-tag" data-src="blog" onclick="toggleSrc(this,'blog')">有 Article</span>
-</div>
-
-{% if not materials %}
+{% if total == 0 %}
 <!-- 空狀態 -->
 <div class="card" style="padding:48px; text-align:center;">
   <div style="font-size:32px; margin-bottom:12px;">📭</div>
-  <p style="color:var(--t4); font-size:14px; margin:0;">目前尚無素材資料。請先執行 pipeline 收集與評分。</p>
+  <p style="color:var(--t4); font-size:14px; margin:0;">
+    {% if q or source or min_score > 0 or tag or content_type %}
+    找不到符合條件的素材。<a href="/materials" style="color:var(--av);">清除篩選</a>
+    {% else %}
+    目前尚無素材資料。請先執行 pipeline 收集與評分。
+    {% endif %}
+  </p>
 </div>
 {% else %}
 
 <!-- 日期分組 -->
+{% if sort == 'score-desc' %}
+<!-- 分數排序：不分日期群組，直接 flat grid -->
+<div class="content-grid">
+  {% for m in materials %}
+  <a href="/material/{{ m.date_str }}/{{ m.index }}"
+     class="mat-card">
+
+    <div class="mc-header">
+      <span class="mc-source">{{ m.source_name or m.source or '—' }}</span>
+      <div style="display:flex; align-items:center; gap:6px;">
+        {% if (m.date_str ~ '_' ~ m.index) in bookmarked_keys %}
+        <span style="color:var(--ay); font-size:13px;" title="已收藏">★</span>
+        {% endif %}
+        <span style="font-size:10px; color:var(--t5);">{{ m.date_str }}</span>
+      </div>
+    </div>
+
+    <div class="mc-body">
+      <div class="mc-title">{{ m.title }}</div>
+      {% if m.abstract %}
+      <div class="mc-abstract">{{ m.abstract[:120] }}</div>
+      {% endif %}
+      {% if m.novelty is not none %}
+      <div class="mc-5d">
+        {% set dims5 = [
+          ('新穎性', m.novelty,         '#007AFF'),
+          ('影響力', m.impact,           '#fb923c'),
+          ('話題性', m.trending,         '#34C759'),
+          ('實用性', m.practicality,     '#FF9500'),
+          ('適合度', m.blog_worthiness,  '#32ADE6'),
+        ] %}
+        {% for label, val, color in dims5 %}
+        {% if val is not none %}
+        <div class="mini-bar-row">
+          <span class="mini-bar-label">{{ label }}</span>
+          <div class="mini-bar-track">
+            <div class="mini-bar-fill"
+                 style="width:{{ (val / 20 * 100)|int }}%; background:{{ color }};"></div>
+          </div>
+          <span class="mini-bar-val">{{ val|int }}</span>
+        </div>
+        {% endif %}
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+
+    {% if m.tags %}
+    <div class="mc-tags">
+      {% for t in m.tags[:4] %}
+      <span class="tag-chip">{{ t }}</span>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="mc-footer">
+      <span class="mc-score">{{ m.total_score|int }}</span>
+      <div class="mc-pills">
+        <span class="pill {{ 'pill-active-green' if m.has_post else 'pill-inactive' }}">Blog</span>
+        <span class="pill {{ 'pill-active-cyan' if m.has_note else 'pill-inactive' }}">Note</span>
+        {% if m.blog_slug %}
+        <span class="pill pill-active-purple" style="cursor:pointer;"
+              onclick="event.preventDefault(); event.stopPropagation(); window.location.href='/blog/{{ m.date_str }}/{{ m.blog_slug }}';">Article</span>
+        {% else %}
+        <span class="pill pill-inactive">Article</span>
+        {% endif %}
+      </div>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<!-- 日期排序：分日期群組 -->
 {% for date_str, date_items in materials | groupby('date_str') | list | reverse %}
 <div class="date-group" id="group-{{ date_str }}" data-date="{{ date_str }}">
   <div class="date-header">
     <span class="date-label">{{ date_str }}</span>
-    <span class="date-count" id="gc-{{ date_str }}">{{ date_items | list | length }} 筆</span>
+    <span class="date-count">{{ date_items | list | length }} 筆</span>
     <a href="/day/{{ date_str }}" class="link-muted" style="font-size:11px; margin-left:auto;">查看日詳情 →</a>
   </div>
   <div class="content-grid">
     {% for m in date_items %}
     <a href="/material/{{ m.date_str }}/{{ m.index }}"
-       class="mat-card"
-       data-date="{{ m.date_str }}"
-       data-score="{{ m.total_score }}"
-       data-title="{{ (m.title or '') | lower }}"
-       data-abstract="{{ (m.abstract or '')[:100] | lower }}"
-       data-tags="{{ (m.tags or []) | join(' ') | lower }}"
-       data-source="{{ (m.source_name or '') | lower }}"
-       data-has-post="{{ 'yes' if m.has_post else 'no' }}"
-       data-has-note="{{ 'yes' if m.has_note else 'no' }}"
-       data-has-blog="{{ 'yes' if m.has_blog else 'no' }}"
-       data-blog-url="{{ '/blog/' ~ m.date_str ~ '/' ~ m.blog_slug if m.blog_slug else '' }}">
+       class="mat-card">
 
       <!-- Header: source + bookmark -->
       <div class="mc-header">
@@ -283,8 +395,8 @@
       <!-- Tags -->
       {% if m.tags %}
       <div class="mc-tags">
-        {% for tag in m.tags[:4] %}
-        <span class="tag-chip">{{ tag }}</span>
+        {% for t in m.tags[:4] %}
+        <span class="tag-chip">{{ t }}</span>
         {% endfor %}
       </div>
       {% endif %}
@@ -308,133 +420,94 @@
   </div>
 </div>
 {% endfor %}
+{% endif %}
 
-<!-- 空搜尋結果 -->
-<div id="empty-search" style="display:none; padding:48px; text-align:center;">
-  <div style="font-size:32px; margin-bottom:12px;">🔍</div>
-  <p style="color:var(--t4); font-size:14px; margin:0;">找不到符合條件的素材</p>
-</div>
+<!-- ── 分頁控制列 ── -->
+{% if total_pages > 1 %}
+<nav class="pagination" aria-label="分頁導覽">
+  <!-- 上一頁 -->
+  {% if page > 1 %}
+  <a class="page-btn" href="/materials?{{ base_qs }}&page={{ page - 1 }}">← 上一頁</a>
+  {% else %}
+  <span class="page-btn disabled">← 上一頁</span>
+  {% endif %}
+
+  {# 頁碼：最多顯示 7 個按鈕，中間為當前頁 #}
+  {% set win = 3 %}
+  {% set p_start = [1, page - win] | max %}
+  {% set p_end   = [total_pages, page + win] | min %}
+
+  {% if p_start > 1 %}
+  <a class="page-btn" href="/materials?{{ base_qs }}&page=1">1</a>
+  {% if p_start > 2 %}
+  <span class="page-info">…</span>
+  {% endif %}
+  {% endif %}
+
+  {% for p in range(p_start, p_end + 1) %}
+  {% if p == page %}
+  <span class="page-btn active">{{ p }}</span>
+  {% else %}
+  <a class="page-btn" href="/materials?{{ base_qs }}&page={{ p }}">{{ p }}</a>
+  {% endif %}
+  {% endfor %}
+
+  {% if p_end < total_pages %}
+  {% if p_end < total_pages - 1 %}
+  <span class="page-info">…</span>
+  {% endif %}
+  <a class="page-btn" href="/materials?{{ base_qs }}&page={{ total_pages }}">{{ total_pages }}</a>
+  {% endif %}
+
+  <!-- 下一頁 -->
+  {% if page < total_pages %}
+  <a class="page-btn" href="/materials?{{ base_qs }}&page={{ page + 1 }}">下一頁 →</a>
+  {% else %}
+  <span class="page-btn disabled">下一頁 →</span>
+  {% endif %}
+
+  <span class="page-info">共 {{ total }} 筆 · 每頁 {{ page_size }} 筆</span>
+</nav>
+{% endif %}
+
 {% endif %}
 
 {% endblock %}
 
 {% block scripts %}
 <script>
-var allCards = null;
-var activeTag = '';
-var activeSrc = '';
-
-function initCards() {
-  allCards = Array.from(document.querySelectorAll('.mat-card[data-date]'));
+// chip 點擊 → 更新隱藏欄位並送出表單（重設為第 1 頁）
+function setTag(val) {
+  var cur = document.getElementById('tag-input').value;
+  document.getElementById('tag-input').value = (cur === val && val !== '') ? '' : val;
+  submitPage1();
 }
-
-function toggleTag(btn, tagName) {
-  activeTag = (activeTag === tagName) ? '' : tagName;
-  document.querySelectorAll('.qtag').forEach(function(el) {
-    el.classList.toggle('active', el.dataset.tag === activeTag);
-  });
-  filterCards();
+function setCt(val) {
+  var cur = document.getElementById('ct-input').value;
+  document.getElementById('ct-input').value = (cur === val) ? '' : val;
+  submitPage1();
 }
-
-function toggleSrc(btn, srcType) {
-  activeSrc = (activeSrc === srcType) ? '' : srcType;
-  document.querySelectorAll('.src-tag').forEach(function(el) {
-    el.classList.toggle('active', el.dataset.src === activeSrc);
-  });
-  filterCards();
+function submitPage1() {
+  var form = document.getElementById('filter-form');
+  // 移除任何殘留的 page 隱藏欄位，讓後端預設為 1
+  var old = form.querySelector('input[name="page"]');
+  if (old) old.remove();
+  form.submit();
 }
-
-function filterCards() {
-  if (!allCards) initCards();
-  var query = document.getElementById('search-input').value.toLowerCase().trim();
-  var sourceFilter = document.getElementById('source-select').value.toLowerCase();
-  var minScoreVal = document.getElementById('min-score-input').value;
-  var minScore = minScoreVal ? parseFloat(minScoreVal) : 0;
-
-  var total = 0;
-  allCards.forEach(function(card) {
-    var combined = (card.dataset.title || '') + ' ' + (card.dataset.tags || '') + ' ' + (card.dataset.abstract || '');
-    var queryMatch = !query || combined.indexOf(query) >= 0;
-    var tagMatch = !activeTag || combined.indexOf(activeTag.toLowerCase()) >= 0;
-    var sourceMatch = !sourceFilter || (card.dataset.source || '').indexOf(sourceFilter) >= 0;
-    var scoreMatch = parseFloat(card.dataset.score || 0) >= minScore;
-
-    var srcMatch = true;
-    if (activeSrc === 'post') srcMatch = card.dataset.hasPost === 'yes';
-    if (activeSrc === 'note') srcMatch = card.dataset.hasNote === 'yes';
-    if (activeSrc === 'blog') srcMatch = card.dataset.hasBlog === 'yes';
-
-    var show = queryMatch && tagMatch && sourceMatch && srcMatch && scoreMatch;
-    card.style.display = show ? '' : 'none';
-    if (show) total++;
-  });
-
-  // 更新每個 date-group 的計數與可見性
-  document.querySelectorAll('.date-group').forEach(function(group) {
-    var dt = group.dataset.date;
-    var visible = Array.from(group.querySelectorAll('.mat-card'))
-                       .filter(function(c){ return c.style.display !== 'none'; });
-    group.style.display = visible.length > 0 ? '' : 'none';
-    var countEl = document.getElementById('gc-' + dt);
-    if (countEl) countEl.textContent = visible.length + ' 筆';
-  });
-
-  document.getElementById('count-label').textContent = total + ' 筆';
-  var empty = document.getElementById('empty-search');
-  if (empty) empty.style.display = total === 0 ? 'block' : 'none';
-}
-
-function rebuildGroups() {
-  var sort = document.getElementById('sort-select').value;
-  var groups = Array.from(document.querySelectorAll('.date-group'));
-
-  if (sort === 'score-desc') {
-    // 分數排序：把所有卡片拉出來重排
-    if (!allCards) initCards();
-    var sorted = allCards.slice().sort(function(a,b){
-      return parseFloat(b.dataset.score) - parseFloat(a.dataset.score);
-    });
-    // 隱藏所有 date group headers，顯示一個 flat grid
-    groups.forEach(function(g){ g.style.display = 'none'; });
-    var flat = document.getElementById('flat-grid');
-    if (!flat) {
-      flat = document.createElement('div');
-      flat.id = 'flat-grid';
-      flat.className = 'content-grid';
-      var empty = document.getElementById('empty-search');
-      if (empty) empty.parentNode.insertBefore(flat, empty);
-    }
-    flat.innerHTML = '';
-    flat.style.display = '';
-    sorted.forEach(function(card) {
-      flat.appendChild(card.cloneNode(true));
-    });
-    // re-bind click
-    flat.querySelectorAll('.mat-card').forEach(function(c){
-      c.addEventListener('click', function(e){
-        e.preventDefault();
-        window.location.href = c.getAttribute('href');
-      });
-    });
-    return;
-  }
-
-  // 日期排序
-  var flat = document.getElementById('flat-grid');
-  if (flat) flat.style.display = 'none';
-  groups.forEach(function(g){ g.style.display = ''; });
-
-  groups.sort(function(a, b) {
-    var da = a.dataset.date, db = b.dataset.date;
-    return sort === 'newest' ? (db > da ? 1 : -1) : (da > db ? 1 : -1);
-  });
-  var anchor = document.getElementById('empty-search');
-  if (anchor) {
-    groups.forEach(function(g) {
-      anchor.parentNode.insertBefore(g, anchor);
+// Enter 在搜尋框也送出（預設 form 行為已涵蓋，但明確重設 page）
+document.addEventListener('DOMContentLoaded', function() {
+  var inp = document.getElementById('search-input');
+  if (inp) {
+    inp.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') { submitPage1(); e.preventDefault(); }
     });
   }
-  filterCards();
-}
+  var ms = document.getElementById('min-score-input');
+  if (ms) {
+    ms.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') { submitPage1(); e.preventDefault(); }
+    });
+  }
+});
 </script>
 {% endblock %}

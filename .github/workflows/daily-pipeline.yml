@@ -18,6 +18,7 @@ concurrency:
 
 permissions:
   contents: write
+  issues: write
 
 jobs:
   pipeline:
@@ -41,6 +42,7 @@ jobs:
           OPENROUTER_API_KEY_2: ${{ secrets.OPENROUTER_API_KEY_2 }}
           OPENROUTER_API_KEY_3: ${{ secrets.OPENROUTER_API_KEY_3 }}
           NEWSAPI_KEY: ${{ secrets.NEWSAPI_KEY }}
+          SEMANTIC_SCHOLAR_API_KEY: ${{ secrets.SEMANTIC_SCHOLAR_API_KEY }}
         run: |
           DATE="${{ github.event.inputs.date }}"
           FORCE="${{ github.event.inputs.force }}"
@@ -57,9 +59,47 @@ jobs:
           git diff --cached --quiet || git commit -m "chore: pipeline $(date -u +%Y-%m-%d)"
           for i in 1 2 3; do
             git pull --rebase && git push && break
-            echo "Push attempt $i failed, retrying in 5s..."
-            sleep 5
+            echo "Push attempt $i failed, retrying..."
+            sleep $((5 * 2 ** i))
           done
+
+  notify-failure:
+    needs: pipeline
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const title = '[pipeline-failure] Daily Pipeline 失敗';
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const today = new Date().toISOString().slice(0, 10);
+
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              per_page: 100
+            });
+            const existing = issues.find(i => i.title.includes('[pipeline-failure] Daily Pipeline'));
+
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body: `再次失敗 — ${today}\nRun: ${runUrl}`
+              });
+              console.log(`已追加留言至 Issue #${existing.number}`);
+            } else {
+              const { data: created } = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body: `## Daily Pipeline 失敗\n\n- **日期**：${today}\n- **Run URL**：${runUrl}\n- **失敗 Job**：pipeline\n\n請前往 Run URL 查看詳情並修復。`
+              });
+              console.log(`已開新 Issue #${created.number}`);
+            }
 
 # 網站部署由 Cloudflare Pages 的 Git 整合處理：CF 偵測到 push 後自動
 # build（web/，NODE_VERSION=20）並部署。不在此 workflow 內做 deploy。
