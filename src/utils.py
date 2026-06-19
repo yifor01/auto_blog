@@ -370,8 +370,14 @@ def save_json(data: list | dict, path: Path) -> None:
 def load_json(path: Path) -> list | dict:
     if not path.exists():
         return []
-    with open(path, encoding="utf-8") as f:
-        return json.load(f)
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, UnicodeDecodeError) as e:
+        # corrupt / 寫到一半 / merge conflict 殘留的 JSON 不該炸掉該日期的所有後續 run。
+        # 記 error 並當作「無資料」處理（caller 多半會重新收集/評分）。
+        _logger.error("load_json failed, treating as empty", extra={"path": str(path), "error": str(e)})
+        return []
 
 
 _TRACKING_PARAM_KEYS = {"fbclid", "gclid", "msclkid", "ref"}

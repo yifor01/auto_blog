@@ -211,8 +211,15 @@ def collect_items(target_date: date | None = None) -> list[ContentItem]:
     _logger.info("Collection complete", extra={"unique_items": len(unique), "date": str(target_date)})
     console.print(f"[bold green]✅ 最終收集: {len(unique)} items[/bold green]")
 
-    save_json([item.model_dump() for item in unique], raw_path)
-    console.print(f"💾 Raw data saved: {raw_path.name}")
+    # 不 cache 空結果：所有 collector 同時失敗（網路/限流）多半是 transient，
+    # 若寫成 [] 會被 checkpoint 當「已完成」永久卡住，只能 --force 解。空結果直接回傳、
+    # 不留 cache，下次 run 會重試。
+    if unique:
+        save_json([item.model_dump() for item in unique], raw_path)
+        console.print(f"💾 Raw data saved: {raw_path.name}")
+    else:
+        _logger.warning("收集結果為空，跳過寫入 cache（避免 transient 失敗被永久快取）")
+        console.print("[yellow]⚠️  收集結果為空，不寫入 cache（下次 run 會重試）[/yellow]")
 
     return unique
 
@@ -359,7 +366,13 @@ def score_items(items: list[ContentItem], target_date: date | None = None) -> li
     rule_passed = batch_rule_score(items, config)
     top_items = batch_llm_score(rule_passed, config)
 
-    save_json([item.model_dump() for item in top_items], scored_path)
+    # 不 cache 空結果：空評分多半是 LLM 全數 429/失敗的 transient 狀況，
+    # 寫成 [] 會被 checkpoint 永久卡住。空結果不留 cache，下次 run 會重試。
+    if top_items:
+        save_json([item.model_dump() for item in top_items], scored_path)
+    else:
+        _logger.warning("評分結果為空，跳過寫入 cache（避免 transient 失敗被永久快取）")
+        console.print("[yellow]⚠️  評分結果為空，不寫入 cache（下次 run 會重試）[/yellow]")
 
     return top_items
 

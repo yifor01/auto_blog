@@ -39,7 +39,12 @@ class RSSCollector(BaseCollector):
                 feed_name = feed_cfg["name"]
                 feed_url = feed_cfg["url"]
                 try:
-                    parsed = feedparser.parse(feed_url)
+                    # 走共用 httpx client（有 timeout）抓 bytes 再交給 feedparser。
+                    # 直接 feedparser.parse(url) 會用它自帶的 urllib、無 timeout，
+                    # 慢／吊死的 feed 會 hang 住整個 run。
+                    resp = client.get(feed_url)
+                    resp.raise_for_status()
+                    parsed = feedparser.parse(resp.content)
                     count = 0
                     for entry in parsed.entries:
                         # 解析發布日期

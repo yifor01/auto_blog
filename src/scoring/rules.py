@@ -97,17 +97,18 @@ def rule_score(item: ContentItem, config: dict | None = None) -> ScoredItem:
             score += 10
             reasons.append(f"⭐ GitHub stars today: {stars}")
 
-    # 5. Hacker News points 加分
+    # 5. Hacker News points 熱度分級加分（話題性信號）
+    # 注意：SourceType.HACKERNEWS.value == "hackernews"（無底線），別寫成 "hacker_news"。
     if item.source.value == "hackernews":
         hn_points = item.raw_metadata.get("points", 0)
-        if hn_points > 300:
-            score += 15
-            reasons.append(f"🔥 HN 高分: {hn_points} points")
-        elif hn_points > 100:
-            score += 10
+        if hn_points >= 300:
+            score += 18
+            reasons.append(f"🔥 HN 爆紅: {hn_points} points")
+        elif hn_points >= 150:
+            score += 12
             reasons.append(f"⬆️ HN 熱門: {hn_points} points")
-        else:
-            score += 5
+        elif hn_points >= 50:
+            score += 6
             reasons.append(f"📰 Hacker News: {hn_points} points")
 
     # 6. Reddit upvotes 加分
