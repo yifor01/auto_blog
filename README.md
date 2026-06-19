@@ -4,9 +4,9 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-00a393.svg)](https://fastapi.tiangolo.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Auto Post Blog** 是一個自動化的 AI 資訊聚合與內容生成系統。每天自動從 9 個前沿資料源（arXiv、HuggingFace、GitHub、Tech Blogs、RSS、Hacker News、Reddit、NewsAPI、ChatPaper）收集最新的生成式 AI 論文與新聞，透過 Rule-based 與 LLM 雙層價值篩選機制，產出高品質的繁體中文「部落格貼文草稿」與「每日精選摘要」。配備完整的 Web Dashboard 供監控、搜尋、收藏與內容管理。支援多 API key round-robin 輪替，scoring 與 blog 生成可使用不同模型。
+**Auto Post Blog** 是一個自動化的 AI 資訊聚合與內容生成系統。每天自動從 10 個前沿資料源（arXiv、HuggingFace、Semantic Scholar、GitHub、Tech Blogs、RSS、Hacker News、Reddit、NewsAPI、ChatPaper）收集最新的生成式 AI 論文與新聞，透過 Rule-based 與 LLM 雙層價值篩選機制，產出高品質的繁體中文「部落格貼文草稿」與「每日精選摘要」。配備完整的 Web Dashboard 供監控、搜尋、收藏與內容管理。透過 OpenRouter（OpenAI-compatible，免費 model 降級 chain）進行 LLM 評分與生成，支援多 API key round-robin 輪替，scoring 與 blog 生成可使用不同 model chain。
 
-> 🌐 **線上網站（Astro 5 + Cloudflare Pages，Cloudflare Access 私人保護 / Email OTP 登入）**：<https://auto-post-blog.pages.dev/>
+> 🌐 **線上網站**：Astro 5 靜態站，部署於 Cloudflare Pages、以 Cloudflare Access（Email OTP）私人保護，網址不公開。
 > 每日 pipeline push 後由 Cloudflare Pages Git 整合自動 build + 部署。前端原始碼見 [`web/`](web/)，部署與 Access 設定細節見 [`docs/cloudflare-deploy-plan.md`](docs/cloudflare-deploy-plan.md)。
 
 ---
@@ -18,9 +18,10 @@
   - _Rule-based 預篩_：自動識別頂流研究機構（word boundary 精確匹配）、熱門話題關鍵字與社群指標（GitHub Stars、HF Upvotes）。
   - _LLM 深度評分_：透過大語言模型就「新穎性、影響力、話題性、實用性、部落格適合度」五大維度進行深度計分。
 - **📊 跨來源去重**：內建 7 天滑動窗口的 URL 與 Arxiv ID 歷史比對，避免同一篇論文或新聞重複出現。
-- **🌐 9 大資料源**：
+- **🌐 10 大資料源**：
   - arXiv / ChatPaper API — 每日最新 AI 論文
   - HuggingFace Daily Papers — 社群投票熱門論文
+  - Semantic Scholar — 官方 Graph API bulk search，跨來源 arXiv ID 去重
   - GitHub Trending — AI 相關熱門開源專案
   - 精選 AI Tech Blogs — Karpathy、Simon Willison、Eugene Yan、Latent Space 等
   - 主流科技媒體 RSS Feeds — TechCrunch、OpenAI、Google Research、VentureBeat、MarkTechPost 等
@@ -55,10 +56,11 @@ graph TD;
         HN[Hacker News]
         Reddit[Reddit]
         News[NewsAPI]
+        SS[Semantic Scholar]
     end
 
     subgraph Collection Layer
-        Collect[BaseCollector x9]
+        Collect[BaseCollector x10]
         Dedup[Single-day + Cross-day Dedup]
     end
 
@@ -81,6 +83,7 @@ graph TD;
     HN --> Collect
     Reddit --> Collect
     News --> Collect
+    SS --> Collect
 
     Collect --> Dedup
     Dedup --> |Raw JSON| RuleEngine
@@ -109,20 +112,21 @@ pip install -e '.[web]'
 
 ### 2. 環境變數設定
 
-複製範例設定檔並填入您的 API Key（專案使用 aihubmix.com 免費模型，支援 4 key round-robin）：
+複製範例設定檔並填入您的 API Key（專案使用 OpenRouter 免費模型，支援多 key round-robin）：
 
 ```bash
 cp .env.example .env
 # 編輯 .env 填入：
-#   AIHUBMIX_API_KEY_1 ~ AIHUBMIX_API_KEY_4（至少一組必要）
+#   OPENROUTER_API_KEY（必要，可再加 OPENROUTER_API_KEY_2 ~ _9 做多 key 輪替）
 #   NEWSAPI_KEY（選用，啟用 NewsAPI collector 需要）
+#   SEMANTIC_SCHOLAR_API_KEY（選用，無 key 也可用但限流較嚴）
 ```
 
 ### 3. 微調配置 (Optional)
 
 編輯 `config.yaml` 調整偏好設定，或啟動 Web 後在 `/settings` 頁面直接修改：
 
-- **LLM 模型**（Scoring: `gpt-4.1-free`、Blog 生成: `gpt-4o-free`，可在 Settings 頁面切換）
+- **LLM 模型 chain**（Scoring 與 Generation 各自一條降級 chain，預設皆為 OpenRouter 免費 model，如 `openai/gpt-oss-120b:free`、`google/gemma-4-31b-it:free`、`nvidia/nemotron-3-super-120b-a12b:free`，可在 Settings 頁面調整）
 - **收集器開關**（視需求開關各資料源）
 - **評分權重與閾值**
 - **去重回看天數** (`dedup.lookback_days`)
@@ -262,7 +266,7 @@ Kanban 三欄（已收藏 → 已完成 → 已發布），拖曳卡片即可切
 | 🤖 LLM 設定 | API Key、Base URL、主力/備援模型、Max Tokens、Request Delay |
 | 📊 評分參數 | Rule 門檻、LLM Top-K、Final Top-K、HF Upvote/GitHub Stars 閾值 |
 | 🔧 Pipeline 參數 | 去重回看天數、資料保留天數 |
-| 🔌 Collector 設定 | 各資料源開關（arXiv、HF Papers、ChatPaper、RSS、Blogs、GitHub、Hacker News、Reddit、NewsAPI）及各自的收集數量與查詢參數 |
+| 🔌 Collector 設定 | 各資料源開關（arXiv、HF Papers、Semantic Scholar、ChatPaper、RSS、Blogs、GitHub、Hacker News、Reddit、NewsAPI）及各自的收集數量與查詢參數 |
 
 所有設定儲存後**即時生效**，下次執行 pipeline 時自動採用新設定。
 
@@ -282,9 +286,8 @@ Kanban 三欄（已收藏 → 已完成 → 已發布），拖曳卡片即可切
 **設定步驟**：
 
 1. 在 GitHub repo Settings → Secrets → Actions 新增以下 Secrets：
-   - `AIHUBMIX_API_KEY_1` ~ `AIHUBMIX_API_KEY_4`、`AIHUBMIX_API_URL`
-   - `OPENROUTER_API_KEY`、`OPENROUTER_API_KEY_2`（fallback 用）
-   - `NEWSAPI_KEY`（選用）
+   - `OPENROUTER_API_KEY`（必要），可再加 `OPENROUTER_API_KEY_2` 做多 key 輪替
+   - `NEWSAPI_KEY`、`SEMANTIC_SCHOLAR_API_KEY`（皆選用）
 2. Push 程式碼後，Daily Pipeline 會自動按排程執行
 3. 也可在 Actions 頁面手動觸發（`workflow_dispatch`），支援指定日期與 `--force` 重跑
 
@@ -336,7 +339,7 @@ Pipeline 產生的所有資料皆按模組劃分，方便溯源與二次開發�
 本專案使用 `pytest` 確保核心模組的正確性：
 
 ```bash
-# 執行所有單元與整合測試（146 tests）
+# 執行所有單元與整合測試（364 tests）
 pytest tests/ -v
 ```
 

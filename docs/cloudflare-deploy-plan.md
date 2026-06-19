@@ -1,7 +1,9 @@
 # Daily Blog → Cloudflare 自動部署 Plan
 
-> 建立日期：2026-06-03 ｜ 狀態：**✅ 完成上線 + 私人保護** <https://auto-post-blog.pages.dev/>（Cloudflare Pages + Access Email OTP）
+> 建立日期：2026-06-03 ｜ 狀態：**✅ 完成上線 + 私人保護** <https://yifor-blog.pages.dev/>（Cloudflare Pages + Access Email OTP）
 > 目標：`daily-pipeline.yml` 跑完後，自動把 blog markdown 變成網站並部署到 Cloudflare，**遠端（手機/外網）私人查看**。
+>
+> 📌 2026-06-19 更新：原 `auto-post-blog` Pages 專案被誤刪，已重建為 **`yifor-blog`**（網址 `yifor-blog.pages.dev`）。重建時 CF 新版 UI 的 Pages 分頁對部分帳號隱藏（全推 Workers），可用直連 `https://dash.cloudflare.com/?to=/:account/pages/new/provider/github` 或 `wrangler pages project create` 繞過。重建後 Access 的 Application domain 須改為新網址；本地 `web/` 程式碼不受影響。
 
 ## 實作紀錄（2026-06-03）
 
@@ -108,14 +110,14 @@ cd web && npm run build && npm run preview
 
 - **方案**：第一次進 Zero Trust 選 **Free**（最多 50 users，Access 全功能；流程可能要填信用卡但 ≤50 人 $0）
 - Zero Trust（<https://one.dash.cloudflare.com>）→ **Access** → **Applications** → **Add an application** → **Self-hosted**
-- **Application domain**：`auto-post-blog.pages.dev`（**只能是 `*.pages.dev`，不能是 `*.workers.dev`**）
+- **Application domain**：`yifor-blog.pages.dev`（**只能是 `*.pages.dev`，不能是 `*.workers.dev`**）
 - **Session Duration**：設 **1 week / 1 month**（= 半永久 key；登入一次後免重登，適合 demo）
 - **登入方式**：**Email OTP**（輸入 email → 收 6 位數驗證碼 → 登入）。OTP 的「one-time」指**驗證碼**單次有效，**不是**每次都登入；免重登時長由 Session Duration 決定。想要 Google 一鍵 → 加 Google IdP（需 OAuth）
 - **Policy**：Action=**Allow**，Include=**Emails**=`yifor0001@gmail.com`（+ 主管 email；公司網域可用 **Emails ending in** `@company.com`）
 
 > #### ⚠️ Access 踩雷紀錄（這段卡了很久，務必照做）
 > 1. **`*.workers.dev` 無法被 Access 保護** → Access 只能保護你自己加入 Cloudflare 的 zone；workers.dev 是 CF 的、不是你的。**必須用 Pages 拿 `*.pages.dev`**（這就是從 Workers 改回 Pages 的原因）。
-> 2. **Application domain 不要填重複**：domain 那格有「subdomain 欄 + domain 下拉」，若下拉已是 `auto-post-blog.pages.dev` 還在 subdomain 填一次 → 變成 `auto-post-blog.pages.dev.auto-post-blog.pages.dev`（疊兩次）→ Access 攔不到真網址。最終只能出現**一次**。
+> 2. **Application domain 不要填重複**：domain 那格有「subdomain 欄 + domain 下拉」，若下拉已是 `yifor-blog.pages.dev` 還在 subdomain 填一次 → 變成 `yifor-blog.pages.dev.yifor-blog.pages.dev`（疊兩次）→ Access 攔不到真網址。最終只能出現**一次**。
 > 3. **【最大坑】Reusable policy 一定要「掛到 app」**：新版 Access 的 policy 是獨立的可重用物件，**建好 policy ≠ 套用**。要到 **App → Policies → Add existing policies → 勾選該 policy → Save application**。判斷法：policy 詳情頁的 **「Used by applications」若顯示 `--` 就是沒掛**，app 的 `policies` 會是 `[]`。**沒掛 policy → 登入流程不完整 → OTP 驗證碼根本不會寄出**（症狀就是「輸入 email 沒收到信」，誤以為是寄信壞掉）。
 > 4. One-time PIN 的 **「Test」按鈕不能點是正常的**（只有 OAuth/SAML IdP 才有 Test）。
 > 5. OTP 寄到「登入頁輸入且符合 policy」的 email，確認該信箱正確、翻 Gmail 的 Spam/促銷分頁、用 `from:cloudflare` 搜尋。
@@ -140,12 +142,12 @@ cd web && npm run build && npm run preview
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy web/dist --project-name=auto-post-blog
+          command: pages deploy web/dist --project-name=yifor-blog
 ```
 > 也加進 `workflow_dispatch` 手動觸發測試（已有），或 deploy job 加 `on: workflow_dispatch` 單獨測。
 
 ### 7. 驗證
-- 手動觸發 workflow（`workflow_dispatch`）→ 看 deploy job 綠燈 → 開 `https://auto-post-blog.pages.dev` → 應跳 Cloudflare Access 登入 → 登入後看到 blog 列表。
+- 手動觸發 workflow（`workflow_dispatch`）→ 看 deploy job 綠燈 → 開 `https://yifor-blog.pages.dev` → 應跳 Cloudflare Access 登入 → 登入後看到 blog 列表。
 
 ## 後續可擴充（非第一版）
 - [ ] digests / posts 各自 collection + 分頁
