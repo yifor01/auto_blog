@@ -15,6 +15,7 @@ from src.utils import (
     llm_chat,
     load_config,
     slugify,
+    to_traditional,
     today_str,
 )
 
@@ -191,6 +192,10 @@ def save_blog_post(gen: GeneratedContent, target_date: date | None = None) -> st
     if not gen.content or not gen.content.strip():
         raise ValueError(f"refuse to write empty post: {gen.source_item.item.title[:60]}")
 
+    # Layer B：生成端簡→繁。免費 LLM 偶發吐簡體字（如 Agnes 的「应」），
+    # 寫檔前做最後攔截，與所有 model 一視同仁。
+    content = to_traditional(gen.content)
+
     date_str = target_date.isoformat() if target_date else today_str()
     slug = slugify(gen.source_item.item.title)
     filename = f"{date_str}_{slug}.md"
@@ -209,7 +214,7 @@ def save_blog_post(gen: GeneratedContent, target_date: date | None = None) -> st
     fm_yaml = yaml.safe_dump(
         frontmatter, allow_unicode=True, sort_keys=False, default_flow_style=False
     ).strip()
-    post_content = f"---\n{fm_yaml}\n---\n\n{gen.content}\n"
+    post_content = f"---\n{fm_yaml}\n---\n\n{content}\n"
     post_path.write_text(post_content, encoding="utf-8")
 
     # 儲存 prompt (未來可重新呼叫)

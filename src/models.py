@@ -7,7 +7,7 @@ from datetime import date, datetime
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class SourceType(str, Enum):
@@ -36,6 +36,17 @@ class ContentItem(BaseModel):
     tags: list[str] = Field(default_factory=list)
     organization: str = ""
     raw_metadata: dict = Field(default_factory=dict)
+
+    @field_validator("title", "abstract")
+    @classmethod
+    def _normalize_to_traditional(cls, v: str) -> str:
+        """Layer A：來源端簡→繁。量子位 / ChatPaper 等中國 source 的簡體
+        title/abstract 在建構時就轉繁，一改全下游受惠（raw/scored JSON、
+        blog frontmatter title、digest、web UI）。對英文/繁中為冪等。"""
+        # 區域 import 避免 utils <-> models 潛在循環依賴
+        from src.utils import to_traditional
+
+        return to_traditional(v)
 
     def dedup_key(self) -> str:
         """用於去重的 key: 優先用 arxiv id, 否則用正規化後的 URL."""

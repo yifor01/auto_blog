@@ -47,27 +47,97 @@ def load_config() -> dict:
 
 
 # ──────────────────────────────────────────────────────────
-# OpenRouter 多 key 輪替 + 多 model 降級
+# 簡體中文 → 繁體中文（台灣正字）轉換
 # ──────────────────────────────────────────────────────────
 
-_API_KEYS: list[str] = []
-for _suffix in ["", "_2", "_3", "_4", "_5", "_6", "_7", "_8", "_9"]:
-    _k = os.getenv(f"OPENROUTER_API_KEY{_suffix}", "")
-    if _k:
-        _API_KEYS.append(_k)
+_opencc_converter = None
+_opencc_unavailable = False
+
+
+def to_traditional(text: str) -> str:
+    """簡體中文 → 繁體中文（OpenCC s2twp：台灣正字 + 慣用詞轉換）。
+
+    兩個用途：
+      - 來源端（Layer A）：量子位 / ChatPaper 等中國 source 的簡體 title/abstract。
+      - 生成端（Layer B）：免費 LLM 偶發吐出的簡體字（如 Agnes 的「应」）。
+
+    特性：
+      - 對純英文 / 已是繁中 / 空字串為冪等（OpenCC 只映射簡體字形，ASCII/URL/程式碼原樣通過）。
+      - OpenCC 未安裝或轉換失敗時，lazy 記 warning 後原樣回傳，絕不中斷 pipeline。
+    """
+    global _opencc_converter, _opencc_unavailable
+    if not text or _opencc_unavailable:
+        return text
+    if _opencc_converter is None:
+        try:
+            from opencc import OpenCC
+
+            _opencc_converter = OpenCC("s2twp")
+        except Exception as e:
+            _opencc_unavailable = True
+            _logger.warning(
+                "OpenCC unavailable, skipping 簡→繁 conversion",
+                extra={"error": str(e)[:160]},
+            )
+            return text
+    try:
+        return _opencc_converter.convert(text)
+    except Exception as e:
+        _logger.debug("to_traditional failed", extra={"error": str(e)[:160]})
+        return text
+
+
+# ──────────────────────────────────────────────────────────
+# 多 provider 路由 + 各自多 key 輪替 + 多 model 降級
+#
+# 同一條 chain 可混用不同 provider 的 model：由 model id 推斷 provider
+# （agnes-* → agnes，其餘 → openrouter），各 provider 有獨立的 base_url
+# 與 key 池。Agnes（apihub.agnes-ai.com）作為 OpenRouter 免費 model 全掛時的
+# 可用性保險，放在 generation chain 末端。
+# ──────────────────────────────────────────────────────────
+
+_AGNES_DEFAULT_BASE_URL = "https://apihub.agnes-ai.com/v1"
+
+
+def _load_keys(prefix: str) -> list[str]:
+    """讀取 PREFIX, PREFIX_2 .. PREFIX_9 的 API keys（缺的略過）。"""
+    keys: list[str] = []
+    for suffix in ["", "_2", "_3", "_4", "_5", "_6", "_7", "_8", "_9"]:
+        k = os.getenv(f"{prefix}{suffix}", "")
+        if k:
+            keys.append(k)
+    return keys
+
+
+_PROVIDER_KEYS: dict[str, list[str]] = {
+    "openrouter": _load_keys("OPENROUTER_API_KEY"),
+    "agnes": _load_keys("AGNES_API_KEY"),
+}
 
 # Lazy 檢查：不在 import 時 raise，讓不需 LLM 的指令（clean / status / list）
 # 即使沒設定 API key 也能正常執行；真正呼叫 LLM 時才在 get_next_api_key() raise。
-_key_cycle = itertools.cycle(_API_KEYS) if _API_KEYS else None
-if _API_KEYS:
-    _logger.info("API keys loaded", extra={"provider": "openrouter", "key_count": len(_API_KEYS)})
+_PROVIDER_CYCLES: dict[str, "itertools.cycle | None"] = {
+    p: (itertools.cycle(ks) if ks else None) for p, ks in _PROVIDER_KEYS.items()
+}
+for _p, _ks in _PROVIDER_KEYS.items():
+    if _ks:
+        _logger.info("API keys loaded", extra={"provider": _p, "key_count": len(_ks)})
 
 # 執行期可被 preflight 修改的 healthy model chains（初始為 None 代表尚未載入）
 _scoring_chain: list[str] | None = None
 _generation_chain: list[str] | None = None
 
 
-def _get_api_base_url() -> str:
+def _provider_for_model(model: str | None) -> str:
+    """由 model id 推斷 provider。agnes-* 走 Agnes，其餘預設 OpenRouter。"""
+    if model and model.startswith("agnes"):
+        return "agnes"
+    return "openrouter"
+
+
+def _get_api_base_url(provider: str = "openrouter") -> str:
+    if provider == "agnes":
+        return os.getenv("AGNES_API_URL") or _AGNES_DEFAULT_BASE_URL
     url = os.getenv("OPENROUTER_API_URL")
     if url:
         return url
@@ -75,16 +145,21 @@ def _get_api_base_url() -> str:
     return config.get("llm", {}).get("api_url", "https://openrouter.ai/api/v1")
 
 
-def get_next_api_key() -> str:
-    """Round-robin 取得下一個 API key。無 key 時才 raise（lazy，僅在真正呼叫 LLM 時）。"""
-    if _key_cycle is None:
-        raise ValueError("No OpenRouter API keys configured (set OPENROUTER_API_KEY[_2..9])")
-    return next(_key_cycle)
+def get_next_api_key(provider: str = "openrouter") -> str:
+    """Round-robin 取得指定 provider 的下一個 API key。
+    無 key 時才 raise（lazy，僅在真正呼叫該 provider 時）。"""
+    cycle = _PROVIDER_CYCLES.get(provider)
+    if cycle is None:
+        env = "OPENROUTER_API_KEY" if provider == "openrouter" else "AGNES_API_KEY"
+        raise ValueError(f"No API keys configured for provider '{provider}' (set {env}[_2..9])")
+    return next(cycle)
 
 
-def get_llm_client() -> OpenAI:
-    """建立帶有輪替 key 的 OpenAI-compatible client。每次呼叫使用下一個 key。"""
-    return OpenAI(api_key=get_next_api_key(), base_url=_get_api_base_url())
+def get_llm_client(model: str | None = None) -> OpenAI:
+    """建立帶有輪替 key 的 OpenAI-compatible client。依 model 推斷 provider，
+    選對應 base_url 並輪替該 provider 的 key。model=None 時預設 OpenRouter。"""
+    provider = _provider_for_model(model)
+    return OpenAI(api_key=get_next_api_key(provider), base_url=_get_api_base_url(provider))
 
 
 def _extract_content(resp) -> str:
@@ -172,7 +247,9 @@ def _probe_model(model: str, timeout: float = 15.0) -> tuple[bool, str]:
     last_err = "empty content"
     for _attempt in range(2):
         try:
-            resp = get_llm_client().with_options(timeout=timeout).chat.completions.create(
+            # provider-aware：Agnes model 用 Agnes endpoint probe，否則 preflight 會
+            # 拿 OpenRouter endpoint 去 probe Agnes 而誤判其死亡（fallback 保全關鍵）。
+            resp = get_llm_client(model).with_options(timeout=timeout).chat.completions.create(
                 model=model,
                 messages=[{"role": "user", "content": "Reply with the single word: OK"}],
                 max_tokens=16, temperature=0.0,
@@ -328,7 +405,7 @@ def llm_chat(
         return ""
 
     for m in chain:
-        client = get_llm_client()  # key 輪替
+        client = get_llm_client(m)  # 依 model 選 provider + 輪替該 provider 的 key
         result = _try_model(client, m, messages, max_tokens, temperature, max_retries, timeout)
         if result:
             return result
