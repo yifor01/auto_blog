@@ -12,7 +12,7 @@ Pipeline 可透過 GitHub Actions 每日自動執行，結果 commit 回 repo，
 - 兩個 workflow 都支援 `workflow_dispatch` 手動觸發
 - 失敗時自動開（或追加留言到）標題含 `[pipeline-failure]` 的 GitHub Issue
 - Daily Pipeline 可指定 `date` 和 `force` 參數
-- Secrets 需在 GitHub Settings 設定：`OPENROUTER_API_KEY`、`OPENROUTER_API_KEY_2`、`NEWSAPI_KEY`、`SEMANTIC_SCHOLAR_API_KEY`（`AIHUBMIX_*` 已於 2026-04-23 棄用，repo 後台可清理）
+- Secrets 需在 GitHub Settings 設定：`OPENROUTER_API_KEY`、`OPENROUTER_API_KEY_2`、`AGNES_API_KEY`（選用，generation chain 末端 fallback）、`NEWSAPI_KEY`、`SEMANTIC_SCHOLAR_API_KEY`（`AIHUBMIX_*` 已於 2026-04-23 棄用，repo 後台可清理）
 - `data/` 和 `output/` 進 repo（排除 `data/health/`、`output/notes/`、`output/prompts/`）
 - 本地 Dashboard：`git pull` → `python -m src.cli web`，checkpoint 機制自動跳過 Actions 已完成的 pipeline
 - 注意：本地 `data/bookmarks.json` 若有變更，需先 commit/push 再 pull，避免 merge conflict

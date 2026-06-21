@@ -4,7 +4,7 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-00a393.svg)](https://fastapi.tiangolo.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Auto Post Blog** 是一個自動化的 AI 資訊聚合與內容生成系統。每天自動從 10 個前沿資料源（arXiv、HuggingFace、Semantic Scholar、GitHub、Tech Blogs、RSS、Hacker News、Reddit、NewsAPI、ChatPaper）收集最新的生成式 AI 論文與新聞，透過 Rule-based 與 LLM 雙層價值篩選機制，產出高品質的繁體中文「部落格貼文草稿」與「每日精選摘要」。配備完整的 Web Dashboard 供監控、搜尋、收藏與內容管理。透過 OpenRouter（OpenAI-compatible，免費 model 降級 chain）進行 LLM 評分與生成，支援多 API key round-robin 輪替，scoring 與 blog 生成可使用不同 model chain。
+**Auto Post Blog** 是一個自動化的 AI 資訊聚合與內容生成系統。每天自動從 10 個前沿資料源（arXiv、HuggingFace、Semantic Scholar、GitHub、Tech Blogs、RSS、Hacker News、Reddit、NewsAPI、ChatPaper）收集最新的生成式 AI 論文與新聞，透過 Rule-based 與 LLM 雙層價值篩選機制，產出高品質的繁體中文「部落格貼文草稿」與「每日精選摘要」。配備完整的 Web Dashboard 供監控、搜尋、收藏與內容管理。透過 OpenRouter（OpenAI-compatible，免費 model 降級 chain）進行 LLM 評分與生成，支援多 API key round-robin 輪替，scoring 與 blog 生成可使用不同 model chain；另以多 provider 路由將 Agnes（`agnes-2.0-flash`）置於生成 chain 末端作可用性保險，所有輸出經 OpenCC 簡→繁（台灣慣用詞）轉換。
 
 > 🌐 **線上網站**：Astro 5 靜態站，部署於 Cloudflare Pages、以 Cloudflare Access（Email OTP）私人保護，網址不公開。
 > 每日 pipeline push 後由 Cloudflare Pages Git 整合自動 build + 部署。前端原始碼見 [`web/`](web/)，部署與 Access 設定細節見 [`docs/cloudflare-deploy-plan.md`](docs/cloudflare-deploy-plan.md)。
@@ -118,6 +118,7 @@ pip install -e '.[web]'
 cp .env.example .env
 # 編輯 .env 填入：
 #   OPENROUTER_API_KEY（必要，可再加 OPENROUTER_API_KEY_2 ~ _9 做多 key 輪替）
+#   AGNES_API_KEY（選用，Agnes 生成 fallback；可加 _2 ~ _9、AGNES_API_URL 覆寫）
 #   NEWSAPI_KEY（選用，啟用 NewsAPI collector 需要）
 #   SEMANTIC_SCHOLAR_API_KEY（選用，無 key 也可用但限流較嚴）
 ```
@@ -126,7 +127,7 @@ cp .env.example .env
 
 編輯 `config.yaml` 調整偏好設定，或啟動 Web 後在 `/settings` 頁面直接修改：
 
-- **LLM 模型 chain**（Scoring 與 Generation 各自一條降級 chain，預設皆為 OpenRouter 免費 model，如 `openai/gpt-oss-120b:free`、`google/gemma-4-31b-it:free`、`nvidia/nemotron-3-super-120b-a12b:free`，可在 Settings 頁面調整）
+- **LLM 模型 chain**（Scoring 與 Generation 各自一條降級 chain，預設皆為 OpenRouter 免費 model，如 `openai/gpt-oss-120b:free`、`google/gemma-4-31b-it:free`、`nvidia/nemotron-3-super-120b-a12b:free`，可在 Settings 頁面調整；Generation chain 末端可掛 `agnes-2.0-flash` 作跨 provider fallback）
 - **收集器開關**（視需求開關各資料源）
 - **評分權重與閾值**
 - **去重回看天數** (`dedup.lookback_days`)
@@ -287,6 +288,7 @@ Kanban 三欄（已收藏 → 已完成 → 已發布），拖曳卡片即可切
 
 1. 在 GitHub repo Settings → Secrets → Actions 新增以下 Secrets：
    - `OPENROUTER_API_KEY`（必要），可再加 `OPENROUTER_API_KEY_2` 做多 key 輪替
+   - `AGNES_API_KEY`（選用，Agnes 生成 fallback）
    - `NEWSAPI_KEY`、`SEMANTIC_SCHOLAR_API_KEY`（皆選用）
 2. Push 程式碼後，Daily Pipeline 會自動按排程執行
 3. 也可在 Actions 頁面手動觸發（`workflow_dispatch`），支援指定日期與 `--force` 重跑
@@ -339,7 +341,7 @@ Pipeline 產生的所有資料皆按模組劃分，方便溯源與二次開發�
 本專案使用 `pytest` 確保核心模組的正確性：
 
 ```bash
-# 執行所有單元與整合測試（364 tests）
+# 執行所有單元與整合測試（383 tests）
 pytest tests/ -v
 ```
 
