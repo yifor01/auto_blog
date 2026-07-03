@@ -20,6 +20,10 @@ API_BASE = "https://hn.algolia.com/api/v1/search"
 _HN_429_INITIAL_DELAY = 2.0   # seconds; doubles each retry: 2 → 4 → 8
 _HN_429_MAX_RETRIES = 3
 
+# Algolia 已不支援以 points 作 numericFilters（2026-06 起回 400），
+# 因此每頁抓大量結果後在 client-side 過濾 min_points
+_HN_HITS_PER_PAGE = 100
+
 
 def _hn_fetch_with_backoff(client, params: dict, query: str) -> dict | None:
     """Fetch HN Algolia search results with 429 exponential backoff.
@@ -81,8 +85,8 @@ class HackerNewsCollector(BaseCollector):
                     params = {
                         "query": query,
                         "tags": "story",
-                        "numericFilters": f"points>{min_points},created_at_i>{start_ts},created_at_i<{end_ts}",
-                        "hitsPerPage": max_results,
+                        "numericFilters": f"created_at_i>{start_ts},created_at_i<{end_ts}",
+                        "hitsPerPage": _HN_HITS_PER_PAGE,
                     }
                     data = _hn_fetch_with_backoff(client, params, query)
                     if data is None:
@@ -99,6 +103,9 @@ class HackerNewsCollector(BaseCollector):
 
                     title = hit.get("title", "")
                     if not title:
+                        continue
+
+                    if (hit.get("points") or 0) < min_points:
                         continue
 
                     raw_url = hit.get("url", "")
