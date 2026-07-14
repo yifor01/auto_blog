@@ -3,20 +3,22 @@ llm:
   max_tokens: 8192
   request_delay_seconds: 8.0
   # 評分 chain（需穩定輸出 JSON，越快越好）— 由上而下降級
-  # 2026-06-06 更新：inclusionAI Ling 2.6 全系列已從 OpenRouter 下架，改用實測仍在架的免費 model
+  # 2026-07-14 更新：gpt-oss-120b:free 已下架、gemma-4-31b 被 Google AI Studio 池限流。
+  # 選 model 硬規則：同一條 chain 的 fallback 必須掛在不同上游 provider（共用上游的 fallback 不是 fallback）。
+  # :free 變體的上游 provider 只能從 429 body 的 provider_name 實測得知（models API 查不到）。
   scoring_models:
-    - openai/gpt-oss-120b:free               # 2.8s, JSON 乾淨穩定
-    - google/gemma-4-31b-it:free             # 1.9s, 備援
-    - nvidia/nemotron-3-super-120b-a12b:free # 120B 最後備援（較慢）
+    - openai/gpt-oss-20b:free                # 上游 Darkbloom；JSON 乾淨、快
+    - google/gemma-4-26b-a4b-it:free         # 上游 Google AI Studio
+    - nvidia/nemotron-3-super-120b-a12b:free # 上游 Nvidia；120B 最後備援（較慢）
   # 生成 chain（繁中品質優先）
   generation_models:
-    - google/gemma-4-31b-it:free             # 繁中語感自然、快
-    - openai/gpt-oss-120b:free               # 繁中乾淨，備援
-    - nvidia/nemotron-3-super-120b-a12b:free # 最後備援
+    - tencent/hy3:free                       # 上游 Novita；繁中品質實測佳（econ-news-daily 首選）
+    - google/gemma-4-26b-a4b-it:free         # 上游 Google AI Studio
+    - nvidia/nemotron-3-super-120b-a12b:free # 上游 Nvidia
     - agnes-2.0-flash                        # Agnes（apihub.agnes-ai.com）：免費 model 全掛時的可用性保險，寫作品質佳
   # Legacy：GeneratedContent.model_used 顯示 / UI 舊 code 仍讀這些 key
-  model: openai/gpt-oss-120b:free
-  generation_model: google/gemma-4-31b-it:free
+  model: openai/gpt-oss-20b:free
+  generation_model: tencent/hy3:free
 collectors:
   arxiv:
     enabled: true

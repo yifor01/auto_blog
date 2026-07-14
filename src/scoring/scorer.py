@@ -84,20 +84,25 @@ def llm_score_item(item: ScoredItem) -> ScoredItem:
     try:
         scores = None
         last_response = ""
-        for _parse_attempt in range(3):
+        # 外層最多 2 次 attempt；llm_chat 帶 validate 會在單一 model 吐爛 JSON 時原地降級
+        # 下一 model，故不需在外層重打整條 chain（避免每日 50 次額度被 27 次請求燒光）。
+        for _parse_attempt in range(2):
             response = llm_chat(
                 messages=[
                     {"role": "system", "content": SCORING_SYSTEM_PROMPT},
                     {"role": "user", "content": user_msg},
                 ],
                 temperature=0.3,
-                max_tokens=500,
+                # reasoning model（gpt-oss 系列）的推理 token 也算進 max_tokens，
+                # 500 會被推理吃光導致 content 為空白燒請求，故留推理空間
+                max_tokens=1200,
+                validate=lambda t: _parse_score_json(t) is not None,
             )
             last_response = response
             scores = _parse_score_json(response)
             if scores:
                 break
-            if _parse_attempt < 2:
+            if _parse_attempt < 1:
                 _logger.debug("LLM score parse failed, retrying", extra={"title": item.item.title[:80]})
 
         if scores:

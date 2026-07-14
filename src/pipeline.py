@@ -37,7 +37,6 @@ from src.utils import (
     get_seen_urls,
     load_config,
     load_json,
-    preflight_models,
     save_json,
 )
 
@@ -483,27 +482,10 @@ def run_pipeline(
     console.rule(f"[bold magenta]🚀 Auto Post Blog — {d}[/bold magenta]")
     console.print(f"  📌 Pipeline 狀態: [bold]{state}[/bold]")
 
-    # Preflight：probe 所有 configured models，把失效的從 chain 移除
-    if state != "done" or force:
-        console.print("  🩺 Preflight: 檢查 LLM model 可用性...")
-        pf = preflight_models()
-        if pf["dead"]:
-            for m, err in pf["dead"]:
-                console.print(f"    [yellow]✗ {m}[/yellow] — {err[:80]}")
-        if pf.get("discovered"):
-            console.print(f"    [cyan]🔍 Auto-discovered {len(pf['discovered'])} free model(s):[/cyan]")
-            for m in pf["discovered"]:
-                console.print(f"      [cyan]+ {m}[/cyan]")
-        if pf.get("last_resort"):
-            console.print("    [magenta]🛟 Fallback to openrouter/free (慢但保底)[/magenta]")
-        for m in pf["scoring"]:
-            console.print(f"    [green]✓ scoring:[/green] {m}")
-        for m in pf["generation"]:
-            console.print(f"    [green]✓ generation:[/green] {m}")
-        if not pf["scoring"] and not pf["generation"]:
-            console.print("[red]❌ 全部 model 都無法使用（含 auto-discover），中止 pipeline[/red]")
-            _logger.error("Preflight: all models dead", extra={"dead": [m for m, _ in pf["dead"]]})
-            raise typer.Exit(code=1)
+    # LLM 健康度改採 lazy retire：不再起頭 probe 全部 model（白燒 5-7 次請求），
+    # 改為呼叫時遇 404 / 上游 429 即將該 model 加入本次 run 的 retired set 跳過；
+    # chain 全空時 llm_chat 內部一次性 auto-discover 自救。
+    console.print("  🩺 LLM 健康度採 lazy retire（404 / 上游 429 即本次 run 跳過該 model）")
 
     # --force: 清除所有快取與輸出（含 posts/notes/prompts）
     if force:

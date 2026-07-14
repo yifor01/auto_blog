@@ -7,6 +7,7 @@ import json
 import os
 from datetime import date, datetime
 from pathlib import Path
+from typing import Callable
 
 import time
 
@@ -116,16 +117,36 @@ _PROVIDER_KEYS: dict[str, list[str]] = {
 
 # Lazy 檢查：不在 import 時 raise，讓不需 LLM 的指令（clean / status / list）
 # 即使沒設定 API key 也能正常執行；真正呼叫 LLM 時才在 get_next_api_key() raise。
+# cycle 元素為 (序號, key) pair：序號 1-based，供 log 記 key#N（key 值絕不入 log）。
 _PROVIDER_CYCLES: dict[str, "itertools.cycle | None"] = {
-    p: (itertools.cycle(ks) if ks else None) for p, ks in _PROVIDER_KEYS.items()
+    p: (itertools.cycle(enumerate(ks, 1)) if ks else None) for p, ks in _PROVIDER_KEYS.items()
 }
 for _p, _ks in _PROVIDER_KEYS.items():
     if _ks:
         _logger.info("API keys loaded", extra={"provider": _p, "key_count": len(_ks)})
 
-# 執行期可被 preflight 修改的 healthy model chains（初始為 None 代表尚未載入）
+# 執行期可被 lazy retire / 緊急 discover 修改的 healthy model chains（None 代表尚未載入）
 _scoring_chain: list[str] | None = None
 _generation_chain: list[str] | None = None
+
+# 本次 run 已判死的 model：404（下架）或上游池限流（換 key/backoff 無效，唯換 model）。
+# 換 model 才有效，故整輪跳過；下次 process 重啟或 reset_model_health() 才復活。
+_RETIRED_MODELS: set[str] = set()
+
+# 緊急 auto-discover 防重入 flag（chain 全空時才觸發一次，平常零成本）。
+_emergency_discovered = False
+
+
+def reset_model_health() -> None:
+    """清空 retired set + 重設快取 chain + 緊急 discover flag。
+
+    供測試隔離與長駐 process（如 web monitor 跨日 run）復活被 retire 的 model 用。
+    """
+    global _scoring_chain, _generation_chain, _emergency_discovered
+    _RETIRED_MODELS.clear()
+    _scoring_chain = None
+    _generation_chain = None
+    _emergency_discovered = False
 
 
 def _provider_for_model(model: str | None) -> str:
@@ -145,29 +166,43 @@ def _get_api_base_url(provider: str = "openrouter") -> str:
     return config.get("llm", {}).get("api_url", "https://openrouter.ai/api/v1")
 
 
-def get_next_api_key(provider: str = "openrouter") -> str:
-    """Round-robin 取得指定 provider 的下一個 API key。
+def _next_key_with_index(provider: str = "openrouter") -> tuple[str, int]:
+    """Round-robin 取得指定 provider 的下一個 (key, 1-based 序號)。
     無 key 時才 raise（lazy，僅在真正呼叫該 provider 時）。"""
     cycle = _PROVIDER_CYCLES.get(provider)
     if cycle is None:
         env = "OPENROUTER_API_KEY" if provider == "openrouter" else "AGNES_API_KEY"
         raise ValueError(f"No API keys configured for provider '{provider}' (set {env}[_2..9])")
-    return next(cycle)
+    idx, key = next(cycle)
+    return key, idx
+
+
+def get_next_api_key(provider: str = "openrouter") -> str:
+    """Round-robin 取得指定 provider 的下一個 API key。
+    無 key 時才 raise（lazy，僅在真正呼叫該 provider 時）。"""
+    return _next_key_with_index(provider)[0]
+
+
+def _client_with_key_index(model: str | None = None) -> tuple[OpenAI, int]:
+    """建立輪替 key 的 client，同時回傳該 key 的 1-based 序號（供 log 記 key#N）。"""
+    provider = _provider_for_model(model)
+    key, idx = _next_key_with_index(provider)
+    return OpenAI(api_key=key, base_url=_get_api_base_url(provider)), idx
 
 
 def get_llm_client(model: str | None = None) -> OpenAI:
     """建立帶有輪替 key 的 OpenAI-compatible client。依 model 推斷 provider，
     選對應 base_url 並輪替該 provider 的 key。model=None 時預設 OpenRouter。"""
-    provider = _provider_for_model(model)
-    return OpenAI(api_key=get_next_api_key(provider), base_url=_get_api_base_url(provider))
+    return _client_with_key_index(model)[0]
 
 
 def _extract_content(resp) -> str:
     msg = resp.choices[0].message
     if msg.content:
         return msg.content
-    # DeepSeek R1 有時把回答放在 reasoning_content
-    reasoning = getattr(msg, "reasoning_content", None)
+    # reasoning model 在 max_tokens 被推理吃光時 content 為空：
+    # DeepSeek R1 放 reasoning_content，OpenRouter（gpt-oss 等）放 reasoning
+    reasoning = getattr(msg, "reasoning_content", None) or getattr(msg, "reasoning", None)
     return reasoning or ""
 
 
@@ -175,8 +210,40 @@ _BACKOFF_BASE_SECONDS = 5
 _BACKOFF_CAP_SECONDS = 60
 
 
+def _status_code_of(exc) -> int | None:
+    """防禦式取 HTTP status code：先 openai SDK 的 .status_code，fallback 掃字串；都沒有回 None。"""
+    code = getattr(exc, "status_code", None)
+    if isinstance(code, int):
+        return code
+    import re
+    m = re.search(r"\b([45]\d\d)\b", str(exc))
+    return int(m.group(1)) if m else None
+
+
+def _upstream_provider(exc) -> str | None:
+    """從 openai SDK exception 解析上游 provider 名稱（上游池限流的判別依據）。
+
+    OpenRouter body 約為 {"error": {"code": 429, "metadata": {"provider_name": "Venice",
+    "raw": "... temporarily rate-limited upstream ..."}}}；SDK 有時把 error 內層直接當 body。
+    任何形狀不符（無 body / 非 dict / 無 metadata / 無 provider_name）一律回 None，絕不 raise。
+    """
+    try:
+        body = getattr(exc, "body", None)
+        if not isinstance(body, dict):
+            return None
+        # SDK 有時把 error 內層直接當 body；有 error dict 就往內鑽，否則就地取
+        inner = body.get("error")
+        err = inner if isinstance(inner, dict) else body
+        meta = err.get("metadata")
+        if not isinstance(meta, dict):
+            return None
+        name = meta.get("provider_name")
+        return name if isinstance(name, str) and name else None
+    except Exception:
+        return None
+
+
 def _try_model(
-    client: OpenAI,
     model: str,
     messages: list[dict],
     max_tokens: int,
@@ -184,14 +251,18 @@ def _try_model(
     max_retries: int,
     timeout: float = 60.0,
 ) -> str | None:
-    """單一 (client, model) 呼叫。
+    """單一 model 呼叫（每次 attempt 內建新 client → 429 retry 時輪替 key）。
 
-    - 429 採指數退避重試（5s → 10s → 20s，上限 60s）。
-    - 每次呼叫帶 timeout（預設 60s），timeout 視為該 model 失敗回 None，
-      讓上層繼續走 fallback 鏈，不卡死整條 pipeline。
-    - 其他 error 或 empty content 直接回 None。
+    429 分兩種（實測確認）：
+    - 上游池限流（body 帶 provider_name）：換 key/backoff 均無效，唯一有效動作是換 model，
+      故將 model 加入 _RETIRED_MODELS，零重試零 backoff 直接回 None。
+    - 我方帳號額度（無 provider_name）：指數退避重試（5s→10s→20s，上限 60s），每次換 key。
+    404（model 下架）：加入 _RETIRED_MODELS，回 None。
+    timeout / 其他 error / empty content：視為該 model 本次失敗回 None，讓上層走 fallback 鏈。
+    key 值絕不入 log，只記序號 key#N。
     """
     for attempt in range(max_retries + 1):
+        client, key_idx = _client_with_key_index(model)
         try:
             resp = client.with_options(timeout=timeout).chat.completions.create(
                 model=model, messages=messages,
@@ -201,12 +272,51 @@ def _try_model(
             return content or None
         except Exception as e:
             err = str(e)
-            if "429" in err and attempt < max_retries:
-                wait = min(_BACKOFF_BASE_SECONDS * (2 ** attempt), _BACKOFF_CAP_SECONDS)
-                _logger.warning("Rate limited, retrying", extra={"model": model, "wait_seconds": wait, "attempt": attempt + 1})
-                time.sleep(wait)
-                continue
-            _logger.debug("Model call failed", extra={"model": model, "error": err[:200]})
+            status = _status_code_of(e)
+
+            # 404：model 下架 → 本次 run retire，不重試
+            if status == 404 or "404" in err:
+                _RETIRED_MODELS.add(model)
+                _logger.warning(
+                    "Model not found, retired for this run",
+                    extra={"model": model, "status_code": 404},
+                )
+                return None
+
+            # 429
+            if status == 429 or "429" in err:
+                provider_name = _upstream_provider(e)
+                if provider_name:
+                    # 上游池限流：換 key/backoff 無效 → retire，零重試直接降級下一 model
+                    _RETIRED_MODELS.add(model)
+                    _logger.warning(
+                        "Upstream provider rate-limited, retiring model for this run",
+                        extra={"model": model, "status_code": status,
+                               "provider_name": provider_name, "key": f"key#{key_idx}"},
+                    )
+                    return None
+                # 我方帳號額度：指數退避重試，下次 attempt 會換新 key
+                if attempt < max_retries:
+                    wait = min(_BACKOFF_BASE_SECONDS * (2 ** attempt), _BACKOFF_CAP_SECONDS)
+                    _logger.warning(
+                        "Rate limited (account quota), retrying with next key",
+                        extra={"model": model, "wait_seconds": wait,
+                               "attempt": attempt + 1, "key": f"key#{key_idx}"},
+                    )
+                    time.sleep(wait)
+                    continue
+                _logger.warning(
+                    "Rate limited, retries exhausted",
+                    extra={"model": model, "status_code": status, "key": f"key#{key_idx}"},
+                )
+                return None
+
+            # 其他 error（含 timeout）：視為該 model 本次失敗
+            _logger.warning(
+                "Model call failed",
+                extra={"model": model, "status_code": status,
+                       "error": err[:200], "key": f"key#{key_idx}"},
+            )
             return None
     return None
 
@@ -373,6 +483,34 @@ def preflight_models(
     }
 
 
+def _emergency_discover(is_generation: bool) -> list[str]:
+    """chain 全空（全部 retired 或 config 空）時的一次性自救。
+
+    保留原 preflight 的「全滅時自救」能力，但平常零成本（只在 chain 空且尚未觸發過時跑）：
+    查 OpenRouter 免費池、排除 retired、最多 probe 3 個，活的接到快取 chain 供本次及後續呼叫用。
+    module 級 flag 確保整個 process 只觸發一次，避免每次 llm_chat 都白燒 discover/probe 請求。
+    """
+    global _emergency_discovered, _scoring_chain, _generation_chain
+    if _emergency_discovered:
+        return []
+    _emergency_discovered = True
+    _logger.warning("llm_chat: chain empty, 觸發緊急 auto-discover")
+
+    pool = [m for m in discover_free_models() if m not in _RETIRED_MODELS]
+    alive: list[str] = []
+    for m in pool[:3]:
+        ok, _err = _probe_model(m)
+        if ok:
+            alive.append(m)
+
+    if alive:
+        # 接到兩條快取 chain（此時原 chain 已空，不存在覆蓋偏好問題）
+        _scoring_chain = list(dict.fromkeys((_scoring_chain or []) + alive))
+        _generation_chain = list(dict.fromkeys((_generation_chain or []) + alive))
+        _logger.info("緊急 auto-discover 成功", extra={"discovered": alive})
+    return alive
+
+
 def llm_chat(
     messages: list[dict],
     model: str | None = None,
@@ -382,12 +520,16 @@ def llm_chat(
     fallback_model: str | None = None,
     is_generation: bool = False,
     timeout: float | None = None,
+    validate: Callable[[str], bool] | None = None,
 ) -> str:
-    """走 OpenRouter 多 model chain。每個 model 嘗試一次，失敗降級。全部失敗回傳 ""。
+    """走多 model chain。每個 model 嘗試一次，失敗降級。全部失敗回傳 ""。
 
     - `model` / `fallback_model`：caller 指定偏好；若不在 chain 中則前置插入。
     - `is_generation=True` 使用 generation chain，否則使用 scoring chain。
     - `timeout`：單次 LLM 呼叫逾時秒數；None 時讀 config `llm.timeout_seconds`（預設 60）。
+    - `validate`：model 回了內容但 validate(content) 為 False 時視為該 model 本次輸出爛，
+      記 warning 並降級下一 model（**不** retire——model 活著只是這次輸出爛）。
+    - 本次 run 已 retire 的 model（404 / 上游 429）自動從 chain 過濾。
     """
     cfg = load_config()["llm"]
     max_tokens = max_tokens or cfg.get("max_tokens", 8192)
@@ -400,16 +542,26 @@ def llm_chat(
         if pref and pref not in chain:
             chain.insert(0, pref)
 
+    # 過濾本次 run 已 retire 的 model（含 caller 前置插入的偏好）
+    chain = [m for m in chain if m not in _RETIRED_MODELS]
+
+    # 緊急補救：過濾後全空（全部 retired 或 config 空）→ 一次性 auto-discover
     if not chain:
-        _logger.error("llm_chat: empty model chain (preflight 可能全部失敗)")
+        chain = _emergency_discover(is_generation)
+
+    if not chain:
+        _logger.error("llm_chat: empty model chain (全部 retired 或 config 空, auto-discover 亦無補救)")
         return ""
 
     for m in chain:
-        client = get_llm_client(m)  # 依 model 選 provider + 輪替該 provider 的 key
-        result = _try_model(client, m, messages, max_tokens, temperature, max_retries, timeout)
-        if result:
-            return result
-        _logger.warning("Model failed, trying next in chain", extra={"model": m})
+        result = _try_model(m, messages, max_tokens, temperature, max_retries, timeout)
+        if result is None:
+            _logger.warning("Model failed, trying next in chain", extra={"model": m})
+            continue
+        if validate is not None and not validate(result):
+            _logger.warning("Response failed validation, falling through", extra={"model": m})
+            continue
+        return result
 
     _logger.error("All LLM models failed", extra={"tried": chain})
     return ""
