@@ -322,6 +322,8 @@ def score_incremental(
 
     # 找出新增的 items
     new_items = [item for item in all_items if item.dedup_key() not in scored_urls]
+    # 清單來源不評分（拿不到全文，評分不可靠；已由 lists stage 呈現）
+    new_items = [it for it in new_items if it.source not in LIST_SOURCES]
 
     if not new_items:
         console.print(f"[cyan]♻️  無新項目需要評分[/cyan]")
@@ -363,6 +365,12 @@ def score_items(items: list[ContentItem], target_date: date | None = None) -> li
 
     console.rule("[bold blue]🔍 篩選階段[/bold blue]")
     config = load_config()
+
+    # 清單來源不評分（拿不到全文，評分不可靠；已由 lists stage 呈現）
+    before = len(items)
+    items = [it for it in items if it.source not in LIST_SOURCES]
+    if before != len(items):
+        console.print(f"[dim]📋 清單來源不評分: {before} → {len(items)} items[/dim]")
 
     rule_passed = batch_rule_score(items, config)
     top_items = batch_llm_score(rule_passed, config)

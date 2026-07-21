@@ -49,9 +49,6 @@ def rule_score(item: ContentItem, config: dict | None = None) -> ScoredItem:
     hot_keywords = [k.lower() for k in scoring_cfg.get("hot_keywords", [])]
 
     # 從 config 讀取門檻值（有預設值保持向後相容）
-    hf_upvote_threshold = scoring_cfg.get("hf_upvote_bonus_threshold", 10)
-    github_stars_high = scoring_cfg.get("github_stars_high", 100)
-    github_stars_medium = scoring_cfg.get("github_stars_medium", 50)
     source_weights = scoring_cfg.get("source_weights", {})
 
     score = 0.0
@@ -78,26 +75,7 @@ def rule_score(item: ContentItem, config: dict | None = None) -> ScoredItem:
         score += kw_score
         reasons.append(f"🔥 熱門關鍵字: {', '.join(matched_kw[:5])}")
 
-    # 3. HF Daily Papers 收錄加分
-    if item.source.value == "hf_papers":
-        score += 15
-        reasons.append("⭐ HuggingFace Daily Papers 收錄")
-        upvotes = item.raw_metadata.get("upvotes", 0)
-        if upvotes > hf_upvote_threshold:
-            score += 10
-            reasons.append(f"👍 HF upvotes: {upvotes}")
-
-    # 4. GitHub stars 加分
-    if item.source.value == "github":
-        stars = item.raw_metadata.get("stars_today", 0)
-        if stars > github_stars_high:
-            score += 15
-            reasons.append(f"⭐ GitHub stars today: {stars}")
-        elif stars > github_stars_medium:
-            score += 10
-            reasons.append(f"⭐ GitHub stars today: {stars}")
-
-    # 5. Hacker News points 熱度分級加分（話題性信號）
+    # 3. Hacker News points 熱度分級加分（話題性信號）
     # 注意：SourceType.HACKERNEWS.value == "hackernews"（無底線），別寫成 "hacker_news"。
     if item.source.value == "hackernews":
         hn_points = item.raw_metadata.get("points", 0)
@@ -111,7 +89,7 @@ def rule_score(item: ContentItem, config: dict | None = None) -> ScoredItem:
             score += 6
             reasons.append(f"📰 Hacker News: {hn_points} points")
 
-    # 6. Reddit upvotes 加分
+    # 4. Reddit upvotes 加分
     if item.source.value == "reddit":
         reddit_score = item.raw_metadata.get("score", 0)
         num_comments = item.raw_metadata.get("num_comments", 0)
@@ -128,13 +106,13 @@ def rule_score(item: ContentItem, config: dict | None = None) -> ScoredItem:
             score += 5
             reasons.append(f"💬 Reddit 高討論: {num_comments} comments")
 
-    # 7. 來源權重加分（從 config 讀取，取代 hardcoded 保底）
+    # 5. 來源權重加分（從 config 讀取，取代 hardcoded 保底）
     sw = source_weights.get(item.source.value, 0)
     if sw > 0:
         score += sw
         reasons.append(f"⚖️ 來源權重: {item.source.value} +{sw}")
 
-    # 7. 標題品質加分 (有數字、比較、新方法等訊號)
+    # 6. 標題品質加分 (有數字、比較、新方法等訊號)
     # 移除過度通用的 "new"/"improved"（幾乎任何標題都可能含），保留真正指示創新的詞。
     # 用 word boundary 比對，避免 "sota" 誤匹配 "Minnesota" 之類子字串。
     novelty_signals = [
@@ -149,10 +127,10 @@ def rule_score(item: ContentItem, config: dict | None = None) -> ScoredItem:
         score += 5
         reasons.append("💡 標題含新穎性訊號")
 
-    # 8. 摘要長度品質 (太短可能是低質量)
+    # 7. 摘要長度品質 (太短可能是低質量)
     if len(item.abstract) > 500:
         score += 3
-    elif len(item.abstract) < 50 and item.source.value not in ("github", "blog", "reddit"):
+    elif len(item.abstract) < 50 and item.source.value not in ("blog", "reddit"):
         score -= 5
         reasons.append("⚠️ 摘要過短")
 

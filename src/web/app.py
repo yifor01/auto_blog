@@ -633,9 +633,6 @@ async def settings_save(
     rule_threshold: Optional[int] = Form(None, ge=0, le=500),
     llm_top_k: Optional[int] = Form(None, ge=1, le=1000),
     final_top_k: Optional[int] = Form(None, ge=1, le=500),
-    hf_upvote_threshold: Optional[int] = Form(None, ge=0, le=100000),
-    github_stars_high: Optional[int] = Form(None, ge=1, le=100000),
-    github_stars_medium: Optional[int] = Form(None, ge=1, le=100000),
     dedup_lookback: Optional[int] = Form(None, ge=0, le=365),
     retention_days: Optional[int] = Form(None, ge=7, le=3650),
     # Collector toggles（checkbox 未勾選時不送出，需用 Optional[str]）
@@ -681,9 +678,6 @@ async def settings_save(
     rule_threshold = rule_threshold if rule_threshold is not None else _scoring_cfg.get("rule_threshold", 20)
     llm_top_k = llm_top_k if llm_top_k is not None else _scoring_cfg.get("llm_top_k", 60)
     final_top_k = final_top_k if final_top_k is not None else _scoring_cfg.get("final_top_k", 20)
-    hf_upvote_threshold = hf_upvote_threshold if hf_upvote_threshold is not None else _scoring_cfg.get("hf_upvote_bonus_threshold", 10)
-    github_stars_high = github_stars_high if github_stars_high is not None else _scoring_cfg.get("github_stars_high", 100)
-    github_stars_medium = github_stars_medium if github_stars_medium is not None else _scoring_cfg.get("github_stars_medium", 50)
     dedup_lookback = dedup_lookback if dedup_lookback is not None else _dedup_cfg.get("lookback_days", 7)
     retention_days = retention_days if retention_days is not None else _cfg.get("retention_days", 90)
     # ────────────────────────────────────────────────────────
@@ -714,9 +708,6 @@ async def settings_save(
         "scoring.rule_threshold": rule_threshold,
         "scoring.llm_top_k": llm_top_k,
         "scoring.final_top_k": final_top_k,
-        "scoring.hf_upvote_bonus_threshold": hf_upvote_threshold,
-        "scoring.github_stars_high": github_stars_high,
-        "scoring.github_stars_medium": github_stars_medium,
         "dedup.lookback_days": dedup_lookback,
         "retention_days": retention_days,
         # Collectors
