@@ -660,13 +660,10 @@ async def settings_save(
     newsapi_key: str = Form(""),
     newsapi_query: str = Form(""),
     newsapi_max_results: int = Form(20, ge=1, le=100),
-    # Source weights
-    sw_arxiv: int = Form(0, ge=0, le=50),
-    sw_chatpaper: int = Form(5, ge=0, le=50),
-    sw_hf_papers: int = Form(0, ge=0, le=50),
+    # Source weights（清單型來源 arxiv/chatpaper/hf_papers/github 不進評分，表單不再提供，
+    # 避免儲存時把已刪除的 dead config key 寫回 config.yaml）
     sw_rss: int = Form(15, ge=0, le=50),
     sw_blog: int = Form(15, ge=0, le=50),
-    sw_github: int = Form(0, ge=0, le=50),
     sw_hackernews: int = Form(0, ge=0, le=50),
     sw_reddit: int = Form(0, ge=0, le=50),
     sw_newsapi: int = Form(15, ge=0, le=50),
@@ -735,12 +732,8 @@ async def settings_save(
         "collectors.newsapi.query": newsapi_query.strip() or "generative AI OR LLM OR large language model",
         "collectors.newsapi.max_results": newsapi_max_results,
         # Source weights
-        "scoring.source_weights.arxiv": sw_arxiv,
-        "scoring.source_weights.chatpaper": sw_chatpaper,
-        "scoring.source_weights.hf_papers": sw_hf_papers,
         "scoring.source_weights.rss": sw_rss,
         "scoring.source_weights.blog": sw_blog,
-        "scoring.source_weights.github": sw_github,
         "scoring.source_weights.hackernews": sw_hackernews,
         "scoring.source_weights.reddit": sw_reddit,
         "scoring.source_weights.newsapi": sw_newsapi,

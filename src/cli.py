@@ -30,6 +30,7 @@ from src.pipeline import (
 from src.utils import (
     FEEDBACK_DIR,
     HEALTH_DIR,
+    LISTS_DIR,
     NOTES_DIR,
     POSTS_DIR,
     PROMPTS_DIR,
@@ -223,8 +224,8 @@ def clean(
     console.print(f"[yellow]將清理 {cutoff} 之前的資料...[/yellow]")
 
     to_delete: list[Path] = []
-    for dir_path in [RAW_DIR, SCORED_DIR, FEEDBACK_DIR, HEALTH_DIR, POSTS_DIR, NOTES_DIR, PROMPTS_DIR]:
-        for f in dir_path.glob("*.json" if dir_path in (RAW_DIR, SCORED_DIR, FEEDBACK_DIR, HEALTH_DIR) else "*.md"):
+    for dir_path in [RAW_DIR, SCORED_DIR, FEEDBACK_DIR, HEALTH_DIR, LISTS_DIR, POSTS_DIR, NOTES_DIR, PROMPTS_DIR]:
+        for f in dir_path.glob("*.json" if dir_path in (RAW_DIR, SCORED_DIR, FEEDBACK_DIR, HEALTH_DIR, LISTS_DIR) else "*.md"):
             try:
                 file_date = date.fromisoformat(f.stem[:10])
                 if file_date < cutoff:

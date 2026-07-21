@@ -4,12 +4,19 @@ import { loadLists } from '../../lists';
 import { formatDate } from '../../utils';
 
 export async function getStaticPaths() {
-  return loadLists().flatMap((d) =>
+  const paths = loadLists().flatMap((d) =>
     d.github.map((e) => ({
       params: { slug: `${d.date}_${e.slug}` },
       props: { entry: e, date: d.date },
     }))
   );
+  // 同日兩個 repo slugify 後撞名會產生重複路由弄壞 build——與 papers/[slug] 相同的去重防呆
+  const seen = new Set<string>();
+  return paths.filter((p) => {
+    if (seen.has(p.params.slug)) return false;
+    seen.add(p.params.slug);
+    return true;
+  });
 }
 
 const { entry, date } = Astro.props;
