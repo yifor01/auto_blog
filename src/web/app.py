@@ -222,6 +222,8 @@ async def day_detail(request: Request, date_str: str):
             "bookmarked_indices": bookmarked_indices,
             # why: lists 為 None 時模板不渲染 tab bar，舊日期照舊顯示評分列表
             "lists": ds.get_day_lists(d),
+            # 置頂文章（frontmatter pinned:true）於 scored tab 頂端顯示（spec §3.2）
+            "pinned_posts": ds.get_day_pinned_posts(d),
             "sidebar_stats": ds.get_sidebar_stats(),
         },
     )

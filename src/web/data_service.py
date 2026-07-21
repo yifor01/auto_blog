@@ -96,6 +96,8 @@ def get_week_status(days: int = 7, running_dates: set[str] | None = None) -> lis
                 "scored_count": scored_count,
                 "posts_count": len(posts),
                 "notes_count": len(notes),
+                # 置頂文章數（spec §3.2）：dashboard 每日卡片顯示 📌 N marker
+                "pinned_count": len(get_day_pinned_posts(d)),
             }
         )
     return result
@@ -330,6 +332,44 @@ def get_day_lists(d: date) -> dict | None:
         _logger.warning("Lists 檔讀取失敗", extra={"date": str(d), "error": str(e)})
         return None
     return data if isinstance(data, dict) else None
+
+
+def get_day_pinned_posts(d: date) -> list[dict]:
+    """讀取當日置頂文章（frontmatter `pinned: true`）供 Web Monitor 置頂顯示（spec §3.2）。
+
+    掃 POSTS_DIR 內 `{date}_*.md`，解析 YAML frontmatter；frontmatter 損毀 → 跳過該檔並記 warning。
+    回傳 `[{"title", "filename", "url"}]`，url 指向既有 `/post/{date}/{slug}` 檢視路由。
+    """
+    import yaml
+
+    date_str = d.isoformat()
+    prefix = f"{date_str}_"
+    result: list[dict] = []
+    for f in sorted(POSTS_DIR.glob(f"{prefix}*.md")):
+        try:
+            content = f.read_text(encoding="utf-8")
+        except Exception as e:
+            _logger.warning("置頂文章讀取失敗", extra={"file": f.name, "error": str(e)})
+            continue
+        fm: dict = {}
+        if content.startswith("---"):
+            parts = content.split("---", 2)
+            if len(parts) >= 3:
+                try:
+                    fm = yaml.safe_load(parts[1]) or {}
+                except Exception as e:
+                    # why: frontmatter 損毀直接跳過（不當作置頂），並記 warning 便於排查
+                    _logger.warning("置頂文章 frontmatter 解析失敗", extra={"file": f.name, "error": str(e)})
+                    continue
+        if not isinstance(fm, dict) or not fm.get("pinned"):
+            continue
+        slug = f.stem[len(prefix):]
+        result.append({
+            "title": fm.get("title") or slug,
+            "filename": f.name,
+            "url": f"/post/{date_str}/{slug}",
+        })
+    return result
 
 
 def get_day_stats(d: date) -> dict:

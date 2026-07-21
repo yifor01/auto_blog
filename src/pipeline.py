@@ -507,6 +507,11 @@ def run_supplement(d: date, dry_run: bool = False, top_k: int | None = None) -> 
         print_summary(top_items)
         return
 
+    # 置頂官方 blog 免評分，不受評分結果或 changed/has_posts gate block（spec §5）：
+    # 即使 top_items 為空（429 風暴/門檻日）也要生成最重要的置頂內容。
+    # 逐篇 checkpoint，下方 generate_posts 若再呼叫會全數跳過，無副作用。
+    _generate_pinned_posts(d)
+
     if not top_items:
         console.print("[yellow]⚠ No items passed scoring. Exiting.[/yellow]")
         return
@@ -593,6 +598,10 @@ def run_pipeline(
         print_summary(top_items)
         return
 
+    # 置頂官方 blog 免評分，不受評分結果 block（spec §5）：即使 top_items 為空也要生成。
+    # 逐篇 checkpoint，下方 generate_posts 若再呼叫會全數跳過，無副作用。
+    _generate_pinned_posts(d)
+
     if not top_items:
         _logger.warning("No items passed scoring", extra={"date": str(d)})
         console.print("[yellow]⚠ No items passed scoring. Exiting.[/yellow]")
@@ -642,7 +651,11 @@ def run_catchup(days: int = 7, dry_run: bool = False) -> None:
                 continue
             build_lists(items, d)
             top_items = score_items(items, d)
-            if dry_run or not top_items:
+            if dry_run:
+                continue
+            # 置頂官方 blog 免評分，即使無評分項目也要生成（spec §5）
+            _generate_pinned_posts(d)
+            if not top_items:
                 continue
             generate_posts(top_items, d)
         except Exception as e:
