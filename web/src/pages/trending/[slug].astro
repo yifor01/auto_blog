@@ -1,0 +1,58 @@
+---
+import Base from '../../layouts/Base.astro';
+import { loadLists } from '../../lists';
+import { formatDate } from '../../utils';
+
+export async function getStaticPaths() {
+  return loadLists().flatMap((d) =>
+    d.github.map((e) => ({
+      params: { slug: `${d.date}_${e.slug}` },
+      props: { entry: e, date: d.date },
+    }))
+  );
+}
+
+const { entry, date } = Astro.props;
+---
+
+<Base title={`${date} · ${entry.title}`} description="GitHub Trending">
+  <nav class="topnav">
+    <a href="/trending" class="back"><span aria-hidden="true">←</span> Trending</a>
+  </nav>
+  <article>
+    <header class="detail-header">
+      <div class="meta-row">
+        <time>{formatDate(new Date(`${date}T00:00:00Z`))}</time>
+        <span class="badge">⭐ +{entry.stars_today} today</span>
+        {entry.language && <span class="badge">{entry.language}</span>}
+      </div>
+      <h1>{entry.title}</h1>
+      <a class="src-link" href={entry.url} target="_blank" rel="noopener">
+        🔗 {entry.url} ↗
+      </a>
+    </header>
+    <div class="abstract">
+      {entry.abstract ? <p>{entry.abstract}</p> : <p class="none">（來源未提供簡介）</p>}
+    </div>
+    <p class="note">內容為收集當日抓取的 repo 描述原文，完整資訊請見 GitHub 原頁。</p>
+  </article>
+</Base>
+
+<style>
+  .topnav { margin-bottom: 1.5rem; }
+  .back { font-family: var(--mono); font-size: 0.85rem; color: var(--muted); }
+  .back:hover { color: var(--accent); }
+  .detail-header { border-bottom: 1px solid var(--border); padding-bottom: 1.2rem;
+    margin-bottom: 1.4rem; }
+  .meta-row { display: flex; gap: 0.6rem; font-family: var(--mono); font-size: 0.8rem;
+    color: var(--faint); }
+  .badge { border: 1px solid var(--border-strong); border-radius: 5px; padding: 0 0.4rem;
+    color: var(--accent-2); }
+  h1 { margin: 0.55rem 0 0.85rem; font-size: 1.6rem; }
+  .src-link { font-family: var(--mono); font-size: 0.82rem; color: var(--muted);
+    word-break: break-all; }
+  .src-link:hover { color: var(--accent); }
+  .abstract p { line-height: 1.7; }
+  .none { color: var(--faint); }
+  .note { margin-top: 2rem; color: var(--faint); font-size: 0.8rem; }
+</style>
