@@ -26,6 +26,7 @@ from rich.table import Table
 from src.lists import LIST_SOURCES, build_lists, get_lists_path
 from src.logger import get_logger
 from src.models import ContentItem, ScoredItem, SourceType
+from src.pinned import select_pinned, to_pinned_scored
 from src.scoring.rules import batch_rule_score
 from src.scoring.scorer import batch_llm_score
 from src.utils import (
@@ -322,15 +323,20 @@ def score_incremental(
 
     # 找出新增的 items
     new_items = [item for item in all_items if item.dedup_key() not in scored_urls]
-    # 清單來源不評分（拿不到全文，評分不可靠；已由 lists stage 呈現）
-    new_items = [it for it in new_items if it.source not in LIST_SOURCES]
+    # 清單來源不評分（拿不到全文，評分不可靠；已由 lists stage 呈現）；
+    # pinned 官方 blog 也繞過評分直接生成，故從評分 pool 剔除
+    config = load_config()
+    pinned_keys = {it.dedup_key() for it in select_pinned(all_items, target_date, config)}
+    new_items = [
+        it for it in new_items
+        if it.source not in LIST_SOURCES and it.dedup_key() not in pinned_keys
+    ]
 
     if not new_items:
         console.print(f"[cyan]♻️  無新項目需要評分[/cyan]")
         return existing_scored
 
     console.rule(f"[bold blue]🔍 增量評分 — {len(new_items)} 新項目[/bold blue]")
-    config = load_config()
 
     # 只對新項目跑 rule + LLM scoring
     new_rule_passed = batch_rule_score(new_items, config)
@@ -366,11 +372,15 @@ def score_items(items: list[ContentItem], target_date: date | None = None) -> li
     console.rule("[bold blue]🔍 篩選階段[/bold blue]")
     config = load_config()
 
-    # 清單來源不評分（拿不到全文，評分不可靠；已由 lists stage 呈現）
+    # 清單來源不評分；pinned 官方 blog 繞過評分直接生成（generate 階段處理）
+    pinned_keys = {it.dedup_key() for it in select_pinned(items, target_date, config)}
     before = len(items)
-    items = [it for it in items if it.source not in LIST_SOURCES]
+    items = [
+        it for it in items
+        if it.source not in LIST_SOURCES and it.dedup_key() not in pinned_keys
+    ]
     if before != len(items):
-        console.print(f"[dim]📋 清單來源不評分: {before} → {len(items)} items[/dim]")
+        console.print(f"[dim]📋 清單/置頂來源不評分: {before} → {len(items)} items[/dim]")
 
     rule_passed = batch_rule_score(items, config)
     top_items = batch_llm_score(rule_passed, config)
@@ -387,14 +397,47 @@ def score_items(items: list[ContentItem], target_date: date | None = None) -> li
 
 
 def generate_posts(top_items: list[ScoredItem], target_date: date | None = None) -> list[str]:
-    """生成 blog posts。逐篇檢查，已有 post 的跳過，新的才生成。"""
+    """生成 blog posts：先置頂官方 blog（免評分），再生成評分 top-K。"""
     from src.generators.blog_post import generate_and_save_posts
 
     target_date = target_date or date.today()
 
     console.rule("[bold blue]✍️ 生成階段[/bold blue]")
 
-    return generate_and_save_posts(top_items, target_date)
+    pinned_paths = _generate_pinned_posts(target_date)
+    paths = generate_and_save_posts(top_items, target_date)
+    return pinned_paths + paths
+
+
+def _generate_pinned_posts(target_date: date) -> list[str]:
+    """頂尖 AI 公司官方 blog 免評分直接生成（逐篇 checkpoint：已有同名 post 跳過）。"""
+    from src.generators.blog_post import generate_and_save_posts
+    from src.utils import slugify
+
+    raw_path = get_raw_path(target_date)
+    if not raw_path.exists():
+        return []
+
+    config = load_config()
+    items = [ContentItem(**r) for r in load_json(raw_path)]
+    todo = []
+    for it in select_pinned(items, target_date, config):
+        post_path = POSTS_DIR / f"{target_date.isoformat()}_{slugify(it.title)}.md"
+        if post_path.exists():
+            continue
+        todo.append(to_pinned_scored(it))
+
+    if not todo:
+        return []
+
+    console.print(f"[bold]📌 置頂生成: {len(todo)} 篇頂尖 AI 公司官方發布[/bold]")
+    paths = generate_and_save_posts(todo, target_date, pinned=True)
+    if len(paths) < len(todo):
+        _logger.warning(
+            "部分置頂文章生成失敗",
+            extra={"expected": len(todo), "generated": len(paths)},
+        )
+    return paths
 
 
 # ──────────────────────────────────────────────────────────

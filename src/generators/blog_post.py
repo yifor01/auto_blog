@@ -184,7 +184,7 @@ def generate_blog_post(item: ScoredItem) -> GeneratedContent:
     )
 
 
-def save_blog_post(gen: GeneratedContent, target_date: date | None = None) -> str:
+def save_blog_post(gen: GeneratedContent, target_date: date | None = None, pinned: bool = False) -> str:
     """儲存 blog post 和對應的 prompt。"""
     # 空文章 guard：rate-limit storm 時 llm_chat 會回 ""，若放行會寫出空文章並被
     # commit/ship。在此 raise，generate_and_save_posts 的 per-item try/except 會跳過該篇、
@@ -207,10 +207,14 @@ def save_blog_post(gen: GeneratedContent, target_date: date | None = None) -> st
         "title": gen.source_item.item.title,
         "source": gen.source_item.item.source_name,
         "url": gen.source_item.item.url,
-        "score": round(gen.source_item.total_score),
         "model": gen.model_used,
         "generated_at": gen.generated_at.isoformat(),
     }
+    if pinned:
+        # 置頂文沒有評分：不寫 score（0 分會誤導），改標 pinned 供兩個 GUI 置頂
+        frontmatter["pinned"] = True
+    else:
+        frontmatter["score"] = round(gen.source_item.total_score)
     fm_yaml = yaml.safe_dump(
         frontmatter, allow_unicode=True, sort_keys=False, default_flow_style=False
     ).strip()
@@ -225,7 +229,7 @@ def save_blog_post(gen: GeneratedContent, target_date: date | None = None) -> st
     return str(post_path)
 
 
-def generate_and_save_posts(items: list[ScoredItem], target_date: date | None = None) -> list[str]:
+def generate_and_save_posts(items: list[ScoredItem], target_date: date | None = None, pinned: bool = False) -> list[str]:
     """批量生成並儲存 blog posts。新 top-K 全部生成（覆寫同名舊文），不在 top-K 的舊文保留不動。"""
     import time
 
@@ -245,7 +249,7 @@ def generate_and_save_posts(items: list[ScoredItem], target_date: date | None = 
             continue
         try:
             gen = generate_blog_post(item)
-            path = save_blog_post(gen, target_date)
+            path = save_blog_post(gen, target_date, pinned=pinned)
             paths.append(path)
             _logger.info(
                 f"({i+1}/{len(items)}) [{item.item.source.value}] "
