@@ -9,7 +9,7 @@ from pathlib import Path
 
 from src.logger import get_logger
 from src.models import ContentItem, ScoredItem
-from src.utils import NOTES_DIR, POSTS_DIR, RAW_DIR, SCORED_DIR, FEEDBACK_DIR, HEALTH_DIR, DIGESTS_DIR, BLOGS_DIR, DATA_DIR, load_json, save_json, slugify
+from src.utils import NOTES_DIR, POSTS_DIR, RAW_DIR, SCORED_DIR, FEEDBACK_DIR, HEALTH_DIR, DIGESTS_DIR, BLOGS_DIR, LISTS_DIR, DATA_DIR, load_json, save_json, slugify
 
 _logger = get_logger("web.data_service")
 
@@ -315,6 +315,21 @@ def get_day_raw_items(d: date) -> list[dict]:
         except Exception:
             continue
     return items
+
+
+def get_day_lists(d: date) -> dict | None:
+    """讀取當日清單檔（Trending / Papers）。無檔、損毀、格式不符皆回 None（tab 隱藏）。"""
+    # why: 舊日期無 lists 檔屬正常情形，缺檔直接回 None 不記 warning；
+    #      只有實際讀取/解析失敗才記 warning，避免 log 噪音
+    path = LISTS_DIR / f"{d.isoformat()}.json"
+    if not path.exists():
+        return None
+    try:
+        data = load_json(path)
+    except Exception as e:
+        _logger.warning("Lists 檔讀取失敗", extra={"date": str(d), "error": str(e)})
+        return None
+    return data if isinstance(data, dict) else None
 
 
 def get_day_stats(d: date) -> dict:
