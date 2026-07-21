@@ -130,7 +130,10 @@ lists:
 - `Nav.astro` 加兩個 tab：`🔥 Trending`（`/trending`）、`📄 Papers`（`/papers`）
 - 兩頁皆：按日分組（只 build 近 30 天，比照首頁），每日一節，
   節內清單卡片（標題 / 簡介 / 天然訊號 badge：stars_today、upvotes、citation）
-- 卡片點擊**直接外連**（GitHub / arXiv / HF），不做詳情頁（YAGNI）
+- 詳情頁：`/trending/<slug>`、`/papers/<slug>`（比照現有 `/daily/[slug]` pattern），
+  內容直接呈現爬蟲已抓到的資料——標題、完整 abstract、metadata badge
+  （stars_today / upvotes / citation / language / authors）、原文外連按鈕；
+  **不做額外爬取或 LLM 加工**，有什麼放什麼
 - 資料來源：`import.meta.glob` 直讀 `output/lists/*.json`，不進 content collection
 - `⚡ 每日自動` 首頁：frontmatter `pinned: true` 的文章置頂 + 📌 badge
 - Papers 頁 others 區塊預設折疊（HF top 10 為主清單）
@@ -141,6 +144,7 @@ lists:
 - `data_service.py` 加 `get_day_lists(date) -> dict | None`（讀 lists JSON，無檔回 None）
 - Day Detail 頁加「🔥 Trending」「📄 Papers」分頁（與現有評分列表並列 tab）；
   無 lists 檔的舊日期隱藏這兩個 tab
+- 分頁內卡片可展開完整 abstract（`<details>` 式，本機頁面不另做詳情頁）
 - Dashboard / Day Detail 對 pinned 文章置頂顯示 + 📌 標記
 - 其他頁面（素材庫 / 主題 / 書籤）不動：LIST_SOURCES 項目不再出現在 scored 資料中，
   自然從這些頁面消失（舊資料照舊顯示，既往不究）
@@ -178,7 +182,7 @@ End-to-end：`python -m src.cli run --date <近日> --force`（或 dry-run + 手
 
 ## 7. 不做的事（YAGNI）
 
-- Trending / Papers 詳情頁
+- 詳情頁的額外爬取 / LLM 加工（只呈現 collect 階段已抓到的內容）
 - 歷史資料回填
 - lists 項目的書籤 / 素材庫整合（想深入寫某篇 → 人工加入精選 blogs 流程）
 - LLM 對 lists 項目的任何處理（摘要翻譯等）——abstract 原樣呈現
