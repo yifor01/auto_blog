@@ -1,0 +1,97 @@
+---
+import Base from '../../layouts/Base.astro';
+import Nav from '../../components/Nav.astro';
+import { loadLists } from '../../lists';
+import { formatDate, RECENT_DAYS } from '../../utils';
+
+const days = loadLists().filter((d) => d.papers.hf.length > 0 || d.papers.others.length > 0);
+const weekdayFmt = new Intl.DateTimeFormat('zh-TW', { weekday: 'short', timeZone: 'UTC' });
+---
+
+<Base title="每日論文精選 — Daily AI Blog" wide>
+  <Nav active="papers" />
+  <p class="page-desc">每日論文精選（HF Daily Papers 依社群投票排序，近 {RECENT_DAYS} 天）</p>
+
+  {days.length === 0 && <p class="empty">尚無論文資料。</p>}
+
+  {days.map((d) => (
+    <section class="day-block">
+      <h2 class="day-header">
+        {d.date} · {weekdayFmt.format(new Date(`${d.date}T00:00:00Z`))}
+        <span class="day-count">{d.papers.hf.length} 篇</span>
+      </h2>
+      <ul class="entry-list">
+        {d.papers.hf.map((e, i) => (
+          <li class="entry">
+            <a href={`/papers/${d.date}_${e.slug}`} class="entry-link">
+              <span class="rank">{i + 1}</span>
+              <div class="entry-main">
+                <h3 class="entry-title">{e.title}</h3>
+                {e.abstract && <p class="entry-abstract">{e.abstract.slice(0, 160)}{e.abstract.length > 160 ? '…' : ''}</p>}
+              </div>
+              <span class="badges">
+                <span class="badge stars">👍 {e.upvotes}</span>
+              </span>
+            </a>
+          </li>
+        ))}
+      </ul>
+
+      {d.papers.others.length > 0 && (
+        <details class="others">
+          <summary>更多論文（arXiv / ChatPaper / Semantic Scholar，{d.papers.others.length} 篇）</summary>
+          <ul class="entry-list">
+            {d.papers.others.map((e, i) => (
+              <li class="entry">
+                <a href={`/papers/${d.date}_${e.slug}`} class="entry-link">
+                  <span class="rank">{i + 1}</span>
+                  <div class="entry-main">
+                    <h3 class="entry-title">{e.title}</h3>
+                    {e.abstract && <p class="entry-abstract">{e.abstract.slice(0, 160)}…</p>}
+                  </div>
+                  <span class="badges">
+                    <span class="badge">{e.source_name}</span>
+                    {e.citation_count > 0 && <span class="badge">📖 {e.citation_count}</span>}
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </section>
+  ))}
+</Base>
+
+<style>
+  .page-desc { color: var(--muted); font-size: 0.85rem; margin: 0 0 1.5rem; }
+  .day-block { margin-bottom: 2rem; }
+  .day-header { display: flex; align-items: center; gap: 0.6rem; font-family: var(--mono);
+    font-size: 0.85rem; color: var(--muted); border-bottom: 1px solid var(--border);
+    padding-bottom: 0.4rem; margin: 0 0 0.7rem; font-weight: 600; }
+  .day-count { background: var(--surface); border-radius: 5px; padding: 0 0.4rem;
+    font-size: 0.74rem; color: var(--faint); }
+  .entry-list { list-style: none; margin: 0; padding: 0; display: flex;
+    flex-direction: column; gap: 0.5rem; }
+  .entry { border: 1px solid var(--border); border-radius: var(--radius);
+    background: var(--surface); transition: border-color 0.15s ease; }
+  .entry:hover { border-color: var(--accent); }
+  .entry-link { display: flex; align-items: flex-start; gap: 0.8rem;
+    padding: 0.75rem 1.1rem; color: inherit; }
+  .rank { font-family: var(--mono); color: var(--faint); font-size: 0.8rem;
+    min-width: 1.4rem; padding-top: 0.15rem; }
+  .entry-main { flex: 1; min-width: 0; }
+  .entry-title { margin: 0 0 0.25rem; font-size: 0.98rem; }
+  .entry:hover .entry-title { color: var(--accent); }
+  .entry-abstract { margin: 0; color: var(--muted); font-size: 0.82rem; line-height: 1.5; }
+  .badges { display: flex; flex-direction: column; gap: 0.3rem; align-items: flex-end;
+    flex-shrink: 0; }
+  .badge { font-family: var(--mono); font-size: 0.72rem; color: var(--muted);
+    border: 1px solid var(--border-strong); border-radius: 5px; padding: 0 0.4rem; }
+  .badge.stars { color: var(--accent-2); }
+  .others { margin-top: 0.7rem; }
+  .others summary { font-family: var(--mono); font-size: 0.8rem; color: var(--muted);
+    cursor: pointer; padding: 0.5rem 0; }
+  .others .entry-list { margin-top: 0.5rem; }
+  .empty { color: var(--muted); text-align: center; padding: 3rem 0; }
+</style>

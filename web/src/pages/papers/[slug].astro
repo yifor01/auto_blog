@@ -1,0 +1,78 @@
+---
+import Base from '../../layouts/Base.astro';
+import { loadLists } from '../../lists';
+import { formatDate } from '../../utils';
+
+export async function getStaticPaths() {
+  const paths = loadLists().flatMap((d) => [
+    ...d.papers.hf.map((e) => ({
+      params: { slug: `${d.date}_${e.slug}` },
+      props: { title: e.title, url: e.url, abstract: e.abstract, date: d.date,
+               badge: `👍 ${e.upvotes} upvotes`, sourceName: 'HuggingFace Daily Papers',
+               authors: e.authors },
+    })),
+    ...d.papers.others.map((e) => ({
+      params: { slug: `${d.date}_${e.slug}` },
+      props: { title: e.title, url: e.url, abstract: e.abstract, date: d.date,
+               badge: e.citation_count > 0 ? `📖 ${e.citation_count} citations` : '',
+               sourceName: e.source_name, authors: e.authors },
+    })),
+  ]);
+
+  const seen = new Set<string>();
+  return paths.filter((p) => {
+    if (seen.has(p.params.slug)) return false;
+    seen.add(p.params.slug);
+    return true;
+  });
+}
+
+const { title, url, abstract, date, badge, sourceName, authors } = Astro.props;
+---
+
+<Base title={`${date} · ${title}`} description="每日論文精選">
+  <nav class="topnav">
+    <a href="/papers" class="back"><span aria-hidden="true">←</span> Papers</a>
+  </nav>
+  <article>
+    <header class="detail-header">
+      <div class="meta-row">
+        <time>{formatDate(new Date(`${date}T00:00:00Z`))}</time>
+        <span class="badge">{sourceName}</span>
+        {badge && <span class="badge accent">{badge}</span>}
+      </div>
+      <h1>{title}</h1>
+      {authors && authors.length > 0 && (
+        <p class="authors">作者：{authors.slice(0, 8).join(', ')}</p>
+      )}
+      <a class="src-link" href={url} target="_blank" rel="noopener">
+        🔗 {url} ↗
+      </a>
+    </header>
+    <div class="abstract">
+      {abstract ? <p>{abstract}</p> : <p class="none">（來源未提供摘要）</p>}
+    </div>
+    <p class="note">內容為收集當日抓取的摘要原文。</p>
+  </article>
+</Base>
+
+<style>
+  .topnav { margin-bottom: 1.5rem; }
+  .back { font-family: var(--mono); font-size: 0.85rem; color: var(--muted); }
+  .back:hover { color: var(--accent); }
+  .detail-header { border-bottom: 1px solid var(--border); padding-bottom: 1.2rem;
+    margin-bottom: 1.4rem; }
+  .meta-row { display: flex; flex-wrap: wrap; gap: 0.6rem; font-family: var(--mono);
+    font-size: 0.8rem; color: var(--faint); }
+  .badge { border: 1px solid var(--border-strong); border-radius: 5px; padding: 0 0.4rem;
+    color: var(--muted); }
+  .badge.accent { color: var(--accent-2); }
+  h1 { margin: 0.55rem 0 0.5rem; font-size: 1.6rem; }
+  .authors { margin: 0 0 0.85rem; color: var(--muted); font-size: 0.82rem; }
+  .src-link { font-family: var(--mono); font-size: 0.82rem; color: var(--muted);
+    word-break: break-all; }
+  .src-link:hover { color: var(--accent); }
+  .abstract p { line-height: 1.7; }
+  .none { color: var(--faint); }
+  .note { margin-top: 2rem; color: var(--faint); font-size: 0.8rem; }
+</style>
