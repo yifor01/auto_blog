@@ -23,6 +23,7 @@ from datetime import date, timedelta
 import typer
 from rich.table import Table
 
+from src.lists import LIST_SOURCES, build_lists, get_lists_path
 from src.logger import get_logger
 from src.models import ContentItem, ScoredItem, SourceType
 from src.scoring.rules import batch_rule_score
@@ -60,9 +61,10 @@ def get_collectors():
     from src.collectors.rss_collector import RSSCollector
     from src.collectors.semantic_scholar import SemanticScholarCollector
     return [
+        # HF 在 arXiv 前：單日去重「先收集者留」，同論文優先保留帶 upvotes 的 HF 版
+        HFPapersCollector(),
         ArxivCollector(),
         ChatPaperCollector(),
-        HFPapersCollector(),
         RSSCollector(),
         BlogCollector(),
         GitHubTrendingCollector(),
@@ -432,6 +434,8 @@ def run_supplement(d: date, dry_run: bool = False, top_k: int | None = None) -> 
         console.print("[yellow]⚠ No items. Exiting.[/yellow]")
         return
 
+    build_lists(items, d, force=changed)  # 補收有新項目時重建清單
+
     _t0 = _time.time()
     _logger.info("Stage started", extra={"pipeline_stage": "score", "stage_action": "start"})
     if changed:
@@ -490,7 +494,7 @@ def run_pipeline(
     # --force: 清除所有快取與輸出（含 posts/notes/prompts）
     if force:
         console.print("[yellow]🔄 --force: 清除所有快取與生成結果, 重新執行[/yellow]")
-        for p in [get_raw_path(d), get_scored_path(d)]:
+        for p in [get_raw_path(d), get_scored_path(d), get_lists_path(d)]:
             if p.exists():
                 p.unlink()
                 console.print(f"  🗑️  刪除 {p.name}")
@@ -518,6 +522,9 @@ def run_pipeline(
         _logger.warning("No items collected", extra={"date": str(d)})
         console.print("[yellow]⚠ No items collected. Exiting.[/yellow]")
         return
+
+    # 清單型來源（Trending/Papers）每日清單（零 LLM）——collect 後即產出
+    build_lists(items, d)
 
     _t0 = _time.time()
     _logger.info("Stage started", extra={"pipeline_stage": "score", "stage_action": "start"})
@@ -582,6 +589,7 @@ def run_catchup(days: int = 7, dry_run: bool = False) -> None:
             items = collect_items(d)
             if not items:
                 continue
+            build_lists(items, d)
             top_items = score_items(items, d)
             if dry_run or not top_items:
                 continue
@@ -605,6 +613,8 @@ def run_collect(d: date, force: bool = False) -> list[ContentItem]:
         "elapsed": round(_time.time() - _t0, 1),
         "item_count": len(items),
     })
+    if items:
+        build_lists(items, d, force=force)
     return items
 
 
