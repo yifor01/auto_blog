@@ -11,7 +11,11 @@ const enrich = loadEnrichment();
 
 const recent = all
   .filter((p) => idDate(p.id) >= cutoff)
-  .sort((a, b) => idDate(b.id).getTime() - idDate(a.id).getTime());
+  .sort(
+    (a, b) =>
+      idDate(b.id).getTime() - idDate(a.id).getTime() ||
+      Number(b.data.pinned) - Number(a.data.pinned)
+  );
 
 const items = recent.map((p) => {
   const source = p.data.source ?? '其他';
@@ -28,6 +32,7 @@ const items = recent.map((p) => {
     title: p.data.title,
     source,
     score: p.data.score,
+    pinned: p.data.pinned,
     url: p.data.url,
     summary,
     date,
@@ -209,6 +214,7 @@ const latestAvg = latest
                   <a href={`/daily/${post.id}`} class="post-link">
                     <div class="post-meta">
                       <time datetime={post.date.toISOString()}>{formatDate(post.date)}</time>
+                      {post.pinned && <span class="pin-badge">📌 置頂</span>}
                       <span class="source-badge">{post.source}</span>
                       {post.org && <span class="org-badge">{post.org}</span>}
                       {post.score != null && <span class="score">★ {Math.round(post.score)}</span>}
@@ -580,6 +586,13 @@ const latestAvg = latest
     color: var(--faint);
     font-size: 0.74rem;
     margin-bottom: 0.4rem;
+  }
+  .pin-badge {
+    color: #ffce4f;
+    border: 1px solid var(--border-strong);
+    border-radius: 5px;
+    padding: 0 0.4rem;
+    font-weight: 600;
   }
   .source-badge {
     color: var(--accent-cyan);

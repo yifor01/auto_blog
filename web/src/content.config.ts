@@ -27,6 +27,7 @@ const posts = defineCollection({
     source: z.string().optional(),
     score: z.coerce.number().optional(),
     model: z.string().optional(),
+    pinned: z.boolean().default(false),
     // YAML 會把未加引號的 ISO timestamp 解析成 date，故用 coerce 容錯
     generated_at: z.coerce.date().optional(),
   }),
