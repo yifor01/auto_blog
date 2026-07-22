@@ -1,0 +1,102 @@
+---
+import Base from './Base.astro';
+import Nav from '../components/Nav.astro';
+
+interface Props {
+  active: 'curated' | 'daily' | 'trending' | 'papers';
+  title: string;
+  description?: string;
+  prompt?: string;
+  subtitle?: string;
+}
+const { active, title, description, prompt, subtitle } = Astro.props;
+---
+
+<Base title={title} description={description} wide>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-inner">
+        <header class="brand-block">
+          <a href="/" class="brand">Daily AI Blog</a>
+          {
+            subtitle && (
+              <p class="subtitle">
+                {prompt && <span class="prompt">{prompt}</span>} {subtitle}
+              </p>
+            )
+          }
+        </header>
+        <slot name="sidebar" />
+      </div>
+    </aside>
+
+    <div class="content">
+      <Nav active={active} />
+      <slot />
+    </div>
+  </div>
+
+  <style>
+    /* 與 index.astro / curated.astro 相同的兩欄外框，確保跨頁 Nav 對齊 */
+    .layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 3rem;
+      align-items: start;
+    }
+    .sidebar {
+      position: sticky;
+      top: 1.5rem;
+    }
+    .sidebar-inner {
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+      max-height: calc(100vh - 3rem);
+      overflow-y: auto;
+      padding-right: 0.4rem;
+    }
+    .brand {
+      display: block;
+      font-size: 1.55rem;
+      font-weight: 700;
+      background: linear-gradient(
+        100deg,
+        var(--accent) 10%,
+        var(--accent-2) 55%,
+        var(--accent-cyan) 100%
+      );
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      width: fit-content;
+    }
+    .brand:hover {
+      color: transparent;
+    }
+    .subtitle {
+      margin: 0.3rem 0 0;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+    .prompt {
+      color: var(--accent-cyan);
+      font-weight: 700;
+    }
+
+    /* 窄螢幕：sidebar 收到上方、不 sticky（與 index/curated 一致） */
+    @media (max-width: 760px) {
+      .layout {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+      }
+      .sidebar {
+        position: static;
+      }
+      .sidebar-inner {
+        max-height: none;
+        overflow: visible;
+      }
+    }
+  </style>
+</Base>
