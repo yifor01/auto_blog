@@ -6,7 +6,7 @@ from datetime import date, datetime
 
 import feedparser
 
-from src.collectors._helpers import infer_organization, parse_entry_date
+from src.collectors._helpers import clean_feed_title, infer_organization, parse_entry_date
 from src.collectors.base import BaseCollector
 from src.models import ContentItem, SourceType
 from src.logger import get_logger
@@ -59,6 +59,16 @@ class RSSCollector(BaseCollector):
                         if abs((pub_date - target_date).days) > 1:
                             continue
 
+                        # 鏡像 feed 會把日期戳與分類標籤黏進標題，且這些來源多走
+                        # pinned 免評分直接生成，污染標題會原樣進生成 prompt。
+                        title = clean_feed_title(entry.get("title", ""))
+                        if not title:
+                            _logger.debug(
+                                "Skipping entry: empty title after cleaning",
+                                extra={"feed": feed_name, "raw_title": entry.get("title", "")[:80]},
+                            )
+                            continue
+
                         article_url = entry.get("link", "")
                         abstract = self._extract_abstract(entry, article_url, client)
 
@@ -66,7 +76,7 @@ class RSSCollector(BaseCollector):
                             ContentItem(
                                 source=SourceType.RSS,
                                 source_name=feed_name,
-                                title=entry.get("title", ""),
+                                title=title,
                                 url=article_url,
                                 authors=[
                                     a.get("name", "") for a in entry.get("authors", [])
