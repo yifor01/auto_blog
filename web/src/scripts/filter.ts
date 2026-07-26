@@ -47,8 +47,36 @@ function debounce<T extends (...args: unknown[]) => void>(fn: T, ms: number): T 
   }) as T;
 }
 
+/**
+ * 綁在 window / document 上的 listener 專用。ClientRouter 軟導航只換 <body>，
+ * 這些全域 listener 不會隨舊 DOM 消失，因此每次 initFilter() 都先 abort 上一輪，
+ * 否則切 N 次 tab 就累積 N 組 keydown/hashchange handler。
+ * 掛在元素上的 listener 不需處理——那些元素本來就會被 swap 掉。
+ */
+let globalListeners: AbortController | null = null;
+
+let mounted = false;
+
+/**
+ * 列表頁的進入點。index.astro 與 curated.astro 共用同一個 module 實例，
+ * 各自呼叫時只會真正註冊一次，避免每次導航把 initFilter 跑兩遍。
+ * astro:page-load 首次載入也會觸發，所以不需另外呼叫 initFilter()。
+ */
+export function mountFilter(): void {
+  if (mounted) return;
+  mounted = true;
+  document.addEventListener('astro:page-load', initFilter);
+}
+
 export function initFilter(): void {
   const searchEl = document.getElementById('search') as HTMLInputElement | null;
+  // 非列表頁（trending / papers / 詳情頁）也會收到 astro:page-load，直接早退。
+  if (!searchEl && !document.querySelector('.post-item')) return;
+
+  globalListeners?.abort();
+  globalListeners = new AbortController();
+  const { signal } = globalListeners;
+
   const resetEl = document.getElementById('reset') as HTMLButtonElement | null;
   const resultCountEl = document.getElementById('result-count');
   const emptyEl = document.querySelector<HTMLElement>('.empty');
@@ -162,10 +190,14 @@ export function initFilter(): void {
   }
 
   // 同頁 hash 導航（如詳情頁 tag 連結回列表）不會 reload，需監聽重新套用
-  window.addEventListener('hashchange', () => {
-    readHash();
-    apply();
-  });
+  window.addEventListener(
+    'hashchange',
+    () => {
+      readHash();
+      apply();
+    },
+    { signal },
+  );
 
   const debouncedApply = debounce(apply, 150);
 
@@ -248,28 +280,32 @@ export function initFilter(): void {
     cursor = next;
   }
 
-  document.addEventListener('keydown', (e) => {
-    const target = e.target as HTMLElement;
-    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
-      if (e.key === 'Escape') (target as HTMLInputElement).blur();
-      return;
-    }
-    if (e.metaKey || e.ctrlKey || e.altKey) return;
-    if (e.key === '/') {
-      e.preventDefault();
-      searchEl?.focus();
-    } else if (e.key === 'j') {
-      moveCursor(1);
-    } else if (e.key === 'k') {
-      moveCursor(-1);
-    } else if (e.key === 'Enter' && cursor >= 0) {
-      const focused = document.querySelector<HTMLElement>('.post-item.kbd-focus a.post-link');
-      focused?.click();
-    } else if (e.key === 'b' && cursor >= 0) {
-      const focused = document.querySelector<HTMLElement>('.post-item.kbd-focus');
-      if (focused) toggleBm(focused);
-    }
-  });
+  document.addEventListener(
+    'keydown',
+    (e) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+        if (e.key === 'Escape') (target as HTMLInputElement).blur();
+        return;
+      }
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === '/') {
+        e.preventDefault();
+        searchEl?.focus();
+      } else if (e.key === 'j') {
+        moveCursor(1);
+      } else if (e.key === 'k') {
+        moveCursor(-1);
+      } else if (e.key === 'Enter' && cursor >= 0) {
+        const focused = document.querySelector<HTMLElement>('.post-item.kbd-focus a.post-link');
+        focused?.click();
+      } else if (e.key === 'b' && cursor >= 0) {
+        const focused = document.querySelector<HTMLElement>('.post-item.kbd-focus');
+        if (focused) toggleBm(focused);
+      }
+    },
+    { signal },
+  );
 
   readHash();
   apply();

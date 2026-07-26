@@ -48,6 +48,15 @@ class ContentItem(BaseModel):
 
         return to_traditional(v)
 
+    @field_validator("tags")
+    @classmethod
+    def _normalize_tags_to_traditional(cls, v: list[str]) -> list[str]:
+        """tags 同樣走 Layer A。漏掉這個，網站的 tag chip 會直接顯示
+        簡體（资讯 / 开源 / 科大讯飞），且 tag 篩選會把簡繁當成兩個不同標籤。"""
+        from src.utils import to_traditional
+
+        return [to_traditional(t) for t in v]
+
     def dedup_key(self) -> str:
         """用於去重的 key: 優先用 arxiv id, 否則用正規化後的 URL."""
         arxiv_id = self.raw_metadata.get("arxiv_id", "")

@@ -189,14 +189,21 @@ const dims = enrich
     }
   } catch {}
 
-  // 閱讀進度條
+  // 閱讀進度條。scroll 綁在 document 上，ClientRouter 軟導航（詳情頁→詳情頁）
+  // 不會清掉舊的，且舊 handler 會抓著已被 swap 掉的 fill 元素——每次先 abort 上一輪。
+  window.__apbScrollListener?.abort();
+  window.__apbScrollListener = new AbortController();
+
   const fill = document.getElementById('progress-fill');
   function onScroll() {
     const h = document.documentElement;
     const max = h.scrollHeight - h.clientHeight;
     fill.style.width = max > 0 ? `${(h.scrollTop / max) * 100}%` : '0%';
   }
-  document.addEventListener('scroll', onScroll, { passive: true });
+  document.addEventListener('scroll', onScroll, {
+    passive: true,
+    signal: window.__apbScrollListener.signal,
+  });
   onScroll();
 </script>
 

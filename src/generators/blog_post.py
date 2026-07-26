@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import date
 from pathlib import Path
 
@@ -15,13 +16,94 @@ from src.utils import (
     llm_chat,
     load_config,
     slugify,
-    to_traditional,
+    to_traditional_shape_only,
     today_str,
 )
 
 _logger = get_logger("generators.blog_post")
 
 ABSTRACT_MIN_LEN_FOR_GENERATION = 100
+
+# ──────────────────────────────────────────────────────────
+# 推理外洩 / 退化迴圈偵測
+# ──────────────────────────────────────────────────────────
+
+# 開頭就是英文推理＝把 chain-of-thought 當正文吐出來了。只比對開頭，
+# 正文中段引用英文（blockquote、論文原句）是正常的，不能誤殺。
+_COT_ENGLISH_OPENERS = re.compile(
+    r"^\W*(We (need|must|should|have|can)\b|I (need|should|will|must)\b|"
+    r"The user\b|Okay[,.]|Let me\b|Let's\b|First,|Sure[,.]|Here'?s (my|the) (plan|approach)\b)",
+    re.IGNORECASE,
+)
+
+# 模型自述分類 / 覆述指令，而不是寫文章。
+_COT_CHINESE_NARRATION = re.compile(
+    r"^\W*(這是一篇針對|根據您提供的(資訊|資料)|本文屬於|好的[，,]\s*我(將|會)|"
+    r"以下是我(為您|)(撰寫|整理))"
+)
+
+# system prompt 的小節標題外洩到正文＝模型在覆述指令。
+_SYSTEM_PROMPT_MARKERS = ("撰寫規範", "最高鐵則", "[SYSTEM]", "system message")
+
+_LOOP_NGRAM = 40
+_LOOP_STEP = 10
+_LOOP_UNIQUE_RATIO = 0.5
+
+
+def strip_reasoning_preamble(content: str) -> str:
+    """剝掉正文前面那句「這是一篇針對…型別的技術報導」自述。
+
+    實測 21 篇洩漏樣本中有 17 篇屬於這型：只有開頭一句是模型在自述分類，
+    後面是完整可用的文章。整篇丟掉重生成等於白燒一次額度，能剝就剝。
+
+    只在偵測到自述開頭、且後面找得到正文錨點（📌）時才切，避免誤傷。
+    """
+    if not content:
+        return content
+    stripped = content.lstrip()
+    if not _COT_CHINESE_NARRATION.search(stripped[:200]):
+        return content
+    marker = stripped.find("📌")
+    # 錨點必須在前段（自述句之後、正文開頭），太遠代表結構不是這一型。
+    if 0 < marker <= 400:
+        return stripped[marker:]
+    return content
+
+
+def looks_like_reasoning_leak(content: str) -> bool:
+    """content 是否為推理外洩或退化迴圈（True = 該丟棄，換下一個 model）。
+
+    針對實際觀察到的三種失效模式，全部來自免費 model：
+      1. 英文 CoT 當正文（"We need to produce a blog article..."）
+      2. 中文自述分類（"這是一篇針對「產業新聞」型別的技術報導。"）
+      3. degenerate repetition（同一片段重複數百次，檔案暴增到 20KB）
+
+    空字串回 False——空內容由 save_blog_post 既有的 guard 處理，不歸這裡管。
+    """
+    if not content or not content.strip():
+        return False
+
+    # 前綴可剝除的先剝再判——只有開頭一句髒、正文完好的不算洩漏。
+    content = strip_reasoning_preamble(content)
+
+    head = content.lstrip()[:200]
+    if _COT_ENGLISH_OPENERS.search(head) or _COT_CHINESE_NARRATION.search(head):
+        return True
+    if any(marker in content for marker in _SYSTEM_PROMPT_MARKERS):
+        return True
+
+    # 退化迴圈：把內容切成重疊 n-gram，唯一比例過低＝在原地打轉。
+    # 條列式文章雖有重複前綴，但每則內容不同，唯一比例仍接近 1。
+    body = "".join(content.split())
+    if len(body) >= _LOOP_NGRAM * 4:
+        grams = [
+            body[i : i + _LOOP_NGRAM]
+            for i in range(0, len(body) - _LOOP_NGRAM + 1, _LOOP_STEP)
+        ]
+        if grams and len(set(grams)) / len(grams) < _LOOP_UNIQUE_RATIO:
+            return True
+
+    return False
 
 BLOG_SYSTEM_PROMPT = """你是一位資深 AI 技術部落客，將 AI 研究論文、開源專案與產業新聞轉寫成繁體中文技術部落格文章。讀者是 AI/ML 工程師與研究者，他們要在幾分鐘內快速掌握「這是什麼、為何重要、技術上怎麼做」。
 
@@ -160,7 +242,9 @@ def generate_blog_post(item: ScoredItem) -> GeneratedContent:
 
 **內部選題角度（僅供你決定切入點，內容不一定正確，禁止當事實引用）**: {item.llm_reason}
 
-請先判斷內容類型（論文／開源專案／新聞），再依撰寫規範產出完整文章。"""
+請先判斷內容類型（論文／開源專案／新聞），再依撰寫規範產出完整文章。
+
+**判斷過程與任何前言都不要寫出來**：不要說明這屬於哪種型別、不要覆述指令、不要「以下是為您撰寫的文章」。輸出的第一個字元就必須是 📌，直接開始正文。"""
 
     full_prompt = f"[SYSTEM]\n{BLOG_SYSTEM_PROMPT}\n\n[USER]\n{user_msg}"
 
@@ -173,7 +257,14 @@ def generate_blog_post(item: ScoredItem) -> GeneratedContent:
         model=model,
         temperature=0.7,
         is_generation=True,
+        # 免費 model 偶發把 CoT 當正文吐出、或陷入退化迴圈。無法靠剝前綴救回的
+        # 才降級下一個 model（model 本身沒死，不 retire）。
+        validate=lambda c: not looks_like_reasoning_leak(c),
     )
+
+    # 通過 validate 但開頭仍帶一句自述的，在這裡剝掉（prompt 已要求不要寫，
+    # 免費 model 仍會偶發違反）。
+    content = strip_reasoning_preamble(content)
 
     return GeneratedContent(
         source_item=item,
@@ -194,7 +285,8 @@ def save_blog_post(gen: GeneratedContent, target_date: date | None = None, pinne
 
     # Layer B：生成端簡→繁。免費 LLM 偶發吐簡體字（如 Agnes 的「应」），
     # 寫檔前做最後攔截，與所有 model 一視同仁。
-    content = to_traditional(gen.content)
+    # 只修字形不動詞彙——套詞庫會把 Layer A 轉好的繁體詞再轉一次（文件→檔案）。
+    content = to_traditional_shape_only(gen.content)
 
     date_str = target_date.isoformat() if target_date else today_str()
     slug = slugify(gen.source_item.item.title)

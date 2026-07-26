@@ -5,6 +5,7 @@ from __future__ import annotations
 import itertools
 import json
 import os
+import re
 from datetime import date, datetime
 from pathlib import Path
 from typing import Callable
@@ -53,39 +54,84 @@ def load_config() -> dict:
 # ──────────────────────────────────────────────────────────
 
 _opencc_converter = None
+_opencc_shape_converter = None
 _opencc_unavailable = False
+
+# s2twp 的 TWPhrases 詞庫是為 Windows／一般軟體 UI 設計的，套進 AI/ML 語境會誤轉。
+# 這些是單次轉換就錯的詞（與雙層轉換無關），轉完後統一改回。
+# 只收「在本專案語境幾乎不可能是對的」的詞——會兩可的（元件 / 最佳化）不列入。
+_TERM_FIXES = {
+    "引數": "參數",  # 参数 parameter
+    "擴充套件": "擴展",  # 扩展 extension
+    "解除安裝": "卸載",  # 卸载 offload（非軟體 uninstall）
+    "區域性": "局部",  # 局部 local / partial
+    "繫結": "綁定",  # 绑定 binding
+    "控制元件": "控制項",  # 控件 widget
+}
+
+
+def _apply_term_fixes(text: str) -> str:
+    for wrong, right in _TERM_FIXES.items():
+        text = text.replace(wrong, right)
+    return text
+
+
+def _init_opencc() -> bool:
+    """Lazy 建立兩個 converter。回傳 False 代表 OpenCC 不可用（呼叫端原樣回傳）。"""
+    global _opencc_converter, _opencc_shape_converter, _opencc_unavailable
+    if _opencc_unavailable:
+        return False
+    if _opencc_converter is not None:
+        return True
+    try:
+        from opencc import OpenCC
+
+        _opencc_converter = OpenCC("s2twp")  # 字形 + 台灣慣用詞
+        _opencc_shape_converter = OpenCC("s2tw")  # 只有字形（台灣正字），不含詞庫
+        return True
+    except Exception as e:
+        _opencc_unavailable = True
+        _logger.warning(
+            "OpenCC unavailable, skipping 簡→繁 conversion",
+            extra={"error": str(e)[:160]},
+        )
+        return False
 
 
 def to_traditional(text: str) -> str:
-    """簡體中文 → 繁體中文（OpenCC s2twp：台灣正字 + 慣用詞轉換）。
+    """Layer A（來源端）：簡體 → 繁體，含台灣慣用詞轉換。
 
-    兩個用途：
-      - 來源端（Layer A）：量子位 / ChatPaper 等中國 source 的簡體 title/abstract。
-      - 生成端（Layer B）：免費 LLM 偶發吐出的簡體字（如 Agnes 的「应」）。
+    用於量子位 / ChatPaper 等中國 source 的 title / abstract / tags——這些欄位
+    整段都是簡體，需要詞彙級轉換（软件→軟體、内存→記憶體、插件→外掛）。
 
-    特性：
-      - 對純英文 / 已是繁中 / 空字串為冪等（OpenCC 只映射簡體字形，ASCII/URL/程式碼原樣通過）。
-      - OpenCC 未安裝或轉換失敗時，lazy 記 warning 後原樣回傳，絕不中斷 pipeline。
+    轉換後套 `_TERM_FIXES`，修掉 s2twp 在 AI/ML 語境的誤轉（参数→引數 等）。
+
+    **不要拿這個處理已是繁中的文字**——s2twp 對繁體不冪等（文件→檔案），
+    生成端請改用 `to_traditional_shape_only()`。
     """
-    global _opencc_converter, _opencc_unavailable
-    if not text or _opencc_unavailable:
+    if not text or not _init_opencc():
         return text
-    if _opencc_converter is None:
-        try:
-            from opencc import OpenCC
-
-            _opencc_converter = OpenCC("s2twp")
-        except Exception as e:
-            _opencc_unavailable = True
-            _logger.warning(
-                "OpenCC unavailable, skipping 簡→繁 conversion",
-                extra={"error": str(e)[:160]},
-            )
-            return text
     try:
-        return _opencc_converter.convert(text)
+        return _apply_term_fixes(_opencc_converter.convert(text))
     except Exception as e:
         _logger.debug("to_traditional failed", extra={"error": str(e)[:160]})
+        return text
+
+
+def to_traditional_shape_only(text: str) -> str:
+    """Layer B（生成端）：只修字形，不動詞彙。
+
+    LLM 產出的內容本來就該是繁中，Layer B 存在只為擦掉免費 model 偶發吐出的
+    簡體字（如 Agnes 的「应」）。若這裡也套 s2twp 的詞庫，會把 Layer A 已經
+    轉好的繁體詞再轉一次——「文档」→（A）「文件」→（B）「檔案」，這正是
+    站上「最新程式庫檔案餵進 LLM」的來源。s2tw 無詞庫，對繁體輸入冪等。
+    """
+    if not text or not _init_opencc():
+        return text
+    try:
+        return _apply_term_fixes(_opencc_shape_converter.convert(text))
+    except Exception as e:
+        _logger.debug("to_traditional_shape_only failed", extra={"error": str(e)[:160]})
         return text
 
 
@@ -688,7 +734,10 @@ def get_seen_urls(exclude_date: date | None = None, lookback_days: int | None = 
                         seen.add(normalize_url(url))
                     arxiv_id = item.get("raw_metadata", {}).get("arxiv_id", "")
                     if arxiv_id:
-                        seen.add(f"arxiv:{arxiv_id}")
+                        # 同樣要與 dedup_key() 對齊：arxiv collector 存的 id 帶版本
+                        # 後綴（2607.08772v1），hf_papers / semantic_scholar 不帶。
+                        # 少了這道正規化，兩側 key 永遠對不上＝arXiv 論文跨日去重全失效。
+                        seen.add(f"arxiv:{re.sub(r'v\d+$', '', arxiv_id)}")
         except Exception:
             continue
     return seen

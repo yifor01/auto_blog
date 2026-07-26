@@ -1,4 +1,6 @@
 ---
+import { ClientRouter } from 'astro:transitions';
+
 interface Props {
   title: string;
   description?: string;
@@ -15,6 +17,8 @@ const { title, description, wide = false } = Astro.props;
     <meta name="robots" content="noindex, nofollow" />
     {description && <meta name="description" content={description} />}
     <title>{title}</title>
+    {/* tab 切換改走軟導航：只換 <body>，不重載整頁（省下 CSS 重解析與白閃） */}
+    <ClientRouter />
   </head>
   <body>
     <div class="topbar"></div>
@@ -51,7 +55,9 @@ const { title, description, wide = false } = Astro.props;
         font-family: var(--sans);
         line-height: 1.75;
         -webkit-text-size-adjust: 100%;
-        scroll-behavior: smooth;
+        /* 不設 scroll-behavior: smooth——ClientRouter 導航後的捲軸重置會被它
+           變成「慢慢捲回頂」的動畫。需要平滑處（filter.ts 的 j/k）自帶
+           scrollIntoView({ behavior: 'smooth' })，不靠這條全域規則。 */
         /* 永遠保留捲軸槽，避免有/無捲軸頁面切換時內容橫向位移 */
         scrollbar-gutter: stable;
       }
