@@ -114,6 +114,56 @@ def _extract_arxiv_id(paper_url: str) -> str | None:
     return None
 
 
+def looks_unspaced(text: str) -> bool:
+    """判斷 abstract 是否為「空白被吃掉」的破損字串。
+
+    HF 論文頁把 abstract 拆成大量 text node，舊版用 get_text(strip=True)
+    解析會把節點間空白全部吃掉，整段變成一個無空白長字串。
+
+    why ASCII 比例門檻：中文摘要天生幾乎沒有空白，單看空白比會誤判。
+
+    why 不加「含 URL 就排除」的防呆：URL 堆疊的 HN 留言確實也會命中空白比
+    門檻（實測 hackernews 26 筆 / reddit 8 筆），但用 "/" 或 "http" 排除會
+    連帶誤殺 59/192 筆真實破損樣本（and/or、Hand-Object 都含 "/"）。
+    正確的防線是**呼叫端限定 source == hf_papers** —— 兩個呼叫點
+    （本檔的 arXiv fallback、src/repair.py）都在 HF 脈絡內，而 HF abstract
+    一律為英文散文。本函式對其他來源不保證正確，不可挪作通用判定。
+    """
+    if len(text) < 100:
+        return False
+    if sum(c.isascii() for c in text) / len(text) <= 0.9:
+        return False
+    return text.count(" ") / len(text) < 0.05
+
+
+def fetch_paper_abstract(client, paper_url: str) -> str:
+    """抓取 HF 論文頁的 abstract 原文；失敗回空字串。
+
+    why " ".join(get_text().split())：HF 論文頁的 abstract 被拆成逐字元
+    text node，get_text(strip=True) 會把節點間空白全部吃掉，get_text(" ")
+    則會變成每字元間插空白 —— 只能先取原文再正規化空白。
+    """
+    try:
+        resp = client.get(paper_url)
+        if resp.status_code != 200:
+            _logger.warning(
+                "Non-200 fetching HF paper page, skipping enrichment",
+                extra={"url": paper_url, "status_code": resp.status_code},
+            )
+            return ""
+        soup = BeautifulSoup(resp.text, "html.parser")
+        for p in soup.select("p"):
+            text = " ".join(p.get_text().split())
+            if len(text) > 100:  # 通常 abstract 都比較長
+                return text
+    except Exception as e:
+        _logger.debug(
+            "Failed to fetch HF paper abstract",
+            extra={"url": paper_url, "error": str(e)},
+        )
+    return ""
+
+
 def _fetch_arxiv_abstract(arxiv_id: str, client) -> str:
     """從 arXiv API 取得論文摘要。失敗時回傳空字串。"""
     try:
@@ -181,46 +231,30 @@ class HFPapersCollector(BaseCollector):
                 # 當日票數通常還沒累積，隔日由 backfill_hf_upvotes() 回補
                 upvotes = _parse_upvotes(article)
 
-                # 修改為去論文單獨頁面抓取 abstract
-                abstract = ""
-                try:
-                    p_resp = client.get(paper_url)
-                    if p_resp.status_code == 200:
-                        p_soup = BeautifulSoup(p_resp.text, "html.parser")
-                        ps = p_soup.select("p")
-                        for p in ps:
-                            # HF 論文頁的 abstract 被拆成逐字元 text node，get_text(strip=True)
-                            # 會把節點間空白全部吃掉（整段變成一個無空白長字串），
-                            # get_text(" ") 則會變成每字元間插空白 —— 只能先取原文再正規化空白
-                            text = " ".join(p.get_text().split())
-                            if len(text) > 100:  # 通常 abstract 都比較長
-                                abstract = text
-                                break
-                    else:
-                        _logger.warning(
-                            "Non-200 fetching HF paper page, skipping enrichment",
-                            extra={"url": paper_url, "status_code": p_resp.status_code},
-                        )
-                except Exception as e:
-                    _logger.debug(
-                        "Failed to fetch HF paper abstract",
-                        extra={"url": paper_url, "error": str(e)},
-                    )
-                
+                abstract = fetch_paper_abstract(client, paper_url)
+
                 # 如果還是抓不到，我們預設為標題
                 if not abstract:
                     abstract = f"AI Paper from HuggingFace Daily Papers: {title}"
 
-                # NEW: arXiv abstract enrichment
+                # arXiv abstract enrichment
+                # why 加 looks_unspaced：破損字串很長，只看 len < 100 會直接
+                # 繞過補救而靜默通過（2026-04~07 共 192 筆就是這樣漏掉的）
                 arxiv_id = _extract_arxiv_id(paper_url)
-                if len(abstract.strip()) < 100 and arxiv_id:
+                if (len(abstract.strip()) < 100 or looks_unspaced(abstract)) and arxiv_id:
                     _logger.debug("Attempting arXiv enrichment", extra={"arxiv_id": arxiv_id})
                     arxiv_abstract = _fetch_arxiv_abstract(arxiv_id, client)
                     if arxiv_abstract:
                         abstract = arxiv_abstract
-                        _logger.info("arXiv enrichment succeeded", extra={"arxiv_id": arxiv_id, "abstract_len": len(abstract)})
+                        _logger.info(
+                            "arXiv enrichment succeeded",
+                            extra={"arxiv_id": arxiv_id, "abstract_len": len(abstract)},
+                        )
                     else:
-                        _logger.warning("arXiv enrichment failed, keeping fallback", extra={"arxiv_id": arxiv_id})
+                        _logger.warning(
+                            "arXiv enrichment failed, keeping fallback",
+                            extra={"arxiv_id": arxiv_id},
+                        )
 
                 # Sleep briefly to be nice to the server
                 time.sleep(_ENRICH_DELAY_SECONDS)
