@@ -11,13 +11,13 @@
 - Astro 靜態站 `/daily/<id>`（`web/src/pages/daily/[slug].astro`）
 - Web Monitor `/post/<date>/<slug>`（`src/web/templates/post_view.html`）
 
-同時修復 HuggingFace 論文摘要的歷史破損資料（見第 4 節）。
+同時修復兩批會直接在 box 裡露出來的髒資料：HuggingFace 論文摘要的空白遺失（第 4 節）、跨來源的 HTML entity 未解碼（第 5 節）。
 
 ## 非目標
 
 - 不做「LLM 生成 vs 原始摘要」的差異標示（YAGNI，肉眼比對已足夠）
 - 不改 `/papers/<slug>`、`/trending/<slug>`——它們本來就直接攤平顯示原文
-- 不改 collector 抓取邏輯（HF 解析已於 commit `2c7cd40` 修正並實測通過）
+- 不改 HF 抓取解析邏輯（已於 commit `2c7cd40` 修正並實測通過，見 §4）
 
 ## 1. 資料層
 
@@ -100,7 +100,7 @@ Build 成本：30 個檔約 8.2MB JSON parse，一次性，可接受。
 
 同款 `<details>`，欄位與第 1.3 節一致。樣式跟隨 monitor 既有的 inline style 慣例，**不共用 Astro 的 CSS**——兩個前端本來就沒有共用樣式層，硬抽反而增加耦合。
 
-## 4. HF 摘要歷史資料修復
+## 4. HF 摘要空白遺失（黏字）
 
 ### 問題
 
@@ -115,24 +115,15 @@ Build 成本：30 個檔約 8.2MB JSON parse，一次性，可接受。
 - `data/raw` 全期 **192 筆**（最早 2026-04-16）
 - `output/lists` 近 30 天 `papers.hf` **46/46 全破** ← 線上 `/papers/<slug>` 目前顯示的就是這批
 
-### 新增 CLI `repair-abstracts`
-
-判定式（同時作為修復目標的篩選條件）：
+### 修復判定式
 
 ```
 source == "hf_papers" and len(abstract) > 100 and abstract.count(" ") / len(abstract) < 0.05
 ```
 
-行為：
+**必須限定 `source == hf_papers`**。全來源掃描時這條式子在 `hackernews`（26 筆）和 `reddit`（8 筆）會誤判——那些內容本來就是整串 URL 與 markdown 連結，空白天生就少。中文摘要同理。
 
-1. 掃 `data/raw/*.json` 找出破損項目
-2. 重抓論文頁解析（現行 `hf_papers.py` 邏輯）
-3. 抓取失敗或結果仍判定為破損 → 走 arXiv fallback
-4. 兩者皆失敗 → 保留原值、記 warning，不寫入
-5. 同步覆寫 `output/lists/*.json` 的 `papers.hf[].abstract`（以 URL 比對）
-6. 無任何項目變更則不寫檔（與 `src/backfill.py` 的既有慣例一致）
-
-參數：`--days N`（預設全期，192 筆量體不大）、`--dry-run`。
+修復動作見 §6 的 `repair-content` CLI。
 
 ### 順手補的防呆
 
@@ -142,9 +133,64 @@ source == "hf_papers" and len(abstract) > 100 and abstract.count(" ") / len(abst
 if (len(abstract.strip()) < 100 or _looks_unspaced(abstract)) and arxiv_id:
 ```
 
-`_looks_unspaced()` 與 `repair-abstracts` 共用同一個判定函式，放在 `hf_papers.py` 匯出。
+`_looks_unspaced()` 放在 `hf_papers.py` 匯出，與 `repair-content` 共用同一個判定函式。
 
-## 5. 錯誤處理總表
+## 5. HTML entity 未解碼
+
+### 問題
+
+多個 collector 把來源的 HTML 原文直接塞進 `ContentItem`，entity 沒解碼。實測分佈：
+
+| 來源.欄位 | 未解碼 / 總數 | 範例 |
+|---|---|---|
+| `hackernews.abstract` | 269 / 1780 | `&#x27;`、`https:&#x2F;&#x2F;x.com` |
+| `rss.title` | 58 / 2919 | `Spotify&#8217;s Prompted Playlists` |
+| `reddit.abstract` | 6 / 101 | `&gt;` |
+| `semantic_scholar.abstract` | 1 / 970 | `&amp;` |
+| `newsapi.abstract` | 1 / 32 | `&nbsp;` |
+
+`rss.title` 這批**已經洩漏到成品**：`output/posts` 有 4 篇的 frontmatter `title:` 帶著 `&#8217;`，線上直接可見。
+
+與本功能的關聯：box 一攤開，`hackernews` 那 269 筆的 `&#x2F;&#x2F;` 會整片露出來。
+
+### 修法：收斂到 `ContentItem` validator
+
+`src/models.py` 的 `_normalize_to_traditional`（title / abstract）與 `_normalize_tags_to_traditional`（tags）已經是 Layer A 的唯一收斂點。在同一處、**`to_traditional()` 之前**加 `html.unescape()`：
+
+```python
+return to_traditional(html.unescape(v))
+```
+
+一改覆蓋所有來源與所有欄位，不必逐個 collector 修。
+
+順序理由：先解碼再轉繁。`&#8217;` 解碼後是 `'`（ASCII 標點），OpenCC 不動它；反過來則是把 entity 字面餵給 OpenCC，雖然目前不會出錯，但語意上是拿未解碼的髒字串當輸入。
+
+**已知取捨**：`html.unescape()` 只做一輪，`&amp;amp;` 會變成 `&amp;` 而非 `&`。來源若真的雙重轉義，這裡不處理——實測資料中沒有這種案例，不預先加複雜度。
+
+## 6. 歷史資料修復 CLI `repair-content`
+
+一支 CLI 同時處理 §4 的 HF 黏字與 §5 的 entity，避免把同一批檔案改兩遍。
+
+### 修復範圍
+
+| 目標 | 動作 |
+|---|---|
+| `data/raw/*.json` | HF 黏字 → 重抓；所有來源 title/abstract/tags → `html.unescape()` |
+| `output/lists/*.json` | `papers.hf[].abstract` 以 URL 比對同步覆寫；title/abstract 解碼 |
+| `output/posts/*.md` | **只改 frontmatter 的 `title:` 行**，body 不動 |
+
+HF 黏字的重抓流程：重抓論文頁（現行 `hf_papers.py` 解析）→ 失敗或結果仍判定為破損則走 arXiv fallback → 兩者皆失敗則保留原值、記 warning，不中斷整批。
+
+### 刻意不做的事
+
+- **不改檔名**。`sam-altman8217s-orb` 這種被污染的 slug 就是 Astro 的頁面 id，改名等於改 URL、打斷既有連結與 `apb-read` localStorage 記錄。只修 frontmatter 的顯示標題。
+- **不解碼 post body**。body 是 LLM 生成的 markdown，可能含程式碼區塊，裡面的 `&amp;` 有可能是字面意義。實測 4 篇受影響檔案的 entity 全部只出現在 `title:` 行，沒有動 body 的必要。
+
+### 參數與慣例
+
+`--days N`（預設全期）、`--dry-run`。無任何項目變更則不寫檔，與 `src/backfill.py` 既有慣例一致。
+
+## 7. 錯誤處理總表
 
 | 情境 | 行為 |
 |------|------|
@@ -153,18 +199,19 @@ if (len(abstract.strip()) < 100 or _looks_unspaced(abstract)) and arxiv_id:
 | post URL 在 raw 查無 | 該頁不渲染 box |
 | `abstract` 為空 | 渲染 box，該欄顯示「（來源未提供摘要）」 |
 | Monitor：`note_view` 走同一 template | 不傳 `raw_item`，box 不渲染 |
-| `repair-abstracts` 重抓失敗 | 保留原值 + warning，不中斷整批 |
+| `repair-content` HF 重抓失敗 | 保留原值 + warning，不中斷整批 |
 
-## 6. 測試
+## 8. 測試
 
 - `loadRaw()`：URL 正規化比對、缺目錄降級、只讀近 30 天
 - `get_raw_by_url()`：命中 / 查無 / URL 尾斜線差異
-- `_looks_unspaced()`：破損字串、正常英文摘要、中文摘要（**中文摘要幾乎沒有空白，必須不被誤判**——判定式須限定 `source == hf_papers`，而 HF abstract 一律為英文）
-- `repair-abstracts --dry-run`：不寫檔
-- 端對端：`npm run build` 後開實際頁面確認 box 展開正常，含一篇 pinned 文（驗證 scored 缺口確實由 raw 補上）
+- `_looks_unspaced()`：破損字串、正常英文摘要、中文摘要、整串 URL 的 HN 留言（後三者**必須都判為正常**，這是實測撞到的誤判來源）
+- `ContentItem` entity 解碼：`&#8217;` / `&#x2F;` / `&amp;` / `&nbsp;` 各一例；已解碼字串冪等；**簡體 + entity 混合**（驗證解碼與 OpenCC 轉繁的順序正確）
+- `repair-content --dry-run`：不寫檔
+- 端對端：`npm run build` 後開實際頁面確認 box 展開正常，含一篇 pinned 文（驗證 scored 缺口確實由 raw 補上）、一篇 hackernews 來源（驗證 entity 已解碼）
 
-## 7. Commit 切分
+## 9. Commit 切分
 
 1. **feat**：`raw.ts` + Astro box + monitor box + `get_raw_by_url` + 測試
-2. **fix**：`hf_papers.py` 防呆 + `repair-abstracts` CLI + 測試
-3. **chore**：`repair-abstracts` 產生的 `data/` / `output/` 資料修正（**獨立 commit**，diff 量大，不與程式碼混在一起）
+2. **fix**：`ContentItem` entity 解碼 + `hf_papers.py` 防呆 + `repair-content` CLI + 測試
+3. **chore**：`repair-content` 產生的 `data/` / `output/` 資料修正（**獨立 commit**，diff 量大，不與程式碼混在一起）
