@@ -167,7 +167,10 @@ python -m src.cli list --days 7        # 列出最近 7 天產出的文章清單
 python -m src.cli show output/posts/2026-02-28_slug.md  # 在終端機預覽文章
 python -m src.cli clean --keep-days 30  # 清理 30 天前的過期資料
 python -m src.cli catchup --days 7     # 補跑最近 N 天中遺漏的日期
+python -m src.cli backfill-votes        # 回補前一天的 HF 論文票數並重排清單
 ```
+
+> `backfill-votes` 平常不需手動跑——論文剛發布時票數還沒累積，`run` 收集完會自動回補前一天。只有在想補更早的日期時才用（`--date 2026-07-25 --days 3`）。
 
 ### 每日摘要
 
