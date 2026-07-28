@@ -343,6 +343,25 @@ def backfill_votes(
         console.print(f"[bold green]✅ 共更新 {changed} 篇論文票數[/bold green]")
 
 
+@app.command(name="repair-content")
+def repair_content(
+    days: int = typer.Option(None, "--days", "-n", help="只修最近 N 天（預設全期）"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="只報告不寫檔"),
+):
+    """修復歷史資料：HF 摘要黏字重抓 + 跨來源 HTML entity 解碼。"""
+    from src.repair import repair_all
+
+    stats = repair_all(days=days, dry_run=dry_run)
+    console.print(
+        f"HF 重抓成功 [green]{stats['hf_refetched']}[/green] / "
+        f"失敗 [yellow]{stats['hf_failed']}[/yellow]，"
+        f"entity 修正 [green]{stats['entities_fixed']}[/green] 處，"
+        f"寫入 [bold]{stats['files_written']}[/bold] 個檔案"
+    )
+    if dry_run:
+        console.print("[yellow]--dry-run：未寫入任何檔案[/yellow]")
+
+
 @app.command(name="analyze-scores")
 def analyze_scores(
     target_date: str = typer.Option(None, "--date", "-d", help="目標日期 (YYYY-MM-DD), 預設今天"),
