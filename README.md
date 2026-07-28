@@ -168,9 +168,13 @@ python -m src.cli show output/posts/2026-02-28_slug.md  # 在終端機預覽文�
 python -m src.cli clean --keep-days 30  # 清理 30 天前的過期資料
 python -m src.cli catchup --days 7     # 補跑最近 N 天中遺漏的日期
 python -m src.cli backfill-votes        # 回補前一天的 HF 論文票數並重排清單
+python -m src.cli repair-content --dry-run  # 清點歷史髒資料規模（不連網、不寫檔）
+python -m src.cli repair-content --days 30  # 實際修復最近 30 天
 ```
 
 > `backfill-votes` 平常不需手動跑——論文剛發布時票數還沒累積，`run` 收集完會自動回補前一天。只有在想補更早的日期時才用（`--date 2026-07-25 --days 3`）。
+
+> `repair-content` 是一次性的歷史資料修復：把 HF 摘要空白被吃掉的黏字（重抓論文頁，失敗則走 arXiv fallback）與跨來源未解碼的 HTML entity 補回來，範圍涵蓋 `data/raw`、`output/lists`、`output/posts`（posts **只改 frontmatter 的 `title:` 行**，body 與檔名都不動）。**務必先跑 `--dry-run` 確認規模**——它完全不連網，只清點候選數。實跑時每次 HTTP 前會節流 0.5 秒，全期約 200 筆需數分鐘；修不好的項目保留原值並記 warning，可重跑補齊。
 
 ### 每日摘要
 
