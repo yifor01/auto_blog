@@ -86,8 +86,8 @@ Build 成本：30 個檔約 8.2MB JSON parse，一次性，可接受。
 
 新增 `get_raw_by_url(date_str: str, url: str) -> dict | None`：
 
-- 沿用既有的 `get_day_raw_items(d)` 讀當日 raw
-- URL 正規化須與 Astro 端 `normalizeUrl` 行為一致（去尾斜線、`http:` → `https:`）
+- **不重用 `get_day_raw_items(d)`**——那支丟掉了 `organization` 與 `raw_metadata`，而 box 需要機構與 `upvotes` / `stars_today` 等天然訊號。直接讀當日 raw JSON
+- URL 正規化須與 Astro 端 `normalizeUrl` 行為一致（去尾斜線、`http:` → `https:`）。**不要用 `src/utils.py` 的 `normalize_url()`**——那支為去重設計，會排序 query、去 `www.`，兩端來源相同時只會徒增不一致風險
 - post 的日期即 raw 的日期，只查當日；查無回 `None`
 
 ### `app.py`
@@ -118,10 +118,17 @@ Build 成本：30 個檔約 8.2MB JSON parse，一次性，可接受。
 ### 修復判定式
 
 ```
-source == "hf_papers" and len(abstract) > 100 and abstract.count(" ") / len(abstract) < 0.05
+source == "hf_papers"
+  and len(abstract) > 100
+  and ascii 比例 > 0.9              # 擋掉中文摘要（天生幾乎沒有空白）
+  and abstract.count(" ") / len(abstract) < 0.05
 ```
 
-**必須限定 `source == hf_papers`**。全來源掃描時這條式子在 `hackernews`（26 筆）和 `reddit`（8 筆）會誤判——那些內容本來就是整串 URL 與 markdown 連結，空白天生就少。中文摘要同理。
+實測命中 **hf_papers 192/192**，與人工清點的破損數完全吻合。
+
+**必須限定 `source == hf_papers`**。全來源掃描時這條式子在 `hackernews`（26 筆）和 `reddit`（8 筆）會誤判——那些內容本來就是整串 URL 與 markdown 連結，空白天生就少。
+
+**但不可改用「含 `/` 或 `http` 就排除」當防呆**：真實破損樣本 **59/192 含 `/`**（`and/or`、`Hand-Object`），這樣寫會漏掉 31% 的修復目標。唯一正確的防線是呼叫端的 source 限定。
 
 修復動作見 §6 的 `repair-content` CLI。
 
@@ -130,10 +137,10 @@ source == "hf_papers" and len(abstract) > 100 and abstract.count(" ") / len(abst
 `hf_papers.py:216` 的 arXiv fallback 觸發條件目前是 `len(abstract.strip()) < 100`。破損字串很長，會直接繞過補救而靜默通過。改為：
 
 ```
-if (len(abstract.strip()) < 100 or _looks_unspaced(abstract)) and arxiv_id:
+if (len(abstract.strip()) < 100 or looks_unspaced(abstract)) and arxiv_id:
 ```
 
-`_looks_unspaced()` 放在 `hf_papers.py` 匯出，與 `repair-content` 共用同一個判定函式。
+`looks_unspaced()` 放在 `hf_papers.py` 匯出，與 `repair-content` 共用同一個判定函式。
 
 ## 5. HTML entity 未解碼
 
@@ -205,7 +212,8 @@ HF 黏字的重抓流程：重抓論文頁（現行 `hf_papers.py` 解析）→ 
 
 - `loadRaw()`：URL 正規化比對、缺目錄降級、只讀近 30 天
 - `get_raw_by_url()`：命中 / 查無 / URL 尾斜線差異
-- `_looks_unspaced()`：破損字串、正常英文摘要、中文摘要、整串 URL 的 HN 留言（後三者**必須都判為正常**，這是實測撞到的誤判來源）
+- `looks_unspaced()`：破損字串、**含 `/` 的破損字串**（真實樣本 59/192 含 `and/or`、`Hand-Object`，早期版本用「含 `/` 就排除」當防呆會誤殺這批）、正常英文摘要、中文摘要
+- **URL 堆疊的 HN 留言不由 `looks_unspaced()` 擋**，改由呼叫端的 `source == hf_papers` 限定擋掉——測在 `repair_all()` 層級（給一筆 unspaced 的 hackernews 項目，斷言不觸發重抓）
 - `ContentItem` entity 解碼：`&#8217;` / `&#x2F;` / `&amp;` / `&nbsp;` 各一例；已解碼字串冪等；**簡體 + entity 混合**（驗證解碼與 OpenCC 轉繁的順序正確）
 - `repair-content --dry-run`：不寫檔
 - 端對端：`npm run build` 後開實際頁面確認 box 展開正常，含一篇 pinned 文（驗證 scored 缺口確實由 raw 補上）、一篇 hackernews 來源（驗證 entity 已解碼）
