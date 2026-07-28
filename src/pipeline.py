@@ -582,6 +582,14 @@ def run_pipeline(
     # 清單型來源（Trending/Papers）每日清單（零 LLM）——collect 後即產出
     build_lists(items, d)
 
+    # 前一天的論文票數此時才沉澱下來，回頭補一次並重排（單次 HTTP，失敗不影響本次 run）
+    try:
+        from src.backfill import backfill_recent
+
+        backfill_recent(d, days=1)
+    except Exception as e:
+        _logger.warning("Upvote backfill failed", extra={"date": str(d), "error": str(e)})
+
     _t0 = _time.time()
     _logger.info("Stage started", extra={"pipeline_stage": "score", "stage_action": "start"})
     top_items = score_items(items, d)

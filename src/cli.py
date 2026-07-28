@@ -326,6 +326,23 @@ def digest(
     console.print(f"[bold green]✅ 每日摘要已生成: {path}[/bold green]")
 
 
+@app.command(name="backfill-votes")
+def backfill_votes(
+    target_date: str = typer.Option(None, "--date", "-d", help="基準日期 (YYYY-MM-DD), 預設今天"),
+    days: int = typer.Option(1, "--days", "-n", help="回補基準日之前 N 天（預設只補前一天）"),
+):
+    """回補 HF 論文票數並重排當日清單（論文剛發布時票數還沒累積）。"""
+    from src.backfill import backfill_recent
+
+    d = _parse_date(target_date)
+    results = backfill_recent(d, days=days)
+    changed = sum(r["changed"] for r in results)
+    if changed == 0:
+        console.print("[yellow]沒有票數需要更新（無 raw 資料 / 日期對不上 / 票數未變）[/yellow]")
+    else:
+        console.print(f"[bold green]✅ 共更新 {changed} 篇論文票數[/bold green]")
+
+
 @app.command(name="analyze-scores")
 def analyze_scores(
     target_date: str = typer.Option(None, "--date", "-d", help="目標日期 (YYYY-MM-DD), 預設今天"),
