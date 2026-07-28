@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 import re
 from datetime import date, datetime
 from enum import Enum
@@ -40,13 +41,19 @@ class ContentItem(BaseModel):
     @field_validator("title", "abstract")
     @classmethod
     def _normalize_to_traditional(cls, v: str) -> str:
-        """Layer A：來源端簡→繁。量子位 / ChatPaper 等中國 source 的簡體
-        title/abstract 在建構時就轉繁，一改全下游受惠（raw/scored JSON、
-        blog frontmatter title、digest、web UI）。對英文/繁中為冪等。"""
+        """Layer A：來源端 HTML entity 解碼 + 簡→繁。量子位 / ChatPaper 等
+        中國 source 的簡體 title/abstract 在建構時就轉繁，一改全下游受惠
+        （raw/scored JSON、blog frontmatter title、digest、web UI）。
+        對英文/繁中為冪等。
+
+        why 先 unescape 再轉繁：&#8217; 解碼後是 ASCII 標點，OpenCC 不動它；
+        反過來則是拿未解碼的髒字串餵 OpenCC。RSS 有 58 筆 title、
+        hackernews 有 269 筆 abstract 帶著未解碼 entity。
+        """
         # 區域 import 避免 utils <-> models 潛在循環依賴
         from src.utils import to_traditional
 
-        return to_traditional(v)
+        return to_traditional(html.unescape(v))
 
     @field_validator("tags")
     @classmethod
@@ -55,7 +62,7 @@ class ContentItem(BaseModel):
         簡體（资讯 / 开源 / 科大讯飞），且 tag 篩選會把簡繁當成兩個不同標籤。"""
         from src.utils import to_traditional
 
-        return [to_traditional(t) for t in v]
+        return [to_traditional(html.unescape(t)) for t in v]
 
     def dedup_key(self) -> str:
         """用於去重的 key: 優先用 arxiv id, 否則用正規化後的 URL."""
