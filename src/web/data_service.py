@@ -8,7 +8,11 @@ from datetime import date, timedelta
 from pathlib import Path
 
 from src.logger import get_logger
-from src.models import ContentItem, ScoredItem, item_from_raw
+# item_from_raw / scored_from_raw：讀 data/raw 與 data/scored 一律走它們無損還原。
+# 直接 ContentItem(**raw) / ScoredItem(**rec) 會重複套用 Layer A 的 s2twp（對繁體
+# 刻意不冪等），本模組每一頁都是給人看的文字，漂移會直接顯示在素材庫列表、搜尋
+# 結果與主題頁上——且與同頁直接讀 raw 的「原始資料 box」自相矛盾。
+from src.models import ContentItem, ScoredItem, item_from_raw, scored_from_raw
 from src.utils import NOTES_DIR, POSTS_DIR, RAW_DIR, SCORED_DIR, FEEDBACK_DIR, HEALTH_DIR, DIGESTS_DIR, BLOGS_DIR, LISTS_DIR, DATA_DIR, load_json, normalize_url_light, save_json, slugify
 
 _logger = get_logger("web.data_service")
@@ -143,7 +147,7 @@ def get_week_top_items(days: int = 7, top_k: int = 5) -> list[dict]:
 
         for idx, raw in enumerate(data):
             try:
-                item = ScoredItem(**raw)
+                item = scored_from_raw(raw)
                 title_slug = slugify(item.item.title)
                 matched_blog_slug = next(
                     (bs for bts, bs in blog_entries if _slug_matches(bts, title_slug)),
@@ -211,7 +215,7 @@ def get_day_items(d: date) -> list[dict]:
     items = []
     for idx, raw in enumerate(data):
         try:
-            item = ScoredItem(**raw)
+            item = scored_from_raw(raw)
             items.append(_serialize_scored_item(idx, item))
         except Exception:
             _logger.debug("Skipping malformed scored item", extra={"date": d.isoformat(), "index": idx})
@@ -236,7 +240,7 @@ def get_all_day_items(d: date) -> list[dict]:
         if isinstance(scored_data, list):
             for idx, raw_scored in enumerate(scored_data):
                 try:
-                    si = ScoredItem(**raw_scored)
+                    si = scored_from_raw(raw_scored)
                     scored_by_url[si.item.url] = _serialize_scored_item(idx, si)
                 except Exception:
                     _logger.debug("Skipping malformed scored item", extra={"date": d.isoformat(), "index": idx})
@@ -512,7 +516,7 @@ def get_item_detail(d: date, index: int) -> dict | None:
         return None
 
     try:
-        item = ScoredItem(**data[index])
+        item = scored_from_raw(data[index])
     except Exception:
         return None
 
@@ -596,7 +600,7 @@ def _load_scored_for_date(date_str: str) -> dict[str, dict]:
     if isinstance(data, list):
         for raw in data:
             try:
-                item = ScoredItem(**raw)
+                item = scored_from_raw(raw)
                 result[item.item.title] = {
                     "novelty": item.novelty,
                     "impact": item.impact,
@@ -1025,7 +1029,7 @@ def list_all_materials(days: int = 90) -> list[dict]:
 
         for idx, raw in enumerate(data):
             try:
-                item = ScoredItem(**raw)
+                item = scored_from_raw(raw)
             except Exception:
                 continue
 
@@ -1210,7 +1214,7 @@ def get_dashboard_charts(days: int = 30) -> dict:
                 daily_total = 0
                 for raw in data:
                     try:
-                        item = ScoredItem(**raw)
+                        item = scored_from_raw(raw)
                         total = item.rule_score + (item.llm_score or 0)
                         daily_total += total
                         src = item.item.source_name or item.item.source.value
@@ -1283,7 +1287,7 @@ def build_search_index() -> None:
             continue
         for idx, raw in enumerate(data):
             try:
-                item = ScoredItem(**raw)
+                item = scored_from_raw(raw)
             except Exception:
                 continue
             total = item.rule_score + (item.llm_score or 0)
@@ -1601,7 +1605,7 @@ def cluster_topics(days: int = 30) -> dict:
 
         for idx, raw in enumerate(data):
             try:
-                item = ScoredItem(**raw)
+                item = scored_from_raw(raw)
             except Exception:
                 continue
             searchable = " ".join([

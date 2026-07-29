@@ -15,7 +15,7 @@ from rich.markdown import Markdown
 from rich.table import Table
 
 from src.logger import get_logger, setup_logging
-from src.models import ScoredItem
+from src.models import ScoredItem, scored_from_raw
 from src.pipeline import (
     get_pipeline_state,
     get_raw_path,
@@ -133,7 +133,9 @@ def summary(
         return
 
     scored_data = load_json(scored_path)
-    items = [ScoredItem(**item) for item in scored_data]
+    # scored_from_raw：讀 scored 一律無損還原，否則摘要表格顯示的標題會比
+    # data/scored 多套一次 s2twp
+    items = [scored_from_raw(item) for item in scored_data]
     print_summary(items)
 
 
@@ -320,7 +322,8 @@ def digest(
         raise typer.Exit(1)
 
     scored_data = load_json(scored_path)
-    items = [ScoredItem(**item) for item in scored_data]
+    # scored_from_raw：digest 是寫檔輸出，重建誤差會直接固化進 output/digests
+    items = [scored_from_raw(item) for item in scored_data]
 
     path = generate_and_save_digest(items, d)
     console.print(f"[bold green]✅ 每日摘要已生成: {path}[/bold green]")

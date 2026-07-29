@@ -104,7 +104,16 @@ def item_from_raw(raw: dict) -> ContentItem:
     是已解碼的成品，讀取端的職責是**無損還原**而非二次清洗；歷史髒資料由
     `repair-content` 負責（`data/raw` 的 entity 已於該指令實跑後歸零）。
     """
-    item = ContentItem(**raw)
+    return _restore_layer_a(ContentItem(**raw), raw)
+
+
+def _restore_layer_a(item: ContentItem, raw: dict) -> ContentItem:
+    """把 Layer A validator 改寫過的欄位，就地還原成 `raw` 裡的存檔原值。
+
+    `item_from_raw()` 與 `scored_from_raw()` 共用的唯一還原實作——兩者只差在
+    去哪裡撈那份 dict（後者要往內鑽一層 `raw["item"]`）。抽出來是為了讓
+    `_LAYER_A_FIELDS` 日後增修時兩條路徑不可能只改到一邊。
+    """
     for field in _LAYER_A_FIELDS:
         if field not in raw:
             continue
@@ -146,6 +155,35 @@ class ScoredItem(BaseModel):
         if self.llm_score is not None:
             return self.rule_score + self.llm_score
         return self.rule_score
+
+
+def scored_from_raw(raw: dict) -> ScoredItem:
+    """從 `data/scored` 的既有 dict 重建 ScoredItem，且**不重複套用 Layer A**。
+
+    `item_from_raw()` 的同構版本：`ScoredItem` 內嵌一個 `item: ContentItem`，
+    所以 `ScoredItem(**rec)` 會連帶再跑一次 Layer A validator，症狀與直接
+    `ContentItem(**raw)` 完全相同（「這個文件的參數」→「這個檔案的參數」、
+    tags 的「高性價比」→「高價效比」）。每讀一次 `data/scored` 就漂一格，而
+    素材庫列表 / 搜尋索引 / 主題頁全都經由這條路徑，與同頁直接讀 `data/raw`
+    的「原始資料 box」並列時，同一段文字會顯示不一致。
+
+    寫回路徑更要命：`pipeline.score_incremental()` 是讀-改-寫，`--supplement`
+    一跑就把漂移永久固化進 `data/scored`（Web Monitor 啟動時對當天自動走
+    `--supplement`，開一次 dashboard 就觸發一次）。故該處除了改走本函式，
+    寫回也沿用原始 dict——比照 `backfill` / `supplement_items` 的做法。
+
+    相容性：舊版 JSON 的 `relevance` → `trending` 由 `_migrate_relevance`
+    （`mode="before"` 的 model_validator）處理。這裡走完整建構所以該遷移照常
+    生效；還原只碰內嵌 item 的 `_LAYER_A_FIELDS`，不觸及評分欄位。
+
+    `raw` 缺 `item` 鍵時直接讓 `ScoredItem(**raw)` 拋 ValidationError（呼叫端
+    多半已包 try/except 跳過爛資料），不在這裡吞掉。
+    """
+    scored = ScoredItem(**raw)
+    nested = raw.get("item")
+    if isinstance(nested, dict):
+        _restore_layer_a(scored.item, nested)
+    return scored
 
 
 class GeneratedContent(BaseModel):

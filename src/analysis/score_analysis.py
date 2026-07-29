@@ -17,7 +17,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from src.models import ScoredItem
+from src.models import ScoredItem, scored_from_raw
 
 # ──────────────────────────────────────────────────────────
 # 常數
@@ -207,7 +207,9 @@ def load_day_items(scored_dir: Path, target_date: date) -> list[ScoredItem]:
     items = []
     for d in raw:
         try:
-            items.append(ScoredItem(**d))
+            # scored_from_raw：讀 scored 一律無損還原（analyze-scores 只看數字，
+            # 但保持單一讀取路徑，才不會有人照這裡的寫法複製到會輸出文字的地方）
+            items.append(scored_from_raw(d))
         except Exception:
             continue
     return items

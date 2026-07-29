@@ -25,7 +25,7 @@ from rich.table import Table
 
 from src.lists import LIST_SOURCES, build_lists, get_lists_path
 from src.logger import get_logger
-from src.models import ContentItem, ScoredItem, SourceType, item_from_raw
+from src.models import ContentItem, ScoredItem, SourceType, item_from_raw, scored_from_raw
 from src.pinned import select_pinned, to_pinned_scored
 from src.scoring.rules import batch_rule_score
 from src.scoring.scorer import batch_llm_score
@@ -336,7 +336,10 @@ def score_incremental(
         return score_items(all_items, target_date)
 
     scored_data = load_json(scored_path)
-    existing_scored = [ScoredItem(**item) for item in scored_data]
+    # scored_from_raw：這裡是讀-改-寫，直接 ScoredItem(**item) 會讓每次
+    # --supplement 都把 Layer A 的 s2twp 再套一輪並寫回，漂移就此永久固化
+    # （Web Monitor 啟動時對當天自動走 --supplement，開一次 dashboard 就一次）
+    existing_scored = [scored_from_raw(item) for item in scored_data]
     scored_urls = {si.item.dedup_key() for si in existing_scored}
 
     # 找出新增的 items
@@ -360,13 +363,19 @@ def score_incremental(
     new_rule_passed = batch_rule_score(new_items, config)
     new_scored = batch_llm_score(new_rule_passed, config) if new_rule_passed else []
 
-    # 合併排名
-    merged = existing_scored + new_scored
-    merged.sort(key=lambda x: x.total_score, reverse=True)
+    # 合併排名。(寫回 payload, ScoredItem) 成對搬移：既有項目一律沿用原始 dict，
+    # 不能用 model_dump()——重建誤差（Layer A 二次套用、欄位預設值變動）會被這次
+    # 覆寫固化進 data/scored。新評分項目沒有原始 dict，序列化是唯一來源。
+    pairs: list[tuple[dict, ScoredItem]] = [
+        *zip(scored_data, existing_scored),
+        *((si.model_dump(), si) for si in new_scored),
+    ]
+    pairs.sort(key=lambda p: p[1].total_score, reverse=True)
     final_top_k = config.get("scoring", {}).get("final_top_k", 30)
-    merged = merged[:final_top_k]
+    pairs = pairs[:final_top_k]
+    merged = [si for _, si in pairs]
 
-    save_json([item.model_dump() for item in merged], scored_path)
+    save_json([payload for payload, _ in pairs], scored_path)
     console.print(
         f"[bold green]✅ 增量評分完成: +{len(new_scored)} 新評分項目, "
         f"最終 top-{len(merged)}[/bold green]"
@@ -385,7 +394,9 @@ def score_items(items: list[ContentItem], target_date: date | None = None) -> li
             f"[cyan]♻️  已存在 {scored_path.name}, 跳過篩選 (使用快取)[/cyan]"
         )
         scored_data = load_json(scored_path)
-        return [ScoredItem(**item) for item in scored_data]
+        # scored_from_raw：checkpoint 續跑時不重複套用 Layer A 的 s2twp，否則
+        # 這批 ScoredItem 產出的 posts / digest 會比 data/scored 多漂一格
+        return [scored_from_raw(item) for item in scored_data]
 
     console.rule("[bold blue]🔍 篩選階段[/bold blue]")
     config = load_config()
@@ -748,7 +759,9 @@ def run_generate(d: date, top_k: int | None = None) -> list[str]:
 
     scored_data = load_json(scored_path)
     limit = top_k or len(scored_data)
-    top_items = [ScoredItem(**item) for item in scored_data[:limit]]
+    # scored_from_raw：讀 scored 一律無損還原，否則貼文標題 / slug / 內文會比
+    # data/scored 多套一次 s2twp
+    top_items = [scored_from_raw(item) for item in scored_data[:limit]]
     _t0 = _time.time()
     _logger.info("Stage started", extra={"pipeline_stage": "generate", "stage_action": "start"})
     post_paths = generate_posts(top_items, d)
