@@ -1,5 +1,5 @@
 ---
-title: 'Q&amp;A: How KRAFTON Built PUBG Ally, a Co-Playable Character Powered by NVIDIA
+title: 'Q&A: How KRAFTON Built PUBG Ally, a Co-Playable Character Powered by NVIDIA
   ACE'
 source: NVIDIA Developer
 url: https://developer.nvidia.com/blog/how-krafton-built-pubg-ally-a-co-playable-character-powered-by-nvidia-ace/

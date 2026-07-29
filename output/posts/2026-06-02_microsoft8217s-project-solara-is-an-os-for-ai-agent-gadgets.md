@@ -1,5 +1,5 @@
 ---
-title: "Microsoft&#8217;s Project Solara is an OS for AI agent gadgets"
+title: "Microsoft’s Project Solara is an OS for AI agent gadgets"
 source: The Verge AI
 url: https://www.theverge.com/news/941830/microsoft-project-solara-os-ai-agent-gadgets
 score: 89

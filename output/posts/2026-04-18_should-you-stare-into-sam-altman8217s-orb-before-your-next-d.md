@@ -1,5 +1,5 @@
 ---
-title: "Should you stare into Sam Altman&#8217;s orb before your next date?"
+title: "Should you stare into Sam Altman’s orb before your next date?"
 source: The Verge AI
 url: https://www.theverge.com/ai-artificial-intelligence/914385/world-id-tinder-identity-verifying-orb
 score: 23

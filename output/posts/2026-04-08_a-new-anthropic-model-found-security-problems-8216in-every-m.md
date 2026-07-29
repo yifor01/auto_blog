@@ -1,5 +1,5 @@
 ---
-title: "A new Anthropic model found security problems &#8216;in every major operating system and web browser&#8217;"
+title: "A new Anthropic model found security problems ‘in every major operating system and web browser’"
 source: The Verge AI
 url: https://www.theverge.com/ai-artificial-intelligence/908114/anthropic-project-glasswing-cybersecurity
 score: 38
