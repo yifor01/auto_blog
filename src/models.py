@@ -24,6 +24,86 @@ class SourceType(str, Enum):
     SEMANTIC_SCHOLAR = "semantic_scholar"
 
 
+# ---- Layer A：剝除來源殘留的媒體標記 ----
+
+# 只剝這五種——媒體與嵌入標記，在正文語境下不是內容。**不可**擴成通吃 `<xxx>`：
+# 實測 data/raw 有 453 個欄位帶角括號標記，多數是正常內容（GitHub README 的
+# `Vec<String>`、CLI 說明的 `<version>` / `<id>` / `<std>`、arxiv 摘要的泛型），
+# 一律剝除會把它們吃掉且無任何 log。
+_MEDIA_TAG_NAMES = "img|iframe|script|style|noscript"
+
+# 成對出現時：script / style 連同標記之間的內容一起剝（那是 JS / CSS 不是正文），
+# 其餘（img / iframe / noscript）只剝標記本身、保留中間文字。
+# `\s*` 是必要的——量子位是 `< img ...>`、GitHub README 是 `</ script >`，
+# 來源殘留普遍在 `<` 後與 `/` 兩側帶空白。re.IGNORECASE 下 `\1` 反向參照也大小寫
+# 不敏感，`< ScRiPt ...>...</SCRIPT>` 才配得起來。
+_PAIRED_MEDIA_RE = re.compile(
+    rf"<\s*({_MEDIA_TAG_NAMES})\b[^<>]*>(.*?)<\s*/\s*\1\s*>",
+    re.IGNORECASE | re.DOTALL,
+)
+# 落單的開/閉標記。是否真的剝由 `_drop_single_media()` 判斷（見該處說明）。
+_SINGLE_MEDIA_RE = re.compile(
+    rf"<\s*(/?)\s*(?:{_MEDIA_TAG_NAMES})\b([^<>]*)>",
+    re.IGNORECASE,
+)
+# 剝除點的佔位符：先標記位置，最後才連同相鄰空白收斂成單一分隔符。why 不直接
+# 換成空字串再全域 collapse 空白——那會順手壓掉欄位其他地方的排版（GitHub README
+# 的 CLI 對齊、段落換行）；用佔位符才能把正規化限制在「真的剝過的地方」。
+_SENTINEL = "\x00"
+_SENTINEL_RUN_RE = re.compile(rf"\s*(?:{_SENTINEL}\s*)+")
+
+
+def _drop_paired_media(match: re.Match[str]) -> str:
+    inner = "" if match.group(1).lower() in ("script", "style") else match.group(2)
+    return f"{_SENTINEL}{inner}{_SENTINEL}"
+
+
+def _drop_single_media(match: re.Match[str]) -> str:
+    """落單標記：閉標記與「帶屬性的開標記」剝掉，裸開標記留著。
+
+    why 裸開標記不剝：實測 data/raw 的裸 `<style>` / `<script>` **全部**是 CLI
+    說明的角括號佔位符（`--style <style>   Style (vivid, natural)`、
+    `pnpm --filter <name> <script>`），與 `<version>` / `<id>` 同一類正常內容，
+    只是名字剛好撞上白名單。反過來，真正的媒體嵌入一定帶屬性（`<img>` 沒有 src
+    什麼都不是），所以「有屬性」正好把兩者分乾淨；裸開標記若真的是標記，也會有
+    配對的閉標記，那種形態已由 `_PAIRED_MEDIA_RE` 先一步處理掉。
+    閉標記語法（`</script>`）則不可能是正文，一律剝。
+    """
+    is_closing = bool(match.group(1))
+    attrs = match.group(2).strip().strip("/").strip()
+    if is_closing or attrs:
+        return _SENTINEL
+    return match.group(0)
+
+
+def strip_media_tags(text: str) -> str:
+    """剝除來源正文殘留的媒體/嵌入標記，並收斂剝除點周邊的多餘空白。
+
+    Layer A 的一部分（`html.unescape()` 之後、`to_traditional()` 之前）：量子位
+    每篇 abstract 開頭都掛著 `< img id="wx_img" ...>`、Hacker News 會抓到 gist 頁的
+    `<script>` boilerplate 與 NPR 的 `<iframe>` 播放器，這些殘留會在詳情頁的
+    「原始資料 box」整串露給使用者看。
+
+    只處理 img / iframe / script / style / noscript，且對「像標記的正常內容」
+    刻意保守——判定細節與理由見 `_drop_single_media()`。無標記的字串原封返回
+    （連空白都不動），對已剝過的字串冪等。
+
+    `repair-content` 修歷史資料時直接 import 這支，不要另外複製一份實作。
+    """
+    if "<" not in text:
+        return text
+    # 佔位符是控制字元，正常內容不會有；先清掉以免外來的 NUL 干擾後面的收斂
+    working = text.replace(_SENTINEL, "")
+    working = _PAIRED_MEDIA_RE.sub(_drop_paired_media, working)
+    working = _SINGLE_MEDIA_RE.sub(_drop_single_media, working)
+    if _SENTINEL not in working:
+        return text
+    # 剝除點原本兩側若有換行就還一個換行（不要把段落壓成一行），否則給一個空格
+    # （`constrained<iframe ...>sandbox` 這種沒有空白的相接不能黏成一個字）
+    working = _SENTINEL_RUN_RE.sub(lambda m: "\n" if "\n" in m.group(0) else " ", working)
+    return working.strip()
+
+
 class ContentItem(BaseModel):
     """統一的內容條目，所有 collector 產出都轉換成這個格式。"""
 
@@ -49,20 +129,29 @@ class ContentItem(BaseModel):
         why 先 unescape 再轉繁：&#8217; 解碼後是 ASCII 標點，OpenCC 不動它；
         反過來則是拿未解碼的髒字串餵 OpenCC。RSS 有 58 筆 title、
         hackernews 有 269 筆 abstract 帶著未解碼 entity。
+
+        why 剝媒體標記夾在中間：`&lt;img src=...&gt;` 要解碼後才認得出是標記
+        （排在 unescape 之前就漏抓），而剝完再轉繁可以少餵 OpenCC 一段標記文字。
+        歷史資料不受惠——讀取端 `item_from_raw()` 會無損還原存檔原值，這是刻意的
+        （清洗歸資料層），舊檔由 `repair-content` 回補。
         """
         # 區域 import 避免 utils <-> models 潛在循環依賴
         from src.utils import to_traditional
 
-        return to_traditional(html.unescape(v))
+        return to_traditional(strip_media_tags(html.unescape(v)))
 
     @field_validator("tags")
     @classmethod
     def _normalize_tags_to_traditional(cls, v: list[str]) -> list[str]:
         """tags 同樣走 Layer A。漏掉這個，網站的 tag chip 會直接顯示
-        簡體（资讯 / 开源 / 科大讯飞），且 tag 篩選會把簡繁當成兩個不同標籤。"""
+        簡體（资讯 / 开源 / 科大讯飞），且 tag 篩選會把簡繁當成兩個不同標籤。
+
+        媒體標記剝除同步套用：實測 data/raw 的 tags 目前 0 筆命中，純粹是讓
+        Layer A 三個欄位的語意一致（下次某個 collector 把髒 HTML 塞進 tags 時
+        不必再想一次這裡有沒有做）。"""
         from src.utils import to_traditional
 
-        return [to_traditional(html.unescape(t)) for t in v]
+        return [to_traditional(strip_media_tags(html.unescape(t))) for t in v]
 
     def dedup_key(self) -> str:
         """用於去重的 key: 優先用 arxiv id, 否則用正規化後的 URL."""
