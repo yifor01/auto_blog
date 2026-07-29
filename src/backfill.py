@@ -49,8 +49,14 @@ def backfill_hf_upvotes(target_date: date, quiet: bool = False) -> dict:
         return stats
 
     items = [ContentItem(**it) for it in raw_data]
-    hf_items = [it for it in items if it.source == SourceType.HF_PAPERS]
-    if not hf_items:
+    # 寫回來源必須是 raw_data 的原始 dict，不能是 ContentItem.model_dump()：
+    # 建構 ContentItem 會再套一次 Layer A 的 s2twp，而 s2twp 對繁體不冪等
+    # （「這個文件的參數」→「這個檔案的參數」）。backfill 每天跑，用 model_dump()
+    # 寫回等於每天讓歷史欄位再漂一格。ContentItem 只拿來判斷來源與重建 lists。
+    hf_pairs = [
+        (raw, it) for raw, it in zip(raw_data, items) if it.source == SourceType.HF_PAPERS
+    ]
+    if not hf_pairs:
         _logger.info("Backfill skipped: no HF items", extra={"date": str(target_date)})
         return stats
 
@@ -59,7 +65,7 @@ def backfill_hf_upvotes(target_date: date, quiet: bool = False) -> dict:
         _logger.warning("Backfill skipped: no votes fetched", extra={"date": str(target_date)})
         return stats
 
-    for it in hf_items:
+    for raw, it in hf_pairs:
         # raw_metadata 裡的 hf_url 才是原始論文頁網址（url 欄位同值，但 hf_url 更明確）
         key = it.raw_metadata.get("hf_url") or it.url
         if key not in votes:
@@ -68,6 +74,8 @@ def backfill_hf_upvotes(target_date: date, quiet: bool = False) -> dict:
         new = votes[key]
         stats["updated"] += 1
         if new != old:
+            # 兩邊都要改：dict 是寫回 raw 的來源，ContentItem 是重建 lists 的來源
+            raw.setdefault("raw_metadata", {})["upvotes"] = new
             it.raw_metadata["upvotes"] = new
             stats["changed"] += 1
             stats["max_delta"] = max(stats["max_delta"], new - old)
@@ -76,7 +84,7 @@ def backfill_hf_upvotes(target_date: date, quiet: bool = False) -> dict:
         _logger.info("Backfill: no vote changes", extra={"date": str(target_date), "checked": stats["updated"]})
         return stats
 
-    save_json([it.model_dump() for it in items], raw_path)
+    save_json(raw_data, raw_path)
 
     # lists 的 hf 段是依 upvotes 排序後截斷的，票數變了就得整段重建
     lists_path = get_lists_path(target_date)

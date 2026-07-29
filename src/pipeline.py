@@ -241,6 +241,11 @@ def supplement_items(target_date: date | None = None) -> tuple[list[ContentItem]
 
     raw_data = load_json(raw_path)
     existing_items = [ContentItem(**item) for item in raw_data]
+    # 寫回 raw 時用的 payload（與 existing_items 同索引）。既有項目一律沿用
+    # 原始 dict，不能用 ContentItem.model_dump()：建構 ContentItem 會再套一次
+    # Layer A 的 s2twp，而 s2twp 對繁體不冪等（「這個文件的參數」→「這個檔案的
+    # 參數」），每次 --supplement 覆寫整份 raw 就讓歷史欄位再漂一格。
+    payload: list[dict] = list(raw_data)
     present_sources = {item.source for item in existing_items}
 
     all_collectors = get_collectors()
@@ -285,6 +290,8 @@ def supplement_items(target_date: date | None = None) -> tuple[list[ContentItem]
         if key not in seen:
             seen.add(key)
             existing_items.append(item)
+            # 新收項目沒有對應的原始 dict，序列化是唯一來源（也是它第一次落地）
+            payload.append(item.model_dump())
             added += 1
 
     # 跨日去重
@@ -293,14 +300,21 @@ def supplement_items(target_date: date | None = None) -> tuple[list[ContentItem]
     if lookback_days > 0 and added > 0:
         cross_day_seen = get_seen_urls(exclude_date=target_date, lookback_days=lookback_days)
         before = len(existing_items)
-        existing_items = [item for item in existing_items if item.dedup_key() not in cross_day_seen]
+        # payload 與 existing_items 必須一起篩，否則兩邊索引錯位、寫回的內容會張冠李戴
+        kept = [
+            (raw, item)
+            for raw, item in zip(payload, existing_items)
+            if item.dedup_key() not in cross_day_seen
+        ]
+        payload = [raw for raw, _ in kept]
+        existing_items = [item for _, item in kept]
         skipped = before - len(existing_items)
         if skipped > 0:
             console.print(
                 f"  [cyan]🔄 跨日去重: 排除 {skipped} 筆 → {len(existing_items)}[/cyan]"
             )
 
-    save_json([item.model_dump() for item in existing_items], raw_path)
+    save_json(payload, raw_path)
     console.print(f"[bold green]✅ 補收完成: +{added} 新項目 (總計 {len(existing_items)})[/bold green]")
 
     return existing_items, added > 0
