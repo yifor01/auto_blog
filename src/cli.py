@@ -367,10 +367,14 @@ def repair_content(
         )
     # 四個數字的單位一律是「欄位數」（tags 逐個元素算一個），不是「出現次數」——
     # 一個 title 裡有 3 個 entity 只計 1。文案與 `repair_all()` 的統計語意必須一致。
+    # 「簡→繁」還包含**沒有任何簡體被轉換**的欄位：`to_traditional_shape_only()`
+    # 每次都會順帶套 `utils._TERM_FIXES`（引數→參數 等），實測落地欄位裡有 27 個
+    # 純 OpenCC 差異為 0、完全是被 term fixes 改的。詳見
+    # `repair._to_traditional_safe()` 的「附帶效果」段。
     console.print(
         f"entity 解碼 [{color}]{stats['entities_fixed']}[/{color}] 欄，"
         f"媒體標記剝除 [{color}]{stats['media_stripped']}[/{color}] 欄，"
-        f"簡→繁 [{color}]{stats['simplified_converted']}[/{color}] 欄，"
+        f"簡→繁（含 term fixes）[{color}]{stats['simplified_converted']}[/{color}] 欄，"
         f"scored 對齊 raw [{color}]{stats['scored_backfilled']}[/{color}] 欄"
     )
     if dry_run:
