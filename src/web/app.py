@@ -284,6 +284,9 @@ async def post_view(request: Request, date_str: str, slug: str):
     md = MarkdownIt()
     content_html = md.render(post["body"])
     feedback = ds.get_feedback(date_str, slug)
+    # why 只有 post_view 傳 raw_item：note_view 共用同一個 template，
+    # 不傳就自然不渲染 box（AI 筆記沒有對應的收集來源）
+    raw_item = ds.get_raw_by_url(date_str, post["frontmatter"].get("url", ""))
 
     return templates.TemplateResponse(
         "post_view.html",
@@ -295,6 +298,7 @@ async def post_view(request: Request, date_str: str, slug: str):
             "content_html": content_html,
             "content_type": "部落格文",
             "feedback": feedback,
+            "raw_item": raw_item,
             "sidebar_stats": ds.get_sidebar_stats(),
         },
     )

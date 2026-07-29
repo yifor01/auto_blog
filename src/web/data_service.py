@@ -319,6 +319,70 @@ def get_day_raw_items(d: date) -> list[dict]:
     return items
 
 
+# raw_metadata 中值得展示的天然訊號；與 web/src/raw.ts 的 SIGNAL_LABELS 保持一致
+_RAW_SIGNAL_LABELS = [
+    ("upvotes", "👍 upvotes"),
+    ("stars_today", "⭐ stars today"),
+    ("points", "HN points"),
+    ("num_comments", "HN 留言"),
+    ("citation_count", "📖 citations"),
+]
+
+
+def _norm_raw_url(url: str) -> str:
+    """輕量 URL 正規化，與 web/src/enrich.ts 的 normalizeUrl 一致。
+
+    why 不用 utils.normalize_url：那支為去重設計會排序 query、去 www.；
+    這裡兩端來源相同（皆為 ContentItem.url 原值），輕量比對即可。
+    """
+    if not url:
+        return ""
+    return url.strip().rstrip("/").replace("http:", "https:", 1)
+
+
+def get_raw_by_url(date_str: str, url: str) -> dict | None:
+    """依 URL 取回當日 raw 收集項目，供詳情頁的「原始資料」box 使用。
+
+    why 不重用 get_day_raw_items()：那支丟掉了 organization 與 raw_metadata，
+    box 需要機構與 upvotes / stars_today 等天然訊號。
+    """
+    target = _norm_raw_url(url)
+    if not target:
+        return None
+    try:
+        d = date.fromisoformat(date_str)
+    except ValueError:
+        return None
+    raw_path = _get_raw_path(d)
+    if not raw_path.exists():
+        return None
+    data = load_json(raw_path)
+    if not isinstance(data, list):
+        return None
+
+    for it in data:
+        if not isinstance(it, dict) or _norm_raw_url(it.get("url", "")) != target:
+            continue
+        meta = it.get("raw_metadata") or {}
+        signals = []
+        for key, label in _RAW_SIGNAL_LABELS:
+            v = meta.get(key)
+            if isinstance(v, (int, float)) and v > 0:
+                signals.append((label, int(v)))
+        return {
+            "title": it.get("title", ""),
+            "abstract": it.get("abstract", ""),
+            "authors": it.get("authors") or [],
+            "organization": it.get("organization", ""),
+            "tags": it.get("tags") or [],
+            "source_name": it.get("source_name", ""),
+            "url": it.get("url", ""),
+            "collected_date": date_str,
+            "signals": signals,
+        }
+    return None
+
+
 def get_day_lists(d: date) -> dict | None:
     """讀取當日清單檔（Trending / Papers）。無檔、損毀、格式不符皆回 None（tab 隱藏）。"""
     # why: 舊日期無 lists 檔屬正常情形，缺檔直接回 None 不記 warning；
