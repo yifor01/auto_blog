@@ -106,8 +106,13 @@ def item_from_raw(raw: dict) -> ContentItem:
     """
     item = ContentItem(**raw)
     for field in _LAYER_A_FIELDS:
-        if field in raw:
-            setattr(item, field, raw[field])
+        if field not in raw:
+            continue
+        value = raw[field]
+        # list 要複製再塞：直接指派是 aliasing，而 backfill / supplement 正好把
+        # 同一份 raw dict 當寫回 payload——日後任何原地改 item.tags 的程式碼都會
+        # 靜默寫壞 data/raw。字串不可比照辦理（list("abc") 會拆成字元）。
+        setattr(item, field, list(value) if isinstance(value, list) else value)
     return item
 
 
