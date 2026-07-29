@@ -78,6 +78,39 @@ class ContentItem(BaseModel):
         return normalize_url(self.url)
 
 
+# Layer A validator 會改寫的欄位——從既有存檔重建時要還原成存檔原值
+_LAYER_A_FIELDS = ("title", "abstract", "tags")
+
+
+def item_from_raw(raw: dict) -> ContentItem:
+    """從 `data/raw` 的既有 dict 重建 ContentItem，且**不重複套用 Layer A**。
+
+    why：存檔裡的 title / abstract / tags 已經是 Layer A 的成品，而 s2twp 對繁體
+    刻意不冪等（「這個文件的參數」→「這個檔案的參數」）。直接 `ContentItem(**raw)`
+    等於再套一次，於是每讀一次就漂一格。寫回 raw 的路徑固然要防（backfill /
+    supplement 已改成保留原始 dict），但只要拿這些 item 產出**任何**檔案就一樣會把
+    漂移寫進成品——`build_day_lists()` 就是這樣讓 `output/lists` 與 `data/raw`
+    出現落差的（實測近 40 天清單型來源 3375 筆中 34 筆非冪等，約 1%），而詳情頁的
+    「原始資料 box」直接讀 `data/raw`，兩處並列時同一段文字會顯示不一致。
+
+    why 先完整建構再賦值、而不是 `model_construct()`：後者跳過**所有**驗證含型別
+    轉換，`published_date` 會停在 str，`_other_entry()` 的 `.isoformat()` 當場
+    AttributeError（已實測）。這裡走完整驗證拿到正確型別，之後才把 Layer A 覆寫過的
+    欄位還原——`ContentItem` 沒有開 `validate_assignment`（Pydantic v2 預設關閉），
+    賦值不會再次觸發 validator。日後若替 `ContentItem` 加上 `validate_assignment`，
+    這個還原會靜默失效，屆時必須改走別的還原手段。
+
+    附帶取捨：還原也跳過了 Layer A 的 `html.unescape()`。這是對的——存檔值本來就
+    是已解碼的成品，讀取端的職責是**無損還原**而非二次清洗；歷史髒資料由
+    `repair-content` 負責（`data/raw` 的 entity 已於該指令實跑後歸零）。
+    """
+    item = ContentItem(**raw)
+    for field in _LAYER_A_FIELDS:
+        if field in raw:
+            setattr(item, field, raw[field])
+    return item
+
+
 class ScoredItem(BaseModel):
     """篩選後帶評分的條目。"""
 

@@ -16,7 +16,7 @@ from datetime import date, timedelta
 from src.collectors.hf_papers import fetch_upvotes
 from src.lists import build_day_lists, get_lists_path
 from src.logger import get_logger
-from src.models import ContentItem, SourceType
+from src.models import SourceType, item_from_raw
 from src.utils import RAW_DIR, console, load_json, save_json
 
 _logger = get_logger("backfill")
@@ -48,11 +48,12 @@ def backfill_hf_upvotes(target_date: date, quiet: bool = False) -> dict:
     if not raw_data:
         return stats
 
-    items = [ContentItem(**it) for it in raw_data]
+    # item_from_raw（而非 ContentItem(**it)）：重建時不重複套用 Layer A 的 s2twp，
+    # 否則下面 build_day_lists() 寫出的 output/lists 會比 data/raw 多漂一格
+    items = [item_from_raw(it) for it in raw_data]
     # 寫回來源必須是 raw_data 的原始 dict，不能是 ContentItem.model_dump()：
-    # 建構 ContentItem 會再套一次 Layer A 的 s2twp，而 s2twp 對繁體不冪等
-    # （「這個文件的參數」→「這個檔案的參數」）。backfill 每天跑，用 model_dump()
-    # 寫回等於每天讓歷史欄位再漂一格。ContentItem 只拿來判斷來源與重建 lists。
+    # model_dump() 帶的是重建後的值，而 backfill 每天跑，用它寫回等於每天讓歷史
+    # 欄位再漂一格。ContentItem 只拿來判斷來源與重建 lists。
     hf_pairs = [
         (raw, it) for raw, it in zip(raw_data, items) if it.source == SourceType.HF_PAPERS
     ]

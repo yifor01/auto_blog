@@ -25,7 +25,7 @@ from rich.table import Table
 
 from src.lists import LIST_SOURCES, build_lists, get_lists_path
 from src.logger import get_logger
-from src.models import ContentItem, ScoredItem, SourceType
+from src.models import ContentItem, ScoredItem, SourceType, item_from_raw
 from src.pinned import select_pinned, to_pinned_scored
 from src.scoring.rules import batch_rule_score
 from src.scoring.scorer import batch_llm_score
@@ -154,7 +154,9 @@ def collect_items(target_date: date | None = None) -> list[ContentItem]:
             f"[cyan]♻️  已存在 {raw_path.name}, 跳過收集 (使用快取)[/cyan]"
         )
         raw_data = load_json(raw_path)
-        return [ContentItem(**item) for item in raw_data]
+        # item_from_raw：checkpoint 續跑時不重複套用 Layer A 的 s2twp，否則
+        # 這批 items 餵給 build_lists() 產出的 output/lists 會比 data/raw 多漂一格
+        return [item_from_raw(item) for item in raw_data]
 
     console.rule(f"[bold blue]📡 收集階段 — {target_date}[/bold blue]")
 
@@ -240,11 +242,13 @@ def supplement_items(target_date: date | None = None) -> tuple[list[ContentItem]
         return collect_items(target_date), True
 
     raw_data = load_json(raw_path)
-    existing_items = [ContentItem(**item) for item in raw_data]
-    # 寫回 raw 時用的 payload（與 existing_items 同索引）。既有項目一律沿用
-    # 原始 dict，不能用 ContentItem.model_dump()：建構 ContentItem 會再套一次
-    # Layer A 的 s2twp，而 s2twp 對繁體不冪等（「這個文件的參數」→「這個檔案的
-    # 參數」），每次 --supplement 覆寫整份 raw 就讓歷史欄位再漂一格。
+    # item_from_raw：重建既有項目時不重複套用 Layer A 的 s2twp（s2twp 對繁體不
+    # 冪等，「這個文件的參數」→「這個檔案的參數」），否則這批 items 餵給
+    # build_lists() 產出的 output/lists 會比 data/raw 多漂一格
+    existing_items = [item_from_raw(item) for item in raw_data]
+    # 寫回 raw 時用的 payload（與 existing_items 同索引）。既有項目一律沿用原始
+    # dict，不能用 model_dump()：每次 --supplement 覆寫整份 raw，任何重建誤差
+    # 都會被固化進存檔。
     payload: list[dict] = list(raw_data)
     present_sources = {item.source for item in existing_items}
 
@@ -433,7 +437,9 @@ def _generate_pinned_posts(target_date: date) -> list[str]:
         return []
 
     config = load_config()
-    items = [ContentItem(**r) for r in load_json(raw_path)]
+    # item_from_raw：讀 raw 一律無損還原，否則 pinned post 的 slug 與內文
+    # 會比 data/raw 多套一次 s2twp
+    items = [item_from_raw(r) for r in load_json(raw_path)]
     todo = []
     for it in select_pinned(items, target_date, config):
         post_path = POSTS_DIR / f"{target_date.isoformat()}_{slugify(it.title)}.md"
@@ -717,7 +723,9 @@ def run_score(d: date, force: bool = False) -> list[ScoredItem]:
         get_scored_path(d).unlink()
 
     raw_data = load_json(raw_path)
-    items = [ContentItem(**item) for item in raw_data]
+    # item_from_raw：讀 raw 一律無損還原，否則寫出的 data/scored 會比
+    # data/raw 多套一次 s2twp
+    items = [item_from_raw(item) for item in raw_data]
     _t0 = _time.time()
     _logger.info("Stage started", extra={"pipeline_stage": "score", "stage_action": "start"})
     scored = score_items(items, d)

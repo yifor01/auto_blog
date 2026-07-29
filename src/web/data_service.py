@@ -8,7 +8,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 from src.logger import get_logger
-from src.models import ContentItem, ScoredItem
+from src.models import ContentItem, ScoredItem, item_from_raw
 from src.utils import NOTES_DIR, POSTS_DIR, RAW_DIR, SCORED_DIR, FEEDBACK_DIR, HEALTH_DIR, DIGESTS_DIR, BLOGS_DIR, LISTS_DIR, DATA_DIR, load_json, normalize_url_light, save_json, slugify
 
 _logger = get_logger("web.data_service")
@@ -253,7 +253,9 @@ def get_all_day_items(d: date) -> list[dict]:
     items: list[dict] = []
     for raw_dict in raw_data:
         try:
-            ci = ContentItem(**raw_dict)
+            # item_from_raw：與同頁「原始資料 box」（直接讀 raw）並列，重建
+            # 若多套一次 s2twp 兩處會顯示不同文字
+            ci = item_from_raw(raw_dict)
             si = scored_by_url.get(ci.url, {})
             scored = bool(si)
             if scored:
@@ -302,7 +304,8 @@ def get_day_raw_items(d: date) -> list[dict]:
     items = []
     for idx, raw in enumerate(data):
         try:
-            it = ContentItem(**raw)
+            # item_from_raw：同上，讀 raw 一律無損還原
+            it = item_from_raw(raw)
             items.append({
                 "index": idx,
                 "title": it.title,
@@ -345,10 +348,11 @@ def get_raw_by_url(date_str: str, url: str) -> dict | None:
     why 不重用 get_day_raw_items()：那支丟掉了 organization 與 raw_metadata，
     box 需要機構與 upvotes / stars_today 等天然訊號。
 
-    why 刻意不走 ContentItem：`get_day_raw_items()` 用 `ContentItem(**raw)` 重建，
-    等於在讀取時又套一次 Layer A 的 s2twp 簡繁轉換（s2twp 對繁體不冪等）。
-    box 承諾顯示的是「磁碟上那份原始資料」，所以這裡直接讀 dict 不做任何轉換。
-    實測兩條路徑對同一批資料的文字漂移率 0.24%（5064 筆中 12 筆，如 `檔`→`件`）。
+    why 刻意不走 ContentItem：box 承諾顯示的是「磁碟上那份原始資料」，直接讀 dict
+    不做任何轉換是最短、也最不可能漂掉的路徑。
+    （其餘讀 raw 的路徑原本用 `ContentItem(**raw)` 重建，等於讀取時又套一次
+    Layer A 的 s2twp——s2twp 對繁體不冪等，實測漂移率 0.24%。那些已於
+    2026-07-29 改走 `models.item_from_raw()` 無損還原，與本函式結果一致。）
 
     URL 比對用 `normalize_url_light()`（非去重用的 `normalize_url()`），以與
     Astro 端 `web/src/enrich.ts` 的 `normalizeUrl` 保持一致——理由見該函式 docstring。
