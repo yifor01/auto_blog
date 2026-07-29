@@ -44,7 +44,12 @@ _POSTS_DIR = Path("output/posts")
 _LIST_FIELDS = ("title", "abstract")
 
 _DATE_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})")
-# 只吃 frontmatter 的 title 行；body 不動（可能含程式碼區塊裡字面意義的 &amp;）
+# 只吃 frontmatter 的 title 行；body 不動（可能含程式碼區塊裡字面意義的 &amp;）。
+# `_FRONTMATTER_RE` 先把搜尋範圍夾在開頭的 `---` … `---` 之間再找 title——只用
+# MULTILINE 的話，`search()` 會咬到**全檔第一個行首 `title:`**，正文（尤其是
+# 引用 YAML 的程式碼區塊）出現一行 `title: ...` 就會被當成 frontmatter 改掉。
+# 實測 2757 篇 post 目前 0 篇會踩到，這是廉價保險而非救火。
+_FRONTMATTER_RE = re.compile(r"\A---\r?\n(.*?)^---[ \t]*\r?$", re.DOTALL | re.MULTILINE)
 _TITLE_LINE_RE = re.compile(r'^title:[ \t]*(.*)$', re.MULTILINE)
 
 
@@ -65,15 +70,39 @@ def _within_days(path: Path, days: int | None) -> bool:
 # ──────────────────────────────────────────────────────────
 
 
+# 明明是**正字繁體**、OpenCC 卻在單字元層級就會改寫的字，不採計為「這個欄位含簡體」
+# 的證據。這兩個字在台灣繁體是天天出現的正常用字（干擾 / 干預、托盤 / 委托），
+# 但 `s2tw('干') == '幹'`、`s2tw('托') == '託'`——把它們當簡體證據，等於讓一整個
+# 純繁體欄位過門，接著被詞組規則改壞。實測 `data/raw` 全量：不排除的話有 11 個純繁體
+# 的量子位摘要唯一觸發條件就是這兩個字，落地結果是 `干預`→`幹預`、`托盤`→`託盤`、
+# `安托資訊`→`安託資訊`，全部是錯的。排除後改動欄位 804 → 793、非冪等仍為 0，
+# 且 `互不干扰`→`互不干擾`、`托盘`→`托盤` 這些**真簡體**的欄位照樣轉得對
+# （欄位裡還有別的簡體字撐著 gate，過門後 OpenCC 仍會處理 `干`/`托`）。
+#
+# 代價：若出現「整段簡體、且唯一簡體字就是 `干` 或 `托`」的欄位（如孤立的 `委托`）
+# 會漏轉。現有語料 0 筆，且新資料走 Layer A 不經這裡。
+#
+# 加字進來前先實測：擴到 `里` 會讓 22 個**真簡體**欄位整個不轉（`里` 常是唯一 gate），
+# 擴到 `占` 則 0 影響（沒必要）。
+_NOT_SIMPLIFIED_EVIDENCE = frozenset("干托")
+
+
 @lru_cache(maxsize=None)
 def _is_simplified_char(ch: str) -> bool:
-    """單字元層級是否為簡體。
+    """這個字元是否可作為「該欄位含簡體」的證據。
 
     「單字元」是關鍵：OpenCC 的詞組規則要有上下文才會觸發，餵單一字元等於只問
-    「這個字本身是不是簡體」（`个` 是、`了` 不是）。OpenCC 不可用時
-    `to_traditional_shape_only()` 原樣回傳 → 一律判定為非簡體 → `_to_traditional_safe()`
-    整個退化成 no-op，這是刻意的安全降級。
+    「這個字本身會不會被改寫」。注意**別把它想成「是不是簡體字」**——實測
+    `s2tw('里')='裡'`、`s2tw('干')='幹'`、`s2tw('托')='託'` 都會變，但這三個字在繁體
+    正文裡本來就大量出現；只有 `了` / `面` / `杆` / `只` 這類才是真的單字元不動、
+    純靠詞組規則才被改寫。誤把前者當「不會動」正是 `幹擾` / `託盤` / `幹預` 落地的
+    根源，故另立 `_NOT_SIMPLIFIED_EVIDENCE` 排除集（理由見該處）。
+
+    OpenCC 不可用時 `to_traditional_shape_only()` 原樣回傳 → 一律判定為非簡體 →
+    `_to_traditional_safe()` 整個退化成 no-op，這是刻意的安全降級。
     """
+    if ch in _NOT_SIMPLIFIED_EVIDENCE:
+        return False
     return to_traditional_shape_only(ch) != ch
 
 
@@ -108,17 +137,24 @@ def _to_traditional_safe(text: str) -> str:
 
     s2tw 對**純繁體**輸入不是無害的：OpenCC 的詞組規則會誤觸發，實測
     `說明了一件事` → `說明瞭一件事`（明了→明瞭）、`裡面包括` → `裡麵包括`
-    （面包→麵包）、`一目了然` 之外的 `了` 也會中招。這些字（了/面/里/干/托/杆）
-    單獨看不是簡體，只有在詞組規則下才被改寫——所以「欄位裡至少要有一個
-    **單字元層級**的簡體字」正好把「整段簡體的舊資料」與「已是繁體的新資料」分開。
-    實測 data/raw：894 個欄位會被 s2tw 改動，這道門擋掉 76 個（其中 37 個是
-    純繁體被詞組規則誤改），放行 804 個。
+    （面包→麵包）。`了` / `面` 這類字單獨看不會被改，只有在詞組規則下才中招——
+    所以「欄位裡至少要有一個**單字元層級**就會被改寫的字」正好把「整段簡體的舊資料」
+    與「已是繁體的新資料」分開。實測 data/raw：894 個欄位會被 s2tw 改動，這道門
+    擋掉 101 個（其中 37 個是純繁體被詞組規則誤改、11 個是只被 `干`/`托` 誤觸發的
+    純繁體欄位），放行 793 個。
 
-    殘餘風險（已實測、可接受）：3 個欄位是「幾乎全繁體但夾了 1 個簡體字」的
-    量子位長摘要，過門後仍會吃到詞組規則（如 2026-07-29 的 `說明了`→`說明瞭`）。
-    不進一步收緊是因為：放行的 804 個欄位裡有 90 個要靠詞組規則才轉得對
-    （关系→關係、制作→製作），而 Layer A 對新資料本來就是全詞組轉換——
-    收緊到「只換簡體字位置」會讓舊資料反而與新資料不一致。
+    **注意 `里` / `干` / `托` 單字元就會被改寫**（`裡` / `幹` / `託`），不屬於上面
+    那類；其中 `干` / `托` 因為在繁體正文太常見而列入 `_NOT_SIMPLIFIED_EVIDENCE`
+    排除集，理由見該處。
+
+    殘餘風險（已實測、可接受）：2 個欄位是「幾乎全繁體但夾了 1 個簡體字」的
+    量子位長摘要，過門後仍會吃到詞組規則（如 2026-07-29 的 `說明了`→`說明瞭`、
+    `一目了然`→`一目瞭然`）。不進一步收緊是因為：放行的欄位裡有 90 個要靠詞組規則
+    才轉得對（关系→關係、制作→製作），而 Layer A 對新資料本來就是全詞組轉換——
+    收緊到「只換簡體字位置」已實測否決：`to_traditional_shape_only('干')` 單字就是
+    `幹`（問題完全沒解），還會新增 120 個全錯欄位（`阿里巴巴`→`阿裡巴巴`）、
+    150 個欄位失去一簡對多繁的消歧（`复杂`→`復雜`、`分钟`→`分鍾` 皆錯），
+    並繞過整張 `_TERM_FIXES`。
 
     ## why 擋掉含控制字元的欄位
 
@@ -153,7 +189,11 @@ def _to_traditional_safe(text: str) -> str:
 
 
 def _clean_value(value: str, stats: dict) -> str:
-    """單一字串跑完三道清洗，並分類累計統計。"""
+    """單一字串跑完三道清洗，並分類累計統計。
+
+    統計單位是**欄位數**不是出現次數：一個 title 裡有 3 個 entity 只計 1
+    （tags 則逐個元素各算一個欄位）。CLI 文案的「N 欄」與此一致。
+    """
     unescaped = html.unescape(value)
     if unescaped != value:
         stats["entities_fixed"] += 1
@@ -417,7 +457,11 @@ def _repair_post_file(path: Path, stats: dict, dry_run: bool) -> None:
     localStorage 已讀記錄。
     """
     text = path.read_text(encoding="utf-8")
-    m = _TITLE_LINE_RE.search(text)
+    fm = _FRONTMATTER_RE.match(text)
+    if not fm:
+        return
+    # 在 frontmatter 區塊內找，但位移一律換算回全檔座標（切片時才不會錯位）
+    m = _TITLE_LINE_RE.search(text, fm.start(1), fm.end(1))
     if not m:
         return
     new_title, changed = _clean_field(m.group(1), stats)

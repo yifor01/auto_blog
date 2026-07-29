@@ -365,11 +365,13 @@ def repair_content(
             f"HF 重抓成功 [green]{stats['hf_refetched']}[/green] / "
             f"失敗 [yellow]{stats['hf_failed']}[/yellow]"
         )
+    # 四個數字的單位一律是「欄位數」（tags 逐個元素算一個），不是「出現次數」——
+    # 一個 title 裡有 3 個 entity 只計 1。文案與 `repair_all()` 的統計語意必須一致。
     console.print(
-        f"entity 解碼 [{color}]{stats['entities_fixed']}[/{color}] 處，"
-        f"媒體標記剝除 [{color}]{stats['media_stripped']}[/{color}] 處，"
-        f"簡→繁 [{color}]{stats['simplified_converted']}[/{color}] 處，"
-        f"scored 對齊 raw [{color}]{stats['scored_backfilled']}[/{color}] 個欄位"
+        f"entity 解碼 [{color}]{stats['entities_fixed']}[/{color}] 欄，"
+        f"媒體標記剝除 [{color}]{stats['media_stripped']}[/{color}] 欄，"
+        f"簡→繁 [{color}]{stats['simplified_converted']}[/{color}] 欄，"
+        f"scored 對齊 raw [{color}]{stats['scored_backfilled']}[/{color}] 欄"
     )
     if dry_run:
         console.print("[yellow]--dry-run：未連網、未重抓、未寫入任何檔案[/yellow]")
