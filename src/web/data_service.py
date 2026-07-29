@@ -330,7 +330,11 @@ _RAW_SIGNAL_LABELS = [
 
 
 def _norm_raw_url(url: str) -> str:
-    """輕量 URL 正規化，與 web/src/enrich.ts 的 normalizeUrl 一致。
+    """輕量 URL 正規化，行為在現有資料上等價於 web/src/enrich.ts 的 normalizeUrl。
+
+    非逐字一致：JS 版的 `http:` 取代錨定開頭（/^http:/），這裡的 str.replace
+    未錨定，故 `https://x/y/http://z` 這類巢狀 URL 兩者會分歧。實測 data/raw
+    全量 17230 個 url 分歧數為 0，若日後開始收 archive.org 類 URL 需補錨定。
 
     why 不用 utils.normalize_url：那支為去重設計會排序 query、去 www.；
     這裡兩端來源相同（皆為 ContentItem.url 原值），輕量比對即可。
