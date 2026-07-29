@@ -3,11 +3,13 @@ import { getCollection, render } from 'astro:content';
 import Base from '../../layouts/Base.astro';
 import { idDate, formatDate, recentCutoff, readingMinutes } from '../../utils';
 import { loadEnrichment, normalizeUrl, DIM_LABELS } from '../../enrich';
+import { loadRaw, lookupRaw } from '../../raw';
 
 export async function getStaticPaths() {
   const cutoff = recentCutoff();
   const posts = await getCollection('posts');
   const enrichMap = loadEnrichment();
+  const rawIndex = loadRaw();
   // 只 build 近 N 天，與列表頁一致；按日期新→舊排序以決定上一篇/下一篇
   const recent = posts
     .filter((p) => idDate(p.id) >= cutoff)
@@ -15,6 +17,10 @@ export async function getStaticPaths() {
 
   return recent.map((post, i) => {
     const e = enrichMap.get(normalizeUrl(post.data.url)) ?? null;
+    // 日期一律取檔名前綴（post.id 形如 `YYYY-MM-DD_slug`），不從 frontmatter 的
+    // generated_at 或 new Date() 推導——推導出的日期一旦偏掉，lookupRaw 會靜默 fallback
+    // 到別天那筆，頁面照樣渲染但顯示錯誤的收集日與訊號數字。
+    const raw = lookupRaw(rawIndex, post.data.url, post.id.slice(0, 10));
     const newer = recent[i - 1];
     const older = recent[i + 1];
     // 同來源相關文章（排除自己，取日期最近的 3 篇）
@@ -30,15 +36,20 @@ export async function getStaticPaths() {
         newer: newer ? { id: newer.id, title: newer.data.title } : null,
         older: older ? { id: older.id, title: older.data.title } : null,
         related,
+        raw,
       },
     };
   });
 }
 
-const { post, enrich, newer, older, related } = Astro.props;
+const { post, enrich, newer, older, related, raw } = Astro.props;
 const { Content } = await render(post);
 const date = idDate(post.id);
 const readMins = readingMinutes(post.body);
+// lookupRaw() 命中精確 key 或退回 url-only fallback 時回傳的東西長得一模一樣，
+// 呼叫端無從分辨。若 raw 的收集日與本篇日期不同，就是走了 fallback（例如該天的
+// raw 已被 clean 清掉），顯示的訊號數字並非本篇當天的值——在 UI 上標示出來。
+const rawStale = raw ? raw.collectedDate !== post.id.slice(0, 10) : false;
 const dims = enrich
   ? DIM_LABELS.map(([key, label]) => ({ label, value: Number(enrich[key]) || 0 }))
   : null;
@@ -126,6 +137,70 @@ const dims = enrich
     <div class="prose">
       <Content />
     </div>
+
+    {/* 原始資料 box：純 <details>，零 JavaScript。理由：SSG 靜態頁不需水合、
+        Chrome 的 Ctrl+F 命中收合內容會自動展開，也不會像閱讀進度條那樣有
+        ClientRouter 軟導航殘留 listener 的問題。 */}
+    {
+      raw && (
+        <details class="raw-box">
+          <summary>
+            <span class="raw-caret" aria-hidden="true">▸</span>
+            原始資料
+            <span class="raw-hint">
+              {raw.sourceName} · 收集於 {raw.collectedDate}
+              {rawStale && <span class="raw-stale">非當日</span>}
+            </span>
+          </summary>
+          <div class="raw-body">
+            {rawStale && (
+              <p class="raw-warn">
+                找不到本篇日期（{post.id.slice(0, 10)}）的收集紀錄，以下顯示的是 {raw.collectedDate}
+                 那天收集到的同一筆來源，訊號數字可能與本篇當時不同。
+              </p>
+            )}
+            <dl class="raw-meta">
+              <dt>來源原標題</dt>
+              <dd>{raw.title}</dd>
+              {raw.organization && (
+                <>
+                  <dt>機構</dt>
+                  <dd>{raw.organization}</dd>
+                </>
+              )}
+              {raw.authors.length > 0 && (
+                <>
+                  <dt>作者</dt>
+                  <dd>{raw.authors.join(', ')}</dd>
+                </>
+              )}
+              {raw.tags.length > 0 && (
+                <>
+                  <dt>原始標籤</dt>
+                  <dd>{raw.tags.join(' · ')}</dd>
+                </>
+              )}
+              {raw.signals.length > 0 && (
+                <>
+                  <dt>來源訊號</dt>
+                  <dd>{raw.signals.map((s) => `${s.label} ${s.value}`).join('　')}</dd>
+                </>
+              )}
+              <dt>原始連結</dt>
+              <dd>
+                <a href={raw.url} target="_blank" rel="noopener">{raw.url}</a>
+              </dd>
+            </dl>
+            <h4>摘要原文</h4>
+            {raw.abstract ? (
+              <p class="raw-abstract">{raw.abstract}</p>
+            ) : (
+              <p class="raw-none">（來源未提供摘要）</p>
+            )}
+          </div>
+        </details>
+      )
+    }
 
     {
       post.data.model && (
@@ -452,6 +527,101 @@ const dims = enrich
   .prose :global(a:hover) {
     text-decoration-color: var(--accent);
   }
+  .raw-box {
+    margin-top: 2.5rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  .raw-box > summary {
+    cursor: pointer;
+    padding: 0.75rem 1.1rem;
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    color: var(--muted);
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .raw-box > summary::-webkit-details-marker {
+    display: none;
+  }
+  .raw-box > summary:hover {
+    color: var(--text);
+  }
+  .raw-caret {
+    color: var(--accent);
+    transition: transform 0.15s ease;
+    display: inline-block;
+  }
+  .raw-box[open] .raw-caret {
+    transform: rotate(90deg);
+  }
+  .raw-hint {
+    margin-left: auto;
+    color: var(--faint);
+    font-size: 0.74rem;
+    text-align: right;
+  }
+  /* 走了 url-only fallback：顯示的不是本篇當天的那筆資料 */
+  .raw-stale {
+    margin-left: 0.4rem;
+    color: var(--accent-2);
+    border: 1px solid var(--accent-2);
+    border-radius: 4px;
+    padding: 0 0.3rem;
+    white-space: nowrap;
+  }
+  .raw-warn {
+    margin: 0 0 0.9rem;
+    font-size: 0.78rem;
+    line-height: 1.6;
+    color: var(--accent-2);
+    border-left: 2px solid var(--accent-2);
+    padding-left: 0.7rem;
+  }
+  .raw-body {
+    border-top: 1px solid var(--border);
+    padding: 1rem 1.1rem 1.2rem;
+  }
+  .raw-meta {
+    display: grid;
+    grid-template-columns: 6rem 1fr;
+    gap: 0.35rem 0.9rem;
+    margin: 0 0 1.1rem;
+    font-size: 0.82rem;
+  }
+  .raw-meta dt {
+    font-family: var(--mono);
+    font-size: 0.74rem;
+    color: var(--faint);
+  }
+  .raw-meta dd {
+    margin: 0;
+    color: var(--muted);
+    overflow-wrap: anywhere;
+  }
+  .raw-body h4 {
+    margin: 0 0 0.45rem;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--faint);
+  }
+  .raw-abstract {
+    margin: 0;
+    font-size: 0.85rem;
+    line-height: 1.7;
+    color: var(--muted);
+    white-space: pre-wrap;
+  }
+  .raw-none {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--faint);
+  }
+
   .model-note {
     margin-top: 2.5rem;
     color: var(--faint);
@@ -547,6 +717,26 @@ const dims = enrich
       padding-left: 0;
       border-top: 1px solid var(--border);
       padding-top: 1rem;
+    }
+    .raw-meta {
+      grid-template-columns: 1fr;
+      gap: 0.1rem 0;
+    }
+    .raw-meta dd {
+      margin-bottom: 0.5rem;
+    }
+    /* 窄螢幕下 summary 一行塞不下「原始資料 + 來源 + 收集日 + 非當日」，改成換行堆疊 */
+    .raw-box > summary {
+      flex-wrap: wrap;
+      gap: 0.35rem 0.5rem;
+    }
+    .raw-hint {
+      flex-basis: 100%;
+      margin-left: 0;
+      text-align: left;
+    }
+    .raw-stale {
+      margin-left: 0.3rem;
     }
   }
 </style>
