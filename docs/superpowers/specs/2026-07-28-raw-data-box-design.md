@@ -33,10 +33,16 @@
 
 ```
 export interface RawItem { ... }
-export function loadRaw(): Map<string, RawItem>
+export interface RawIndex { byDayUrl: Map<string, RawItem>; byUrl: Map<string, RawItem> }
+export function loadRaw(): RawIndex
+export function lookupRaw(index: RawIndex, url?: string, postDay?: string): RawItem | null
 ```
 
-- key：`normalizeUrl(item.url)`，直接 import `enrich.ts` 既有的 `normalizeUrl`，兩邊比對規則必須一致
+- **雙索引**：主 key 為複合的 `` `${day}|${normalizeUrl(item.url)}` ``（`day` 取自 raw 檔名），另建 url-only 的 `byUrl` 作 fallback，同一 URL 保留**最早收集**的那筆
+- `lookupRaw()` 的命中順序：先用 post 日期精準命中當天那筆，落空才退回 url-only
+- **why 不能只用 url-only key**（原設計如此，實作階段改掉）：同一篇文章常橫跨多天被收集，url-only key 會被最後寫入的那天覆蓋，實測 **575 篇中有 69 篇**在 box 裡顯示到「別天」的原始資料（訊號值如 stars_today 也跟著失真）。複合 key 讓「post 當天」成為第一順位；退回 url-only 是為了 post 日期與收集日不同、或該天 raw 已被 `clean` 清掉的情形，此時取最早那筆離 post 日期最近、失真最小
+- fallback 命中（`collectedDate !== post 日期`）時 UI 標示「非當日」並說明實際收集日，不讓讀者誤以為是當天資料
+- URL 正規化直接 import `enrich.ts` 既有的 `normalizeUrl`；Python 端對應 `src/utils.py` 的 `normalize_url_light()`，**兩邊比對規則必須一致**（分歧的症狀是 box 靜默不顯示，見該函式 docstring）
 - 只讀近 `RECENT_DAYS`(30) 天的 `data/raw/*.json`，與 `recentCutoff()` 同基準——詳情頁本來就只 build 近 30 天
 - 快取策略沿用 `enrich.ts`：`import.meta.env?.DEV` 時不快取（dev server 長駐會看不到 pipeline 新寫入的檔）
 - 讀檔/parse 失敗一律 `continue`，缺 `data/raw` 目錄時回傳空 map（優雅降級，與 `loadEnrichment()` 一致）
@@ -87,8 +93,11 @@ Build 成本：30 個檔約 8.2MB JSON parse，一次性，可接受。
 新增 `get_raw_by_url(date_str: str, url: str) -> dict | None`：
 
 - **不重用 `get_day_raw_items(d)`**——那支丟掉了 `organization` 與 `raw_metadata`，而 box 需要機構與 `upvotes` / `stars_today` 等天然訊號。直接讀當日 raw JSON
-- URL 正規化須與 Astro 端 `normalizeUrl` 行為一致（去尾斜線、`http:` → `https:`）。**不要用 `src/utils.py` 的 `normalize_url()`**——那支為去重設計，會排序 query、去 `www.`，兩端來源相同時只會徒增不一致風險
+- URL 正規化用 `src/utils.py` 的 `normalize_url_light()`（去尾斜線、`http:` → `https:`），行為須與 Astro 端 `normalizeUrl` 一致。**不要用同檔的 `normalize_url()`**——那支為去重設計，會排序 query、去 `www.`，兩端來源相同時只會徒增不一致風險。兩支函式的用途差異表寫在 `normalize_url_light()` 的 docstring
 - post 的日期即 raw 的日期，只查當日；查無回 `None`
+- **兩端命中策略刻意分歧**：Astro 有 url-only fallback + 「非當日」標示（§1.2），Monitor 只查當日、查無就不渲染 box。理由是 Monitor 是本機工具，資料就在同一台機器上、缺 box 不痛；Astro 是對外的唯一入口，寧可退一步顯示鄰近日期的資料並標示清楚。改動任一端前先確認這個分歧仍成立
+- **刻意不走 `ContentItem`**：`get_day_raw_items()` 用 `ContentItem(**raw)` 重建，等於讀取時再套一次 Layer A 的 s2twp 轉換（對繁體不冪等），而 box 承諾顯示的是磁碟上那份原始資料，故直接讀 dict。實測兩條路徑對同一批資料的文字漂移率 0.24%（5064 筆中 12 筆，如 `檔`→`件`）
+- `_RAW_SIGNAL_LABELS` 與 `web/src/raw.ts` 的 `SIGNAL_LABELS` 必須逐字一致（key + emoji 標籤）；已知型別契約差異（TS `Number()` 接受字串、Python `isinstance` 不接受）記在 `data_service.py` 該常數上方，實測全量資料零影響
 
 ### `app.py`
 
