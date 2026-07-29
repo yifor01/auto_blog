@@ -24,7 +24,7 @@ from src.collectors.hf_papers import (
     looks_unspaced,
 )
 from src.logger import get_logger
-from src.utils import save_json
+from src.utils import normalize_url_light, save_json
 
 _logger = get_logger(__name__)
 
@@ -35,17 +35,6 @@ _POSTS_DIR = Path("output/posts")
 _DATE_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})")
 # 只吃 frontmatter 的 title 行；body 不動（可能含程式碼區塊裡字面意義的 &amp;）
 _TITLE_LINE_RE = re.compile(r'^title:[ \t]*(.*)$', re.MULTILINE)
-
-
-def _norm_url(url: str) -> str:
-    """輕量 URL 正規化，與 web/src/enrich.ts 的 normalizeUrl 行為一致。
-
-    why 不用 utils.normalize_url：那支為去重設計，會排序 query、去 www.，
-    比對兩端來源相同（皆為 ContentItem.url 原值）時只會徒增不一致風險。
-    """
-    if not url:
-        return ""
-    return url.strip().rstrip("/").replace("http:", "https:", 1)
 
 
 def _within_days(path: Path, days: int | None) -> bool:
@@ -189,7 +178,7 @@ def repair_all(
                     new_abs = _repair_hf_abstract(it.get("url", ""), fetcher, arxiv_fetcher)
                     if new_abs:
                         it["abstract"] = new_abs
-                        fetched[_norm_url(it.get("url", ""))] = new_abs
+                        fetched[normalize_url_light(it.get("url", ""))] = new_abs
                         stats["hf_refetched"] += 1
                         changed = True
                     else:
@@ -231,7 +220,7 @@ def repair_all(
             for e in entries:
                 if not isinstance(e, dict):
                     continue
-                repaired = fetched.get(_norm_url(e.get("url", "")))
+                repaired = fetched.get(normalize_url_light(e.get("url", "")))
                 if repaired and e.get("abstract") != repaired:
                     e["abstract"] = repaired
                     changed = True

@@ -9,7 +9,7 @@ from pathlib import Path
 
 from src.logger import get_logger
 from src.models import ContentItem, ScoredItem
-from src.utils import NOTES_DIR, POSTS_DIR, RAW_DIR, SCORED_DIR, FEEDBACK_DIR, HEALTH_DIR, DIGESTS_DIR, BLOGS_DIR, LISTS_DIR, DATA_DIR, load_json, save_json, slugify
+from src.utils import NOTES_DIR, POSTS_DIR, RAW_DIR, SCORED_DIR, FEEDBACK_DIR, HEALTH_DIR, DIGESTS_DIR, BLOGS_DIR, LISTS_DIR, DATA_DIR, load_json, normalize_url_light, save_json, slugify
 
 _logger = get_logger("web.data_service")
 
@@ -319,7 +319,17 @@ def get_day_raw_items(d: date) -> list[dict]:
     return items
 
 
-# raw_metadata 中值得展示的天然訊號；與 web/src/raw.ts 的 SIGNAL_LABELS 保持一致
+# raw_metadata 中值得展示的天然訊號。
+#
+# ⚠️ 跨語言平行實作：與 `web/src/raw.ts` 的 `SIGNAL_LABELS` **必須逐字一致**
+# （key 與 emoji 標籤都是），改一邊就要同步改另一邊——兩個前端顯示同一批
+# data/raw，不同步的症狀是「同一篇文章兩邊訊號列不一樣」，無 log 無 exception。
+#
+# 已知的型別契約差異（目前零影響，但改資料格式時要留意）：
+#   - TS 端 `Number(m[key])` + `Number.isFinite`：字串 "703" 會被接受並顯示
+#   - Python 端 `isinstance(v, (int, float))` + `int(v)`：字串 "703" 不顯示，
+#     浮點數會被截斷（TS 保留小數）
+# 實測 data/raw 全量 8425 筆訊號值型別 100% 為 int，兩端輸出目前完全相同。
 _RAW_SIGNAL_LABELS = [
     ("upvotes", "👍 upvotes"),
     ("stars_today", "⭐ stars today"),
@@ -329,28 +339,21 @@ _RAW_SIGNAL_LABELS = [
 ]
 
 
-def _norm_raw_url(url: str) -> str:
-    """輕量 URL 正規化，行為在現有資料上等價於 web/src/enrich.ts 的 normalizeUrl。
-
-    非逐字一致：JS 版的 `http:` 取代錨定開頭（/^http:/），這裡的 str.replace
-    未錨定，故 `https://x/y/http://z` 這類巢狀 URL 兩者會分歧。實測 data/raw
-    全量 17230 個 url 分歧數為 0，若日後開始收 archive.org 類 URL 需補錨定。
-
-    why 不用 utils.normalize_url：那支為去重設計會排序 query、去 www.；
-    這裡兩端來源相同（皆為 ContentItem.url 原值），輕量比對即可。
-    """
-    if not url:
-        return ""
-    return url.strip().rstrip("/").replace("http:", "https:", 1)
-
-
 def get_raw_by_url(date_str: str, url: str) -> dict | None:
     """依 URL 取回當日 raw 收集項目，供詳情頁的「原始資料」box 使用。
 
     why 不重用 get_day_raw_items()：那支丟掉了 organization 與 raw_metadata，
     box 需要機構與 upvotes / stars_today 等天然訊號。
+
+    why 刻意不走 ContentItem：`get_day_raw_items()` 用 `ContentItem(**raw)` 重建，
+    等於在讀取時又套一次 Layer A 的 s2twp 簡繁轉換（s2twp 對繁體不冪等）。
+    box 承諾顯示的是「磁碟上那份原始資料」，所以這裡直接讀 dict 不做任何轉換。
+    實測兩條路徑對同一批資料的文字漂移率 0.24%（5064 筆中 12 筆，如 `檔`→`件`）。
+
+    URL 比對用 `normalize_url_light()`（非去重用的 `normalize_url()`），以與
+    Astro 端 `web/src/enrich.ts` 的 `normalizeUrl` 保持一致——理由見該函式 docstring。
     """
-    target = _norm_raw_url(url)
+    target = normalize_url_light(url)
     if not target:
         return None
     try:
@@ -365,7 +368,7 @@ def get_raw_by_url(date_str: str, url: str) -> dict | None:
         return None
 
     for it in data:
-        if not isinstance(it, dict) or _norm_raw_url(it.get("url", "")) != target:
+        if not isinstance(it, dict) or normalize_url_light(it.get("url", "")) != target:
             continue
         meta = it.get("raw_metadata") or {}
         signals = []

@@ -656,11 +656,51 @@ def load_json(path: Path) -> list | dict:
         return []
 
 
+def normalize_url_light(url: str) -> str:
+    """輕量 URL 正規化，用於「兩端來源相同」的 URL 比對（原始資料 box、repair 對照表）。
+
+    只做三件事：去頭尾空白、去尾部 `/`、`http:` → `https:`。
+    query 順序、`www.` 前綴、追蹤參數、fragment **一律保留**。
+
+    ## 與 `normalize_url()` 的區別（兩支刻意並存，不要合併）
+
+    | | `normalize_url_light()` | `normalize_url()` |
+    |---|---|---|
+    | 用途 | 同一份資料的兩個視角互相對照 | 跨來源 / 跨日**去重** |
+    | query | 原樣保留 | 移除追蹤參數並按 key 排序 |
+    | `www.` / 大小寫 | 原樣保留 | 去 `www.`、netloc 轉小寫 |
+    | fragment | 原樣保留 | 移除 |
+
+    去重要的是「盡量把同一篇文章的不同寫法收斂成一個 key」，寧可過度正規化；
+    這裡兩端拿到的都是同一個 `ContentItem.url` 原值，只需要吸收
+    scheme / 尾斜線這類無害差異，多做只會徒增與 JS 端不一致的風險。
+
+    ## 跨語言平行實作：`web/src/enrich.ts` 的 `normalizeUrl`
+
+    Astro 靜態站用 TS 版建 raw 索引、Web Monitor 用本函式查同一批 `data/raw`，
+    **兩者行為必須保持一致**；任何一邊改了規則就要同步改另一邊，否則症狀是
+    「原始資料 box 不顯示」——**無 log、無 exception**。
+    修改本函式前請先看 `web/src/enrich.ts`，並更新
+    `tests/test_normalize_url_light.py`（該檔逐條釘住兩端共同行為）。
+
+    已知的非逐字差異：TS 版的 `http:` 取代是錨定的（`/^http:/`），本函式用未錨定的
+    `str.replace(..., 1)`，故 `https://x/y/http://z` 這類巢狀 URL 兩者會分歧。
+    實測 `data/raw` 全量 17230 個 url 分歧數為 0；日後若開始收 archive.org
+    類 URL，需要把兩端一起改成錨定寫法。
+    """
+    if not url:
+        return ""
+    return url.strip().rstrip("/").replace("http:", "https:", 1)
+
+
 _TRACKING_PARAM_KEYS = {"fbclid", "gclid", "msclkid", "ref"}
 
 
 def normalize_url(url: str) -> str:
     """URL 正規化，用於跨來源 / 跨日去重比對。
+
+    注意：這支**不是** `normalize_url_light()` 的重複實作，兩者用途不同
+    （去重 vs 同源對照），差異表見 `normalize_url_light()` 的 docstring。
 
     - scheme 統一 https（http/空 → https）
     - netloc 小寫並去掉 `www.` 前綴
