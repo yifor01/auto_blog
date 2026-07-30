@@ -365,16 +365,23 @@ def repair_content(
             f"HF 重抓成功 [green]{stats['hf_refetched']}[/green] / "
             f"失敗 [yellow]{stats['hf_failed']}[/yellow]"
         )
-    # 四個數字的單位一律是「欄位數」（tags 逐個元素算一個），不是「出現次數」——
+    # 五個數字的單位一律是「欄位數」（tags 逐個元素算一個），不是「出現次數」——
     # 一個 title 裡有 3 個 entity 只計 1。文案與 `repair_all()` 的統計語意必須一致。
     # 「簡→繁」還包含**沒有任何簡體被轉換**的欄位：`to_traditional_shape_only()`
     # 每次都會順帶套 `utils._TERM_FIXES`（引數→參數 等），實測落地欄位裡有 27 個
     # 純 OpenCC 差異為 0、完全是被 term fixes 改的。詳見
     # `repair._to_traditional_safe()` 的「附帶效果」段。
+    #
+    # 「簡→繁」與「錯字修正」在**已修乾淨的資料上仍會各報 10 欄**，這是正常的：
+    # 那 10 個欄位含簡體字（會過守門），OpenCC 的詞組規則每次都把已修好的
+    # `干預`/`一出`/`指明了`/`不是只問` 重新改壞，再由錯字表原地修回。
+    # 淨結果為 0（`files_written` 也會是 0），實測全語料 88361 個欄位淨改動殘留 0。
+    # 要看有沒有真的改到東西，一律以「寫入 N 個檔案」為準。
     console.print(
         f"entity 解碼 [{color}]{stats['entities_fixed']}[/{color}] 欄，"
         f"媒體標記剝除 [{color}]{stats['media_stripped']}[/{color}] 欄，"
         f"簡→繁（含 term fixes）[{color}]{stats['simplified_converted']}[/{color}] 欄，"
+        f"錯字修正 [{color}]{stats['typos_fixed']}[/{color}] 欄，"
         f"scored 對齊 raw [{color}]{stats['scored_backfilled']}[/{color}] 欄"
     )
     if dry_run:
