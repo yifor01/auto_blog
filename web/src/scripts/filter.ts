@@ -177,7 +177,10 @@ export function initFilter(): void {
     }
     if (state.sort !== 'date') p.set('sort', state.sort);
     const s = p.toString();
-    history.replaceState(null, '', s ? `#${s}` : location.pathname);
+    // state 一律沿用現有的：Astro ClientRouter 在此存 {index, scrollX, scrollY}，
+    // 寫成 null 會讓它的 popstate handler 不接手（上一頁 URL 退了但畫面不變）。
+    // syncHash() 在初始化路徑就會被呼叫，光載入頁面就足以清掉。
+    history.replaceState(history.state, '', s ? `#${s}` : location.pathname);
   }
 
   function readHash(): void {
