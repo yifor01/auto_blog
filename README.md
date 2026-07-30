@@ -345,11 +345,19 @@ Pipeline 產生的所有資料皆按模組劃分，方便溯源與二次開發�
 
 ## 🛠️ 開發與貢獻
 
-本專案使用 `pytest` 確保核心模組的正確性：
+本專案有兩套測試，納管方式不同：
 
 ```bash
-# 執行所有單元與整合測試（383 tests）
+# 後端 Python（pytest）— 800+ tests
 pytest tests/ -v
+
+# 前端 Astro 站（vitest + happy-dom）
+cd web && npm ci && npm test
 ```
+
+| | 位置 | 是否進 repo | CI 是否執行 |
+|---|---|---|---|
+| 後端 | `tests/` | ❌（`.gitignore` 排除） | ❌ 只能本地跑 |
+| 前端 | `web/src/**/*.test.ts` | ✅ | ✅ `.github/workflows/ci.yml`（`web/**` 有變更時） |
 
 歡迎任何 Issue 回報或 Pull Request！如果這個專案對您追蹤 AI 領域的發展有幫助，請不要吝嗇給予一顆 ⭐️。

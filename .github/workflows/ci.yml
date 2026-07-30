@@ -1,0 +1,51 @@
+name: CI
+
+# 前端（web/）測試。刻意獨立於 daily-pipeline.yml：
+# pipeline 每天要產資料，測試失敗不該擋掉資料產出。
+#
+# paths 過濾：只有 web/ 或本 workflow 本身有變更才跑。
+# → 每天的 `chore: pipeline` commit 只動 data/ 與 output/，不會觸發。
+# Python 端的 tests/ 被 .gitignore 排除、不進 repo，CI 無從執行，故本檔不含 pytest。
+
+on:
+  push:
+    paths:
+      - 'web/**'
+      - '.github/workflows/ci.yml'
+  pull_request:
+    paths:
+      - 'web/**'
+      - '.github/workflows/ci.yml'
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  web-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: web/.nvmrc   # 與 Cloudflare Pages 讀的同一份（目前 20）
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      # npm ci 要求 package-lock.json 與 package.json 完全一致；
+      # 這裡先失敗，總比 Cloudflare Pages 部署時才失敗好。
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test

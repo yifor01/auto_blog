@@ -20,6 +20,7 @@
 - 修復 CLI 無任何項目變更則**不寫檔**（比照 `src/backfill.py`）
 - 測試中**不得發出真實 HTTP 請求**——抓取函式一律以參數注入
 - `web/` 目前**沒有** TS 測試框架（`enrich.ts` 也沒有測試）。不為此引入 vitest；TS 端以 `npm run build` + 實際開頁面驗證
+  （**2026-07-31 已推翻**：`e77f802` 於 `web/` 引入 vitest + happy-dom，使用者追認。此條為本計畫執行當下的約束，保留不改）
 - Commit message 格式：`<type>: <description>`，type ∈ feat/fix/refactor/docs/test/chore
 - **不得改動 `output/posts/` 的檔名**。`sam-altman8217s-orb` 這種被 entity 污染的 slug 就是 Astro 的頁面 id，改名等於改 URL、打斷既有連結與 `apb-read` localStorage 記錄。只修 frontmatter 的顯示標題
 - **不得解碼 post body**。body 是 LLM 生成的 markdown，程式碼區塊裡的 `&amp;` 可能是字面意義。實測 4 篇受影響檔案的 entity 全部只在 `title:` 行
@@ -1408,5 +1409,6 @@ git commit -m "docs: CHANGELOG 記錄原始資料 box 與資料修復"
 ## 驗證缺口（實作者必須知道）
 
 - `web/` 沒有 TS 測試框架，`loadRaw()` 沒有單元測試，只靠 Task 5/8 的 build + 實際開頁面驗證。若 build 通過但 box 沒出現，第一個要查的是 `normalizeUrl` 兩端是否對得上。
+  （**2026-07-31 已推翻**：`e77f802` 引入 vitest，使用者追認；`loadRaw()` 現在可以補單元測試了。上述缺口敘述為當時實況，保留不改）
 - `repair-content` 的 HF 重抓會打真實 HF 網站（約 192 次請求）。Task 3 的測試全部注入 stub，**真實抓取路徑只在 Task 7 的 dry-run 與實跑中驗證**。
 - Task 7 會改動已 commit 的 `data/` 與 `output/`，且 CI 每日也會寫這些目錄。執行前先 `git pull`，避免與 Actions 產出衝突。
