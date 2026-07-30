@@ -1,5 +1,5 @@
 ---
-title: "使用 Claude Code：HTML 难以置信的奇效"
+title: "使用 Claude Code：HTML 難以置信的奇效"
 source: 寶玉 baoyu.io
 url: https://baoyu.io/translations/2026-05-08/trq212-status-2052809885763747935
 score: 73

@@ -1,5 +1,5 @@
 ---
-title: "设计圈的 Claude Code 时刻来了"
+title: "設計圈的 Claude Code 時刻來了"
 source: 寶玉 baoyu.io
 url: https://baoyu.io/blog/2026-04-17/claude-design
 score: 23

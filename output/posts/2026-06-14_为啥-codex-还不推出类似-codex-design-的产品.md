@@ -1,5 +1,5 @@
 ---
-title: 为啥 Codex 还不推出类似 Codex Design 的产品？
+title: 為啥 Codex 還不推出類似 Codex Design 的產品？
 source: 寶玉 baoyu.io
 url: https://baoyu.io/blog/2026-06-13/codex-design-model-gap
 score: 65

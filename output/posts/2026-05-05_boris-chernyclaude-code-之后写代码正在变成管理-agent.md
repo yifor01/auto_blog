@@ -1,5 +1,5 @@
 ---
-title: "Boris Cherny：Claude Code 之后，写代码正在变成“管理 Agent”"
+title: "Boris Cherny：Claude Code 之後，寫代碼正在變成“管理 Agent”"
 source: 寶玉 baoyu.io
 url: https://baoyu.io/blog/anthropics-boris-cherny-why-coding-is-solved-and-what-comes-next
 score: 100
