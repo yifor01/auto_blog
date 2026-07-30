@@ -3,48 +3,41 @@ title: How AgentCore Gateway supports the MCP 2026-07-28 spec
 source: AWS ML
 url: https://aws.amazon.com/blogs/machine-learning/how-agentcore-gateway-supports-the-mcp-2026-07-28-spec/
 model: tencent/hy3:free
-generated_at: '2026-07-29T14:15:12.700452'
-score: 77
+generated_at: '2026-07-29T08:33:56.338961'
+score: 88
 ---
 
-📌 【AWS 技術更新】MCP 協議迎來重大版本更新，AgentCore Gateway 已支援無狀態架構
+📌 【AWS ML】MCP 協議重大更新：轉向無狀態架構，AgentCore Gateway 已支援 2026-07-28 版本
 
-TL;DR：MCP 2026-07-28 規格轉向無狀態架構，Amazon Bedrock AgentCore 可透過單一設定即可啟用。
+TL;DR：MCP 協議轉向無狀態設計以解決擴展性問題，Amazon Bedrock AgentCore 可透過單一設定即時支援。
 
-隨著 AI Agent 應用規模擴大，如何讓模型與外部工具之間的溝通更具擴展性成為關鍵。Model Context Protocol (MCP) 近期發布了 2026-07-28 規格，這是該協議自發布以來規模最大且最重要的修訂。
+🚀 **MCP 協議迎來史上最大規模版本更新**
 
-🧩 **從有狀態轉向無狀態：解決企業級擴展挑戰**
+Model Context Protocol (MCP) 發布了 2026-07-28 規格，這是自協議推出以來最重要的一次修訂。這次更新不僅帶來了傳輸層（transport）的變動，更將協議轉向「無狀態」（stateless）設計，讓協議能更有效地在一般 HTTP 基礎設施上進行擴展，以應對企業級部署帶來的規模化挑戰。
 
-這次更新最核心的技術變動是將 MCP 轉變為「無狀態（stateless）」協議。
+🧩 **三大核心技術改進：無狀態、強授權與生命週期保障**
 
-- 基礎變更：協議現在可以基於一般的 HTTP 基礎設施進行擴展。
-- 核心動機：協議維護者認為，轉向無狀態架構是應對企業級部署中擴展性（scaling）挑戰的必要手段。
+這次版本更新引入了數項關鍵設計，旨在提升協議的演進能力與安全性：
 
-⚠️ **引入不相容的變更，但未來將更穩定**
+* **轉向無狀態設計**：透過轉向無狀態化，解決了企業級部署中的擴展性（scaling）難題。
+* **強化授權機制**：更緊密地結合企業實務，與 OAuth 2.0 及 OpenID Connect 進行對齊，提升安全性。
+* **建立生命週期保障**：為了避免未來版本更新導致功能損壞，引入了治理增強機制（governance enhancements），包括功能生命週期政策（feature lifecycle policy）、擴充功能框架（extensions framework）以及一致性測試套件（conformance-suite）要求。
 
-由於本次更新包含與舊版不相容（backward-incompatible）的變動，開發者需要注意。不過，為了避免未來頻繁出現破壞性更新，新版規格引入了全新的治理機制：
+⚠️ **版本不相容與平滑升級策略**
 
-- 功能生命週期政策（Feature lifecycle policy）
-- 擴充機制（Extensions framework）
-- 符合性套件要求（Conformance-suite requirement）
+由於這次更新包含與舊版不相容（backward-incompatible）的變動，維護者採取了「選擇性加入」（opt-in）的升級策略：
 
-這些機制旨在確保協議在演進的過程中，不會破壞核心功能。
-
-🚀 **AgentCore Gateway 如何支援新規格**
-
-對於使用 Amazon Bedrock AgentCore 的開發者來說，可以立即在 AgentCore Gateway 上使用最新的協議版本。
-
-- 啟用方式：透過呼叫 `UpdateGateway` 並提供你希望 Gateway 支援的版本列表即可。
-- 向下相容：現有的客戶端（clients）將維持原樣運作，不需要針對個別目標進行操作。
-- 版本協商：Gateway 會透過單一配置欄位宣告其支援的協議版本，而客戶端則會在每次請求時選擇對應的版本。
+1. **雙向行動機制**：升級是選擇性的，除非使用者與客戶端同時採取行動，否則不會發生任何變化。
+2. **AgentCore Gateway 實作**：開發者可以透過呼叫 `UpdateGateway` 並傳入想要支援的版本列表，來讓 Amazon Bedrock AgentCore 的 AgentCore Gateway 支援最新協議。
+3. **對既有客戶端透明**：現有的客戶端仍能照常運作，無需針對每個目標進行個別設定。客戶端會在每一次請求中，透過單一配置欄位選擇要使用的協議版本。
 
 🎯 **實務啟示**
 
-這次更新對 AI Agent 的開發者來說，意味著底層通訊層變得更具企業級的穩定性與擴展性。由於升級是「選擇性加入（opt-in）」的，開發者可以根據需求，在確保客戶端與 Gateway 同步支援的情況下，平滑地遷移至新版本。
+對於正在建構 AI Agent 的工程師而言，這次 MCP 的轉向意味著未來部署在大型企業環境中的工具（tools）與代理（agents）將具備更好的擴展性與安全性標準。建議開發者在升級至 2026-07-28 版本前，應確認客戶端已具備選擇版本的能力，並利用新增的擴充功能框架來進行功能演進。
 
 🔗 **來源**
 - 標題：How AgentCore Gateway supports the MCP 2026-07-28 spec
 - 作者／機構：Sean Eichenberger @ AWS ML
 - 連結：https://aws.amazon.com/blogs/machine-learning/how-agentcore-gateway-supports-the-mcp-2026-07-28-spec/
 
-#AI #MCP #AWS #AmazonBedrock #AgentCore #MachineLearning #LLM #SoftwareArchitecture #CloudComputing #TechUpdate
+#AI #MCP #ModelContextProtocol #AWS #AmazonBedrock #AgentCore #MachineLearning #SoftwareArchitecture #OAuth2 #Scalability

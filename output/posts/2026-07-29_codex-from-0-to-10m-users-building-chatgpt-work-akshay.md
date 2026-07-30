@@ -3,34 +3,43 @@ title: 'Codex from 0 to 10M Users: Building ChatGPT Work — Akshay Nathan, Open
 source: Latent Space
 url: https://www.latent.space/p/chatgpt-work
 model: tencent/hy3:free
-generated_at: '2026-07-29T14:26:37.344822'
-score: 51
+generated_at: '2026-07-29T08:38:47.399825'
+score: 64
 ---
 
-📌 【OpenAI 觀察】Codex 使用者突破千萬，從編碼工具轉型為知識工作代理
+📌 【OpenAI 重點報導】Codex 用戶激增十倍，從程式碼助手轉型為知識工作代理人
 
-TL;DR：Codex 使用者數暴增 10 倍，且知識工作者佔比正以 3 倍於開發者的速度成長。
+TL;DR：Codex 用戶數呈爆炸式成長，正從單純的編碼工具進化為驅動知識工作的 Superapp。
 
-當「程式碼寫得出來」變得越來越容易，AI 的下一個戰場不在程式碼本身，而在於如何讓那些「不會寫程式的人」也能透過代理（Agent）介面完成任務。
+🎣 **「會寫程式的人」遠比「使用程式的人」少 100 倍**
 
-🚀 **Codex 使用者數爆發式成長**
+隨著「直接能用」的程式碼生成變得越來越容易，這群龐大的非開發者族群將成為 AI 最龐大的市場。OpenAI 正在嘗試透過精準的代理人介面（agentic interface），將這群人的需求轉化為實際生產力。
 
-OpenAI 的數據顯示，Codex 的月活躍使用者（MAU）自 2026 年 1 月以來已成長超過 10 倍。在 7 月 9 日推出 ChatGPT Work 不滿兩週後，Codex 與 ChatGPT Work 的總使用者數便已達到 1,000 萬人。
+🧩 **Codex 用戶數激增 10 倍，正邁向 Superapp 階段**
 
-🧩 **從 Coding Agents 演進為 Knowledge Work Agents**
+根據 Latent Space 的報導，Codex 的月活躍用戶數（MAU）自 2026 年 1 月起已增長超過 10 倍。
 
-目前的發展趨勢顯示，Codex 已不再僅僅是一個編碼工具，而是正在「打破邊界」（breaking containment）：
-- **產品整合**：OpenAI 進行了組織架構調整，將 Codex 的兩位領導者 Greg 與 Tibo 納入產品與 ChatGPT 的管理範疇，完成「超級應用程式」（Superapp）的整合。
-- **用戶結構轉變**：截至 6 月，知識工作者已佔 Codex 使用者基數的 20%，且其成長速度比開發者快上 3 倍。
-- **解決不同場景問題**：傳統知識工作分散在文件（寫作）、試算表（分析）、簡報（溝通）等不同工具中；而 ChatGPT Work 旨在讓使用者透過描述目標，由代理協作並整合工具、內容與環境來達成結果，而非手動操作應用程式功能。
+- **用戶規模**：在 7 月 9 日推出 ChatGPT Work 不滿兩週後，OpenAI 宣稱 ChatGPT Work 與 Codex 的總用戶數已達到 1,000 萬人。
+- **產品整合**：由於 Codex 目前正為 ChatGPT Work 提供支援，因此所有 ChatGPT Work 的用戶實際上都是 Codex 架構的使用者，即便他們並非傳統工程師。
+- **組織轉型**：OpenAI 已完成「Superapp」整合週期，將 Codex 的兩位核心領導者 Greg 與 Tibo 轉調至產品與 ChatGPT 部門，負責處理更廣泛的應用場景。
 
-🎯 **實務啟示**
+📊 **知識工作者正以 3 倍於開發者的速度成長**
 
-對於工程師而言，這代表 AI 的應用範疇正從單純的「輔助寫程式」轉向「跨應用程式的自動化操作」。開發者未來可能不只是在寫程式碼，更是在設計能理解複雜工作流程、並能操作各種軟體介面的 Agent。
+Codex 的範疇已不再僅限於開發工具，其用戶結構正在發生劇烈變化：
+
+- **用戶組成**：今年 6 月的數據顯示，知識工作者已佔 Codex 用戶總數的 20%。
+- **成長速度**：知識工作者族群的成長速度，比開發者快了 3 倍以上。
+- **產品演進**：為了應對知識工作與編碼完全不同的問題與環境，OpenAI 已從 Codex 團隊中拆分出專門針對知識工作者的產品。
+
+💡 **從「操作應用程式」轉向「描述結果」**
+
+傳統的知識工作分散在各種不同的工具原語（primitives）中，例如用於寫作的文書軟體、用於分析的試算表、用於溝通的簡報，以及各種專業應用程式。
+
+ChatGPT Work 的核心理念是透過代理人（agents）打破這些工具間的隔閡。使用者不再需要手動開啟應用程式並操作其功能，而是隻需描述預期的結果，即可與代理人協作，由代理人負責整合工具、上下文與執行流程。
 
 🔗 **來源**
 - 標題：Codex from 0 to 10M Users: Building ChatGPT Work
 - 作者／機構：Latent Space
 - 連結：https://www.latent.space/p/chatgpt-work
 
-#OpenAI #Codex #ChatGPT #AI #AgenticWorkflow #KnowledgeWork #SoftwareEngineering #Productivity #LLM #Superapp
+#OpenAI #Codex #ChatGPTWork #AI #KnowledgeWork #AgenticWorkflow #ProductStrategy #LLM #Superapp #TechTrends
