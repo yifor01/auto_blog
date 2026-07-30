@@ -1,0 +1,122 @@
+{
+  "_readme": [
+    "跨語言契約 fixture——TS 與 Python 兩份平行實作的『唯一一份期望值』。",
+    "web/src/raw.ts（Astro 靜態站）與 src/web/data_service.py（Web Monitor）是同一個",
+    "『原始資料 box』的兩份實作，使用者已裁示兩個前端不共用樣式層，所以重複是刻意的；",
+    "但底下這兩項契約必須逐字一致，漂移的症狀是『box 查不到資料 → 整個 box 靜默不渲染』，",
+    "無 log、無 exception。",
+    "",
+    "兩端各有一支測試讀本檔：",
+    "  TS     → web/src/cross-lang-contract.test.ts（npm test）",
+    "  Python → tests/test_cross_lang_contract.py（pytest tests/ -q）",
+    "期望值只寫在這裡，任一端改了實作而沒同步本檔，兩邊測試會一起紅；",
+    "改了本檔而沒同步實作，也會紅。改動時三個檔案（fixture + 兩份實作）要一起送。"
+  ],
+
+  "normalizeUrl": {
+    "_impl": {
+      "ts": "web/src/enrich.ts :: normalizeUrl",
+      "python": "src/utils.py :: normalize_url_light"
+    },
+    "_note": "去頭尾空白 → 去尾部斜線 → http: 轉 https:，只做這三件事（順序有意義）。",
+
+    "shared": [
+      {
+        "input": "  https://example.com/a  ",
+        "expected": "https://example.com/a",
+        "note": "去頭尾空白（TS .trim() / Python .strip()）"
+      },
+      {
+        "input": "https://example.com/a/",
+        "expected": "https://example.com/a",
+        "note": "去尾部斜線"
+      },
+      {
+        "input": "https://example.com/a///",
+        "expected": "https://example.com/a",
+        "note": "連續尾斜線要去到底（TS /\\/+$/ 對應 Python rstrip('/')）"
+      },
+      {
+        "input": "https://example.com/",
+        "expected": "https://example.com",
+        "note": "根路徑的尾斜線同樣要去掉"
+      },
+      {
+        "input": "http://example.com/a",
+        "expected": "https://example.com/a",
+        "note": "http: 升級成 https:"
+      },
+      {
+        "input": "  http://example.com/a/  ",
+        "expected": "https://example.com/a",
+        "note": "三個步驟疊加"
+      },
+      {
+        "input": "",
+        "expected": "",
+        "note": "空字串短路回空字串（呼叫端據此判定『查不到』）"
+      },
+      {
+        "input": "https://example.com/a",
+        "expected": "https://example.com/a",
+        "note": "已正規化的輸入必須冪等"
+      },
+      {
+        "input": "https://www.example.com/a",
+        "expected": "https://www.example.com/a",
+        "note": "www. 保留（這是與去重用的 normalize_url() 的分界）"
+      },
+      {
+        "input": "https://Example.COM/a",
+        "expected": "https://Example.COM/a",
+        "note": "netloc 大小寫保留"
+      },
+      {
+        "input": "https://example.com/a?b=2&a=1",
+        "expected": "https://example.com/a?b=2&a=1",
+        "note": "query 順序保留、不排序"
+      },
+      {
+        "input": "https://example.com/a?utm_source=x",
+        "expected": "https://example.com/a?utm_source=x",
+        "note": "追蹤參數保留"
+      },
+      {
+        "input": "https://example.com/a#sec",
+        "expected": "https://example.com/a#sec",
+        "note": "fragment 保留"
+      }
+    ],
+
+    "divergent": [
+      {
+        "input": "https://web.archive.org/web/2020/http://example.com/",
+        "ts": "https://web.archive.org/web/2020/http://example.com",
+        "python": "https://web.archive.org/web/2020/https://example.com",
+        "note": "已知且刻意保留的分歧：TS 用錨定的 /^http:/，Python 用未錨定的 replace('http:','https:',1)，故巢狀 URL 的內層只會在 Python 端被改寫。實測全語料分歧數為 0（實測筆數見 src/utils.py 的 normalize_url_light() docstring），所以不修；日後若開始收 archive.org 類 URL，兩端要一起改成錨定寫法並更新本節。"
+      },
+      {
+        "input": "https://r.jina.ai/http://example.com/a",
+        "ts": "https://r.jina.ai/http://example.com/a",
+        "python": "https://r.jina.ai/https://example.com/a",
+        "note": "同上，reader proxy 形式的巢狀 URL。"
+      }
+    ]
+  },
+
+  "signalLabels": {
+    "_impl": {
+      "ts": "web/src/raw.ts :: SIGNAL_LABELS",
+      "python": "src/web/data_service.py :: _RAW_SIGNAL_LABELS"
+    },
+    "_note": "raw_metadata 中值得展示的天然訊號。key、標籤文字（含 emoji）與順序都要完全相同——box 的訊號列在兩個前端必須長得一樣。",
+
+    "entries": [
+      { "key": "upvotes", "label": "👍 upvotes" },
+      { "key": "stars_today", "label": "⭐ stars today" },
+      { "key": "points", "label": "HN points" },
+      { "key": "num_comments", "label": "HN 留言" },
+      { "key": "citation_count", "label": "📖 citations" }
+    ]
+  }
+}
