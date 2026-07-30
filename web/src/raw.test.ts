@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
+import contract from './__fixtures__/cross-lang-contract.json';
 import { lookupRaw, type RawIndex, type RawItem } from './raw';
 
 /**
@@ -21,6 +22,30 @@ import { lookupRaw, type RawIndex, type RawItem } from './raw';
 interface FsMock {
   readdirSync: ReturnType<typeof vi.fn>;
   readFileSync: ReturnType<typeof vi.fn>;
+}
+
+/**
+ * 訊號標籤的期望值一律取自共用 fixture `__fixtures__/cross-lang-contract.json`，
+ * 該檔同時被 `cross-lang-contract.test.ts`（TS）與 `tests/test_cross_lang_contract.py`
+ * （Python）讀取。本檔若自己再寫死一份，就成了第三份副本——改了實作與 fixture
+ * 卻沒改這裡，這些測試會拿舊值繼續綠。
+ *
+ * why 用 JSON import 而非比照 `cross-lang-contract.test.ts` 的 `fs.readFileSync`：
+ * 本檔為了測 loadRaw 已經 `vi.mock('node:fs')`，用 fs 讀 fixture 會撞上自己的 mock。
+ * Vite 原生支援 JSON import，內容一樣來自磁碟上那個檔案，且路徑相對於本模組解析、
+ * 不依賴 cwd。（已用 mutation 驗證：改動 fixture 內的 label，本檔測試確實 FAIL。）
+ */
+const SIGNAL_ENTRIES: { key: string; label: string }[] = contract.signalLabels.entries;
+
+/** 依 key 取 fixture 中的訊號定義；取不到就明確炸掉，不讓測試靜默降級成弱斷言。 */
+function signal(key: string): { key: string; label: string } {
+  const hit = SIGNAL_ENTRIES.find((e) => e.key === key);
+  if (!hit) {
+    throw new Error(
+      `共用 fixture 的 signalLabels 已無 "${key}"，raw.test.ts 需同步更新（見 __fixtures__/cross-lang-contract.json）`,
+    );
+  }
+  return hit;
 }
 
 vi.mock('node:fs', () => {
@@ -99,8 +124,9 @@ describe('lookupRaw 命中順序', () => {
   const URL = 'https://example.com/a';
 
   test('postDay 有對應那天時，回傳「當天」那筆而非 byUrl fallback', () => {
-    const sameDay = mkItem({ collectedDate: '2026-06-28', signals: [{ label: '⭐ stars today', value: 141 }] });
-    const otherDay = mkItem({ collectedDate: '2026-07-22', signals: [{ label: '⭐ stars today', value: 2040 }] });
+    const stars = signal('stars_today');
+    const sameDay = mkItem({ collectedDate: '2026-06-28', signals: [{ label: stars.label, value: 141 }] });
+    const otherDay = mkItem({ collectedDate: '2026-07-22', signals: [{ label: stars.label, value: 2040 }] });
     const index = mkIndex({ [`2026-06-28|${URL}`]: sameDay, [`2026-07-22|${URL}`]: otherDay }, { [URL]: otherDay });
 
     // 這正是實測 69/575 篇踩到的症狀：一篇 2026-06-28 的文章顯示「收集於 2026-07-22」、⭐ 2040。
@@ -203,17 +229,18 @@ describe('loadRaw 索引建立', () => {
 
   test('byDayUrl 用 day+url 複合 key，同一 url 跨多天各自獨立成筆', async () => {
     const URL = 'https://github.com/foo/bar';
+    const stars = signal('stars_today');
     const { loadRaw } = await setup({
-      '2026-07-20.json': [rec(URL, { raw_metadata: { stars_today: 141 } })],
-      '2026-07-22.json': [rec(URL, { raw_metadata: { stars_today: 2040 } })],
+      '2026-07-20.json': [rec(URL, { raw_metadata: { [stars.key]: 141 } })],
+      '2026-07-22.json': [rec(URL, { raw_metadata: { [stars.key]: 2040 } })],
     });
 
     const index = loadRaw();
 
     // 若 key 退化成 url-only，兩天會互相覆寫成 1 筆——這正是 69/575 篇顯示到別天資料的成因。
     expect(index.byDayUrl.size).toBe(2);
-    expect(index.byDayUrl.get(`2026-07-20|${URL}`)?.signals).toEqual([{ label: '⭐ stars today', value: 141 }]);
-    expect(index.byDayUrl.get(`2026-07-22|${URL}`)?.signals).toEqual([{ label: '⭐ stars today', value: 2040 }]);
+    expect(index.byDayUrl.get(`2026-07-20|${URL}`)?.signals).toEqual([{ label: stars.label, value: 141 }]);
+    expect(index.byDayUrl.get(`2026-07-22|${URL}`)?.signals).toEqual([{ label: stars.label, value: 2040 }]);
   });
 
   test('byDayUrl 的 key 使用正規化後的 url', async () => {
@@ -301,14 +328,15 @@ describe('loadRaw 的 byUrl fallback 保留最早收集日', () => {
   });
 
   test('byUrl 留最早的同時，byDayUrl 每天仍各自完整', async () => {
+    const up = signal('upvotes');
     const { loadRaw } = await setup({
-      '2026-07-10.json': [rec(URL, { raw_metadata: { upvotes: 3 } })],
-      '2026-07-28.json': [rec(URL, { raw_metadata: { upvotes: 99 } })],
+      '2026-07-10.json': [rec(URL, { raw_metadata: { [up.key]: 3 } })],
+      '2026-07-28.json': [rec(URL, { raw_metadata: { [up.key]: 99 } })],
     });
 
     const index = loadRaw();
-    expect(index.byUrl.get(URL)?.signals).toEqual([{ label: '👍 upvotes', value: 3 }]);
-    expect(index.byDayUrl.get(`2026-07-28|${URL}`)?.signals).toEqual([{ label: '👍 upvotes', value: 99 }]);
+    expect(index.byUrl.get(URL)?.signals).toEqual([{ label: up.label, value: 3 }]);
+    expect(index.byDayUrl.get(`2026-07-28|${URL}`)?.signals).toEqual([{ label: up.label, value: 99 }]);
   });
 });
 
@@ -330,29 +358,55 @@ describe('loadRaw 的 signals 擷取', () => {
     return loadRaw().byUrl.get('https://example.com/a')!.signals;
   }
 
-  test('五種訊號齊備時，標籤與順序符合 SIGNAL_LABELS', async () => {
-    expect(
-      await signalsOf({ points: 120, upvotes: 8, citation_count: 5, stars_today: 30, num_comments: 42 }),
-    ).toEqual([
-      { label: '👍 upvotes', value: 8 },
-      { label: '⭐ stars today', value: 30 },
-      { label: 'HN points', value: 120 },
-      { label: 'HN 留言', value: 42 },
-      { label: '📖 citations', value: 5 },
-    ]);
+  test('所有訊號齊備時，標籤文字與順序完全比照共用 fixture', async () => {
+    // fixture 被清空時 toEqual([]) 會變成零斷言假綠，先擋掉。
+    expect(SIGNAL_ENTRIES.length).toBeGreaterThanOrEqual(5);
+
+    // raw_metadata 的鍵刻意用 fixture 的「反序」寫入：輸出順序若跟著物件插入順序跑，
+    // 這條就會 FAIL——確保「順序等於 SIGNAL_LABELS 的宣告順序」不是碰巧成立。
+    const meta: Record<string, number> = {};
+    [...SIGNAL_ENTRIES].reverse().forEach((e, i) => {
+      meta[e.key] = (i + 1) * 7;
+    });
+
+    const got = await signalsOf(meta);
+    expect(got).toHaveLength(SIGNAL_ENTRIES.length);
+    expect(got).toEqual(SIGNAL_ENTRIES.map((e) => ({ label: e.label, value: meta[e.key] })));
   });
 
   test('值為 0 的訊號不入列', async () => {
-    expect(await signalsOf({ upvotes: 0, stars_today: 7 })).toEqual([{ label: '⭐ stars today', value: 7 }]);
+    const [dropped, kept] = SIGNAL_ENTRIES;
+    expect(await signalsOf({ [dropped.key]: 0, [kept.key]: 7 })).toEqual([{ label: kept.label, value: 7 }]);
   });
 
   test('負數不入列', async () => {
-    expect(await signalsOf({ upvotes: -5, stars_today: 7 })).toEqual([{ label: '⭐ stars today', value: 7 }]);
+    const [dropped, kept] = SIGNAL_ENTRIES;
+    expect(await signalsOf({ [dropped.key]: -5, [kept.key]: 7 })).toEqual([{ label: kept.label, value: 7 }]);
   });
 
-  test('非數值（字串 / null / 物件 / NaN）不入列', async () => {
-    expect(await signalsOf({ upvotes: 'many', points: null, num_comments: {}, citation_count: NaN, stars_today: 7 }))
-      .toEqual([{ label: '⭐ stars today', value: 7 }]);
+  test('非數值與非有限值（字串 / null / 物件 / 陣列 / NaN / Infinity）不入列', async () => {
+    const kept = SIGNAL_ENTRIES[SIGNAL_ENTRIES.length - 1];
+    const expected = [{ label: kept.label, value: 7 }];
+
+    // 除了最後一個訊號之外全部餵髒值，只有最後一個該存活。
+    const junk: unknown[] = ['many', null, {}, [1, 2], NaN];
+    const meta: Record<string, unknown> = {};
+    SIGNAL_ENTRIES.slice(0, -1).forEach((e, i) => {
+      meta[e.key] = junk[i % junk.length];
+    });
+    meta[kept.key] = 7;
+    expect(await signalsOf(meta)).toEqual(expected);
+
+    // Infinity 單獨測：它通得過 `v > 0`，實作中只有 Number.isFinite 擋得住它。
+    // 不能走 signalsOf()——那條路徑會 JSON.stringify，而 JSON.stringify(Infinity) 是 null，
+    // 髒值根本到不了受測程式碼（第一版就是這樣寫成假綠的）。
+    // 真實可達的路徑是 JSON 文字裡的超大數字字面值：JSON.parse('1e999') === Infinity。
+    const first = SIGNAL_ENTRIES[0];
+    const { loadRaw } = await setup({
+      '2026-07-20.json':
+        `[{"url":"https://example.com/inf","raw_metadata":{"${first.key}":1e999,"${kept.key}":7}}]`,
+    });
+    expect(loadRaw().byUrl.get('https://example.com/inf')!.signals).toEqual(expected);
   });
 
   test('raw_metadata 缺漏或非物件時 signals 為空陣列', async () => {
@@ -362,7 +416,12 @@ describe('loadRaw 的 signals 擷取', () => {
   });
 
   test('raw_metadata 只帶不在白名單的欄位時 signals 為空', async () => {
-    expect(await signalsOf({ score: 88, rank: 1 })).toEqual([]);
+    const outsiders = { score: 88, rank: 1 };
+    // 若哪天 fixture 把這些收進白名單，本條就不再是「白名單外」的案例了。
+    expect(SIGNAL_ENTRIES.map((e) => e.key)).not.toContain('score');
+    expect(SIGNAL_ENTRIES.map((e) => e.key)).not.toContain('rank');
+
+    expect(await signalsOf(outsiders)).toEqual([]);
   });
 });
 
@@ -553,19 +612,20 @@ describe('loadRaw + lookupRaw 整合', () => {
 
   test('跨多天收集的同一 url，post 拿到自己那天的資料', async () => {
     const URL = 'https://github.com/foo/bar';
+    const stars = signal('stars_today');
     const { loadRaw, lookupRaw: lookup } = await setup({
-      '2026-07-10.json': [rec(URL, { raw_metadata: { stars_today: 141 } })],
-      '2026-07-22.json': [rec(URL, { raw_metadata: { stars_today: 2040 } })],
+      '2026-07-10.json': [rec(URL, { raw_metadata: { [stars.key]: 141 } })],
+      '2026-07-22.json': [rec(URL, { raw_metadata: { [stars.key]: 2040 } })],
     });
     const index = loadRaw();
 
     const early = lookup(index, URL, '2026-07-10');
     expect(early?.collectedDate).toBe('2026-07-10');
-    expect(early?.signals).toEqual([{ label: '⭐ stars today', value: 141 }]);
+    expect(early?.signals).toEqual([{ label: stars.label, value: 141 }]);
 
     const late = lookup(index, URL, '2026-07-22');
     expect(late?.collectedDate).toBe('2026-07-22');
-    expect(late?.signals).toEqual([{ label: '⭐ stars today', value: 2040 }]);
+    expect(late?.signals).toEqual([{ label: stars.label, value: 2040 }]);
   });
 
   test('post 日期與所有收集日都不同時，退回最早那筆', async () => {
