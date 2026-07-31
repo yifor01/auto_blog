@@ -11,6 +11,7 @@ from src.collectors.base import BaseCollector
 from src.models import ContentItem, SourceType
 from src.logger import get_logger
 from src.utils import (
+    ABSTRACT_MAX_CHARS_DEFAULT,
     extract_full_text_from_html,
     fetch_article_text,
     get_http_client,
@@ -30,6 +31,7 @@ class RSSCollector(BaseCollector):
             return []
 
         feeds = cfg.get("feeds", [])
+        max_chars = config["collectors"].get("abstract_max_chars", ABSTRACT_MAX_CHARS_DEFAULT)
         target_date = target_date or date.today()
         items: list[ContentItem] = []
 
@@ -70,7 +72,7 @@ class RSSCollector(BaseCollector):
                             continue
 
                         article_url = entry.get("link", "")
-                        abstract = self._extract_abstract(entry, article_url, client)
+                        abstract = self._extract_abstract(entry, article_url, client, max_len=max_chars)
 
                         items.append(
                             ContentItem(
@@ -110,7 +112,7 @@ class RSSCollector(BaseCollector):
         article_url: str,
         client,
         min_len: int = 1000,
-        max_len: int = 2000,
+        max_len: int = ABSTRACT_MAX_CHARS_DEFAULT,
     ) -> str:
         """三段 priority 提取 abstract：content:encoded > summary > HTTP fetch。"""
         raw_html = ""

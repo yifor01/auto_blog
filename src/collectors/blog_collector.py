@@ -12,7 +12,13 @@ from src.collectors._helpers import infer_organization, parse_entry_date
 from src.collectors.base import BaseCollector
 from src.models import ContentItem, SourceType
 from src.logger import get_logger
-from src.utils import extract_full_text_from_html, fetch_article_text, get_http_client, load_config
+from src.utils import (
+    ABSTRACT_MAX_CHARS_DEFAULT,
+    extract_full_text_from_html,
+    fetch_article_text,
+    get_http_client,
+    load_config,
+)
 
 _logger = get_logger("collectors.blogs")
 
@@ -36,6 +42,7 @@ class BlogCollector(BaseCollector):
             return []
 
         sources = cfg.get("sources", [])
+        max_chars = config["collectors"].get("abstract_max_chars", ABSTRACT_MAX_CHARS_DEFAULT)
         target_date = target_date or date.today()
         items: list[ContentItem] = []
 
@@ -45,7 +52,7 @@ class BlogCollector(BaseCollector):
                 blog_name = blog["name"]
                 blog_url = blog["url"]
                 try:
-                    collected = self._scrape_blog(client, blog_name, blog_url, target_date)
+                    collected = self._scrape_blog(client, blog_name, blog_url, target_date, max_chars)
                     items.extend(collected)
                     _logger.info("Blog collected", extra={"blog": blog_name, "count": len(collected)})
                 except Exception as e:
@@ -62,6 +69,7 @@ class BlogCollector(BaseCollector):
         name: str,
         url: str,
         target_date: date,
+        max_chars: int = ABSTRACT_MAX_CHARS_DEFAULT,
     ) -> list[ContentItem]:
         """通用部落格爬蟲：嘗試找 RSS feed，否則 scrape HTML."""
         # 先嘗試常見 RSS 路徑；第一個成功就停，連線層錯誤立即放棄剩餘路徑
@@ -81,7 +89,7 @@ class BlogCollector(BaseCollector):
                     parsed = feedparser.parse(resp.text)
                     if parsed.entries:
                         return self._parse_feed_entries(
-                            parsed.entries, name, url, target_date, client
+                            parsed.entries, name, url, target_date, client, max_chars
                         )
                 else:
                     _logger.debug(
@@ -103,7 +111,7 @@ class BlogCollector(BaseCollector):
                 continue
 
         # Fallback: scrape HTML 找最新文章連結
-        return self._scrape_html(client, name, url, target_date)
+        return self._scrape_html(client, name, url, target_date, max_chars)
 
     def _parse_feed_entries(
         self,
@@ -112,6 +120,7 @@ class BlogCollector(BaseCollector):
         base_url: str,
         target_date: date,
         client,
+        max_chars: int = ABSTRACT_MAX_CHARS_DEFAULT,
     ) -> list[ContentItem]:
         items: list[ContentItem] = []
         for entry in entries[:10]:  # 最多看 10 篇
@@ -133,12 +142,12 @@ class BlogCollector(BaseCollector):
             # Priority 2: summary / description
             if not raw_html:
                 raw_html = getattr(entry, "summary", "")
-            abstract = extract_full_text_from_html(raw_html, 2000) if raw_html else ""
+            abstract = extract_full_text_from_html(raw_html, max_chars) if raw_html else ""
 
             # Priority 3: 短摘要補抓
             article_url = entry.get("link", "")
             if len(abstract) < 1000 and article_url:
-                fetched = fetch_article_text(article_url, client, 2000)
+                fetched = fetch_article_text(article_url, client, max_chars)
                 if len(fetched) > len(abstract):
                     abstract = fetched
 
@@ -172,6 +181,7 @@ class BlogCollector(BaseCollector):
         name: str,
         url: str,
         target_date: date,
+        max_chars: int = ABSTRACT_MAX_CHARS_DEFAULT,
     ) -> list[ContentItem]:
         """Fallback HTML scraping for blogs without RSS."""
         try:
@@ -197,18 +207,13 @@ class BlogCollector(BaseCollector):
                 try:
                     p_resp = client.get(href)
                     if p_resp.status_code == 200:
-                        p_soup = BeautifulSoup(p_resp.text, "html.parser")
-                        # 找尋常見的正文標籤
-                        article_body = p_soup.select_one("article, .post-content, .entry-content, main")
-                        if article_body:
-                            ps = article_body.select("p")
-                            content_abstract = " ".join([p.get_text(strip=True) for p in ps[:3]])
-                        else:
-                            content_abstract = " ".join([p.get_text(strip=True) for p in p_soup.select("p")[:3]])
+                        # 走共用提取：容器優先序 + 雜訊剝除 + 句界截斷，
+                        # 不再自行 select_one（會踩祖先優先的坑）或只取前 3 段
+                        content_abstract = extract_full_text_from_html(p_resp.text, max_chars)
                 except Exception:
                     pass
 
-                final_abstract = content_abstract[:1000] if content_abstract else f"Title: {title}"
+                final_abstract = content_abstract or f"Title: {title}"
                 if not self._is_valid_blog_entry(title=title, url=href, abstract=final_abstract):
                     _logger.debug("Skipping invalid HTML scraped entry", extra={"title": title[:80]})
                     continue

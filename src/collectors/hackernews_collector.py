@@ -11,7 +11,7 @@ from zoneinfo import ZoneInfo
 from src.collectors.base import BaseCollector
 from src.models import ContentItem, SourceType
 from src.logger import get_logger
-from src.utils import build_link_abstract, get_http_client, load_config
+from src.utils import ABSTRACT_MAX_CHARS_DEFAULT, build_link_abstract, get_http_client, load_config
 
 _logger = get_logger("collectors.hackernews")
 
@@ -62,6 +62,7 @@ class HackerNewsCollector(BaseCollector):
         if not cfg.get("enabled", True):
             return []
 
+        max_chars = config.get("collectors", {}).get("abstract_max_chars", ABSTRACT_MAX_CHARS_DEFAULT)
         target_date = target_date or date.today()
         queries: list[str] = cfg.get("queries", ["AI", "LLM", "GPT"])
         min_points: int = cfg.get("min_points", 50)
@@ -125,7 +126,7 @@ class HackerNewsCollector(BaseCollector):
                     elif raw_url:
                         engagement = f"{points} points, {num_comments} comments on Hacker News"
                         domain = urlparse(raw_url).netloc.replace("www.", "")
-                        abstract = build_link_abstract(url, client, engagement, domain)
+                        abstract = build_link_abstract(url, client, engagement, domain, max_chars)
                     else:
                         abstract = f"news.ycombinator.com — {points} points, {num_comments} comments on Hacker News"
 

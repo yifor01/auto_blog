@@ -10,7 +10,7 @@ from bs4 import BeautifulSoup
 from src.collectors.base import BaseCollector
 from src.models import ContentItem, SourceType
 from src.logger import get_logger
-from src.utils import get_http_client, load_config
+from src.utils import ABSTRACT_MAX_CHARS_DEFAULT, get_http_client, load_config, truncate_at_boundary
 
 _logger = get_logger("collectors.github")
 
@@ -95,6 +95,7 @@ class GitHubTrendingCollector(BaseCollector):
         if not cfg.get("enabled", True):
             return []
 
+        max_chars = config["collectors"].get("abstract_max_chars", ABSTRACT_MAX_CHARS_DEFAULT)
         target_date = target_date or date.today()
         languages = cfg.get("languages", ["python"])
         items: list[ContentItem] = []
@@ -171,7 +172,7 @@ class GitHubTrendingCollector(BaseCollector):
                             except Exception as e:
                                 _logger.warning("Could not fetch README", extra={"repo": repo_name, "error": str(e)})
 
-                        final_abstract = readme_text[:1500] if readme_text else description
+                        final_abstract = truncate_at_boundary(readme_text, max_chars) if readme_text else description
 
                         owner = repo_path.split("/")[0] if "/" in repo_path else ""
                         organization = _GITHUB_OWNER_TO_ORG.get(owner.lower(), "")

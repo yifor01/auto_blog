@@ -10,7 +10,13 @@ from zoneinfo import ZoneInfo
 from src.collectors.base import BaseCollector
 from src.logger import get_logger
 from src.models import ContentItem, SourceType
-from src.utils import build_link_abstract, get_http_client, load_config
+from src.utils import (
+    ABSTRACT_MAX_CHARS_DEFAULT,
+    build_link_abstract,
+    get_http_client,
+    load_config,
+    truncate_at_boundary,
+)
 
 _logger = get_logger("collectors.reddit")
 
@@ -31,6 +37,7 @@ class RedditCollector(BaseCollector):
             _logger.info("Skipping Reddit collector on GitHub Actions (datacenter IP blocked)")
             return []
 
+        max_chars = config.get("collectors", {}).get("abstract_max_chars", ABSTRACT_MAX_CHARS_DEFAULT)
         target_date = target_date or date.today()
         subreddits: list[str] = cfg.get("subreddits", ["LocalLLaMA", "MachineLearning"])
         min_upvotes: int = cfg.get("min_upvotes", 50)
@@ -94,11 +101,11 @@ class RedditCollector(BaseCollector):
                     selftext = (post.get("selftext") or "").strip()
 
                     if selftext:
-                        abstract = selftext[:500]
+                        abstract = truncate_at_boundary(selftext, max_chars)
                     elif not is_self:
                         engagement = f"{score} upvotes, {num_comments} comments on r/{sub}"
                         domain = post.get("domain", "reddit.com")
-                        abstract = build_link_abstract(final_url, client, engagement, domain)
+                        abstract = build_link_abstract(final_url, client, engagement, domain, max_chars)
                     else:
                         abstract = f"reddit.com — {score} upvotes, {num_comments} comments on r/{sub}"
 
