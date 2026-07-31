@@ -1029,7 +1029,7 @@ VARIANT_CASES = [
 @pytest.mark.parametrize("key,wrong,right", VARIANT_CASES)
 def test_variant_fix_entry(key, wrong, right):
     """每一條修正表條目都要有自己的測試（拿掉該條就會 FAIL）。"""
-    from src.repair import _apply_variant_fixes
+    from src.utils import _apply_variant_fixes
 
     assert _apply_variant_fixes(wrong) == right
 
@@ -1038,8 +1038,11 @@ def test_every_variant_fix_entry_has_a_test():
     """修正表與測試案例必須逐條對齊——新增條目卻沒補測試會在這裡失敗。
 
     這條擋的是「表越加越長、但只有前幾條真的被驗過」。
+
+    表已於 2026-07-31 搬到 `src/utils.py`（Layer A 與 repair 共用），這裡跟著改
+    import 來源；對齊關係本身不變。
     """
-    from src.repair import _VARIANT_FIXES
+    from src.utils import _VARIANT_FIXES
 
     tested = {c[0] for c in VARIANT_CASES}
     assert tested == set(_VARIANT_FIXES), (

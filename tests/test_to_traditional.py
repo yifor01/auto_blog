@@ -8,9 +8,11 @@ from __future__ import annotations
 
 from datetime import date, datetime
 
+import pytest
+
 from src.generators.blog_post import save_blog_post
 from src.models import ContentItem, GeneratedContent, ScoredItem, SourceType
-from src.utils import to_traditional, to_traditional_shape_only
+from src.utils import _apply_variant_fixes, to_traditional, to_traditional_shape_only
 
 # 簡體字偵測集（出現在輸出 = 在地化失敗）。刻意只列繁簡異形字，
 # 避免「谷」這類繁簡同形字造成誤判。
@@ -145,6 +147,181 @@ class TestConversionIdempotency:
     def test_layer_b_still_cleans_simplified_chars(self):
         """Layer B 仍須擦掉 LLM 偶發吐出的簡體字。"""
         assert to_traditional_shape_only("这个应该转换") == "這個應該轉換"
+
+
+class TestVariantFixesAtLayerA:
+    """`_VARIANT_FIXES` 從 repair 層搬進 Layer A（2026-07-31）。
+
+    why 要搬：`repair-content` 的變體修正只能補歷史，而 `to_traditional()`
+    是**所有新資料的生產路徑**，每天仍在產同一批錯字。實測 41 條裡有 28 條
+    在 Layer A 路徑真的會被觸發（其中 4 條需要真實脈絡才觸發，見
+    `test_variant_fix_needs_real_context`）。
+    """
+
+    @pytest.mark.parametrize(
+        "simplified, wrong, right",
+        [
+            ("更复杂的推理链路", "更復雜", "更複雜"),
+            ("不复杂的架构", "不復雜", "不複雜"),
+            ("这是个死胡同", "死衚衕", "死胡同"),
+            ("他很克制这个冲动", "剋制", "克制"),
+            ("股价跌到20年谷底了", "穀底", "谷底"),
+            ("台积电流片", "臺積電", "台積電"),
+            ("金属托盘", "金屬託盤", "金屬托盤"),
+            ("背负骂名", "揹負", "背負"),
+            ("总台直播", "總檯", "總臺"),
+            ("在签什么合约", "在籤什麼", "在簽什麼"),
+            ("这只会营造假象", "這隻會營造", "這只會營造"),
+        ],
+    )
+    def test_layer_a_no_longer_emits_variant_errors(self, simplified, wrong, right):
+        out = to_traditional(simplified)
+        assert wrong not in out, f"Layer A 仍在產出錯字 {wrong!r}：{out!r}"
+        assert right in out
+
+    @pytest.mark.parametrize(
+        "simplified, wrong, right",
+        [
+            # 這幾條的最小輸入（合并请求 / 系统化）s2twp 本來就轉對，
+            # 只有帶著真實脈絡時才會被詞組規則改壞——用最小輸入驗證會假綠。
+            ("代码提交合并请求", "合並請求", "合併請求"),
+            ("帮助你系统化学习", "係統化", "系統化"),
+        ],
+    )
+    def test_variant_fix_needs_real_context(self, simplified, wrong, right):
+        out = to_traditional(simplified)
+        assert wrong not in out, f"Layer A 仍在產出錯字 {wrong!r}：{out!r}"
+        assert right in out
+
+    def test_variant_table_itself_is_idempotent(self):
+        """表本身要冪等（修正後再套一次不變）。
+
+        注意這裡刻意測**表**而不是整條 `to_traditional()` 路徑——後者對繁體輸入
+        本來就不冪等（s2twp 詞組規則：文件→檔案），那是既有設計，由 Layer B
+        改用 s2tw 來收尾，不是本表的責任。
+        """
+        once = _apply_variant_fixes("更復雜的死衚衕與剋制")
+        assert _apply_variant_fixes(once) == once
+        assert once == "更複雜的死胡同與克制"
+
+
+class TestVariantFixGateKnownLimitation:
+    """守門的已知代價：繁簡同形的輸入修不到。
+
+    `他很克制` / `20年谷底` 每個字都是繁簡通用 ⇒ 守門判定「不含簡體」⇒ 不套變體表，
+    但 s2twp 的**詞組規則**仍把它們改成 `剋制` / `穀底`。
+
+    ## 實際影響範圍很小
+
+    只要欄位裡有**別的**簡體字撐著守門就會放行並修好——而量子位 / ChatPaper 這類
+    真實來源的 abstract 是整段簡體，必然如此（實測 `他很克制这个冲动` → `克制`、
+    `股价跌到20年谷底了` → `谷底`，都修對）。受影響的只有「純繁簡同形的短欄位」。
+
+    ## why 接受這個代價
+
+    另一種判準「OpenCC 真的改變了文字就套表」能修好這幾個，但實測會**引入新錯**：
+    `委託馬斯克撰寫文檔` →（文檔→文件 觸發轉換）→ 套表 → `委托馬斯克`。
+    專案在簡繁修正上的一貫原則是**寧可少修也不要造新錯**（見 `repair.py` 變體表
+    註解），且這幾個 case 在搬表之前就已經是這樣——是「沒修好舊錯」而非「改壞」。
+
+    ## 未來要根治的方向
+
+    根因是 `to_traditional()`（s2twp）被無條件套在所有 `ContentItem` 上，包含
+    本來就是繁中的來源。正解是讓 Layer A 只對簡體來源生效，而不是繼續加修正表。
+    """
+
+    @pytest.mark.parametrize(
+        "text, still_wrong",
+        [
+            ("他很克制", "他很剋制"),
+            ("20年谷底", "20年穀底"),
+        ],
+    )
+    def test_homograph_input_is_not_repaired(self, text, still_wrong):
+        assert to_traditional(text) == still_wrong
+
+    @pytest.mark.parametrize(
+        "text, expected",
+        [
+            ("他很克制这个冲动", "他很克制這個衝動"),
+            ("股价跌到20年谷底了", "股價跌到20年谷底了"),
+        ],
+    )
+    def test_same_words_are_repaired_once_gate_opens(self, text, expected):
+        """同樣的詞，只要欄位裡有別的簡體字撐著守門就修得到（真實來源的常態）。"""
+        assert to_traditional(text) == expected
+
+
+class TestVariantFixGateProtectsTraditional:
+    """守門：變體表只在「輸入真的含簡體字」時才套。
+
+    why 需要這道門：變體表修的是「OpenCC 轉換時挑錯分支」，這種錯**只可能發生在
+    真的被轉換的文字上**。無條件套用會把下列**正確的繁體**改壞——這些反例不是
+    假想，`託馬斯`（←「委託馬斯克」）在 AI 新聞語境是高頻真實風險。
+    """
+
+    @pytest.mark.parametrize(
+        "traditional_text",
+        [
+            "董事會委託馬斯克主導這項收購案",  # 託馬斯 → 托馬斯
+            "把關係統化條列出來",  # 係統化 → 系統化
+            "五行相剋制衡的道理",  # 剋制 → 克制
+            "稻穀底部的含水率影響儲存年限",  # 穀底 → 谷底
+            "農民曆史上首次全面數位化",  # 曆史 → 歷史
+            "看完這一齣來評論才公道",  # 一齣來 → 一出來
+            "把總檯帳搬到雲端",  # 總檯 → 總臺
+        ],
+    )
+    def test_pure_traditional_input_is_untouched(self, traditional_text):
+        assert to_traditional(traditional_text) == traditional_text
+
+    def test_gate_lets_genuinely_simplified_through(self):
+        """守門不能矯枉過正：整段簡體仍須完整轉換 + 套變體修正。"""
+        assert to_traditional("更复杂的托盘设计") == "更複雜的托盤設計"
+
+
+class TestOpenCCVersionGuard:
+    """釘住 `opencc<1.3.2` 上限的**理由**，而不只是在 pyproject 寫個數字。
+
+    **1.3.2**（不是 1.4）起 s2twp 詞庫新增 `B超 → 超音波`（醫學 B 型超音波）
+    且無詞邊界保護，任何「數字+B+超」都會被吃掉。`7B`/`70B`/`405B` 是本專案最核心
+    的術語形狀，後接「超大 / 超強 / 超越 / 超輕量」是極自然的中文搭配，且轉換
+    **不可逆**（`753超音波大` 無法反推原本是 B）。
+
+    這條測試存在的意義：原本的上限寫 `<1.4`，而 `pip install -e .` 每天在 CI
+    無鎖版安裝——本機 venv 停在 1.3.1 剛好全綠，生產環境卻會裝到 1.3.2。
+    版本錯了這幾條會紅，不會再靜默漂移。
+    """
+
+    @pytest.mark.parametrize(
+        "simplified, expected",
+        [
+            ("753B超大参数", "753B超大參數"),
+            ("70B超越了GPT-4", "70B超越了GPT-4"),
+            ("8B超轻量模型", "8B超輕量模型"),
+            ("参数量7B超过预期", "參數量7B超過預期"),
+        ],
+    )
+    def test_model_size_before_chao_is_not_eaten(self, simplified, expected):
+        assert to_traditional(simplified) == expected
+
+
+class TestHarvestedFrom14:
+    """1.4 修對、1.3 沒修的詞，以 `_TERM_FIXES` 條目在 1.3 上收割。
+
+    量測全語料 32,950 個去重欄位後挑出來的（見 2026-07-31 版本評估）：
+    這兩條是升 1.4 才會拿到、且不帶副作用的淨改善。
+    """
+
+    def test_xiangxiang_uses_correct_form(self):
+        assert to_traditional("想象一下这个场景") == "想像一下這個場景"
+
+    def test_marketing_uses_taiwan_term(self):
+        assert to_traditional("市场营销团队") == "市場行銷團隊"
+
+    def test_term_fixes_also_apply_at_layer_b(self):
+        """這兩條修的是「該轉而沒轉」，與輸入含不含簡體無關 ⇒ 兩層都要套。"""
+        assert to_traditional_shape_only("想象力") == "想像力"
 
 
 class TestTagsConverted:

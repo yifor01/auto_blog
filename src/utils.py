@@ -7,6 +7,7 @@ import json
 import os
 import re
 from datetime import date, datetime
+from functools import lru_cache
 from pathlib import Path
 from typing import Callable
 
@@ -60,19 +61,149 @@ _opencc_unavailable = False
 # s2twp 的 TWPhrases 詞庫是為 Windows／一般軟體 UI 設計的，套進 AI/ML 語境會誤轉。
 # 這些是單次轉換就錯的詞（與雙層轉換無關），轉完後統一改回。
 # 只收「在本專案語境幾乎不可能是對的」的詞——會兩可的（元件 / 最佳化）不列入。
+#
+# 本表**無守門、兩層都套**：修的是「詞彙選錯 / 該轉而沒轉」，與輸入含不含簡體無關。
+# 需要守門的那類（OpenCC 挑錯繁體分支）在下面的 `_VARIANT_FIXES`，兩者請勿合併。
 _TERM_FIXES = {
+    # ── s2twp 誤轉：轉了但選錯詞 ──
     "引數": "參數",  # 参数 parameter
     "擴充套件": "擴展",  # 扩展 extension
     "解除安裝": "卸載",  # 卸载 offload（非軟體 uninstall）
     "區域性": "局部",  # 局部 local / partial
     "繫結": "綁定",  # 绑定 binding
     "控制元件": "控制項",  # 控件 widget
+    # ── s2twp 1.3.x 漏轉：1.4 修對了，但 1.4 另有不可逆的災難性退步
+    #    （`B超→超音波` 無詞邊界，吃掉 `753B超大參數`），故留在 1.3 並在此收割。
+    #    量測依據見 2026-07-31 的全語料版本評估（32,950 個去重欄位）。
+    "想象": "想像",  # 46 處；台灣標準寫法
+    "市場營銷": "市場行銷",  # 6 處；台灣說「行銷」
 }
 
 
 def _apply_term_fixes(text: str) -> str:
     for wrong, right in _TERM_FIXES.items():
         text = text.replace(wrong, right)
+    return text
+
+
+# 明明是**正字繁體**、OpenCC 卻在單字元層級就會改寫的字，不採計為「這個欄位含簡體」
+# 的證據。`干擾`/`干預`、`托盤`/`委托` 在台灣繁體是天天出現的正常用字，但
+# `s2tw('干') == '幹'`、`s2tw('托') == '託'`——把它們當簡體證據，等於讓一整個
+# 純繁體欄位過門，接著被詞組規則改壞。與 `repair.py` 共用同一份定義。
+_NOT_SIMPLIFIED_EVIDENCE = frozenset("干托")
+
+
+@lru_cache(maxsize=None)
+def _is_simplified_char(ch: str) -> bool:
+    """這個字元是否可作為「該欄位含簡體」的證據。
+
+    「單字元」是關鍵：OpenCC 的詞組規則要有上下文才會觸發，餵單一字元等於只問
+    「這個字本身會不會被改寫」。**別把它想成「是不是簡體字」**——實測
+    `s2tw('里')='裡'`、`s2tw('干')='幹'`、`s2tw('托')='託'` 都會變，但這三個字在
+    繁體正文裡本來就大量出現；只有 `了` / `面` / `杆` / `只` 這類才是真的單字元
+    不動、純靠詞組規則才被改寫。
+
+    OpenCC 不可用時 `to_traditional_shape_only()` 原樣回傳 → 一律判定為非簡體 →
+    變體修正整個退化成 no-op，這是刻意的安全降級。
+    """
+    if ch in _NOT_SIMPLIFIED_EVIDENCE:
+        return False
+    return to_traditional_shape_only(ch) != ch
+
+
+# ──────────────────────────────────────────────────────────
+# 變體修正表：把 OpenCC 在「一簡對多繁」上挑錯的分支改回來。
+#
+# ## 為什麼在 Layer A 也要有這張表（2026-07-31 從 `repair.py` 搬上來）
+#
+# `repair-content` 的同一張表只能補歷史；`to_traditional()` 才是**所有新資料的
+# 生產路徑**，每天仍在產同一批錯字（`更复杂`→`更復雜`、`死胡同`→`死衚衕`、
+# `克制`→`剋制`）。實測 41 條裡 28 條在 Layer A 路徑真的會被觸發。
+#
+# ## 為什麼要守門（與 `_TERM_FIXES` 的關鍵差別）
+#
+# 本表修的是「**轉換過程中**挑錯分支」，這種錯只可能發生在真的被轉換的文字上；
+# 沒被轉換的文字套這張表**只有誤傷、沒有收益**。實測會被無條件套用改壞的正確繁體：
+#
+#   託馬斯 ← 「董事會委託馬斯克主導收購」→ 委托馬斯克   ← AI 新聞高頻，最危險
+#   係統化 ← 「把關係統化條列出來」    → 把關系統化
+#   剋制  ← 「五行相剋制衡的道理」    → 相克制衡
+#   穀底  ← 「稻穀底部的含水率」      → 稻谷底部
+#   曆史  ← 「農民曆史上首次數位化」   → 農民歷史上
+#   總檯  ← 「把總檯帳搬到雲端」      → 總臺帳
+#   一齣來 ← 「看完這一齣來評論」      → 這一出來
+#
+# 這些反例由 `tests/test_to_traditional.py::TestVariantFixGateProtectsTraditional` 釘住。
+#
+# ## 條目為什麼幾乎都帶脈絡
+#
+# 凡是「錯字字串」可能跨詞邊界撞到正常文字的，一律用實測到的脈絡加長，並在註解
+# 寫出被擋掉的反例。脈絡是從**全語料的全部出現位置**枚舉出來的，不是抽樣。
+#
+# 表裡有 13 條在 Layer A 路徑不會觸發（s2twp 本來就轉對，它們是 repair 走的
+# s2tw 路徑專屬）。刻意保留：守門下不會誤觸發，且是 OpenCC 行為變動時的防線。
+_VARIANT_FIXES = {
+    # ── ① 守門失效：欄位靠別的合法繁體字過門，純繁體被詞組規則改壞 ──
+    # 幹擾 / 幹預 帶左脈絡：語料裡有「骨幹」，通用寫法會撞到「骨幹擾動」「骨幹預備」
+    "過濾幹擾": "過濾干擾",
+    "受到幹擾": "受到干擾",
+    "一次幹預": "一次干預",
+    "人工幹預": "人工干預",
+    "接管幹預": "接管干預",
+    "臺積電": "台積電",  # 專有名詞；一般的 `平臺` 是正確台灣用法，刻意不收
+    "穀底": "谷底",  # 士氣跌至 20 年谷底（`穀` 是穀物，語料 0 個合法用法）
+    "託馬斯": "托馬斯",  # Thomas Kurian
+    "藍色遊標": "藍色游標",  # 公司名；通用的 `遊標→游標` 會弄壞「旅遊標籤」
+    "/遊資": "/游資",  # 前綴 `/` 擋掉「旅遊資訊」
+    # ── ② OpenCC 消歧錯誤：整段簡體該轉，但挑錯分支 ──
+    # 托盤三條帶左脈絡：語料裡就有股市工具 README，通用寫法會弄壞「委託盤」「信託盤」
+    "/託盤": "/托盤",
+    "金屬託盤": "金屬托盤",
+    "載物託盤": "載物托盤",
+    # 復雜三條帶左脈絡：通用寫法會弄壞「修復雜湊表」「恢復雜亂的狀態」
+    "不復雜": "不複雜",
+    "更復雜": "更複雜",
+    "執行復雜": "執行複雜",
+    # 瞭 三條帶右脈絡：通用的 `說明瞭→說明了` 會弄壞「說明瞭解決方案」
+    "證明瞭太多": "證明了太多",
+    "說明瞭一件": "說明了一件",
+    "目睹瞭如今": "目睹了如今",
+    "一齣來": "一出來",  # `齣` 只用於戲曲量詞
+    # 「搞定并发布」是「搞定 + 並發布（and publish）」，被挑成併發（concurrency）。
+    "搞定併發布": "搞定並發布",
+    # 乾（dry）被挑來當「幹（做）」；通用的 `乾的→幹的` 會弄壞「曬乾的衣服」
+    "乾的就是": "幹的就是",
+    "乾的是": "幹的是",
+    "該乾的活": "該幹的活",
+    "它乾的活": "它幹的活",
+    # 隻（量詞）被挑來當「只」；帶右脈絡是因為語料裡就有正確的量詞用法
+    "不是隻寫": "不是只寫",
+    "不是隻面": "不是只面",
+    "不是隻在": "不是只在",
+    "不是隻返": "不是只返",
+    "這隻會營造": "這只會營造",
+    # ── ③ 第一順位就挑錯（`s2tw('签')='籤'` 等預設值本身就不對）──
+    "合並請求": "合併請求",
+    "在籤什麼": "在簽什麼",
+    "一起籤的": "一起簽的",
+    # 音譯名一律用共用字形（里）。**必須用間隔號錨定**：通用的 `庫裡安→庫里安`
+    # 會弄壞「資料庫裡安放著索引」這種在本領域極自然的句子。
+    "·庫裡安": "·庫里安",
+    # ── ④ target-side 掃描抓到的 ──
+    "曆史": "歷史",  # 27 年歷史；`日曆` 不受影響
+    "總檯": "總臺",  # 央視總臺
+    "聯閤": "聯合",
+    "係統化": "系統化",  # 帶 `化`：通用的 `係統→系統` 會弄壞「關係統計」
+    "剋制": "克制",  # 教育部標準寫法
+    "死衚衕": "死胡同",  # 教育部標準寫法
+    "揹負": "背負",  # 教育部標準寫法
+}
+
+
+def _apply_variant_fixes(text: str) -> str:
+    for wrong, right in _VARIANT_FIXES.items():
+        if wrong in text:
+            text = text.replace(wrong, right)
     return text
 
 
@@ -108,11 +239,17 @@ def to_traditional(text: str) -> str:
 
     **不要拿這個處理已是繁中的文字**——s2twp 對繁體不冪等（文件→檔案），
     生成端請改用 `to_traditional_shape_only()`。
+
+    最後套 `_VARIANT_FIXES`，但**只在輸入真的含簡體字時**——理由與反例見該表註解
+    （無條件套用會把「委託馬斯克」改成「委托馬斯克」）。
     """
     if not text or not _init_opencc():
         return text
     try:
-        return _apply_term_fixes(_opencc_converter.convert(text))
+        out = _apply_term_fixes(_opencc_converter.convert(text))
+        if any(_is_simplified_char(c) for c in text):
+            out = _apply_variant_fixes(out)
+        return out
     except Exception as e:
         _logger.debug("to_traditional failed", extra={"error": str(e)[:160]})
         return text
@@ -816,7 +953,123 @@ def slugify(text: str, max_len: int = 60) -> str:
     return truncated.strip("-") or "untitled"
 
 
-def extract_full_text_from_html(html: str, max_chars: int = 2000) -> str:
+# abstract 字元上限預設值。原為 2000，實測 18 個 RSS 來源全部撞頂且斷在句中，
+# 一般新聞全文約 3000-9000 字元，故提高。呼叫端可用 collectors.abstract_max_chars 覆寫。
+ABSTRACT_MAX_CHARS_DEFAULT = 8000
+
+# 正文容器 selector，**由精確到泛用**，必須逐一嘗試。
+# 不可整串丟給 select_one：CSS select_one 依文件順序回傳第一個 match，
+# 而外層容器（main）必然排在內層（.entry-content）之前，優先序會完全失效。
+_CONTENT_SELECTORS = (
+    ".entry-content",
+    ".post-content",
+    ".article-content",
+    ".article-body",
+    ".c-entry-content",
+    ".post-body",
+    ".e-content",
+    ".blog-post",
+    ".h-entry",
+    ".hentry",
+    ".prose",
+    "article",
+    "[role='main']",
+    "main",
+    "#content",
+    "#main",
+    ".content",
+)
+
+# 版面雜訊：推薦文章、電子報、分享列、作者簡介、麵包屑等。
+# 只比對 class/id 的語意關鍵字，刻意不含 'content'（會誤殺正文）。
+_NOISE_SELECTORS = (
+    "script, style, nav, footer, header, aside, form, iframe, noscript, "
+    ".sidebar, .comments, .nav, .menu, "
+    "[class*='related'], [class*='recommend'], [class*='newsletter'], "
+    "[class*='subscribe'], [class*='share'], [class*='social'], "
+    "[class*='promo'], [class*='advert'], [class*='author-bio'], "
+    "[class*='breadcrumb'], [class*='post-nav'], [class*='pagination'], "
+    "[id*='related'], [id*='comments'], [id*='newsletter']"
+)
+
+# 尾段推薦區的標題文字。class 被雜湊（CSS modules / Next.js，如 Anthropic、The Verge）時，
+# `[class*='related']` 之類的比對完全無效，只能靠標題文字辨識。
+_TRAILING_SECTION_TITLES = frozenset(
+    {
+        "related content", "related posts", "related articles", "related stories",
+        "related reading", "more from", "more in", "read next", "up next",
+        "most popular", "you might also like", "recommended for you", "recommended",
+        "newsletter", "subscribe", "share this article", "comments",
+    }
+)
+# 只剝除位於全文這個比例之後的區塊——正文中段同名小標（如 "Most popular"
+# 真的在討論熱門模型）不得被誤殺。
+_TRAILING_CUT_MIN_RATIO = 0.6
+
+_MIN_CONTAINER_LEN = 200
+# 句界回退的下限：切點回退後至少要保留 max_chars 的這個比例，
+# 否則寧可硬切——避免整段沒有標點的文本被回退到只剩開頭一句。
+_BOUNDARY_MIN_RATIO = 0.6
+_SENTENCE_ENDS = "。！？!?."
+
+
+def _strip_trailing_sections(container) -> None:
+    """就地移除容器尾段的推薦 / 訂閱區塊（靠標題文字辨識，不依賴 class 名稱）。"""
+    full_text = container.get_text(" ", strip=True)
+    if not full_text:
+        return
+    threshold = len(full_text) * _TRAILING_CUT_MIN_RATIO
+
+    for heading in container.find_all(["h1", "h2", "h3", "h4"]):
+        raw_title = heading.get_text(" ", strip=True)
+        title = " ".join(raw_title.lower().split()).rstrip(":")
+        if title not in _TRAILING_SECTION_TITLES:
+            continue
+        # 保守起見用首次出現位置：低估位置只會放過推薦區，不會誤砍正文
+        position = full_text.find(raw_title)
+        if position < threshold:
+            continue  # 位在正文中段，是內容小標而非推薦區
+
+        # 上溯找出「推薦區塊」本身。祖先一旦大到裝得下 heading 之前的正文，
+        # 就代表它是正文容器而非推薦區——必須停在上一層，否則會把整篇文章剝掉
+        # （The Verge：h2 距容器 8 層，無腦上溯會剝掉 8131 字元的正文容器）。
+        tail_budget = (len(full_text) - position) * 1.2 + 50
+        node = heading
+        while node.parent is not None and node.parent is not container:
+            if len(node.parent.get_text(" ", strip=True)) > tail_budget:
+                break
+            node = node.parent
+
+        for sibling in list(node.next_siblings):
+            sibling.extract()
+        node.extract()
+        return
+
+
+def truncate_at_boundary(text: str, max_chars: int) -> str:
+    """在 max_chars 內截斷，優先退到句界、其次詞界，避免斷在字中間。
+
+    回退幅度受 `_BOUNDARY_MIN_RATIO` 限制：若最近的邊界離切點太遠
+    （例如整段無標點），則硬切，不讓內容被砍到剩開頭。
+    """
+    if len(text) <= max_chars:
+        return text
+
+    window = text[:max_chars]
+    min_keep = int(max_chars * _BOUNDARY_MIN_RATIO)
+
+    sentence_cut = max(window.rfind(ch) for ch in _SENTENCE_ENDS)
+    if sentence_cut >= min_keep:
+        return window[: sentence_cut + 1].strip()
+
+    word_cut = window.rfind(" ")
+    if word_cut >= min_keep:
+        return window[:word_cut].rstrip()
+
+    return window.rstrip()
+
+
+def extract_full_text_from_html(html: str, max_chars: int = ABSTRACT_MAX_CHARS_DEFAULT) -> str:
     """從 HTML 提取純文字，優先選取語意容器標籤，fallback 到 <p> 聚合。"""
     import re
 
@@ -825,20 +1078,18 @@ def extract_full_text_from_html(html: str, max_chars: int = 2000) -> str:
     soup = BeautifulSoup(html, "html.parser")
 
     # 移除干擾元素
-    for tag in soup.select("script, style, nav, footer, header, aside, .sidebar, .comments, .nav, .menu"):
+    for tag in soup.select(_NOISE_SELECTORS):
         tag.decompose()
 
-    # 嘗試語意容器（擴充 selector）
-    body = soup.select_one(
-        "article, .post-content, .entry-content, main, .content, "
-        "[role='main'], .article-body, .c-entry-content, .post-body, "
-        ".blog-post, .hentry, .h-entry, .e-content, #content, #main"
-    )
-    if body:
-        text = body.get_text(separator=" ", strip=True)
-        text = re.sub(r"\s{2,}", " ", text)
-        if len(text) >= 200:
-            return text[:max_chars]
+    # 語意容器：由精確到泛用逐一嘗試，取第一個內容夠長的
+    for selector in _CONTENT_SELECTORS:
+        body = soup.select_one(selector)
+        if not body:
+            continue
+        _strip_trailing_sections(body)
+        text = re.sub(r"\s{2,}", " ", body.get_text(separator=" ", strip=True))
+        if len(text) >= _MIN_CONTAINER_LEN:
+            return truncate_at_boundary(text, max_chars)
 
     # Fallback: 聚合所有 <p> 標籤（排除過短段落）
     paragraphs = soup.find_all("p")
@@ -851,14 +1102,14 @@ def extract_full_text_from_html(html: str, max_chars: int = 2000) -> str:
         text = " ".join(p_texts)
         text = re.sub(r"\s{2,}", " ", text)
         if len(text) >= 100:
-            return text[:max_chars]
+            return truncate_at_boundary(text, max_chars)
 
     # 最終 fallback: 整頁文字
     text = soup.get_text(separator=" ", strip=True)
-    return re.sub(r"\s{2,}", " ", text)[:max_chars]
+    return truncate_at_boundary(re.sub(r"\s{2,}", " ", text), max_chars)
 
 
-def fetch_article_text(url: str, client: httpx.Client, max_chars: int = 2000) -> str:
+def fetch_article_text(url: str, client: httpx.Client, max_chars: int = ABSTRACT_MAX_CHARS_DEFAULT) -> str:
     """GET 文章 URL，返回純文字。失敗時返回空字串並記錄 debug log。"""
     try:
         resp = client.get(url, timeout=12)
@@ -875,7 +1126,11 @@ def fetch_article_text(url: str, client: httpx.Client, max_chars: int = 2000) ->
 
 
 def build_link_abstract(
-    url: str, client: httpx.Client, engagement: str, fallback_domain: str, max_chars: int = 1500
+    url: str,
+    client: httpx.Client,
+    engagement: str,
+    fallback_domain: str,
+    max_chars: int = ABSTRACT_MAX_CHARS_DEFAULT,
 ) -> str:
     """Link post 共用 helper：嘗試抓取外部文章內容，失敗時 fallback 到 domain + engagement。"""
     fetched = fetch_article_text(url, client, max_chars)
