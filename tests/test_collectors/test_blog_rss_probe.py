@@ -149,3 +149,88 @@ def test_generic_exception_continues_to_next_path(mock_get_client):
 
     # All 6 paths attempted despite the first one erroring
     assert mock_client.get.call_count == 6
+
+
+# ── 索引頁帶路徑時的 URL 拼接（2026-07-31 修復）─────────────────────────
+# 症狀：Chip Huyen（config url = https://huyenchip.com/blog/）連續產出
+# abstract 只有 13–82 字元的 "Title: {title}" 佔位字串。
+# 根因：RSS 探測與文章連結都把「根相對路徑」接到索引頁 URL（含 /blog 路徑），
+# 拼出 https://huyenchip.com/blog/feed 與 .../blog/2025/01/07/agents.html，
+# 兩者皆 404 → 退回 HTML 抓取 → 正文抓不到 → 退回 Title 佔位字串。
+
+
+@patch("src.collectors.blog_collector.get_http_client")
+def test_rss_probe_also_tries_origin_when_index_has_path(mock_get_client):
+    """索引頁帶路徑時，RSS 探測必須也試 origin 相對路徑（huyenchip 的 feed 在網站根）。"""
+    from src.collectors.blog_collector import BlogCollector
+
+    mock_client = MagicMock()
+    mock_get_client.return_value = mock_client
+    mock_client.get.return_value = _make_non200_resp(404)
+
+    collector = BlogCollector()
+    with patch.object(collector, "_scrape_html", return_value=[]):
+        collector._scrape_blog(mock_client, "Chip Huyen", "https://huyenchip.com/blog/", date.today())
+
+    probed = [c.args[0] for c in mock_client.get.call_args_list]
+    assert "https://huyenchip.com/feed" in probed, (
+        f"origin 相對的 /feed 從未被探測過（真實 feed 就在這裡，HTTP 200）。實際探測：{probed}"
+    )
+
+
+@patch("src.collectors.blog_collector.get_http_client")
+def test_rss_probe_unchanged_for_root_level_blogs(mock_get_client):
+    """索引頁本來就在網站根時，探測次數與網址維持原樣（不得因修復而多打請求）。"""
+    from src.collectors.blog_collector import BlogCollector
+
+    mock_client = MagicMock()
+    mock_get_client.return_value = mock_client
+    mock_client.get.return_value = _make_non200_resp(404)
+
+    collector = BlogCollector()
+    with patch.object(collector, "_scrape_html", return_value=[]):
+        collector._scrape_blog(mock_client, "Simon Willison", "https://simonwillison.net/", date.today())
+
+    probed = [c.args[0] for c in mock_client.get.call_args_list]
+    assert len(probed) == 6, f"根層級部落格應維持 6 次探測，實際 {len(probed)}：{probed}"
+    assert probed[0] == "https://simonwillison.net/feed"
+
+
+@patch("src.collectors.blog_collector.get_http_client")
+def test_scrape_html_resolves_root_relative_href_against_origin(mock_get_client):
+    """`/2025/01/07/agents.html` 是根相對路徑，必須接在 origin 上而非索引頁路徑上。"""
+    from src.collectors.blog_collector import BlogCollector
+
+    index_html = """
+    <html><body><article>
+      <a href="/2025/01/07/agents.html">Agents</a>
+    </article></body></html>
+    """
+    article_resp = MagicMock()
+    article_resp.status_code = 200
+    article_resp.text = "<html><body><article><p>" + ("正文內容。" * 200) + "</p></article></body></html>"
+
+    mock_client = MagicMock()
+    mock_get_client.return_value = mock_client
+
+    def _get(u, *a, **kw):
+        if u.endswith("/blog/"):
+            r = MagicMock(); r.status_code = 200; r.text = index_html
+            r.raise_for_status = MagicMock()
+            return r
+        return article_resp
+
+    mock_client.get.side_effect = _get
+
+    collector = BlogCollector()
+    items = collector._scrape_html(
+        mock_client, "Chip Huyen", "https://huyenchip.com/blog/", date.today()
+    )
+
+    assert items, "應至少抓到一篇文章"
+    assert items[0].url == "https://huyenchip.com/2025/01/07/agents.html", (
+        f"根相對連結被接到索引頁路徑上了（會 404）：{items[0].url}"
+    )
+    assert not items[0].abstract.startswith("Title: "), (
+        "正文抓取失敗退回了 Title 佔位字串"
+    )

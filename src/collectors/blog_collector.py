@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import httpx
 from datetime import date
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 from bs4 import BeautifulSoup
 
@@ -30,6 +30,23 @@ _INVALID_TITLE_KEYWORDS = frozenset([
 
 _FEED_URL_LAST_SEGMENTS = frozenset(["feed", "rss", "atom"])
 _FEED_URL_EXTENSIONS = (".xml", ".rss", ".atom")
+
+
+def _rss_candidates(index_url: str, rss_paths: list[str]) -> list[str]:
+    """產生 RSS 探測網址：每條路徑先試「相對索引頁」再試「相對網站根」。
+
+    索引頁本身帶路徑時（如 https://huyenchip.com/blog/），feed 常在網站根
+    （https://huyenchip.com/feed）而非索引頁下。只拼索引頁會 6 條全 404，
+    退回 HTML 抓取後連文章網址也拼錯，最終每篇只剩 "Title: {title}"。
+
+    索引頁在網站根時兩種拼法相同，去重後探測次數與網址完全不變。
+    """
+    candidates: list[str] = []
+    for path in rss_paths:
+        for url in (index_url.rstrip("/") + path, urljoin(index_url, path)):
+            if url not in candidates:
+                candidates.append(url)
+    return candidates
 
 
 class BlogCollector(BaseCollector):
@@ -74,8 +91,7 @@ class BlogCollector(BaseCollector):
         """通用部落格爬蟲：嘗試找 RSS feed，否則 scrape HTML."""
         # 先嘗試常見 RSS 路徑；第一個成功就停，連線層錯誤立即放棄剩餘路徑
         rss_paths = ["/feed", "/rss", "/atom.xml", "/feed.xml", "/rss.xml", "/index.xml"]
-        for rss_path in rss_paths:
-            rss_url = url.rstrip("/") + rss_path
+        for rss_url in _rss_candidates(url, rss_paths):
             try:
                 resp = client.get(rss_url)
                 if resp.status_code == 200 and (
@@ -197,8 +213,10 @@ class BlogCollector(BaseCollector):
                 if not title or len(title) < 5:
                     continue
 
-                if href.startswith("/"):
-                    href = url.rstrip("/") + href
+                # urljoin 正確處理三種形式：絕對網址原樣、根相對接 origin、
+                # 相對路徑接索引頁。手寫 rstrip + href 會把根相對的 /2025/x.html
+                # 接到索引頁路徑上（https://huyenchip.com/blog/2025/x.html → 404）
+                href = urljoin(url, href)
 
                 # 為了避免每個部落格發送 10 次 request，這裡不主動 fetch content。
                 # 但為了評分機制，我們將它標記為「待抓取」或提示此為 HTML 抓取。
