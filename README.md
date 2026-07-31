@@ -345,19 +345,29 @@ Pipeline 產生的所有資料皆按模組劃分，方便溯源與二次開發�
 
 ## 🛠️ 開發與貢獻
 
-本專案有兩套測試，納管方式不同：
+本專案有兩套測試，都進 repo、都由 CI 守門：
 
 ```bash
-# 後端 Python（pytest）— 800+ tests
+# 後端 Python（pytest）— 844 tests
+pip install -e ".[test]"     # [test] = [web] extras + pytest
 pytest tests/ -v
 
-# 前端 Astro 站（vitest + happy-dom）
+# 前端 Astro 站（vitest + happy-dom）— 62 tests
 cd web && npm ci && npm test
 ```
 
 | | 位置 | 是否進 repo | CI 是否執行 |
 |---|---|---|---|
-| 後端 | `tests/` | ❌（`.gitignore` 排除） | ❌ 只能本地跑 |
-| 前端 | `web/src/**/*.test.ts` | ✅ | ✅ `.github/workflows/ci.yml`（`web/**` 有變更時） |
+| 後端 | `tests/`（844） | ✅ | ✅ `.github/workflows/ci.yml` → `python-test` job |
+| 前端 | `web/src/**/*.test.ts`（62） | ✅ | ✅ `.github/workflows/ci.yml` → `web-test` job |
+
+CI 觸發條件（兩個 job 共用）：`web/**`、`src/**`、`tests/**`、`pyproject.toml`、
+`.github/workflows/ci.yml` 任一有變更。每天的 `chore: pipeline` commit 只動
+`data/` 與 `output/`，不會觸發。
+
+> 為什麼改 `web/**` 也要跑 pytest：跨語言契約（URL 正規化、訊號標籤）的期望值只有一份，
+> 放在 `web/src/__fixtures__/cross-lang-contract.json`，
+> `web/src/cross-lang-contract.test.ts` 與 `tests/test_cross_lang_contract.py` 讀同一個檔。
+> 任一端改實作而沒同步 fixture，兩邊要一起紅才有意義。
 
 歡迎任何 Issue 回報或 Pull Request！如果這個專案對您追蹤 AI 領域的發展有幫助，請不要吝嗇給予一顆 ⭐️。

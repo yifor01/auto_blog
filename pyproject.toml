@@ -4,7 +4,9 @@ version = "0.1.0"
 description = "自動收集 GenAI 新知，篩選高價值內容，產出部落格貼文草稿與個人 AI 筆記"
 requires-python = ">=3.11"
 dependencies = [
-    "typer>=0.15.0,<1.0",
+    # typer 0.25 起改用 vendored click（typer.Exit 不再是 click.exceptions.Exit），
+    # 上限鎖住直到程式碼與測試一併遷移。
+    "typer>=0.15.0,<0.25",
     "httpx>=0.28.0,<1.0",
     "pydantic>=2.0,<3.0",
     "pydantic-settings>=2.0,<3.0",
@@ -15,16 +17,29 @@ dependencies = [
     "rich>=13.0,<15.0",
     "beautifulsoup4>=4.12,<5.0",
     "python-dotenv>=1.0,<2.0",
-    "opencc>=1.1,<2.0",
+    # OpenCC 1.4 改了轉換字典（例：`托盤` 不再被二次轉成 `託盤`）。
+    # 本專案的 _TERM_FIXES / _VARIANT_FIXES 修正表是對著 1.3.x 逐條校準出來的，
+    # 跟著升版會靜默改變每篇文章的用字 → 鎖上限，升級要重跑校準。
+    "opencc>=1.1,<1.4",
 ]
 
 [project.optional-dependencies]
 web = [
     "fastapi>=0.115.0,<1.0",
+    # fastapi 對 starlette 只寫 >=0.46.0（無上限）。starlette 1.0 移除了
+    # `TemplateResponse(name, {"request": ...})` 舊簽名，而 src/web/app.py 全部用舊簽名
+    # → 裝到 1.x 每個頁面都會炸 `TypeError: unhashable type: 'dict'`。
+    "starlette>=0.46.0,<1.0",
     "uvicorn[standard]>=0.34.0,<1.0",
     "jinja2>=3.1.0,<4.0",
     "markdown-it-py>=3.0.0,<5.0",
     "python-multipart>=0.0.9,<1.0",
+]
+# 測試專用（非執行期依賴）。tests/test_web/ 會 import src.web.app，
+# 所以必須連 web extras 一起裝，否則 CI 會在 collect 階段就 ImportError。
+test = [
+    "auto-post-blog[web]",
+    "pytest>=8.0,<10.0",
 ]
 
 [project.scripts]

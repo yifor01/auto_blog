@@ -1,20 +1,35 @@
 name: CI
 
-# 前端（web/）測試。刻意獨立於 daily-pipeline.yml：
-# pipeline 每天要產資料，測試失敗不該擋掉資料產出。
+# 兩套測試：前端 web/（vitest）與後端 tests/（pytest）。
+# 刻意獨立於 daily-pipeline.yml：pipeline 每天要產資料，測試失敗不該擋掉資料產出。
 #
-# paths 過濾：只有 web/ 或本 workflow 本身有變更才跑。
-# → 每天的 `chore: pipeline` commit 只動 data/ 與 output/，不會觸發。
-# Python 端的 tests/ 被 .gitignore 排除、不進 repo，CI 無從執行，故本檔不含 pytest。
+# paths 過濾：GitHub 的 paths 只能設在 workflow 層級（job 層級沒有這個欄位），
+# 所以這裡放的是兩個 job 的**聯集**，任一命中就兩個 job 都跑。
+# → 每天的 `chore: pipeline` commit 只動 data/ 與 output/（127 個歷史 commit 實測皆然），
+#   不在聯集內，不會觸發本 workflow。
+#
+# 聯集造成的多跑是刻意接受的：
+# - 改 web/** 也跑 pytest —— **必要**。跨語言契約的期望值放在
+#   web/src/__fixtures__/cross-lang-contract.json，Python 側的
+#   tests/test_cross_lang_contract.py 讀的是同一個檔，只跑 TS 側會漏掉另一半。
+# - 改 src/** 也跑 npm test —— 多餘但只花約一分鐘，換來單一 workflow 檔的簡單性。
 
+# （兩份清單刻意逐字重複：GitHub Actions 的 workflow parser 不支援 YAML anchor／alias，
+#   寫 `&ci-paths` / `*ci-paths` 本機 yaml.safe_load 會過、上 GitHub 會直接壞掉。改了要兩邊一起改。）
 on:
   push:
     paths:
       - 'web/**'
+      - 'src/**'
+      - 'tests/**'
+      - 'pyproject.toml'
       - '.github/workflows/ci.yml'
   pull_request:
     paths:
       - 'web/**'
+      - 'src/**'
+      - 'tests/**'
+      - 'pyproject.toml'
       - '.github/workflows/ci.yml'
 
 concurrency:
@@ -49,3 +64,27 @@ jobs:
 
       - name: Run tests
         run: npm test
+
+  python-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'   # 與 daily-pipeline.yml 同一版
+          cache: 'pip'
+          cache-dependency-path: pyproject.toml
+
+      # [test] extras = [web] extras + pytest。
+      # 一定要帶 [web]：tests/test_web/ 會 import src.web.app，少了 fastapi 會在
+      # collect 階段就 ImportError（不是個別測試失敗，是整包收不起來）。
+      - name: Install dependencies
+        run: pip install -e ".[test]"
+
+      # 不注入任何 API key：844 個測試全部以 mock/stub 取代外部呼叫，
+      # 已在無網路 namespace + 無 .env 的環境實測通過。真的有測試想連外時這裡會紅。
+      - name: Run tests
+        run: pytest tests/ -q

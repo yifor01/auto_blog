@@ -167,6 +167,9 @@ lists:
 ## 6. 測試
 
 pytest（`tests/`，不進 repo）：
+（**2026-07-31 已變更**：`tests/` 解除 `.gitignore` 排除、正式納管進 repo，並由
+`.github/workflows/ci.yml` 的 `python-test` job 執行。此處敘述為本設計撰寫當下的實況，保留不改）
+
 
 - `build_lists`：排序正確、截斷上限、缺 metadata 欄位、空來源空陣列、繁化透傳
 - pinned 挑選：organization 命中 / 未命中、每日上限、從評分 pool 移除、

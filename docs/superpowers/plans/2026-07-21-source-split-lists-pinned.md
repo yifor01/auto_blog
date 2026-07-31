@@ -14,6 +14,8 @@
 
 - 繁體中文輸出；Python 註解風格比照既有檔案（精簡、講 why）
 - `tests/` 不進 repo（.gitignore 排除），只存在本地；pytest 執行方式 `source .venv/bin/activate && pytest tests/...`
+  （**2026-07-31 已推翻**：`tests/` 解除排除、納管進 repo，並由 `.github/workflows/ci.yml` 的
+  `python-test` job 執行。此條為本計畫執行當下的約束，保留不改）
 - 既往不究：不回填歷史日期 lists 檔；無 lists 檔的日期 GUI 隱藏對應 tab / 不顯示
 - lists stage 零 LLM；pinned 生成走現有 generation chain
 - `LIST_SOURCES = {GITHUB, HF_PAPERS, ARXIV, CHATPAPER, SEMANTIC_SCHOLAR}`

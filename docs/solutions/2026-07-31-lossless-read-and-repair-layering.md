@@ -91,6 +91,17 @@ def scored_from_raw(raw: dict) -> ScoredItem     # 同上，處理內嵌的 item
 
 `web/src/raw.ts` 與 `src/web/data_service.py` 是同功能的兩份實作。TS 側沒有測試框架、Python 側的測試被 `.gitignore` 排除（CI 跑不到），所以一致性**只由人的注意力維持**。做法：
 
+> **（2026-07-31 已解決，上段為當時實況，保留不改）**
+> 這個缺口已補上，兩端都由 `.github/workflows/ci.yml` 守：
+> - TS 側引入 vitest（`e77f802`，使用者追認），`web/src/raw.test.ts` 41 個測試含 13 個 mutation 驗證
+> - Python `tests/` 解除 `.gitignore` 排除、844 個測試納管並接上 `python-test` job
+> - 契約期望值收斂成單一來源 `web/src/__fixtures__/cross-lang-contract.json`（`e0fb178`、`2d99733`），
+>   `web/src/cross-lang-contract.test.ts` 與 `tests/test_cross_lang_contract.py` 共讀
+> - CI 的 paths 是兩個 job 的聯集，改 `web/**` 也會跑 pytest ——
+>   否則只同步 TS 端仍會漏掉另一半，正是本段擔心的失效模式
+>
+> 「只由人的注意力維持」現在改由 CI 維持；下列三條做法仍然成立、且仍是必要條件。
+
 - 同語言內的重複一律消除（`_norm_raw_url` / `_norm_url` → `utils.normalize_url_light()`）
 - 跨語言的在兩邊互相 cross-reference 註解，寫明已知差異與實測數據
 - 加 AST meta-test 擋「新增第 N+1 個呼叫點」——逐一守住現況的測試對此完全無感

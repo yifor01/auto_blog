@@ -19,6 +19,8 @@
 - Commit message 格式 `<type>: <description>`
 - 環境：先 `source .venv/bin/activate`
 - `tests/` 與 `CHANGELOG.md` 被 `.gitignore` 排除，commit 不含它們（專案刻意設計），但仍要更新
+  （**2026-07-31 部分已推翻**：`tests/` 已解除排除、納管進 repo 並接上 CI；`CHANGELOG.md` 仍維持排除。
+  此條為本計畫執行當下的約束，保留不改）
 - **時序約束**：背景有 pipeline 在寫 `data/`，Task 4 的 repair 實跑必須等它結束
 
 ## 實測數據（設計依據）
