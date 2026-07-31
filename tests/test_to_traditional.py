@@ -336,3 +336,55 @@ class TestTagsConverted:
             tags=["资讯", "开源", "吴恩达"],
         )
         assert item.tags == ["資訊", "開源", "吳恩達"]
+
+
+class TestExternallyVerifiedCandidates2026_07_31:
+    """2026-07-31 巡邏候選經三道閘門後 merge 的 8 條。
+
+    三道閘門（依 status.md 的三條鐵則）：
+    ① ≥2 篇不同文章的真實脈絡（全 118 天語料統計，非 7 天窗口）
+    ② 外部辭典交叉核對（教育部辭典），不採信單一審查者語感
+    ③ 反例掃描：key 字串不得命中語料裡正確的用法
+
+    被閘門擋掉而**刻意不收**的（理由見 docs 計畫的「已駁回候選」）：
+    - `合作伙伴→合作夥伴`（13 次/12 篇）：教育部辭典「伙伴」與「夥伴」互通，非錯字
+    - `幾周→幾週`（8 次/7 篇）：除周朝／賙濟外 `周`／`週` 一般可互用
+    - `賽道里→賽道裡`（5 次/5 篇）、`文本里→文本裡`（2 次/2 篇）：語意判斷正確，
+      但純字串 key 無法排除 `賽道里程`／`里數`，需負向前瞻，現行表格式不支援
+    """
+
+    @pytest.mark.parametrize(
+        "simplified, wrong, right",
+        [
+            # 发生 → 髮生：OpenCC 把「结发」當成「結髮」詞組挑分支
+            ("总结发生了什么变化", "總結髮生", "總結發生"),
+            ("最有价值的讨论总发生在知乎", "總髮生", "總發生"),
+            # 加注（投資加碼）→ 加註（註解）。全 17 筆語料脈絡皆為投資，
+            # 但 `加註說明` 是合法用法，故一律帶左錨定
+            ("产业与全球资本共同加注", "共同加註", "共同加注"),
+            ("老股东持续加注", "持續加註", "持續加注"),
+            ("获得资本加注身价暴涨", "資本加註", "資本加注"),
+            ("小米战投连续三轮加注", "輪加註", "輪加注"),
+            ("重磅加注这个赛道", "重磅加註", "重磅加注"),
+            ("超额加注该项目", "超額加註", "超額加注"),
+        ],
+    )
+    def test_layer_a_emits_corrected_form(self, simplified, wrong, right):
+        out = to_traditional(simplified)
+        assert wrong not in out, f"Layer A 仍在產出錯字 {wrong!r}：{out!r}"
+        assert right in out, f"未產出正確形式 {right!r}：{out!r}"
+
+    @pytest.mark.parametrize(
+        "simplified, must_keep",
+        [
+            # 髮生 的反例：頭髮生長是正確用字，錨定必須避開
+            ("头发生长速度", "頭髮生長"),
+            ("头发生得很快", "頭髮生"),
+            # 加註 的反例：註解語意的加註是正確用字
+            ("请在这里加注说明", "加註說明"),
+            ("给参数加注释", "註釋"),
+        ],
+    )
+    def test_counterexamples_survive(self, simplified, must_keep):
+        out = to_traditional(simplified)
+        assert must_keep in out, f"新增條目誤傷了正確用法：{simplified!r} → {out!r}"
