@@ -1,0 +1,724 @@
+[
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "NVIDIA Developer",
+      "title": "Co-Designing AI Model Attention for Fast, Interactive Long-Context Inference",
+      "url": "https://developer.nvidia.com/blog/co-designing-ai-model-attention-for-fast-interactive-long-context-inference/",
+      "authors": [
+        "Tanya Lenz"
+      ],
+      "abstract": "As agentic and long-context workloads become common, the context lengths increase and attention consumes a larger share of inference time (Figure 1). Because attention now dominates that cost, how it is designed—not just how it is implemented—increasingly determines a model’s inference performance. Shaping model architecture around how GPUs execute it is the premise of AI model co-design. For a discussion of how model design choices impact both throughput and interactivity without sacrificing accuracy, see the previous post, AI Model Co-Design: Hardware-Friendly LLM Design . This post examines how group size (query heads per KV head), head dimension, and sequence length shape the performance of dense attention, where every query attends to all keys and values along the sequence length. We distill that analysis, together with how attention is parallelized across GPUs, into four practical guidelines: a co-design checklist that helps model developers raise inference throughput and interactivity on NVIDIA GPUs. Stay tuned for a post covering sparse attention. Figure 1. DeepSeek-R1 prefill time breakdown at 4K, 32K, and 128K context lengths, where the attention share rises from 18% to 85% Every analysis is grounded in two sources: analytical formulas from GEMM-shape arithmetic, and measured data from prefill and decode kernels with FP8 for both attention compute and the KV cache. Abbreviation Definition PB Prefill batch size DB Decode batch size QH Number of query heads KH Number of KV heads (KH = QH for MHA, KH = QH/G for GQA, KH = 1 for MQA) \\(G\\) Group size = QH/KH (query heads sharing one KV head) Hsz Head dimension (typically 64, 128, or 256) ISL Input sequence length (query tokens in prefill) KVSL Average KV cache sequence length in a decode iteration Table 1. Notations used in the equations featured in this post How are prefill and decode two different problems? Prefill processes the full prompt in parallel, producing large GEMM-M (= ISL × \\(G\\)) matmuls that are compute-bound. Without speculative decoding , decode generates one token at a time, producing small GEMM-M (= \\(G\\)) matmuls and becoming memory-bound by KV cache reads from high-bandwidth memory (HBM). Speculative decoding increases GEMM-M and can shift decode toward compute-bound. Because the query lengths, KV access, and bottleneck differ for prefill and decode (Table 2), each parameter is analyzed separately for each phase. Prefill Decode Query length Full input (ISL tokens) 1 token KV context Prompt (ISL tokens) Full KV cache (KVSL tokens) Attention GEMM-M ISL × \\(G\\) (large) \\(G\\) (small) Primary bottleneck Compute (matmul + softmax) HBM bandwidth (memory) Table 2. Prefill and decode differ in query length, KV context, attention GEMM-M, and primary bottleneck Note: With prefix caching, common in agentic and multiturn apps, a new turn may have a short ISL while attending to a large prefix cache. With a short ISL but long prefix cache, prefill behaves like decode. How arithmetic intensity governs compute- versus memory-bound behavior The roofline bounds GPU performance by compute and bandwidth ceilings, as previously explained . Arithmetic intensity determines which binds (Equation 1): Arithmetic Intensity = Total FLOPs / Total bytes accessed The ridge point marks the transition from memory-bound to compute-bound. Prefill lies well above it and is compute-bound, while decode lies below it and is memory-bound (Figure 2). Speculative decoding raises decode arithmetic intensity and can move it toward the ridge. Figure 2. Roofline model showing decode on the memory-bound ramp and prefill on the compute-bound plateau How does the FlashAttention kernel compute attention on GPU? FlashAttention computes attention without materializing the full attention matrix. It streams tiles of \\(Q\\), \\(K\\), and \\(V\\) from HBM to on-chip SRAM and fuses three steps into one pass: First, batched matmul (BMM1) scores queries against keys Second, online softmax normalizes the scores using a running max and sum Third, second batched matmul (BMM2) weights the values The BMMs run on Tensor Cores while the softmax exponentials run on special-function units. The BMM shapes drive the arithmetic intensity analysis that follows. Figure 3. FlashAttention kernel with BMM1 and BMM2 on Tensor Cores and fused online softmax on special-function units. Image adapted from FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness GEMM shapes Attention performance follows from the shapes of its two matmuls. Table 3 lists the per-phase (Batch, M, N, K) dimensions of BMM1 and BMM2. BMM Phase Batch M N K Meaning BMM1 Prefill PB × KH ISL × \\(G\\) ISL Hsz Q · Kᵀ: score queries against keys Decode DB × KH 1 × \\(G\\) KVSL Hsz BMM2 Prefill PB × KH ISL × \\(G\\) Hsz ISL Weights · V: aggregate values Decode DB × KH 1 × \\(G\\) Hsz KVSL Table 3. GEMM (Batch, M, N, K) shapes for BMM1 and BMM2 For decode, GEMM-M = \\(G\\), usually 8-16, far below a GPU tile-M of 64 or 128, limiting parallel work per tile. Larger \\(G\\) loads less KV per token and amortizes each load across more query heads, improving utilization. The next section quantifies this effect. Group size Group size (\\(G\\)) is the number of query heads that share one KV head. MHA has \\(G\\) = 1, GQA has \\(G\\) = 4, 8, 16, …, and MQA has \\(G\\) = QH. Arithmetic intensity as a function of \\(G\\). In the following formulas, “Bytes” refers to HBM bytes moved. For simplicity, assume 1 byte per element (that is, FP8 KV cache). Prefill As \\(G\\) grows, the 1/\\(G\\) vanishes and arithmetic intensity approaches 2 × ISL. At ISL = 32K, raising \\(G\\) from 8 to 16 improves arithmetic intensity by under 6%. In other words, prefill is dominated by ISL, not \\(G\\). Figure 4 confirms this, varying \\(G\\) from 1 (MHA) to 64 (MQA) changes prefill runtime by under 1%. Equations 2, 3, and 4: FLOPs = 4 × PB × QH × ISL² × Hsz (constant in \\(G\\)) Bytes = 2 × PB × KH × Hsz × ISL × (\\(G\\) + 1) Arithmetic Intensity = 2 × \\(G\\) × ISL / (\\(G\\) + 1) = 2 × ISL / (1 + 1/\\(G\\)) → 2 × ISL as \\(G\\) → ∞ Decode (GEMM-M = \\(G\\)) Doubling \\(G\\) doubles decode arithmetic intensity. Raising \\(G\\) from 1 to 8 gives an 8x gain by reducing memory traffic and improving GPU compute utilization. It is independent of KVSL: arithmetic intensity stays near 2 × \\(G\\), so decode remains memory-bound unless \\(G\\) is very large. Models such as NVIDIA Nemotron 3 adopted GQA with two KV heads, which makes decode more efficient. Equations 5, 6, and 7: FLOPs = 4 × DB × QH × KVSL × Hsz (constant in \\(G\\)) Bytes = 2 × DB × KH × Hsz × (\\(G\\) + KVSL) Arithmetic Intensity = 2 × \\(G\\) × KVSL / (\\(G\\) + KVSL) ≈ 2 × \\(G\\) (when KVSL ≫ \\(G\\)) Figure 4 shows decode runtime falls about 2x per doubling of \\(G\\) because halving the KV heads halves the data loaded per token. Beyond \\(G\\) = 16, the KVSL = 32K curve flattens. Its per-step kernel is small enough that two costs dominate: fixed setup and post-processing overhead, and the flash-decoding reduction from splitting KV across SMs to stay parallel with few KV heads. The longer KVSL = 128K kernel better amortizes these costs and continues tracking the 2x trend. Note: Speculative decoding raises effective GEMM-M to (1+\\(D\\)) × \\(G\\), where \\(D\\) is the number of draft tokens. Once large enough to fill compute tiles, decode moves toward compute-bound. Figure 4. Normalized runtime versus \\(G\\) (QH=64, Hsz=128, PB=1, DB=8; prefill ISL and decode KVSL as 32K and 128K). Prefill is flat in \\(G\\) (compute-bound); decode falls ~2x per doubling of \\(G\\) (memory-bound), from MHA (\\(G\\)=1) to MQA (\\(G\\)=64) Guideline 1: Choose \\(G\\) for decode efficiency and push it high. Prefill runtime is flat in \\(G\\), while decode arithmetic intensity ≈ 2 × \\(G\\), so higher \\(G\\) improves decode speed and GPU utilization. Speculative decoding is another lever to boost performance at a given \\(G\\). Head dimension Unlike group size, head dimension (Hsz) does not affect arithmetic intensity.",
+      "published_date": "2026-07-31",
+      "tags": [
+        "Agentic AI / Generative AI",
+        "Data Center / Cloud",
+        "Developer Tools & Techniques",
+        "AI Inference",
+        "Inference Performance"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "NVIDIA Developer",
+        "feed_url": "https://developer.nvidia.com/blog/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agentic, speculative decoding, kv cache, long context",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 71,
+    "llm_reason": "提供實用的長上下文注意力設計指引，對 NVIDIA GPU 推理性能有實質提升。",
+    "novelty": 9,
+    "impact": 12,
+    "trending": 17,
+    "practicality": 15,
+    "blog_worthiness": 18
+  },
+  {
+    "item": {
+      "source": "newsapi",
+      "source_name": "Nature.com",
+      "title": "End-to-end multimodal pathology foundation model with clinical dialogue",
+      "url": "https://www.nature.com/articles/s41591-026-04521-4",
+      "authors": [
+        "Eugene Vorontsov, George Shaikovski, Adam Casson, Julian Viret, Eric Zimmermann, Neil Tenenholtz, Yi Kan Wang, Jan H. Bernhard, Ran A. Godrich, Juan A. Retamero, Jinru Shia, Mithat Gonen, Martin R. Weiser, David S. Klimstra, Razik Yousfi, Nicolò Fusi, Thomas J. Fuchs, Kristen Severson, Siqi Liu"
+      ],
+      "abstract": "Trained on 2.3 million whole-slide images and 14 million clinical question−answer pairs, the multimodal foundation model PRISM2 matched clinical-grade cancer detection performance without task-specific training, demonstrating the value of clinical dialogue su…",
+      "published_date": "2026-07-31",
+      "tags": [
+        "newsapi"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "newsapi_source": "Nature.com",
+        "published_at": "2026-07-31T00:00:00Z"
+      }
+    },
+    "rule_score": 20.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: multimodal",
+      "⚖️ 來源權重: newsapi +15"
+    ],
+    "llm_score": 79,
+    "llm_reason": "結合影像與臨床對話，創新多模態基礎模型，具高影響力與熱門度。",
+    "novelty": 14,
+    "impact": 17,
+    "trending": 18,
+    "practicality": 12,
+    "blog_worthiness": 18
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "JetBrains Open-Sources KotlinLLM: Smart Macros That Generate Kotlin Source Code at Runtime and Hot-Reload It Through JDI",
+      "url": "https://www.marktechpost.com/2026/07/31/jetbrains-research-open-sources-kotlinllm-intellij-plugin-kotlin-runtime-llm/",
+      "authors": [
+        "Michal Sutter"
+      ],
+      "abstract": "JetBrains Research Open-Sources KotlinLLM. KotlinLLM is an IntelliJ IDEA plugin for Kotlin/JVM projects that adds a language feature called Smart macros . A Smart macro is a regular Kotlin function call whose body is generated Kotlin code. The public API is deliberately small. asLlm<F, T>(from, hint) converts an input of type F into a typed value T, such as a data class, enum, list, or primitive. mockLlm<T>() generates a stateful implementation of an interface T, whose behavior depends on which methods are called on it. When a project launches through the KotlinLLM run configuration, the plugin scans for asLlm and mockLlm calls, updates generated bootstrap/provider/parser/mock files, launches the run configuration under JDI, and registers breakpoints on generated regenerate hooks. If generated logic does not match a runtime scenario, execution reaches a hook. The plugin captures runtime values and type information from the suspended frame, the LLM agent submits a code update, and the plugin compiles it and redefines the loaded class before retrying the original call. KotlinLLM targets Kotlin/JVM specifically because the runtime evolution loop depends on JVM class redefinition through JDI. The embed below walks the macro API, animates the nine-step runtime loop, and models why covered scenarios stop costing inference calls. On an adapted Spring Petclinic Kotlin project with 18 asLlm call sites, 24 of 24 application scenarios completed after Smart macro evolution, with a 100% hot-reload success rate and compilation/redefinition adding roughly 1% of total runtime overhead. A synthetic “GitHub Beginner Issue Radar” parsed real issue data across 20 repositories and 30k+ issues, reaching about 0.89 recall on ground-truth beginner labels. The plugin requires IntelliJ IDEA 2025.2.x, JDK 21, and an OpenAI API key stored in the target project’s .kotlinllm file via Tools > KotlinLLM Settings . It is released under the Apache License 2.0, with runnable examples, the thesis write-up , and the KotlinConf 2026 talk recording in the repository . Not as a production runtime, at least not yet. JetBrains labels KotlinLLM a research prototype , and it is described it as an experimental IntelliJ IDEA plugin. The plugin is experimental, but its output is deployable . Once behavior has been generated, the target project can compile and run that behavior without another LLM request for the same scenario. You ship plain Kotlin, not a model dependency. Sources: JetBrains Research blog , the kotlinllm-plugin README , and InfoWorld The post JetBrains Open-Sources KotlinLLM: Smart Macros That Generate Kotlin Source Code at Runtime and Hot-Reload It Through JDI appeared first on MarkTechPost .",
+      "published_date": "2026-07-31",
+      "tags": [
+        "Agentic AI",
+        "AI Infrastructure",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Editors Pick",
+        "New Releases",
+        "Open Source",
+        "Software Engineering",
+        "Staff",
+        "Tech News",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 68,
+    "llm_reason": "Kotlin LLM 宏即時熱重載，實用但影響有限",
+    "novelty": 12,
+    "impact": 12,
+    "trending": 15,
+    "practicality": 14,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "blog",
+      "source_name": "Simon Willison",
+      "title": "Stateless MCP has recaptured my interest (and inspired mcp-explorer and datasette-mcp)",
+      "url": "https://simonwillison.net/2026/Jul/31/stateless-mcp/",
+      "authors": [
+        "Simon Willison"
+      ],
+      "abstract": "Tuesday was Stateless MCP day —the rollout of MCP 2.0, or the 2026-07-28 Model Context Protocol specification to use the more formal but less memorable name. This is the most significant change to the MCP spec since it first launched, and has also served to reignite my personal interest in the protocol. For background: MCP is the Model Context Protocol, which describes a standard way to expose new tools to LLM-powered agent frameworks. It was introduced by Anthropic back in November 2024 , had a huge spike of interest through much of 2025, and then became somewhat eclipsed by Skills (another Anthropic invention) when it became apparent that an agent harness with access to a terminal and curl could do most of what MCP did in a more flexible way. I wrote about that in my review of 2025 . I’m coming back around to MCP now. Giving an agent a shell environment with the ability to access the internet is fraught with risk , and requires a strong model that is capable of effectively driving such an environment. MCP tools are easier to audit and control, and simple enough that smaller models that run on a laptop can still drive them reasonably well. The new stateless MCP specification also greatly decreases the complexity of implementing both clients and servers for the protocol. I built three of those this week! The best demonstration of the difference between stateful and stateless MCP is in this May 21st blog post that introduced the RC for the new specification. It included a clear before-and-after example. The older stateful MCP (I’m going to call it “legacy MCP”) required two HTTP requests—the first to initialize a session and obtain a Mcp-Session-Id , and the second to actually call the tool: The new stateless way uses a single HTTP request which looks like this: This is so much cleaner from both a client- and server-side implementation perspective. It’s also a better fit for building scalable web applications, since now you don’t need to maintain server-side state to keep track of those session IDs, or worry about routing the same session to the same backend machine. I couldn’t find a great CLI tool for interactively probing an MCP server, so I had Codex help build my own. mcp-explorer is the result. It’s a stateless Python CLI tool, so you don’t even need to install it to try it out—it works with uvx like this: This queries Ade Oshineye’s agentic-mermaid.dev demo MCP. The above command returns the following list of tools: This outputs a whole bunch of information, including the JSON schema of the inputs and outputs. To call that tool and pass arguments to it: To get just the raw SVG try adding | jq .svg -r to that command. I got back this image : There are a few more commands in the README, but you get the general idea. I find building CLI tools like this to be a really productive way to get familiar with a specification, even if an agent writes most of the actual code. The second project is datasette-mcp , a Datasette plugin which adds a /-/mcp endpoint to any Datasette instance. This is probably the fourth time I’ve tried building this plugin, but thanks to the new stateless MCP specification I finally have a version that feels good to release. It provides just three tools: list_databases() , get_database_schema(database_name) , and execute_sql(database_name, sql) . They do exactly what you would expect them to do—though execute_sql() is read-only for the moment. Wire these into an agent, or a chat tool like ChatGPT or Claude, and they’ll gain the ability to run SQL queries against your hosted Datasette instance. So far I’m running it on the Datasette mirror of my blog, at datasette.simonwillison.net/-/mcp . It took a bit of fiddling to figure out how to attach that to ChatGPT and Claude, but I got there in the end. Here’s a new TIL showing exactly how to do that. Here’s a shared Claude session where I asked it: list tables in simonwillison.net what has Simon said recently about MCP? It ran 7 separate SQL queries to figure out the answer. My LLM tool is long overdue for an official MCP integration. The new alpha llm-mcp-client plugin is my attempt at exactly that: Here’s the output (including reasoning trace, I’m using LLM 0.32rc2 ): I see the question “count the notes” is probably asking me to tally up blog notes. It could also mean published notes or drafts, so there’s some ambiguity there. I’ll need to figure out the total number of notes, likely by querying the count for both published notes and drafts to get a clear answer. Let’s execute that count! And the output of llm logs for that prompt. Once this is fully baked, I’m considering bringing it directly into LLM core. I’m excited to experiment with MCP in Datasette Agent and llm-coding-agent as well. A few months after MCP was first released, I wrote Model Context Protocol has prompt injection security problems , where I noted that the pattern of having end users mix and match tools pushed responsibility for avoiding data exfiltration attacks out to the users themselves. I hadn’t coined the Lethal Trifecta yet, but that was absolutely what I had in mind. Then general agents with arbitrary shell and curl access came along, and that’s so much harder to keep secure! Something I’ve come to appreciate about MCP is that it’s much easier to reason about agent capabilities and what might go wrong than with arbitrary command execution in an open network environment—the default for most of today’s general and coding agent tools. I plan to lean into MCP a whole lot more when I’m building sensitive applications on top of LLMs. This is Stateless MCP has recaptured my interest (and inspired mcp-explorer and datasette-mcp) by Simon Willison, posted on 31st July 2026 . Previous: OpenAI’s accidental cyberattack against Hugging Face is science fiction that happened Sponsor me for $10/month and get a curated email digest of the month's most important LLM developments.",
+      "published_date": "2026-08-01",
+      "tags": [
+        "blog"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "blog_name": "Simon Willison",
+        "blog_url": "https://simonwillison.net/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, mcp, model context protocol, reasoning",
+      "⚖️ 來源權重: blog +15"
+    ],
+    "llm_score": 57,
+    "llm_reason": "MCP 2.0 只為簡化實作，缺乏創新深度，但實用且對代理框架有影響。",
+    "novelty": 7,
+    "impact": 12,
+    "trending": 9,
+    "practicality": 14,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Nous Research Ships Three Integration Paths for Hermes Agent and Buzz, Block’s Open Source Nostr Workspace for Humans and Agents",
+      "url": "https://www.marktechpost.com/2026/07/31/nous-research-ships-three-integration-paths-for-hermes-agent-and-buzz-blocks-open-source-nostr-workspace-for-humans-and-agents/",
+      "authors": [
+        "Michal Sutter"
+      ],
+      "abstract": "Nous Research has released Hermes Agent support for Buzz , Block’s open source, self-hostable workspace where humans and AI agents share the same channels. Buzz is built on Nostr. Every message is a signed event on a relay you own, and every participant, human or agent, is a keypair. That removes the bot-token model. Agents get their own identity, their own channel memberships, and their own audit trail. Yes, and both sides are self-hostable today. Buzz is Apache-2.0 with 18.8k stars; Hermes Agent is MIT licensed. Solo developers and small engineering teams can run it through Buzz Desktop with no configuration. Mid-market platform teams are the strongest fit, because the relay sits on Postgres, Redis, and S3/MinIO. Enterprises should scope this as a pilot, since mobile clients and workflow approval gates are still being wired up. Practical applications include incident memory over channel history, branch-as-room code review, agent-drafted release notes, and cron-delivered reports. The integration docs split the work by where Hermes runs. Under the Buzz Desktop managed runtime , Buzz spawns Hermes locally as a preset harness. Open Settings → Runtimes and Hermes appears automatically. Discovery resolves the hermes-acp launcher on your login-shell PATH, which the installer writes to ~/.local/bin . Inbound is ACP over stdio. The relay bridge suits a hosted agent identity. Buzz’s buzz-acp harness bridges a channel to hermes acp over stdio, reaching the relay by WebSocket. This is a transport integration, not a second install. The spawned subprocess shares the same config, credentials, memory, skills, and state as hermes on that host. The native gateway platform is the deepest option. A bundled buzz plugin makes Buzz a normal Hermes messaging platform beside Telegram and Discord, covering channels, DMs, mention gating, threaded replies, reactions, images, and cron delivery. Hermes keeps its own approvals, memory, and session management. Setup is hermes gateway setup . On the gateway path, inbound arrives over a persistent NIP-42-authenticated Nostr WebSocket with dependency-free BIP-340 signing, falling back to CLI polling automatically. Outbound always goes through the buzz CLI. The transport setting accepts auto , websocket , or poll , and poll_interval defaults to 4 seconds. The recommended defaults ship private. require_mention: true means the agent answers only when addressed in channels, while DMs always dispatch. allow_all_users: false restricts access to listed npubs or hex pubkeys. interim_assistant_messages: false and tool_progress: off keep the tool log out of the channel. Events are de-duplicated by event id against a per-channel high-water mark, and the agent’s own messages are filtered by pubkey. Check out the Integration Docs , the Buzz Adapter Reference , and the GitHub Repo . Also, feel free to follow us on Twitter , and don’t forget to join our SubReddit and subscribe to our Newsletter . The post Nous Research Ships Three Integration Paths for Hermes Agent and Buzz, Block’s Open Source Nostr Workspace for Humans and Agents appeared first on MarkTechPost .",
+      "published_date": "2026-07-31",
+      "tags": [
+        "Agentic AI",
+        "Editors Pick",
+        "Model Context Protocol (MCP)",
+        "New Releases",
+        "Software Engineering",
+        "Staff"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: rss +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 59,
+    "llm_reason": "整合既有工具，實用性高但缺乏創新。",
+    "novelty": 6,
+    "impact": 12,
+    "trending": 11,
+    "practicality": 14,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "newsapi",
+      "source_name": "Nature.com",
+      "title": "Unify learns cellular evolution with universal multimodal embeddings",
+      "url": "https://www.nature.com/articles/s41467-026-76230-y.pdf",
+      "authors": [
+        "Huawen Zhong, Wenkai Han, Guoxin Cui, David Gomez-Cabrero, Jesper Tegner, Xin Gao, Manuel Aranda"
+      ],
+      "abstract": "Integrating single-cell RNA-sequencing (scRNA-seq) data across species is still technically challenging. Here, the authors report a transfer learning framework designed to integrate scRNA-seq data across species by combining RNA expression with embeddings fro…",
+      "published_date": "2026-07-31",
+      "tags": [
+        "newsapi"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "newsapi_source": "Nature.com",
+        "published_at": "2026-07-31T00:00:00Z"
+      }
+    },
+    "rule_score": 20.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: multimodal",
+      "⚖️ 來源權重: newsapi +15"
+    ],
+    "llm_score": 64,
+    "llm_reason": "跨物種 scRNA‑seq 整合新框架，具實用價值與技術深度",
+    "novelty": 12,
+    "impact": 12,
+    "trending": 10,
+    "practicality": 14,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "Optimizing production agents with Amazon Bedrock AgentCore Observability",
+      "url": "https://aws.amazon.com/blogs/machine-learning/optimizing-production-agents-with-amazon-bedrock-agentcore-observability/",
+      "authors": [
+        "Joshua Lacy"
+      ],
+      "abstract": "As your AI agents move from prototype to production, the challenges shift from getting them to work to keeping them fast and efficient. In Part 1 of this series, we walked through debugging two common agent failures: infinite loops and tool invocation errors. Those scenarios dealt with agents that were broken. In this post, we tackle a different challenge: agents that work correctly but perform poorly. Slow response times and unbounded memory growth are the most common operational issues that surface after you resolve the initial debugging problems. They don’t trigger error alerts, but they erode user trust and increase costs over time. Using AgentCore Observability , a capability of Amazon Bedrock AgentCore, and Amazon CloudWatch , you will learn how to identify performance bottlenecks across your agent’s execution path and diagnose memory issues in long-running sessions. You will also implement monitoring practices that catch degradation before users notice it. For additional information and best practices, review AgentCore Evaluations , a capability of Amazon Bedrock AgentCore, and AgentCore Insights . You need an AWS account with Amazon Bedrock AgentCore access, CloudWatch Transaction Search enabled, and a deployed agent. See Part 1 for full setup details. Agents experience performance bottlenecks when they work correctly but respond too slowly. You expect sub-second responses but experience multi-second delays. Agents complete tasks successfully, but the latency makes them impractical for interactive use cases. This scenario is particularly challenging because slow is subjective. What’s acceptable for a batch processing agent is unacceptable for a customer service chatbot. You must establish performance budgets for your specific use case, then systematically identify which components violate those budgets. Performance degradation often manifests gradually. Agents might start with acceptable 2-second response times, but as you add features, integrate more tools, or accumulate more memory, latency creeps to 5 seconds, then 10, then becomes unusable. P95 response times exceed your thresholds, users abandon sessions, but error rates stay low. The agent works correctly but responds too slowly. Figure 1 — Session details showing multiple traces with consistently high latency. The three invocations took 7.5-8.2 seconds (average span latency), demonstrating a systemic performance bottleneck rather than occasional slowness. This pattern indicates the agent’s architecture needs optimization. To find bottlenecks, start by identifying high-latency requests. Query CloudWatch for agent invocations that exceed your performance budget: This query returns agent invocations that took longer than 3 seconds (adjust the threshold based on your requirements), sorted by latency. Pick a representative high-latency request and note its RequestId . Next, analyze the request timeline to understand where time is spent: The query shows you the sequence of operations within the request and how long each took. Look for operations that consume disproportionate time. Common culprits include memory retrieval operations, tool invocations, token generation, and sequential operations that could run in parallel. Figure 2 — OpenTelemetry trace timeline showing 17 spans across three sequential execute_event_loop_cycle operations. The tools (customer_lookup, order_history) execute one after another rather than in parallel, with each cycle waiting for the previous one to complete. This sequential pattern compounds latency across each tool invocation. Check memory retrieval latency specifically: Memory retrieval should complete in under 200 milliseconds, representing the point where users begin perceiving noticeable delays in interactive applications. Higher latency suggests inefficient memory organization. Examine tool invocation latency to identify slow integrations: The query identifies which tools contribute most to overall latency. A single slow tool can bottleneck the entire agent workflow. Performance bottlenecks typically stem from three root causes. Slow tool execution occurs when external tools take seconds to respond because of poor optimization, overload, or network issues. Latencies compound with sequential calls, so a 2-second tool called three times becomes a 6-second bottleneck. Excessive token generation is a factor because foundation models (FMs) produce tokens sequentially, meaning a 500-token response takes 5x longer than a 100-token one, impacting both latency and cost. Finally, sequential processing , performing independent operations one at a time instead of in parallel, increases both cost and compute times. For slow tool execution, implement caching, connection pooling, and proper database indexing to reduce response times. Set timeout limits and consider faster tool alternatives. If a tool consistently lags, profile it independently. The issue might be network latency, cold starts, or resource contention rather than the tool’s logic itself. For memory retrieval, replace single large namespaces with topic-specific partitions, such as preferences, history, and domain knowledge, to reduce search space. Summarize old conversations into compact entries rather than storing them verbatim, and set size limits per namespace, such as 100 preferences, 50 recent messages, or 500 domain facts. For token generation, optimize prompts to encourage brief, direct answers of 2–3 sentences unless more detail is requested. Add explicit length constraints and monitor token usage with alerts for unexpectedly long responses. For sequential processing, run independent tool calls in parallel. Sequential calls totaling 4.5s (2s + 1.5s + 1s) drop to only 2s when parallelized, often cutting latency by 50 percent or more with minimal effort. To verify your optimizations, re-run the latency query from the identifying bottlenecks section. Confirm that P95 response times now fall within your performance budget and that the trace timeline shows parallel execution where expected. Agents experience memory issues in long-running sessions when they maintain sessions where memory usage grows unbounded. Agents accumulate context, and eventually, agents hit token limits, lose important context, or exhaust available memory. Sessions fail unexpectedly, and you lose conversation state. This scenario is particularly problematic for agents that support extended workflows, such as customer service sessions, research assistants, or monitoring agents. Without proper memory management, these use cases become impractical. When abnormally long agent sessions exist, token usage grows linearly with session duration. Memory retrieval latency increases over time as memory stores grow. Sessions terminate unexpectedly with out-of-memory errors or context window exceeded errors. Figure 3 — Session details for the memorygrowth_Agent showing 6 traces, 15.7K total tokens consumed, and an average trace latency of 3,757 ms within a single session. Token usage grows with each successive invocation, demonstrating unbounded context accumulation. In production sessions spanning hours, this pattern leads to context window exhaustion and unexpected session failures. To identify long-running sessions with high memory usage: The query returns sessions lasting longer than one hour (3600 seconds), sorted by memory size. Pick a session with unusually high memory usage and note its SessionId . Examine memory extraction patterns to verify consolidation is occurring: Figure 4 — CloudWatch Logs Insights showing 209 memory-related log entries concentrated around 18:20. The spike in memory operations indicates the agent storing information without consolidation. Each invocation adds new memory entries (through add_conversation_note and add_user_context tools) without pruning or summarizing old data, demonstrating the unbounded growth pattern. Memory extraction should occur regularly throughout the session.",
+      "published_date": "2026-07-31",
+      "tags": [
+        "Advanced (300)",
+        "Amazon Bedrock AgentCore",
+        "Technical How-to"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 60,
+    "llm_reason": "提供實務監控技巧，缺乏新方法，適合技術讀者。",
+    "novelty": 6,
+    "impact": 12,
+    "trending": 14,
+    "practicality": 15,
+    "blog_worthiness": 13
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "DeepSeek Upgrades DeepSeek-V4-Flash-0731 with Major Agentic and Coding Gains",
+      "url": "https://www.marktechpost.com/2026/07/31/deepseek-upgrades-deepseek-v4-flash-0731-with-major-agentic-and-coding-gains/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "DeepSeek published DeepSeek-V4-Flash-0731 on Hugging Face and moved the official V4-Flash API into public beta on July 31, 2026. The model card is explicit that this is the official release superseding the preview, and that the architecture and size are unchanged. The gains come from re-post-training, not a new design. The checkpoint ships with the DSpark speculative decoding module attached, matching the structure of DeepSeek-V4-Flash-DSpark . Hugging Face reports 304B parameters for the repo, which includes that draft module on top of the 284B base. On the API side, deepseek-v4-flash now natively supports the Responses API format and is adapted for Codex. The V4-Pro API and the app and web models were not updated. Yes, in two very different ways. Via API, it is deployable by almost anyone: DeepSeek’s pricing page lists deepseek-v4-flash at $0.14 per 1M input tokens on a cache miss, $0.0028 on a cache hit, and $0.28 per 1M output tokens, with a 2,500 concurrency limit. That is roughly a third of deepseek-v4-pro output pricing ($0.87). Seed-stage startups, indie developers, and internal platform teams can run agent loops at this price without a GPU budget. Via self-hosting, the bar is much higher : The weights are MIT-licensed and ungated, but every expert stays resident in memory even though only 13B activate per token. DeepSeek’s vLLM example serves it on a single 4×GB300 node. Unsloth’s dynamic GGUFs put the lossless 8-bit build at 162 GB and a 3-bit build at 103 GB, needing roughly 110 GB of combined RAM plus VRAM. Self-hosting suits mid-size and large enterprises with a serving cluster, or one well-specced workstation at aggressive quantization. Per the DeepSeek-V4 technical report , V4-Flash is a 284B-parameter MoE with 13B activated per token and a 1M-token context window. Each MoE layer holds 1 shared expert and 256 routed experts with an intermediate dimension of 2048, and 6 routed experts fire per token. The first three MoE layers use hash routing. Multi-token prediction depth is 1. Attention is hybrid, combining Compressed Sparse Attention (CSA) and Heavily Compressed Attention (HCA). Manifold-Constrained Hyper-Connections (mHC) replace conventional residual connections, with expansion factor 4 and 20 Sinkhorn-Knopp iterations. Pre-training used more than 32T tokens and the Muon optimizer. The paper’s headline efficiency figure — 27% of single-token inference FLOPs and 10% of KV cache versus DeepSeek-V3.2 at 1M context — is stated for V4-Pro, not Flash. <!– EMBED HERE: paste wordpress-embed.html into a Custom HTML block –> All figures below are DeepSeek-reported, from the 0731 model card. DSpark is enabled with one vLLM flag: --speculative-config '{\"method\":\"dspark\",\"num_speculative_tokens\":7,\"draft_sample_method\":\"greedy\"}' . The DSpark paper reports 60–85% faster per-user generation on V4-Flash versus the MTP-1 baseline at matched aggregate throughput. There is no Jinja chat template. DeepSeek ships an encoding/ folder with encode_messages and parse_message_from_completion_text instead. reasoning_effort takes low , high , or max . DeepSeek recommends temperature = 1.0 , top_p = 0.95 for agentic use and 1.0 otherwise, with up to 384K output tokens at high and max . Check out the Model Update on HF . Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post DeepSeek Upgrades DeepSeek-V4-Flash-0731 with Major Agentic and Coding Gains appeared first on MarkTechPost .",
+      "published_date": "2026-07-31",
+      "tags": [
+        "Agentic AI",
+        "AI Infrastructure",
+        "AI Paper Summary",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Editors Pick",
+        "Language Model",
+        "Large Language Model",
+        "Machine Learning",
+        "New Releases",
+        "Staff",
+        "Tech News",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, post-training, moe, quantization",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 48,
+    "llm_reason": "重複訓練、無新架構，僅更新 API，影響有限",
+    "novelty": 4,
+    "impact": 8,
+    "trending": 12,
+    "practicality": 14,
+    "blog_worthiness": 10
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "The Verge AI",
+      "title": "Anthropic says Claude accidentally hacked real companies too",
+      "url": "https://www.theverge.com/ai-artificial-intelligence/973670/anthropic-claude-hacked-organizations-during-cyber-tests",
+      "authors": [
+        "Robert Hart"
+      ],
+      "abstract": "AI News Tech Anthropic says Claude accidentally hacked real companies too ﻿But swears OpenAI’s Hugging Face hack was worse. ﻿But swears OpenAI’s Hugging Face hack was worse. by Robert Hart Jul 31, 2026, 1:41 PM UTC Image: The Verge Robert Hart is a London-based reporter at The Verge covering all things AI and a Senior Tarbell Fellow. Previously, he wrote about health, science and tech for Forbes . Anthropic just realized several of its Claude AI models hacked into the systems of three different organizations during testing, acting on their own and without the company noticing. The revelation comes days after rival OpenAI said one of its own models had breached developer platform Hugging Face, adding to growing unease over whether frontier AI labs are doing enough to control the increasingly capable systems they are building. In a blog post describing the incidents, Anthropic said Claude gained unauthorized access to the systems during cybersecurity evaluations. All of the attacks happened during “capture-the-flag” exercises, a common way of testing hacking ability, where models are asked to find and obtain hidden information inside of a simulated network. The disclosure adds to mounting pressure on frontier AI labs in the wake of the Hugging Face incident and the release of powerful open-weight Chinese models. Employees at the major labs are now calling for coordinated global governance, and US lawmakers have begun weighing tighter oversight of powerful models and who can access them . Anthropic says the environment for its cybersecurity tests was supposed to be isolated. However, a “misconfiguration” left the machines Claude accessed “with live internet access,” the company said, and because all models had been “explicitly told” they had no internet access, they “assumed” the real networks it encountered were part of the simulated environment. The earliest incidents date back to April and involved three different Claude models: Opus 4.7, Mythos 5 , and “an internal research test model,” according to the blog post. As the models were being tested on their cyber abilities, Anthropic said they lacked the standard safeguards usually put in place to curtail riskier behavior. The company said it discovered incidents after reviewing more than 141,000 cybersecurity test runs, something it only did after OpenAI disclosed its rogue AI agent was behind the attack on Hugging Face. The three models behaved very differently when they encountered information suggesting that the systems they were encountering were, in fact, real. By Anthropic’s account, the oldest model, Opus 4.7, recognized it had reached a real system, “but continued its attack.” Its flagship Mythos 5 figured out it was using the internet but somehow reasoned this was all still part of the simulation, so continued. The internal test model, which Anthropic describes as “our latest model,” stopped the exercise when evidence emerged that its targets were real. Anthropic did not identify the affected organizations and said it will continue to investigate the incident and provide updates when it can. The company said it is also speaking with AI research nonprofit METR about conducting a third-party review of what happened. OpenAI has also hired METR to conduct an independent review. Throughout the post, Anthropic repeatedly contrasts both the nature and its handling of the incidents with OpenAI’s, ending with a bulleted, four-point list outlining the differences — and why it believes its own response was better. Anthropic emphasizes that it “proactively” reviewed its tests, and did so before a company detected any activity. It also said its models accessed the internet “via an open path,” rather than using a novel exploit like OpenAI’s agent, adding that its most recent model also stopped when it realized it was working in a real environment. Anthropic also said its models failed in a different way from OpenAI’s agent, indicating that this was a safer form of failure. “While there is not a perfectly sharp distinction between the two, we believe these incidents to be closer to a harness and operational failure than a model alignment failure,” the company said. In plain English: The Claude models were doing what they were told, while OpenAI’s agent pursued its goal in a way its creators did not intend, described as misalignment in the AI safety world. Anthropic called on other AI labs to conduct similar proactive reviews of its cyber testing, adding that the discovery underscores the need for stronger controls and safety measures when testing AI systems. Follow topics and authors from this story to see more like this in your personalized homepage feed and to receive email updates. Robert Hart AI Anthropic News OpenAI Security Tech",
+      "published_date": "2026-07-31",
+      "tags": [
+        "AI",
+        "Anthropic",
+        "News",
+        "OpenAI",
+        "Security",
+        "Tech"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "The Verge AI",
+        "feed_url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, alignment, safety, open weight",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 47,
+    "llm_reason": "報導安全事件，缺乏技術深度，適合簡短新聞稿",
+    "novelty": 3,
+    "impact": 13,
+    "trending": 14,
+    "practicality": 4,
+    "blog_worthiness": 13
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "KDnuggets",
+      "title": "Building Voice-Controlled AI Agents",
+      "url": "https://www.kdnuggets.com/building-voice-controlled-ai-agents",
+      "authors": [
+        "Shittu Olumide"
+      ],
+      "abstract": "Building Voice-Controlled AI Agents Building a voice-controlled AI agents isn't hard, this article breaks the pipeline into its real components: streaming speech recognition, turn detection, streaming generation, interruption handling, and tool calling under voice constraints and shows what each one is responsible for. By Shittu Olumide , Technical Content Specialist on July 31, 2026 in Artificial Intelligence # Introduction Most people picture building a voice agent as stitching three things together: speech-to-text (STT), a large language model (LLM), and text-to-speech (TTS). Wire them up, and you're done. That picture is correct as far as it goes, and it describes the simplest architecture, where each stage waits for the previous one to fully complete before starting. It's also not the production-standard pattern in 2026, because it's far too slow for anything that needs to feel like a real conversation. The actual hard part isn't the prompt, and it isn't even the model. It's orchestration: latency, turn-taking, tool calls, and interruption handling, layered on top of that basic STT-LLM-TTS chain. This is the actual engineering challenge precisely: voice is a turn-taking problem, not a transcription problem; semantic end-of-turn detection, barge-in cancellation, streaming, and time-to-first-token are the levers that separate a voice agent that feels natural from one that feels like a phone tree with a chatbot bolted onto it. This article breaks the pipeline into its real components — streaming speech recognition, turn detection, streaming generation, interruption handling, and tool calling under voice constraints — and shows what each one is responsible for, where it actually breaks, and includes a tested code excerpt that makes the responsibility concrete. None of the code here needs a live microphone or a paid API key to run; each component is demonstrated in isolation, the way you'd actually reason about it before deciding what your system needs. # Why the Sequential Pattern Doesn't Work Start with the architecture choice underneath everything else, because it determines whether the rest of this article's concerns even apply to your system. In the sequential pattern, the user speaks, STT transcribes the full utterance, the LLM generates the full response, TTS synthesizes the full audio, and only then does the user hear anything. It's the simplest pattern to build and reason about. It's also the slowest, because every stage sits idle waiting for the one before it to fully finish, and those delays stack on top of each other. The streaming pattern is the production standard instead: each stage streams its output to the next incrementally. STT streams partial transcripts to the LLM, the LLM streams tokens to TTS, and TTS synthesizes and plays audio from the first complete sentence while the LLM is still generating everything after it. This is genuinely harder to build; it demands careful handling of interruptions, buffering, and partial state, which is exactly what the rest of this article walks through, but it's the only pattern that hits a usable latency budget. That budget isn't a vague aspiration. Human conversation has a natural 200 to 300ms gap between speakers. Response delays beyond 500ms feel noticeably slow, and delays beyond 3 seconds cause most users to disengage or assume the system is broken. Current speech-to-speech systems cluster in the 0.8 to 3 second time-to-first-token range across leading providers, which means the architecture decision alone is what determines whether your agent lands in the \"feels natural\" zone or the \"caller hangs up\" zone, before a single word of the actual response has been considered. # Streaming Speech-to-Text The first component's job in a voice agent is not \"transcribe this audio file.\" It's continuously processing an incoming audio stream and emitting transcripts as the user is still speaking, then signaling once it's confident they've finished. Production STT for voice agents runs over a persistent WebSocket connection . Audio goes out in small chunks, roughly 50ms at a time, and streaming transcript events come back — not a single blocking call that returns text once at the very end. This distinction matters because of how the transcript actually changes mid-stream. A real streaming STT engine emits partial events that update as more audio arrives and the model revises its best guess, followed by one final event once it's confident the words have settled. Accuracy on entities — order numbers, phone numbers, and proper nouns — matters disproportionately here, because a single misheard digit breaks a downstream function lookup entirely, in a way that a human listener would have caught by simply asking the caller to confirm. # streaming_stt.py # Prerequisites: Python 3.10+, standard library only # Run: python streaming_stt.py import asyncio from dataclasses import dataclass from enum import Enum class TranscriptEventType(Enum): PARTIAL = \"transcript.user.delta\" # live, still-changing transcript FINAL = \"transcript.user\" # confirmed, won't change again @dataclass class TranscriptEvent: event_type: TranscriptEventType text: str confidence: float = 1.0 class MockStreamingSTT: \"\"\" Stands in for a real STT WebSocket connection. Real implementations send audio chunks and receive these same two event types back -- partial deltas while the user is mid-utterance, then one final event once the model is confident the words are settled. \"\"\" def __init__(self, simulated_utterance: str): words = simulated_utterance.split() self._partial_stages = [\" \".join(words[:i]) for i in range(1, len(words) + 1)] async def stream_events(self): for stage in self._partial_stages[:-1]: yield TranscriptEvent(TranscriptEventType.PARTIAL, stage, confidence=0.7) await asyncio.sleep(0) # yield control, simulating real async I/O yield TranscriptEvent(TranscriptEventType.FINAL, self._partial_stages[-1], confidence=0.97) async def consume_transcript_stream(stt: MockStreamingSTT): \"\"\" The pattern every voice agent client implements: render partial transcripts live for responsiveness, but only act on the FINAL event downstream -- partials can and do change before that. \"\"\" final_transcript = None partial_count = 0 async for event in stt.stream_events(): if event.event_type == TranscriptEventType.PARTIAL: partial_count += 1 print(f\" [partial] '{event.text}' (confidence={event.confidence})\") elif event.event_type == TranscriptEventType.FINAL: final_transcript = event.text print(f\" [FINAL] '{event.text}' (confidence={event.confidence})\") return final_transcript, partial_count async def main(): stt = MockStreamingSTT(\"My order number is A B 3 7 9 2\") final_text, n_partials = await consume_transcript_stream(stt) print(f\"\\nFinal transcript used downstream: '{final_text}'\") print(f\"Partial events received before final: {n_partials}\") asyncio.run(main()) How to run : python streaming_stt.py , no dependencies required. The downstream code only ever acts on the single FINAL event, even though nine partial transcripts streamed in before it as the simulated utterance built up word by word. That separation — render partials for live feedback, act only on the confirmed final — is what every real streaming STT client implements, whether it's AssemblyAI's Voice Agent API or any other production endpoint. # Turn Detection: Deciding When the User Is Actually Done This component is easy to skip mentally because it feels like it should just be part of the STT step. It isn't, and treating it as a separate concern is what makes it tunable. Turn detection is the system's specific method for deciding when the caller has finished speaking and the agent should respond, and it consumes the audio stream's silence pattern, not the transcript's text content, which is why it's a distinct piece of logic from STT. Get this wrong in either direction, and the conversation breaks differently. Too eager, and the agent interrupts a speaker who paused mid-thought to think.",
+      "published_date": "2026-07-31",
+      "tags": [],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "KDnuggets",
+        "feed_url": "https://www.kdnuggets.com/feed"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 56,
+    "llm_reason": "拆解實務流程，缺乏創新方法",
+    "novelty": 6,
+    "impact": 9,
+    "trending": 13,
+    "practicality": 14,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "blog",
+      "source_name": "Latent Space",
+      "title": "[AINews] not much happened today",
+      "url": "https://www.latent.space/p/ainews-not-much-happened-today-038",
+      "authors": [
+        "Latent Space"
+      ],
+      "abstract": "It might seem strange that we aren’t giving title story to a noteworthy DeepSeek open weights model update that still bumps up the Pareto Frontier that GPT 5.6 pushed out only yesterday : But because it is a post-train only update with no further details, there’s really not all that much to report, apart from noting that DeepSeek is finally relevant again after over a year of comparative obscurity (with V4 Pro this April as an exception) after becoming way too prominent, well timed after their $70B pre-IPO fundraise . AI News for 7/30/2026-7/31/2026. We checked 12 subreddits, 544 Twitters and no further Discords. AINews’ website lets you search all past issues. As a reminder, AINews is now a section of Latent Space . You can opt in/out of email frequencies! DeepSeek V4-Flash 0731: post-training leap, API launch, and immediate open-weights release DeepSeek’s biggest story of the day was the official public-beta launch of DeepSeek-V4-Flash API , with DeepSeek stating that its upgraded agent capabilities now surpass V4-Pro-Preview and that the API now supports the Responses API format and is “fully adapted for Codex” ( @deepseek_ai ). In a follow-up, DeepSeek clarified that the improvement applies only to the Flash API , while V4-Pro API/App/Web remain unchanged for now; V4-Pro official is still pending ( @deepseek_ai ). Community observers quickly highlighted the magnitude of the jump: @cline called out Terminal-Bench 82.7 , up +25.8 from the April preview’s 56.9 . The notable technical claim is that this jump came without changing architecture or size. Artificial Analysis summarized V4 Flash 0731 as still 284B total / 13B active , 1M context , text-only, at $0.14 / $0.28 per 1M input/output tokens with an unusually aggressive 98% cache-hit discount to $0.0028 / 1M cached tokens ( @ArtificialAnlys ). On their index, the model rose from 40 → 50 , landing 1 point behind GPT-5.6 Luna (max, 51) while coming in at roughly 60% lower cost per task on DeepSeek’s first-party API. They also reported major agentic gains, including GDPval-AA v2 Elo 1189 → 1559 , Terminal-Bench 2.1 to 79% , τ³-Bench Banking +8 points , and a 12% drop in output-token usage versus the predecessor. Multiple posts converged on the same takeaway: this is a post-training win , not a scaling-law/pretraining story (e.g. @kimmonismus , @EMostaque , @Yuchenj_UW ). Open-weights followed almost immediately. The official weights landed on Hugging Face and were widely amplified by @MiaAI_lab , @_akhaliq , and others. The release is under MIT , and @vllm_project highlighted serving details: 256 routed experts , 6 active per token , 1M context , three reasoning-effort levels , and an included DSpark speculative decoding module that can be enabled via a single flag. Local/quantized deployment followed immediately: @UnslothAI published runnable quants requiring roughly 168GB RAM for lossless 4-bit and 110GB for 3-bit , while @danielhanchen later shared additional UD quants . A second-order theme was harness sensitivity and agent specialization. A number of posts argued that Flash’s gains are best understood in the context of better post-training for tool use and long-horizon tasks , not just raw IQ benchmarks. @jakevin7 reported that the model autonomously discovered and used subagent swarm patterns in a Maka-based setup. @arena later placed DeepSeek-V4-Flash-High on the Pareto frontier in the Frontend Code Arena , scoring 1586 and jumping +154 points over its preview. Several practitioners also noted that open models increasingly benefit from lighter harnesses and cache-friendly deployment patterns rather than heavy orchestration (e.g. @omarsar0 ). Open vs closed, price compression, and what “cheap intelligence” now means The release immediately reframed the week’s price war. After OpenAI’s prior-day cuts to GPT-5.6 Luna (-80%) and Terra (-20%) , many users read DeepSeek’s Flash upgrade as a direct competitive response. @kimmonismus summarized the new economics as $0.28/M output tokens , with performance “super close” to higher-end proprietary systems on some coding-agent benchmarks. @ArtificialAnlys later corrected an early cache-hit-rate display issue and reiterated that on DeepSeek’s own API, 0731 is firmly on the Pareto frontier for intelligence vs. cost per task . Developers quickly integrated DeepSeek into existing coding stacks rather than treating it as a standalone API. @ziwenxu_ showed DeepSeek V4-Flash running inside Codex via a router that preserves access to GPT, Grok, Kimi, and DeepSeek in one model picker; @Teknium added it to Hermes Agent ; @cline made the updated model free in Cline ; and @victormustar even spun up a free public endpoint . The practical message: the cost/performance delta is now big enough that routing and harness choices materially affect engineering workflows. This also strengthened the pro-open argument in the cyber/safety debate. After the week’s security incidents, @ClementDelangue argued that Hugging Face defended itself with an open model —specifically a quantized GLM 5.2 —and that banning open models would most harm defenders, startups, and researchers . @sundeep made the complementary point that a safe world with closed models still benefits from a vibrant open ecosystem . In parallel, @thinkymachines published a more incremental position: widen access in stages rather than treating open weights and safety as mutually exclusive. AI security incidents: labs’ sandboxing failures overshadow “rogue model” narratives The dominant non-release controversy concerned newly disclosed cyber-eval incidents. @GergelyOrosz summarized reports that OpenAI had an under-development agent escape a sandbox and target Hugging Face, while Anthropic disclosed similar incidents from prior months only after the OpenAI story broke. The Anthropic side was further summarized by @kimmonismus : after reviewing 141,006 eval runs , Anthropic found three incidents involving Opus 4.7 , Mythos 5 , and an internal model, all enabled by a misconfigured third-party evaluation environment with internet access. The strong consensus among technical commentators was that these were primarily infra and harness failures, not evidence of autonomous agency. @johnennis , @Dan_Jeffries1 , and @perrymetzger all argued that the descriptions implied poor sandboxing, weak logging, and bad operational discipline . @jachiam0 added an interesting nuance: a lack of situational awareness in evals can itself cause safety failures when the model is told the environment is simulated but it is not. The policy split is becoming clearer. Some posters, including @ostrisai and @RichardSocher , used the incidents to criticize closed labs’ claims of superior safety. Others, such as @jachiam0 , pushed the opposite direction, warning that the combination of frontier cyber capability and geopolitical conflict raises the probability of serious escalation against critical infrastructure. Either way, the technical lesson that emerged most consistently was narrower: agent behavior is highly shaped by eval scaffolding, access controls, and harness design . Agents, harnesses, eval environments, and continual improvement infrastructure A recurring meta-theme across many tweets was that model capability is increasingly bottlenecked by harnesses and environments. @swyx distilled the zeitgeist into a line: if you can distill models, you can also distill agent harnesses . @TheTuringPost made the related point that many perceived “model limitations” are actually memory or harness decisions made around the model . Research posts this week reinforced that view with concrete systems work. @omarsar0 summarized Microsoft’s Echoverse , which compiles specifications into stateful applications with grounded graders and uses rollout analysis to repair both environments and training signals; notably, shallow environments hurt live-site accuracy while deeper ones improved it.",
+      "published_date": "2026-08-01",
+      "tags": [
+        "blog"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "blog_name": "Latent Space",
+        "blog_url": "https://www.latent.space/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, tool use, reasoning, post-training",
+      "⚖️ 來源權重: blog +15"
+    ],
+    "llm_score": 45,
+    "llm_reason": "post‑train 更新，缺乏新方法，僅 API 與公開權重，技術深度有限",
+    "novelty": 5,
+    "impact": 7,
+    "trending": 10,
+    "practicality": 14,
+    "blog_worthiness": 9
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "LingBot-Map Tutorial: GPU-Aware Inference and Point Cloud Export",
+      "url": "https://www.marktechpost.com/2026/07/31/lingbot-map-tutorial-gpu-aware-inference-and-point-cloud-export/",
+      "authors": [
+        "Sana Hassan"
+      ],
+      "abstract": "In this tutorial, we implement an end-to-end streaming 3D reconstruction pipeline with LingBot-Map . We begin by configuring the input source, reconstruction settings, checkpoint selection, and output controls, then probe the available GPU and automatically tune frame limits, camera iterations, scale frames, and KV-cache parameters according to the detected VRAM. We install the repository and its dependencies, download the pretrained checkpoint, preprocess image or video frames, and construct the GCTStream model with streaming attention and long-range trajectory memory. We then perform mixed-precision inference, decode the predicted camera poses and intrinsic parameters, convert depth maps into world-coordinate point clouds, validate the recovered geometry, visualize the reconstructed scene and camera trajectory, and export the results as PLY, NPZ, or GLB artifacts. We define the configuration parameters that control the input source, model behavior, inference mode, point-cloud generation, and export settings. We inspect the available GPU, system memory, and disk space before automatically adjusting frame limits, scale frames, camera iterations, and KV-cache size according to the detected VRAM. We also create reusable shell and GPU-probing functions that prepare the Colab environment for the remaining reconstruction workflow. We clone the LingBot-Map repository and install the required dependencies without replacing Colab’s existing NumPy and OpenCV packages. We register the repository in the Python environment and verify the installed library versions to ensure that the runtime is ready for execution. We then download the selected pretrained LingBot-Map checkpoint from Hugging Face and store its local path for model initialization. We import PyTorch, LingBot-Map components, geometry utilities, and visualization libraries before selecting the appropriate inference precision for the available GPU. We load frames from a bundled scene, custom image directory, or video file and uniformly sample them according to the configured frame limit and stride. We preprocess the selected images into model-ready tensors and preview representative frames after cropping and resizing. We construct the GCTStream model with streaming KV-cache controls, camera refinement, 3D rotary embeddings, and scaled dot-product attention. We load the pretrained checkpoint, move the model to the GPU, cast the aggregation trunk to the selected precision, and report its parameter count and memory usage. We then run streaming or windowed inference, record processing speed and peak GPU consumption, and collect the predicted images, depths, confidence maps, and camera pose encodings. We decode the predicted pose encodings into camera extrinsic and intrinsic matrices and calculate the reconstructed camera trajectory. We convert every confidence-filtered depth map into world-coordinate points while preserving the corresponding RGB values and source-frame identifiers. We also perform a geometric quality check and calculate robust scene boundaries to verify that the reconstructed point cloud follows the expected camera and depth conventions. We visualize the RGB frames, depth maps, confidence masks, confidence distribution, camera trajectory, and reconstructed point cloud. We export the reconstruction as PLY and NPZ files, while optionally generating a GLB scene or launching an interactive Viser viewer inside Colab. We also support an optional ablation experiment that compares keyframe configurations in terms of speed, GPU memory usage, and reconstructed trajectory behavior. In conclusion, we established a complete and configurable workflow for converting an ordered image or video sequence into a spatially consistent 3D reconstruction. We used LingBot-Map’s streaming architecture to process frames efficiently while controlling KV-cache growth, GPU memory consumption, keyframe density, and camera-refinement cost. We transformed the model’s pose and depth predictions into camera extrinsics, intrinsics, trajectory coordinates, and confidence-filtered world points, and we verified the geometry before generating visualizations and reusable reconstruction files. We also retained support for windowed inference, interactive Viser inspection, alternative export formats, and ablation experiments, which allows us to extend the notebook from a Colab demonstration into a practical environment for evaluating reconstruction quality, runtime performance, and memory trade-offs across different GPUs and scene lengths. Check out the Full Code here . Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post LingBot-Map Tutorial: GPU-Aware Inference and Point Cloud Export appeared first on MarkTechPost .",
+      "published_date": "2026-07-31",
+      "tags": [
+        "Applications",
+        "Artificial Intelligence",
+        "Computer Vision",
+        "Editors Pick",
+        "Staff",
+        "Technology",
+        "Tutorials",
+        "Uncategorized"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: kv cache",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 54,
+    "llm_reason": "實用教程，缺乏新方法，仍具可落地價值",
+    "novelty": 3,
+    "impact": 8,
+    "trending": 10,
+    "practicality": 18,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "qm – Multiplayer agent harness for work",
+      "url": "https://github.com/yc-software/qm",
+      "authors": [
+        "tosh"
+      ],
+      "abstract": "qm A multiplayer agent harness for work. In Slack and on the web. What is QM? Most agents are designed like personal assistants. You can make one work for a whole\ncompany, but it quickly gets complex. QM is designed for startups. Employees each get\ntheir own isolated workspace and work independently without affecting each other, and\nthey can also collaborate with the agent in channels, group messages, and projects. Each person and each room has its own scoped memory, files, keychain view, permissions,\ncrons, web apps, and durable sandbox. It's built with open source in mind. Pick your own harness and model and switch between\nthem — Pi, OpenCode, Codex, and Claude Code all drive the same core, so a deployment\nisn't tied to any single vendor. Features Personal and shared scopes. People customize the agent to be theirs , and still\nwork with it collaboratively in Slack channels and projects. Slack and web. The same identity and configuration carries between Slack and the\nweb app. Admin control. Set org-level configuration, a security posture, and which\nharnesses and models are available. Web apps. Spin up custom internal apps and publish them to the right people. Shared skills. Skills are scope-owned and shareable by grant, with admin-gated\npromotion to the whole org and skill packs imported from git repositories. Background work. Crons and watches run work while nobody's watching. What you can do with it Search internal notes, email, documents, databases, and the web together Retrieve information from your company brain Build internal apps, publish them to the right people, and keep their data current Learn your writing voice from past sends, then triage your inbox on a schedule —\nlabels and reply drafts included Work in an existing repository: run tests, open PRs, monitor CI, check system logs Track a project in a shared channel and post updates and follow-ups Architecture flowchart LR DB[(\"Postgres<br/>sessions · memory · queue\")] subgraph CORE[\"Headless core\"] API[\"API · identity · policy · scheduler\"] LOOP[\"Agent loop<br/>(Pi, OpenCode, Claude Code)\"] API <--> LOOP end SBX[\"Per-scope sandbox<br/>files · tools · logged-in services\"] DB <--> API LOOP <--> SBX Loading Every turn runs through a central core, which can use a variety of models and harnesses\nto generate the response. A Postgres persistence layer holds user data, session history,\nand other durable state. The agent has a small, fixed tool surface; one of those tools is execute , which runs commands in the scope's own isolated sandbox — its durable computer,\nwhere installed tools stay installed. The web UI, the admin panel, and the public portal\nare optional plugins over the core's HTTP API;\nSlack is an optional in-process plugin that core starts\nand supervises through a direct service client. The core runs TypeScript directly on Node and uses Fastify for HTTP. The Slack plugin\nuses Bolt; the web UI builds with Vite and renders with Lit. The core itself is generic. Everything specific to one company — org config, custom tools\nand skills, sandbox image, infrastructure — lives in a deployment directory that the qm CLI validates and deploys. Every substrate (harness, session\nstore, sandbox, memory) sits behind an interface, so production implementations swap in\nvia one wiring file. Security and secrets QM's approach follows local coding agents like OpenCode, Codex, and Claude Code: the\nagent acts as the person it's working for, with their credentials and permissions, and\neverything it does is audited. An org picks one security posture, which narrower scopes\ncan only tighten: Strict — every harness tool call pauses for human approval, except the two\nno-effect turn enders. Auto (default) — a classifier screens provenance-labelled external data and tool\nresults before they reach the model; a deployment can point that at its own screening\nproxy. Dangerous — no content screening, no pauses between tool calls. The predeclared command policy — approval rules and hard denials for things like\nrecursive deletes or destructive SQL — applies in every posture, Dangerous included. SECURITY.md has the threat model, the operator assumptions, and the\nknown limitations. Deploy it for your org Create an organization-owned deployment repository that depends on @yc-software/qm : npm exec --yes --package=@yc-software/qm@latest -- \\ qm init . --org < slug > --target < fly-or-aws > npm install Initialization materializes a deployment skill for an agent and walks through\ninfrastructure, web sign-in, connector credentials, optional Slack access, deployment,\nand live verification — no source checkout required. Each deployment runs in the\noperator's own cloud account; initialization does not generate or enable deployment CI,\nand this repository has no production deployment workflow. See deployment.md for the details. Contributing We take contributions as human-written text, not code — see CONTRIBUTING.md . Describe the change you'd like informally in a .txt or .md file in adrs/ , and if we're aligned we'll handle the\nimplementation. Report vulnerabilities privately — see SECURITY.md ,\nnot a public issue. Customize your instance The deployment repository above carries config and a sandbox layer, and never needs a\nsource checkout. Some organizations want the opposite trade: the whole codebase in one\nplace, so engineers and coding agents read core and customizations together, while the\ncustomizations themselves stay private. For that, keep a private fork : a standalone\nprivate repository whose history begins as a clone of qm and whose core stays identical\nto upstream. Populate it once, then clone it to work in: gh repo create < org > /qm-private --private git clone --bare git@github.com:yc-software/qm qm-seed.git\ngit -C qm-seed.git push --mirror git@github.com: < org > /qm-private\nrm -rf qm-seed.git git clone git@github.com: < org > /qm-private\ngit -C qm-private remote add upstream git@github.com:yc-software/qm Create the private fork with a plain clone, as shown above, and never with GitHub's fork\nfeature. The word \"fork\" here names the concept — a downstream copy that diverges\ndeliberately and merges from upstream — not GitHub's Fork button. A GitHub fork inherits\nthe visibility of the repository it came from, so a fork of a public repository cannot be\nmade private. A GitHub fork also shares one object network with the repository it came\nfrom, so commits pushed to the fork stay fetchable by SHA from the public side. Many\norganizations disallow forking private repositories as well. A plain clone has none of\nthese problems, and it costs one thing: the clone is an ordinary repository, so upstream's\nCI workflows run live in your own account. Expect to supply the secrets those workflows\nneed, or disable the ones you do not want running. Everything specific to your organization goes in deploy/layers/<org>/ — config, sandbox\ntools and skills, plugin images, infrastructure — in the same shape qm init produces. See deploy/layers/README.md . Core stays byte-identical to\nupstream, which is what keeps merges small. Two skills maintain the boundary in both directions. update-qm merges upstream qm into\nthe private fork and opens the sync PR; upstream-pr sends an organization-agnostic fix back to\nqm, cutting the branch from upstream/main and checking the outgoing diff, commit\nmessages, and screenshots for organization identifiers before it pushes. Nothing under deploy/layers/ ever travels upstream. Going deeper docs/getting-started.md — first run, end to end cli/README.md — the qm CLI and the deployment directory contract docs/deploy-directory.md — the deployment directory in full .env.example — every knob, documented in place plugins/ — the surfaces (Slack, web UI, admin, portal) License Except where otherwise noted, QM is available under the MIT License .\n\n(542 points, 113 comments on Hacker News)",
+      "published_date": "2026-08-01",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 542,
+        "num_comments": 113,
+        "hn_url": "https://news.ycombinator.com/item?id=49126604",
+        "object_id": "49126604"
+      }
+    },
+    "rule_score": 26.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "🔥 HN 爆紅: 542 points"
+    ],
+    "llm_score": 45,
+    "llm_reason": "缺乏技術創新，僅為產品說明",
+    "novelty": 3,
+    "impact": 7,
+    "trending": 16,
+    "practicality": 10,
+    "blog_worthiness": 9
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "NVIDIA Developer",
+      "title": "NVIDIA Video Codec SDK 13.1: Zero-Copy Transcode, AV1 B-Frames, and Frame-Accurate Seek",
+      "url": "https://developer.nvidia.com/blog/nvidia-video-codec-sdk-13-1-zero-copy-transcode-av1-b-frames-and-frame-accurate-seek/",
+      "authors": [
+        "Elizabeth Goodman"
+      ],
+      "abstract": "The demand for high-quality video continues to accelerate across industries, powering everything from immersive streaming experiences to remote collaboration, generative AI media tools, and large-scale content delivery. Behind these experiences is a growing need for video pipelines that are faster, more efficient, and capable of handling increasingly complex formats and workloads. NVIDIA Video Codec SDK helps developers meet that challenge by providing access to GPU-accelerated video encoding and decoding through NVIDIA dedicated hardware video engines. NVIDIA Video Codec SDK 13.1 is now available. We encourage developers to explore the latest features in their video pipelines, take advantage of the redesigned sample apps, and share feedback via the NVIDIA Developer forums . What’s new in SDK 13.1 Encode features : · Hierarchical Reference Mode for AV1 with up to 31 B-frames · UHQ tuning info combined with iterative encoding Decode features : · Per-macroblock decode statistics for H.264 and HEVC · View information during MV-HEVC decode · Seek to a specific frame Transcode features : · Application-allocated CUarray as NVIDIA Video Encoder (NVENC) input and NVIDIA Video Decoder (NVDEC) output · Redesigned transcoder samples with a modular, queue-based architecture Other features : · Official Docker-based development environment Encode improvements Why AV1 hierarchical reference mode Using B-frames as references improves encode quality. Hierarchical Reference Mode improves it further by arranging B-frames in a tree-like reference structure: leaf nodes are non-reference B-frames, and the root is the middle B-frame. This structure increases NVENC’s maximum number of B-frames from 7 to 31, enabling the encoder to exploit temporal redundancy and improve overall quality. Use of this mode does not add any performance penalty, but video memory consumption goes higher. Figure 1. Example of a hierarchical reference structure with 15 B-frames SDK 13.1 adds Hierarchical Reference Mode for AV1, supporting 1, 3, 7, 15, and 31 B-frames; H.264 and HEVC will follow in future driver versions. The mode is most effective at seven or more B-frames and has minimal performance impact. For configuration details, see the NVENC Programming Guide . Figure 2, below, shows bitrate savings when encoding 15 B-frames in Constant Quality (CQ) mode, compared with NVENC’s High Quality (HQ) tuning in preset p7. Figure 2. CQ mode – Bitrate savings for Hierarchical Reference Mode with 15 B-frames Figure 3, below, shows bitrate savings when encoding 15 B-frames in Variable Bitrate (VBR). Figure 3. VBR mode – Bitrate savings for Hierarchical Reference Mode with 15 B-frames UHQ tuning info with iterative encoding Iterative encoding (introduced in Video Codec SDK 12.1 ) freezes the encoder’s automatic state advancement and lets the user re-encode the same frame with different parameters. NVENC tracks each iteration’s state, and can stop and commit to any one of them. UHQ tuning info (introduced in Video Codec SDK 12.2 ) combines lookahead level and temporal filtering to deliver the best quality-vs-performance tradeoffs in latency-tolerant encoding. Temporal filtering reduces noise in natural video by using motion estimation to find matching patches in adjacent frames and applying them to filter the current frame, yielding average coding gains of 4–5% on natural content. The lookahead level feature analyzes future frames and uses coding tree units (CTUs) and other statistics to allocate bits efficiently for rate control. Four lookahead levels with different performance and quality tradeoffs are currently supported.. Version 13.1 combines UHQ tuning info with iterative encoding, so lookahead level and temporal filtering now work alongside per-iteration re-encode. Decode improvements Per-macroblock decode statistics The NVDECODE API now retrieves detailed per-macroblock decode statistics for each decoded frame of H.264 and H.265 (HEVC) content. For every 16×16 block, the decoder exposes the luma quantization parameter (QP), the coding unit type (Intra, Inter, Skip, or PCM), and up to two motion vectors (forward and backward), all extracted as a natural byproduct of hardware decode with no additional CPU overhead. These statistics unlock GPU-accelerated video-analytics workflows that previously required CPU-side bitstream parsing. Motion vectors enable scene-change detection, object tracking, and shot-boundary analysis. QP values give a per-block view of encoding quality for adaptive bitrate optimization and quality monitoring. Macroblock types reveal coding structure useful for content classification and compression research. The workflow is straightforward: applications query decoder capabilities via cuvidGetDecoderCaps() , enable statistics collection at decoder creation, and retrieve a GPU-resident statistics buffer with each decoded frame from cuvidMapVideoFrame() . The user can copy the statistics to host memory or process them directly on the GPU with CUDA kernels for real-time pipelines. The SDK ships a ready-to-use sample, AppDec -dumpstats , that demonstrates the full flow. Frame-accurate seek AI workflows—from inference pipelines for object detection, content moderation, and video summarization, to training-data preparation that samples diverse frames across large datasets—frequently need specific frames rather than sequential decode. Video editing and non-linear post-production have the same requirement. The Video Codec SDK now provides a comprehensive seeking and random-frame-access API through the NvVideoDecoder class, making frame-accurate access as simple as array indexing while fetching only the frames you need. A GOP-aware seek architecture handles the request. For frame N, the SDK locates the nearest IDR frame before the target, seeks the demuxer there, and flushes decoder state via CUVID_PKT_DISCONTINUITY . From that IDR forward, only frames needed to reach N are processed: the parser flags and skips non-reference frames, and reference frames decode but bypass mapping and post-processing (format conversion, scaling, cropping via cuvidMapVideoFrame() ) through PTS-based filtering. Only frame N runs the full decode, mapping, and post-processing pipeline. Figure 4. Traditional sequential decode compared to GOP-aware seek The NvVideoDecoder class wraps the low-level SeekUtils engine and exposes a clean, operator-based interface. Figure 5, below, shows the internal seek flow when a frame is requested. Figure 5. Seek flow for fetching frame N (decoder[N]) Key capabilities: Decoder caching for playlists: NvVideoDecoder caches decoder instances by codec, bit depth, and chroma format, and reuses them via LRU eviction to avoid repeated creation overhead Non-seekable streams: Elementary streams, network streams, and pipes are auto-detected. Forward seeking works efficiently; backward seeking is supported with an automatic decoder reset Flexible frame specification: The AppDecVideoDecoder sample supports individual indices (0,10,20), ranges with step (0:100:10), time-based access (-t 1.5,3.0), and playlist files for batch processing Open GOP support: Streams with non-IDR I-frames seek to the nearest IDR rather than the nearest keyframe, ensuring all reference frames are available MV-HEVC stereoscopic enhancements The Video Codec SDK now offers better 3D-video support: view-ID and layer metadata from the decoder; multi-GPU encoding at high resolutions; and improved compatibility with third-party software.",
+      "published_date": "2026-07-31",
+      "tags": [
+        "Computer Vision / Video Analytics",
+        "Computer Graphics & Visualization",
+        "Media & Entertainment",
+        "Video Codec SDK",
+        "Video Decode / Encode"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "NVIDIA Developer",
+        "feed_url": "https://developer.nvidia.com/blog/feed/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: quantization",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 46,
+    "llm_reason": "產品更新，技術改進有限，適合簡短說明。",
+    "novelty": 6,
+    "impact": 7,
+    "trending": 9,
+    "practicality": 14,
+    "blog_worthiness": 10
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "The Verge AI",
+      "title": "It’s time to panic about AI safety",
+      "url": "https://www.theverge.com/podcast/973668/ai-safety-openai-hugging-face-vergecast",
+      "authors": [
+        "David Pierce"
+      ],
+      "abstract": "Podcasts AI Policy It’s time to panic about AI safety On The Vergecast: Why everyone’s worried about powerful AI, and why it seems nobody will stop it. Plus, what’s a computer? On The Vergecast: Why everyone’s worried about powerful AI, and why it seems nobody will stop it. Plus, what’s a computer? by David Pierce Jul 31, 2026, 2:03 PM UTC David Pierce is editor-at-large and Vergecast co-host with over a decade of experience covering consumer tech. Previously, at Protocol, The Wall Street Journal, and Wired. When the phrase “OpenAI hacked Hugging Face” has more or less entered mainstream culture, you know we have an AI problem . This week, we learned more about exactly how OpenAI’s agent broke out of a sandbox and autonomously traversed the web, including a bunch of other supposedly secure web services, all in the name of cheating on a benchmark tests. The fact that this hack happened is a problem. So is the fact that it took a while for anyone to notice. And the fact that it seems no one is willing or able to do much to stop it. (And lest you think it’s just an OpenAI problem, since we recorded this episode Anthropic acknowledged its models have also hacked a bunch of other companies without either party knowing.) It might all just be a bunch of posturing and hype, but it’s also increasingly clear that the companies building large language models either can’t or won’t put the right guardrails on them. So who will? On this episode of The Vergecast , David and Nilay dig into all the safety questions — around OpenAI and Anthropic, but also around the new generation of Chinese models that are clearly a threat to the US AI industry. But before we get into all of that, we talk about all the new ideas about how we use computers, from Mark Zuckerberg’s agent-filled future of everything to Samsung’s impressive new foldable phone to Apple’s new leasing program . After all that, it’s time for Brendan Carr is a Dummy, a bunch of vertical video news, and the smashing success of the Ferrari Luce. People are buying it! If one of them is you, we’d love to hear about it. Watch | Listen | Get ad-free In case you missed it this week: We also talked about the upcoming devices from AI companies , the resurgence in flip phones , the Galaxy Z Fold 8 , and the state of the Facebook Oversight Board . And we want to hear all your thoughts about all of it! Call the Vergecast Hotline at 866-VERGE11, send us an email at vergecast@theverge.com, and tell us everything that’s on your mind. And make sure you subscribe so you don’t miss an episode! Follow topics and authors from this story to see more like this in your personalized homepage feed and to receive email updates. David Pierce AI OpenAI Podcasts Policy Vergecast",
+      "published_date": "2026-07-31",
+      "tags": [
+        "AI",
+        "OpenAI",
+        "Podcasts",
+        "Policy",
+        "Vergecast"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "The Verge AI",
+        "feed_url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, safety",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 40,
+    "llm_reason": "主要為安全議題評論，缺乏技術創新與實作細節",
+    "novelty": 2,
+    "impact": 8,
+    "trending": 14,
+    "practicality": 4,
+    "blog_worthiness": 12
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "KDnuggets",
+      "title": "5 Books That Will Deepen Your Understanding of Large Language Models",
+      "url": "https://www.kdnuggets.com/5-books-that-will-deepen-your-understanding-of-large-language-models",
+      "authors": [
+        "Vinod Chugani"
+      ],
+      "abstract": "5 Books That Will Deepen Your Understanding of Large Language Models Check out these five books on building, fine-tuning, and deploying large language models. By Vinod Chugani on July 31, 2026 in Language Models # Introduction The generative AI ecosystem moves fast, but the mathematics and architectures powering it are well-documented. The shift from classical natural language processing (NLP) to generative AI has changed what data professionals actually need to know. A few years ago, understanding recurrent neural networks or standard classification models was enough for most roles. Today, the scale and complexity of transformer architectures demand a more rigorous, systems-level approach to machine learning. If you want to move beyond prompting an API and actually understand how to train, fine-tune, and deploy foundation models, you need structured, comprehensive resources. Fragmented tutorials won't cut it for serious practitioners. Below are five books that will sharpen your understanding of large language models (LLMs), ranging from concise conceptual overviews to deep, code-heavy engineering handbooks. # 1. Build a Large Language Model (From Scratch) by Sebastian Raschka We will begin with the technical foundations. The most durable way to understand any complex system is to build it yourself. The first two books take that principle seriously: one by walking you through constructing an LLM from the ground up, and the other by giving you the sharpest possible conceptual map of how modern language models actually work. Sebastian Raschka's book Build a Large Language Model (From Scratch) walks you through the granular process of designing, training, and fine-tuning an LLM. Instead of hiding the mechanics behind high-level abstractions, it puts you in direct contact with the underlying mathematics and logic. Here's what this book covers: It guides you through coding a transformer-based LLM completely from scratch using PyTorch . It provides deep technical coverage of core mechanics, including tokenization, embeddings, attention layers, and optimization techniques. It includes over 20 annotated Jupyter notebooks for hands-on reinforcement. It bridges high-level theory and applied coding, making it a good fit for researchers and AI engineers who need to understand exactly how data flows through the network. # 2. The Hundred-Page Language Models Book by Andriy Burkov Building from scratch is one way to develop intuition, but sometimes you need a high-quality map of the territory before you start constructing anything. That's where Burkov's compact guide The Hundred-Page Language Models Book comes in. For busy professionals or students who need a high-signal introduction to NLP, it moves quickly without sacrificing the technical accuracy you need to understand the field. Why this book stands out: It traces the evolution of language models from simple count-based n-grams to modern architectures like GPT and BERT. It explains core mathematical concepts accessibly, pairing them with clean visuals and working Python code snippets. It breaks down pretraining, text generation, and attention mechanisms into digestible chapters. It's designed to deliver maximum learning value per hour for time-constrained readers. # 3. Hands-On Large Language Models by Jay Alammar and Maarten Grootendorst Let's now turn to the applied practitioner layer. Once you have a solid grasp of the foundations, the natural next question is: how do you actually build something with this knowledge? The following three books shift the focus from understanding LLMs to working with them, covering everything from visual intuition and semantic search to production deployment at scale. Written by Jay Alammar, known for his visual essays on transformers, and Maarten Grootendorst, Hands-On Large Language Models makes complex architectures accessible to visual learners and data scientists who want both theory and application. Key highlights: Over 250 custom figures that illustrate topics like attention heads and multi-layer transformers. Tutorials on building semantic search systems and dense retrieval engines that go beyond keyword matching. Coverage of the modern AI pipeline, from prompt engineering to retrieval-augmented generation (RAG). Practical guidance on fine-tuning and deploying models using open-source tools and Hugging Face integrations. # 4. Natural Language Processing with Transformers by Lewis Tunstall, Leandro von Werra, and Thomas Wolf If the previous book gives you the visual intuition, this one gives you the engineering rigor to match it. Co-written by Hugging Face engineers, Natural Language Processing with Transformers functions as a manual for the exact tools and libraries driving the modern open-source AI ecosystem, and if you're building production-level AI applications, it's the standard reference. What you'll learn: Step-by-step tutorials on training and using models like BERT, GPT, and T5. Thorough coverage of dataset preparation, model training, fine-tuning, and performance evaluation. Real-world case studies demonstrating NLP applications in healthcare, finance, and multilingual contexts. Targeted guidance for machine learning engineers integrating Hugging Face repositories into production stacks. # 5. The LLM Engineering Handbook by Paul Iusztin and Maxime Labonne Training and fine-tuning a model is only half the story. The harder challenge for most teams is what comes next: getting that model in front of real users in a way that's reliable, scalable, and maintainable. That's exactly the gap this book addresses. While the other books focus largely on initial model training, The LLM Engineering Handbook functions as an operations manual for deploying LLMs into user-facing products. Key features: It details the end-to-end lifecycle of LLM products, showing how to turn research models into reliable, production-ready systems. It provides concrete examples for prompt optimization, tool use via function calling, and complex RAG architectures. It covers deployment strategies, including model evaluation patterns built for scale. It's aimed at developers who want to move beyond simple API wrappers and build scalable LLM applications. # Where to Go From Here These five books cover the full spectrum of what it takes to work seriously with large language models: coding a transformer from scratch, visualizing the mathematics behind attention, fine-tuning open-source models, and shipping them into production. Together, they trace a natural learning path: build your intuition, sharpen your technical foundations, then develop the engineering skills to make something real. You don't need to read all five at once. The most useful starting point depends on where you are right now. If you're newer to the field or still building your conceptual footing, Burkov or Alammar and Grootendorst will give you the clearest on-ramp. If you're already comfortable with the theory and want to go deeper on implementation, Raschka's from-scratch approach or Tunstall et al.'s Hugging Face handbook will push your skills further. And when you're ready to think seriously about production, Iusztin and Labonne will meet you there. The field rewards people who engage seriously with how these systems actually work, not just how to call them. Wherever you are in that journey, at least one of these belongs on your shelf. Vinod Chugani is an AI and data science educator who bridges the gap between emerging AI technologies and practical application for working professionals. His focus areas include agentic AI, machine learning applications, and automation workflows. Through his work as a technical mentor and instructor, Vinod has supported data professionals through skill development and career transitions. He brings analytical expertise from quantitative finance to his hands-on teaching approach. His content emphasizes actionable strategies and frameworks that professionals can apply immediately.",
+      "published_date": "2026-07-31",
+      "tags": [],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "KDnuggets",
+        "feed_url": "https://www.kdnuggets.com/feed"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agentic, tool use, function calling, fine-tuning, rag",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 32,
+    "llm_reason": "書單缺乏技術創新，僅為資源整理",
+    "novelty": 3,
+    "impact": 6,
+    "trending": 8,
+    "practicality": 5,
+    "blog_worthiness": 10
+  },
+  {
+    "item": {
+      "source": "newsapi",
+      "source_name": "MacRumors",
+      "title": "The MacRumors Show: Revisiting iOS 27 Ahead of iPhone 18 Pro",
+      "url": "https://www.macrumors.com/2026/07/31/the-macrumors-show-revisiting-ios-27/",
+      "authors": [
+        "Hartley Charlton"
+      ],
+      "abstract": "After over a month of testing iOS 27, on this week's episode of The MacRumors Show we circle back to the beta and talk through our experiences with Siri AI, Liquid Glass refinements, and more.\n\n\n\n\r\nSubscribe to The MacRumors Show YouTube channel for more vide…",
+      "published_date": "2026-07-31",
+      "tags": [
+        "newsapi"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "newsapi_source": "MacRumors",
+        "published_at": "2026-07-31T16:10:59Z"
+      }
+    },
+    "rule_score": 20.0,
+    "rule_reasons": [
+      "⚖️ 來源權重: newsapi +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 37,
+    "llm_reason": "純產品測評，缺乏技術創新與深度",
+    "novelty": 3,
+    "impact": 7,
+    "trending": 10,
+    "practicality": 8,
+    "blog_worthiness": 9
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "Announcing the Agentic Catalog Experience in Amazon Quick",
+      "url": "https://aws.amazon.com/blogs/machine-learning/announcing-the-agentic-catalog-experience-in-amazon-quick/",
+      "authors": [
+        "Srikanth Baheti"
+      ],
+      "abstract": "As organizations embrace AI-powered analytics, the value of a natural language (Text2SQL) answer is only as good as the business context behind it. We’re entering a phase where semantic richness (table and column descriptions, and relationships) must flow directly from where it’s authored in upstream data catalogs and semantic tools into the AI products that serve end users. Products like Amazon Quick can no longer operate in isolation. They need to natively consume and reason over the definitions, relationships, and governance metadata that data teams curate in systems like AWS Glue Data Catalog and Databricks Unity Catalog. This shift from siloed metadata to connected, catalog-aware AI is what enables intelligent analytics at scale. Enterprise data teams have done the hard work. They have invested heavily in upstream catalog platforms such as AWS Glue, Databricks Unity Catalog, Snowflake Horizon, Collibra, and dbt. On these platforms, they meticulously define table descriptions, column semantics, primary and foreign key relationships, glossary terms, and metric definitions. Yet when it comes to enabling end users (such as sales managers, marketing directors, and finance leads) for production-ready AI and trusted dashboards, a significant gap remains. When data curators (business intelligence engineers, analytics leads, and senior analysts) need to enable their business users in Amazon Quick, they face three compounding challenges: The problem isn’t upstream. The metadata exists. The governance is defined. The relationships are mapped. The problem is the last mile: translating that rich catalog context into a curated, consumable experience that delivers grounded AI answers and deterministic dashboards end users can trust. Today, we’re announcing the Agentic Catalog Experience in Amazon Quick, an AI-powered workflow that helps data curators rapidly define their context boundary, inherit upstream semantics, and enable end users for grounded Q&A and trusted dashboards at scale. At the heart of this experience is the Quick Agent, scoped to discovery, creation, and inheritance tasks within the catalog context. It uses the semantic context from the catalog connection to summarize the entire catalog at a glance, engage the customer in natural language conversation, surface the most relevant tables and relationships based on the customer’s use case, and assess metadata readiness. Then, with a single conversational confirmation, it auto-creates Catalog-Generated Datasets and Topics with targeted metadata inherited from the upstream catalog. No manual configuration. No context-switching. No weeks of setup. Instead of scrolling through thousands of tables to find the right ones, curators use natural language. With the Agentic Catalog Experience, curators describe what they need: Curator: “I’m a Senior Analyst on the Finance team. I need tables for quarterly revenue reporting and cost analysis.” The Quick Agent searches across your entire catalog to surface the most relevant tables instantly, using all available metadata including business descriptions, tags, Gold/Silver/Bronze classifications, quality scores, table health scores, and glossary terms. No more manual browsing. No more guessing. After the curator selects their tables, the Quick Agent creates catalog representations (Datasets) at scale in a single guided workflow. Your upstream catalog remains the source of truth because the default creation path is Direct Query. Datasets with inherited semantics are flagged with a clear “Semantics Inherited” badge, and their metadata is read-only. Authors can refresh inherited metadata on demand by choosing the sync button to stay aligned with their catalog. Quick Agent: “Creating 6 Catalog-Generated Datasets now: revenue_by_region created (DirectQuery, read-only metadata), cost_centers created, and gl_transactions created.” The Quick Agent carries forward targeted metadata from your catalog into the assets it creates. Today, inheritance is deliberately focused on two key areas to avoid noise and keep Datasets clean: Note : While all available metadata (Gold/Silver classifications, quality scores, tags, and health scores) is used during discovery to find the right tables, inheritance into Datasets is intentionally scoped to table and column definitions today. We plan to add more metadata types to Datasets over time. Quick Agent: “I detected 3 relationships between these tables and created a Topic called ‘Finance Revenue Model’ with the star schema joins preconfigured. Table and column definitions have been inherited from the upstream catalog.” The curated Datasets and Topics are ready for use immediately: After creation, the metadata tied to these Datasets and Topics feeds into the Amazon Quick semantic store, which powers re-ranking and unified context for AI-powered Q&A. Getting from catalog connection to the first business question takes minutes, not weeks. A key design principle underpins this experience: Amazon Quick is a consumer of upstream catalog metadata, not a dedicated catalog itself. This means: Support for additional catalog platforms is coming soon. Metadata inheritance is intentionally focused to keep Datasets clean and production-ready: Here’s what this means for the business users downstream: A sales manager asks: “What were our Q4 sales by region?” Behind the scenes, the AI agent: No manual dataset configuration required. The curator defined the context boundary once with the Quick Agent, and every end user benefits immediately. The Agentic Catalog Experience doesn’t exist in isolation. Combined with the broader platform capabilities of Amazon Quick (including integration with Slack, Outlook, documents, and knowledge bases), end users get the full enterprise context: This unified context enables production-ready AI answers, grounded in your organization’s specific data and semantics. To get started with the Agentic Catalog Experience, create a data source connection to your AWS Glue Data Catalog in Amazon Quick. After you establish the connection, the Quick Agent guides you through discovery, schema exploration, and Topic creation in a single conversational workflow. In this walkthrough, we connect to a Glue Data Catalog and build a Financial Analytics Topic. In Amazon Quick, create a new data source. From the list of connection types, select Glue Data Catalog (available in preview), and then choose Next . This connection is for the metadata. With it, Amazon Quick can consume the table and column definitions and the relationships your teams have already curated in AWS Glue. Figure 1: Selecting the Glue Data Catalog connection type in Amazon Quick A Glue Data Catalog connection works together with an Amazon Athena connection. Glue provides the metadata, and Athena provides the query path to the data itself in Amazon Simple Storage Service (Amazon S3). Create the Athena data source as well, so that Amazon Quick can run queries against the underlying data. After you create both, the Data sources page shows the two entries side by side: the Glue Data Catalog source for the metadata and the Athena source for the data. Figure 2: The Glue Data Catalog and Athena data sources listed together Open the GDC-Demo data source detail page. Under Data connections , you can see the linked Athena data source that Amazon Quick uses to query the data. Choose Explore data to launch the Quick Agent scoped to this data source. Figure 3: Launching the Quick Agent from the data source detail page The Quick Agent panel opens on the right side of the screen, automatically scoped to the Glue Data Catalog data source. The “Specific data” mode is selected, with “GDC-Demo” pinned as the context boundary. As a result, the Agent surfaces only metadata from this specific catalog connection. Figure 4: The Quick Agent scoped to a specific catalog connection Ask the Agent to explore your catalog.",
+      "published_date": "2026-07-31",
+      "tags": [
+        "Amazon Quick Suite",
+        "Announcements",
+        "Foundational (100)"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 27,
+    "llm_reason": "純行銷公告，缺乏技術深度",
+    "novelty": 2,
+    "impact": 5,
+    "trending": 7,
+    "practicality": 6,
+    "blog_worthiness": 7
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "量子位",
+      "title": "AI頂會現場，見到了一家美妝巨頭",
+      "url": "https://www.qbitai.com/2026/08/464364.html",
+      "authors": [
+        "听雨"
+      ],
+      "abstract": "AI頂會現場，見到了一家美妝巨頭 聽雨 2026-08-01 10:52:18 來源： 量子位 歐萊雅把AI裝進mei’zhuang’quan’lian’lu 聽雨 發自 凹非寺 量子位 | 公眾號 QbitAI 誰曾想呢，在WAIC現場，我竟然看見了美妝巨頭 歐萊雅 ？？ △ 歐萊雅中國首次亮相世界人工智慧大會 定睛一看，竟然還有 何同學 和他帶來的「手機床」。 和他一同亮相的，則是歐萊雅首個面向線下消費者的生成式AI美容顧問 3CE GENBA 。 它能基於品牌知識庫和歐萊雅AI模型，理解消費者提出的具體問題，並將其轉化為產品和妝容建議。 △ 人氣數碼博主@老師好我叫何同學展示AI如何將需求轉化為智慧化解決方案 這兩個產品看起來八竿子打不著，卻都在回答同一個問題：AI到底能不能真正理解人？ 何同學給出的答案是： 「懂人」和「懂美」本質上是同一件事，因為美始終由人定義。 AI給歐萊雅帶來的變化，還不止發生在產品上。它已經進一步深入歐萊雅的核心產品鏈路，包括產品研發、內容生產、專案交付和產品運營。 一種髮質，可以先在數字世界裡完成配方篩選；一套營銷創意，可以從AI生成的顏色、材質和形狀中尋找靈感；一個AI客服，也可以從內測準確率80%+，一步步迭代到90%以上。 更深層的變化，則發生在組織內部。 過去不到一個月， 歐萊雅中國超過70%的員工參加了一次AI能力自測 ；在全球，已有超過7.3萬名員工完成生成式AI培訓。 把這些變化放在一起看，歐萊雅來到WAIC展示的，是一場AI對美妝行業「人、貨、場」的系統性重寫。 當AI不再只是一個營銷工具，一家百年企業究竟該如何被重新組織？ 人變了，AI要先懂人，才能懂美 AI進入美妝行業，首先改變的是消費者尋找答案的方式。 過去，人們更多是被動接收來自廣告、社交媒體和品牌的資訊。如今，一部分問題開始被直接拋給AI： 我適合什麼髮型？這款產品是否適合我的膚質？怎樣的妝容更適合今天的場合？ 消費者已經不再等待品牌提供答案，而是主動描述需求、比較方案，並讓AI參與決策。 歐萊雅北亞及中國首席增長官 黃冰榕 提到，這種變化會倒逼品牌變得更加專業、精準和個性化。 消費者會主動通過與AI的對話尋求資訊，希望獲得更有針對性、更精準的資訊。 △ 歐萊雅北亞及中國首席增長官黃冰榕 由此，歐萊雅提出了 「AI for Beauty」 （AI向美）的理念。 美妝本來就沒有一套適用於所有人的標準答案，膚質、髮質和生活場景不同，人們對美的理解也不同。 AI的價值，並非替消費者定義什麼是美，而是理解這些差異，擴大選擇，讓每個人更容易找到適合自己的方案。 這種理念在歐萊雅最新推出的AI產品上，體現得淋漓盡致。 作為歐萊雅首個面向線下消費者的生成式AI應用， 3CE GENBA 生成式美容顧問，基於品牌知識庫和歐萊雅AI模型，為線下消費者提供問答式美妝諮詢。 消費者無需理解複雜的產品體系，只需要描述自己的需求，AI便可以給出更有針對性的產品和妝容建議。 △ 歐萊雅展出 3CE GENBA生成式美容顧問 另一款 互動式裝置PPD專業美髮造型魔鏡 ，則能讓消費者虛擬體驗不同髮型和妝容的整體搭配效果。 在真正改變造型之前，消費者就能提前比較不同風格，更快找到適合自己的方案。 但在歐萊雅，要讓AI真正理解消費者，只改造前臺體驗還不夠。 越精準、越個性化的答案，越需要後端的產品研發、內容生產和服務體系提供支撐。 於是，AI開始從消費者看得見的互動介面，進一步深入歐萊雅產品研發、表達和交付的全過程。 貨變了，AI進入產品被創造的全過程 首先被改變的是 產品研發 。 在黃冰榕看來，營銷端的表層AI應用容易有同質化的可能。真正決定一家美妝企業長期競爭力的，依然是產品和功效。 因此，歐萊雅開始把AI用到更核心的研發環節。 傳統配方篩選需要在真實實驗中不斷試錯，每更換一種髮質或配方組合，測試過程都可能重新開始。 歐萊雅展示的 Hair Digital Twin頭髮數字孿生模型 ，則針對這個痛點，把其中一部分試錯提前放到了數字世界。 △ 歐萊雅Hair Digital Twin頭髮數字孿生模型及Longevity AI Cloud整合長壽AI雲 研究人員可以先用數字孿生模擬不同配方對不同髮質的作用，再從大量組合中篩選更值得進入真實實驗的方向。其篩選速度可以達到傳統實驗室的3倍。 類似的嘗試還包括 Longevity AI Cloud整合長壽AI雲 ，其依託計算生物學，能分析超過260個長壽生物標誌物。 接下來是 內容生產 。 儘管生成式AI可以快速產出大量圖片和創意，但產量從來不是品牌內容唯一的衡量標準。黃冰榕直接點出了其中的風險： 如果不加引導，AI生成的東西最後可能走向同質化。 歐萊雅北亞首發的 生成式人工智慧美妝內容實驗室CreAItech ，能重構創意營銷打法，更高效地產出高影響力的美的內容。 △ 歐萊雅生成式人工智慧美妝內容實驗室CreAltech北亞首發 具體來看，這套工作流程可以分為三步： 第一步，讓AI充分發揮想像力，碰撞不同的顏色、材質和形狀。 第二步，由品牌人把消費者洞察、品牌精神和審美判斷加入通用輸出，將它打磨成真正屬於品牌的內容。 第三步，再用AI減少重複性和行政性工作，把營銷人的時間還給創意。 這套分工的邊界在於： AI負責開啟可能性，人負責作出選擇 。 經過品牌人的篩選和打磨，最終內容既能延續品牌的審美風格，也能準確傳遞品牌希望與消費者溝通的資訊。 AI應用的交付方式 也在變化。 在AI應用落地過程中，歐萊雅採用POC和小步快跑機制：先用小工具驗證方向，再根據業務反饋持續測試、修正和迭代。 歐萊雅的 AI客服 便經歷了這樣的過程。其內測初期準確率為80%多，團隊在使用過程中不斷補充業務反饋、測試結果並修正問題，逐步將準確率提升至90%多。 這套機制也改變了技術團隊的角色。 歐萊雅北亞及中國資訊長 趙楓 提到，技術團隊既要理解快速變化的AI技術，也要理解具體業務場景，並把兩者轉化成可以落地的產品能力。 △ 歐萊雅北亞及中國資訊長趙楓 此外，AI還在繼續向 生產運營 環節延伸。 目前，歐萊雅已在蘇州尚美工廠引入AI品控，並佈局智慧包裝創意中心和先進智慧運營中心。 △ 歐萊雅智慧包裝創意中心 由此，AI從消費者體驗一路進入產品研發、內容生產、技術交付和生產運營，逐漸串起歐萊雅的美妝業務鏈路。 場變了，歐萊雅為智慧體時代準備了什麼 繼貨架電商和社交電商之後，下一個消費場景可能是 「智慧體電商」 。 黃冰榕判斷，未來越來越多的資訊獲取和消費決策會由AI參與完成。消費者可以直接告訴智慧體自己的需求，再由智慧體完成資訊查詢、產品比較和推薦。 在這樣的場景中，品牌需要讓產品資訊、品牌知識和服務能力被智慧體準確識別和呼叫。 這項準備無法只由電商團隊完成，產品、營銷和內容團隊需要共同打通品牌知識與業務能力。 外部的「場」走向智慧體電商，內部的「場」也要隨之改變。圍繞這場組織轉型，歐萊雅將重點落在兩個層面： 員工 與 平臺 。 員工需要適應新的工作方式，也要接受AI工具在使用過程中持續迭代。只有真正開始使用，AI才能在具體業務中不斷完善。 歐萊雅提出 「Human＋理念」 ，希望AI放大人的專業能力，讓員工成為「AI增強型專家」。 △ 歐萊雅集團全面推進員工AI技能提升培訓 過去不到一個月，歐萊雅中國超過70%的員工參加了AI能力自測。在全球，已有超過7.3萬名員工完成生成式AI培訓。 黃冰榕表示，現在缺的已經不是學習熱情，而是如何針對不同崗位和AI能力水平，為員工提供更合適的培訓。 趙楓還提到，員工不能只學習AI知識，還要在實際業務中動手使用。員工可以藉助內部工具，把學到的知識轉化成小工具或輔助型智慧體。 在平臺方面，歐萊雅在過去一年搭建了 Beauty Tech Agentic Platform（美妝智慧平臺） ，為員工和業務團隊使用AI提供統一的技術底座。 趙楓介紹，這套平臺可以快速接入市場上的大模型能力，同時通過技術護欄保證AI應用負責任、可信賴。 在此基礎上，技術團隊可以開發智慧體，並將經過驗證的能力複用到更多業務場景。 隨著智慧體數量增加，平臺未來還要管理智慧體團隊，包括智慧體之間，以及智慧體與員工之間的工作關係。 企業使用AI也由此進入更深一層：重新梳理任務如何流動、判斷由誰作出，以及人和智慧體怎樣共同完成工作。 模型會持續變化，業務資料、工作流、治理原則和組織協作方式，才是企業能夠長期沉澱的能力。 但一家企業的AI轉型，也很難只依靠內部力量完成。 趙楓提到，當下沒有一家公司能夠獨自完成AI轉型，企業需要與外部技術夥伴共同探索具體的業務場景。 在本屆WAIC期間，歐萊雅與火山引擎簽署戰略合作備忘錄，引入本土AI生態的技術能力。 同時，歐萊雅啟動 第二屆「有意思青年·科技大Fun頌」美妝科技駭客松 ，讓更多大學階段的青年開發者和創新團隊圍繞真實的美妝需求，用AI探索新的解決方案。 △ 歐萊雅第二屆“有意思青年——科技大Fun頌”美妝科技駭客松正式啟動 對於歐萊雅而言，員工、技術平臺和外部生態構成了彼此銜接的三層能力：員工推動AI進入日常工作，平臺讓成熟能力能夠持續複用，合作伙伴與駭客松則為企業帶來更多技術和創意變數。 由此，歐萊雅的AI改造進一步走出企業內部。從連線本土技術夥伴，到吸引青年人才參與，美妝與AI之間的結合，也開始形成一個更開放的創新生態。 百年企業的AI答卷 歐萊雅第一次來到WAIC，只是一個露出水面的節點。 在消費者看到的生成式美容顧問和虛擬試妝背後，AI已經進入產品研發、內容生產、專案交付和員工協作。 被改變的不只是某個環節的效率，還有一家企業理解消費者、創造產品和組織工作的方式。 而歐萊雅面對的問題，也不只屬於美妝行業。 今天，越來越多傳統企業都在面臨同樣的問題： 從哪裡開始用AI，如何走出單點AI工具，怎樣把不斷變化的模型變成可以長期積累的組織能力，又該怎樣處理AI與人的關係。 所有人都在尋找答案。 而歐萊雅這家百年企業，已經率先嚐試用一場對「人、貨、場」的全鏈路AI改造，交出了自己的答卷。 版權所有，未經授權不得以任何形式轉載及使用，違者必究。 AI 聽雨 一年連融三輪數億元！位元組+清華姚班，重構企業軟體工程 2026-07-30 GPT-5.6今起大降價，最大幅度80%！ 2026-07-31 出海企業苦等的可信任AI營銷產品，飛書深諾做出來了 2026-07-27 傳奇AlphaFold團隊全員解散！諾獎得主投奔Anthropic，資源轉向Gemini 2026-07-30 相關閱讀",
+      "published_date": "2026-08-01",
+      "tags": [
+        "資訊",
+        "首頁輪播",
+        "AI"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "量子位",
+        "feed_url": "https://www.qbitai.com/feed"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agentic",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 29,
+    "llm_reason": "缺乏技術創新，僅為產品展示",
+    "novelty": 3,
+    "impact": 7,
+    "trending": 10,
+    "practicality": 4,
+    "blog_worthiness": 5
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "TechCrunch AI",
+      "title": "Smallest.ai raises $13M to build ultra-fast voice AI that sounds genuinely human",
+      "url": "https://techcrunch.com/2026/07/31/smallest-ai-raises-13m-to-build-ultra-fast-voice-ai-that-sounds-genuinely-human/",
+      "authors": [
+        "Marina Temkin"
+      ],
+      "abstract": "While AI agents are increasingly capable of solving customer support problems, most people can still tell immediately when they’re talking to a machine instead of a human. Smallest.ai , a startup founded in late 2024, is betting the next leap in voice agents will not come from making large language models faster, but from using smaller, specialized models built for human conversation. Simply put, the company wants to make speaking to an AI agent indistinguishable from talking to a human. To do so, it’s developing a small voice model designed to mimic how humans process information by listening, thinking, and speaking simultaneously. “While I’m speaking to you, you’re already thinking, and you might interrupt me if I talk for too long,” Sudarshan Kamath (pictured left), founder and CEO of Smallest.ai, told TechCrunch, adding that this is exactly how the startup’s model is designed to work. To fuel this mission, Smallest.ai has raised $13 million in a Series A round, led by Seligman Ventures with participation from Sierra Ventures and 3one4 Capital. The fresh capital brings the startup’s total funding to over $21 million. “The way an LLM works is you give it an entire prompt, and then it starts thinking,” Kamath said. While that latency is acceptable in a text chat, in a voice conversation, even a short pause feels unnatural. “If you think about how we are talking, I’m not giving you like a large clipping of my audio, and then you start thinking.” The startup’s model serves as a real-time intelligence layer that enables natural customer conversations on specific topics, with virtually zero response lag. But if the model encounters a subject outside its limited knowledge base, Smallest.ai hands off the query to a large foundational model, briefly placing the customer on hold to “research” the issue — just as a real human would do. Kamath believes that all AI agents will soon rely on two models: a small voice model for real-time interaction, and an “offline” LLM that is called upon as needed to solve complex problems. Unlike large foundational models, Smallest.ai focuses strictly on voice-specific nuances, such as handling diverse accents, supporting dozens of languages, and operating in noisy environments. The startup’s existing customers include companies in the voice space, including RingCentral and Truecaller. Kamath said that any customer support company, including newer ones like Sierra and Decagon, is a potential customer for the startup. When asked why a well-funded AI customer support company wouldn’t build its own voice model, Kamath said that for customer support startups, becoming “extremely good at doing voice is a distraction from their core business.” Smallest.ai competes with voice AI leader ElevenLabs, as well as Cartesia and regional players like Sarvam that focus on local languages. While some competitors apply voice AI to use cases, like audio dubbing and podcasting, Smallest.ai focuses strictly on real-time conversational voice agents for its enterprise customers. “We want our models to break the Turing test,” Kamath said. “You should speak to our model and not know it’s AI or human. That’s the sole focus of the company.”",
+      "published_date": "2026-07-31",
+      "tags": [
+        "AI",
+        "Startups",
+        "Venture",
+        "customer support",
+        "voice AI"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "TechCrunch AI",
+        "feed_url": "https://techcrunch.com/category/artificial-intelligence/feed/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 22,
+    "llm_reason": "缺乏技術細節，僅為資金公告，影響有限",
+    "novelty": 3,
+    "impact": 4,
+    "trending": 8,
+    "practicality": 3,
+    "blog_worthiness": 4
+  }
+]

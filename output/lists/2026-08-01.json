@@ -1,0 +1,597 @@
+{
+  "date": "2026-08-01",
+  "github": [
+    {
+      "title": "NousResearch/hermes-agent",
+      "slug": "nousresearch-hermes-agent",
+      "url": "https://github.com/NousResearch/hermes-agent",
+      "abstract": "Hermes Agent ☤ Hermes Agent | Hermes Desktop The self-improving AI agent built by Nous Research . It's the only agent with a built-in learning loop — it creates skills from experience, improves them during use, nudges itself to persist knowledge, searches its own past conversations, and builds a deepening model of who you are across sessions. Run it on a $5 VPS, a GPU cluster, or serverless infrastructure that costs nearly nothing when idle. It's not tied to your laptop — talk to it from Telegram while it works on a cloud VM. Use any model you want — Nous Portal , OpenRouter, OpenAI, your own endpoint, and many others . Switch with hermes model — no code changes, no lock-in. A real terminal interface Full TUI with multiline editing, slash-command autocomplete, conversation history, interrupt-and-redirect, and streaming tool output. Lives where you do Telegram, Discord, Slack, WhatsApp, Signal, and CLI — all from a single gateway process. Voice memo transcription, cross-platform conversation continuity. A closed learning loop Agent-curated memory with periodic nudges. Autonomous skill creation after complex tasks. Skills self-improve during use. FTS5 session search with LLM summarization for cross-session recall. Honcho dialectic user modeling. Compatible with the agentskills.io open standard. Scheduled automations Built-in cron scheduler with delivery to any platform. Daily reports, nightly backups, weekly audits — all in natural language, running unattended. Delegates and parallelizes Spawn isolated subagents for parallel workstreams. Write Python scripts that call tools via RPC, collapsing multi-step pipelines into zero-context-cost turns. Runs anywhere, not just your laptop Seven terminal backends — local, Docker, SSH, Singularity, Modal, Daytona, and Vercel Sandbox. Daytona and Modal offer serverless persistence — your agent's environment hibernates when idle and wakes on demand, costing nearly nothing between sessions. Run it on a $5 VPS or a GPU cluster. Research-ready Batch trajectory generation, trajectory compression for training the next generation of tool-calling models. Quick Install Linux, macOS, WSL2, Termux curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash Windows (native, PowerShell) Heads up: Native Windows runs Hermes without WSL — CLI, gateway, TUI, and tools all work natively. If you'd rather use WSL2, the Linux/macOS one-liner above works there too. Found a bug? Please file issues . Run this in PowerShell: iex (irm https: // hermes-agent.nousresearch.com / install.ps1) The installer handles everything: uv, Python 3.11, Node.js, ripgrep, ffmpeg, and a portable Git Bash (MinGit, unpacked to %LOCALAPPDATA%\\hermes\\git — no admin required, completely isolated from any system Git install). Hermes uses this bundled Git Bash to run shell commands. If you already have Git installed, the installer detects it and uses that instead. Otherwise a ~45MB MinGit download is all you need — it won't touch or interfere with any system Git. Android / Termux: The tested manual path is documented in the Termux guide . On Termux, Hermes installs a curated .[termux] extra because the full .[all] extra currently pulls Android-incompatible voice dependencies. Windows: Native Windows is fully supported — the PowerShell one-liner above installs everything. If you'd rather use WSL2, the Linux command works there too. Native Windows install lives under %LOCALAPPDATA%\\hermes ; WSL2 installs under ~/.hermes as on Linux. After installation: source ~ /.bashrc # reload shell (or: source ~/.zshrc) hermes # start chatting! Troubleshooting Windows Defender or antivirus flags uv.exe as malware If your antivirus (Bitdefender, Windows Defender, etc.) quarantines uv.exe from the Hermes bin folder ( %LOCALAPPDATA%\\hermes\\bin\\uv.exe ), this is a false positive . The file is Astral's uv — the Rust Python package manager Hermes bundles to manage its Python environment. ML-based antivirus engines commonly flag unsigned Rust binaries that download and install packages. To verify your copy is authentic: # Install GitHub CLI if needed winget install -- id GitHub.cli # Login to GitHub gh auth login # Run verification $uv = \" $ env: LOCALAPPDATA \\hermes\\bin\\uv.exe \" $ver = ( & $uv -- version).Split( ' ' )[ 1 ]\n[ Net.ServicePointManager ]::SecurityProtocol = [ Net.SecurityProtocolType ]::Tls12 $zip = \" $ env: TEMP \\uv.zip \" Invoke-WebRequest \" https://github.com/astral-sh/uv/releases/download/ $ver /uv-x86_64-pc-windows-msvc.zip \" - OutFile $zip - UseBasicParsing\ngh attestation verify $zip -- repo astral - sh / uv Expand-Archive $zip \" $ env: TEMP \\uv_x \" - Force\n( Get-FileHash \" $ env: TEMP \\uv_x\\uv.exe \" ).Hash -eq ( Get-FileHash $uv ).Hash If attestation says \"Verification succeeded\" and the last line prints True , you're good. To whitelist Hermes: Windows Defender: Run PowerShell as Admin → Add-MpPreference -ExclusionPath \"$env:LOCALAPPDATA\\hermes\\bin\" Bitdefender: Add an exception in the Bitdefender console (Protection > Antivirus > Settings > Manage Exceptions) Whitelist the folder , not the file hash — Hermes updates uv and the hash changes every version For more context, see the upstream Astral reports: astral-sh/uv#13553 , astral-sh/uv#15011 , astral-sh/uv#10079 . Getting Started hermes # Interactive CLI — start a conversation hermes model # Choose your LLM provider and model hermes tools # Configure which tools are enabled hermes config set # Set individual config values hermes config get # Print individual config values hermes gateway # Start the messaging gateway (Telegram, Discord, etc.) hermes setup # Run the full setup wizard (configures everything at once) hermes claw migrate # Migrate from OpenClaw (if coming from OpenClaw) hermes update # Update to the latest version hermes doctor # Diagnose any issues 📖 Full documentation → Skip the API-key collection — Nous Portal Hermes works with whatever provider you want — that's not changing. But if you'd rather not collect five separate API keys for the model, web search, image generation, TTS, and a cloud browser, Nous Portal covers all of them under one subscription: 300+ models — pick any of them with /model <name> Tool Gateway — web search (Firecrawl), image generation (FAL), text-to-speech (OpenAI), cloud browser (Browser Use), all routed through your sub. No extra accounts. One command from a fresh install: hermes setup --portal That logs you in via OAuth, sets Nous as your provider, and turns on the Tool Gateway. Check what's wired up any time with hermes portal info . Full details on the Tool Gateway docs page . You can still bring your own keys per-tool whenever you want — the gateway is per-backend, not all-or-nothing. CLI vs Messaging Quick Reference Hermes has two entry points: start the terminal UI with hermes , or run the gateway and talk to it from Telegram, Discord, Slack, WhatsApp, Signal, or Email. Once you're in a conversation, many slash commands are shared across both interfaces. Action CLI Messaging platforms Start chatting hermes Run hermes gateway setup + hermes gateway start , then send the bot a message Start fresh conversation /new or /reset /new or /reset Change model /model [provider:model] /model [provider:model] Set a personality /personality [name] /personality [name] Retry or undo the last turn /retry , /undo /retry , /undo Compress context / check usage /compress , /usage , /insights [--days N] /compress , /usage , /insights [days] Browse skills /skills or /<skill-name> /<skill-name> Interrupt current work Ctrl+C or send a new message /stop or send a new message Platform-specific status /platforms /status , /sethome For the full command lists, see the CLI guide and the Messaging Gateway guide . Documentation All documentation lives at hermes-agent.nousresearch.",
+      "stars_today": 568,
+      "language": "Python"
+    },
+    {
+      "title": "cjpais/Handy",
+      "slug": "cjpais-handy",
+      "url": "https://github.com/cjpais/Handy",
+      "abstract": "Handy A free, open source, and extensible speech-to-text application that works completely offline. Handy is a cross-platform desktop application that provides simple, privacy-focused speech transcription. Press a shortcut, speak, and have your words appear in any text field. This happens on your own computer without sending any information to the cloud. Why Handy? Handy was created to fill the gap for a truly open source, extensible speech-to-text tool. As stated on handy.computer : Free : Accessibility tooling belongs in everyone's hands, not behind a paywall Open Source : Together we can build further. Extend Handy for yourself and contribute to something bigger Private : Your voice stays on your computer. Get transcriptions without sending audio to the cloud Simple : One tool, one job. Transcribe what you say and put it into a text box Handy isn't trying to be the best speech-to-text app—it's trying to be the most forkable one. How It Works Press a configurable keyboard shortcut to start/stop recording (or use push-to-talk mode) Speak your words while the shortcut is active Release and Handy processes your speech using Whisper Get your transcribed text pasted directly into whatever app you're using The process is entirely local: Silence is filtered using VAD (Voice Activity Detection) with Silero Transcription uses your choice of models: Whisper models (Small/Medium/Turbo/Large) with GPU acceleration when available Parakeet V3 - CPU-optimized model with excellent performance and automatic language detection Works on Windows, macOS, and Linux Quick Start Installation Download the latest release from the releases page or the website macOS : Also available via Homebrew cask : brew install --cask handy Windows : Also available via winget : winget install cjpais.Handy Note: The Homebrew cask and winget package are not maintained by the Handy developers. Install the application Launch Handy and grant necessary system permissions (microphone, accessibility) Configure your preferred keyboard shortcuts in Settings Start transcribing! Development Setup For detailed build instructions including platform-specific requirements, see BUILD.md . Integrations Control Handy from Raycast — start/stop recording, browse transcript history, manage dictionary, switch models and languages. Source · by @mattiacolombomc Architecture Handy is built as a Tauri application combining: Frontend : React + TypeScript with Tailwind CSS for the settings UI Backend : Rust for system integration, audio processing, and ML inference Core Libraries : transcribe-cpp : Local speech recognition with Whisper-family models (GGML/GGUF) transcribe-rs : CPU-optimized speech recognition with Parakeet models cpal : Cross-platform audio I/O vad-rs : Voice Activity Detection rdev : Global keyboard shortcuts and system events rubato : Audio resampling Debug Mode Handy includes an advanced debug mode for development and troubleshooting. Access it by pressing: macOS : Cmd+Shift+D Windows/Linux : Ctrl+Shift+D CLI Parameters Handy supports command-line flags for controlling a running instance and customizing startup behavior. These work on all platforms (macOS, Windows, Linux). Remote control flags (sent to an already-running instance via the single-instance plugin): handy --toggle-transcription # Toggle recording on/off handy --toggle-post-process # Toggle recording with post-processing on/off handy --cancel # Cancel the current operation Startup flags: handy --start-hidden # Start without showing the main window handy --no-tray # Start without the system tray icon handy --debug # Enable debug mode with verbose logging handy --help # Show all available flags Flags can be combined for autostart scenarios: handy --start-hidden --no-tray macOS tip: When Handy is installed as an app bundle, invoke the binary directly: /Applications/Handy.app/Contents/MacOS/Handy --toggle-transcription Known Issues & Current Limitations This project is actively being developed and has some known issues . We believe in transparency about the current state: Major Issues (Help Wanted) Whisper Model Crashes: Whisper models crash on certain system configurations (Windows and Linux) Does not affect all systems - issue is configuration-dependent If you experience crashes and are a developer, please help to fix and provide debug logs! Wayland Support (Linux): Limited support for Wayland display server Requires wtype or dotool for text input to work correctly (see Linux Notes below for installation) Linux Notes Text Input Tools: For reliable text input on Linux, install the appropriate tool for your display server: Display Server Recommended Tool Install Command X11 xdotool sudo apt install xdotool Wayland wtype sudo apt install wtype Both dotool sudo apt install dotool (requires input group) X11 : Install xdotool for both direct typing and clipboard paste shortcuts Wayland : Install wtype (preferred) or dotool for text input to work correctly dotool setup : Requires adding your user to the input group: sudo usermod -aG input $USER (then log out and back in) Without these tools, Handy falls back to enigo which may have limited compatibility, especially on Wayland. Other Notes: Runtime library dependency ( libgtk-layer-shell.so.0 ) : Handy links gtk-layer-shell on Linux. If startup fails with error while loading shared libraries: libgtk-layer-shell.so.0 , install the runtime package for your distro: Distro Package to install Example command Ubuntu/Debian libgtk-layer-shell0 sudo apt install libgtk-layer-shell0 Fedora/RHEL gtk-layer-shell sudo dnf install gtk-layer-shell Arch Linux gtk-layer-shell sudo pacman -S gtk-layer-shell For building from source on Ubuntu/Debian, you may also need libgtk-layer-shell-dev . The recording overlay is disabled by default on Linux ( Overlay Position: None ) because certain compositors treat it as the active window. When the overlay is visible it can steal focus, which prevents Handy from pasting back into the application that triggered transcription. If you enable the overlay anyway, be aware that clipboard-based pasting might fail or end up in the wrong window. If you are having trouble with the app, running with the environment variable WEBKIT_DISABLE_DMABUF_RENDERER=1 may help If Handy fails to start reliably on Linux, see Troubleshooting → Linux Startup Crashes or Instability . Global keyboard shortcuts (Wayland): On Wayland, system-level shortcuts must be configured through your desktop environment or window manager. Use the CLI flags as the command for your custom shortcut. GNOME: Open Settings > Keyboard > Keyboard Shortcuts > Custom Shortcuts Click the + button to add a new shortcut Set the Name to Toggle Handy Transcription Set the Command to handy --toggle-transcription Click Set Shortcut and press your desired key combination (e.g., Super+O ) KDE Plasma: Open System Settings > Shortcuts > Custom Shortcuts Click Edit > New > Global Shortcut > Command/URL Name it Toggle Handy Transcription In the Trigger tab, set your desired key combination In the Action tab, set the command to handy --toggle-transcription Sway / i3: Add to your config file ( ~/.config/sway/config or ~/.config/i3/config ): bindsym $mod+o exec handy --toggle-transcription Hyprland: Add to your config file ( ~/.config/hypr/hyprland.conf ): bind = $mainMod, O, exec, handy --toggle-transcription You can also manage global shortcuts outside of Handy via Unix signals, which lets Wayland window managers or other hotkey daemons keep ownership of keybindings: Signal Action Example SIGUSR2 Toggle transcription pkill -USR2 -n handy SIGUSR1 Toggle transcription with post-processing pkill -USR1 -n handy Example Sway config: bindsym $mod+o exec pkill -USR2 -n handy\nbindsym $mod+p exec pkill -USR1 -n handy pkill here simply delivers the signal—it does not terminate the process.",
+      "stars_today": 294,
+      "language": "Rust"
+    },
+    {
+      "title": "t8y2/dbx",
+      "slug": "t8y2-dbx",
+      "url": "https://github.com/t8y2/dbx",
+      "abstract": "70+ databases in 20 MB. Desktop, Docker, CLI, built-in AI assistant, and MCP Server. English | 前往中文版本 Why DBX? 🪶 20 MB, zero runtime bloat No Java JRE. No Python venv. No bundled Chromium. DBX ships as a single small binary — download, install, connect. DBeaver needs Java; TablePlus is macOS-only. DBX runs everywhere with nothing extra. 🤖 AI that lives in your editor Highlight a table, describe what you want, get SQL back — no copy-paste between tools. Works with Claude, OpenAI, or local models via Ollama. Built-in safety checks review AI-generated SQL before it runs. 🔌 MCP: your databases, AI-ready DBX speaks the Model Context Protocol. Claude Code, Cursor, Windsurf, and other AI coding agents can query your databases through connections you already set up. One config, everywhere. 🌐 Desktop + Docker + Web Native app on macOS, Windows, and Linux. Self-host via Docker for team access. Web version for browser-only environments. Same feature set. Same connections. Features 70+ Databases, One Tool MySQL, PostgreSQL, SQLite, Cloudflare D1, Redis, MongoDB, DuckDB, ClickHouse, SQL Server, Oracle, Elasticsearch, Easysearch, Qdrant, Milvus, Weaviate, MariaDB, TiDB, OceanBase, openGauss, GaussDB, KWDB, KingBase, Vastbase, GoldenDB, Doris, SelectDB, StarRocks, Manticore Search, Redshift, DM, TDengine, XuguDB, CockroachDB, Access, HighGo, UXDB, and more. Agent/JDBC-oriented profiles extend DBX to H2, Snowflake, Trino, PrestoSQL, Hive, DB2, Informix, Neo4j, Cassandra, BigQuery, Kylin, SunDB, JDBCX, and custom JDBC connections. New native and agent-driven drivers also cover Databricks, SAP HANA, Teradata, Vertica, Firebird, Exasol, YashanDB, GBase 8a/8s, Databend, RQLite, Turso, InfluxDB, QuestDB, IoTDB, etcd, ZooKeeper, Nacos, IRIS, and more. Message queue admin is also available for Pulsar, Kafka, and RocketMQ. All in a single ~20 MB app. No bundled Chromium. Query Editor CodeMirror 6 with SQL syntax highlighting, metadata-aware autocomplete, Cmd+Enter execution, selected SQL execution, SQL formatting, diagnostics, and 9 editor themes. Persistent query history, saved SQL snippets, tab restore, and SQL file execution keep repeat work close at hand. AI SQL Assistant Describe what you want in plain language — get SQL back. DBX can explain queries, optimize SQL, fix errors, and run AI-generated SQL through built-in safety checks. Works with Claude, OpenAI, local models, or any OpenAI-compatible endpoint. Data Grid Virtual-scrolled table that handles large result sets. Inline editing, SQL preview before save, WHERE / ORDER BY controls, DataGrip-style filters, LIKE / NOT LIKE context filters, sorting, full-text search, pagination, column resize, auto-fit, row numbers, zebra stripes, and full cell details. Export or copy as CSV, JSON, Markdown, XLSX, or INSERT statements. Schema Tools Schema browser — databases, schemas, tables, columns, indexes, foreign keys, triggers, with sidebar search & pin Object browser — grouped procedures, functions, views, and source editing where supported Table structure editor — reviewable column and index changes for supported engines ER diagram — visualize table relationships Schema diff — compare structures across connections Explain plan — visual query execution plan Field lineage — column-level lineage analysis Database search — find objects across large schemas Data Operations Table import — CSV, Excel Data transfer — migrate between databases Database export — full database dump Data compare — compare table data and review synchronization output SQL file execution — run .sql files directly File preview — drag & drop Parquet, CSV, JSON to preview instantly (powered by DuckDB) Connection import — bring connection profiles from DBeaver or Navicat Specialized Browsers Redis — key pattern search, batch key operations, command runner, TTL editing, and all data types (String, Hash, List, Set, ZSet, Stream) MongoDB — document CRUD with pagination, Atlas & replica set URL connection Safety & Connectivity SSH tunnel (key & password) · database and AI proxy settings · auto-reconnect on connection loss · confirmation dialogs for destructive operations · encrypted config export/import · color-coded connections · driver store and optional JDBC plugin Polished UI Dark mode with native title bar sync · 9 editor themes · English, 簡體中文 & Español · layout preferences · built-in auto-update AI Agent Integration (MCP) DBX provides a separate Rust-powered MCP server that lets AI coding agents query databases using connections configured in DBX. The MCP server is distributed independently from the desktop application, so installing DBX does not automatically install the MCP executable. npx @dbx-app/mcp-server Add to your .mcp.json : { \"mcpServers\" : { \"dbx\" : { \"command\" : \" npx \" , \"args\" : [ \" -y \" , \" @dbx-app/mcp-server \" ] }\n  }\n} Manage the connection allowlist and the Read only , Data read/write , and Full access modes in DBX Settings → MCP . The machine-readable values remain read_only , safe_write , and high_risk_write ; client configs do not need permission or connection-scope environment variables. For upgrade compatibility, an existing DBX_MCP_ALLOW_WRITES=0 (or false ) remains a read-only restriction only until a central MCP policy is saved for the first time; it can never enable writes or override a saved policy. Windows portable builds need DBX_DATA_DIR in the MCP config, pointing to the data directory next to DBX.exe (the folder that contains dbx.db ). For DBX Web or Docker deployments, point the MCP server at the Web backend API. If the Web login page requires a password, set DBX_WEB_PASSWORD to the same password used there: { \"mcpServers\" : { \"dbx\" : { \"command\" : \" npx \" , \"args\" : [ \" -y \" , \" @dbx-app/mcp-server \" ], \"env\" : { \"DBX_WEB_URL\" : \" http://localhost:4224 \" , \"DBX_WEB_PASSWORD\" : \" your-web-login-password \" }\n    }\n  }\n} Works with Claude Code, Cursor, Windsurf, and any MCP-compatible agent. Supports listing connections, browsing tables, executing SQL, and opening tables directly in DBX's UI. Precompiled native binaries are also published for macOS, Linux, and Windows in package releases . They run without Node.js and are suitable for offline or server environments. The npm installation uses the same Rust binary through a small Node.js launcher. DBX also provides a dedicated CLI package for terminal, script, and Codex workflows: npm install -g @dbx-app/cli # or via Homebrew brew tap t8y2/dbx && brew install dbx-cli\ndbx connections list --json\ndbx query local \" select 1 \" --json See the MCP server README and CLI README for details. Install Download the latest release from the Releases page. Homebrew (macOS): brew install --cask dbx Scoop (Windows): scoop bucket add dbx https://github.com/t8y2/scoop-bucket\nscoop install dbx WinGet (Windows): winget install t8y2.dbx Flatpak (Linux): flatpak remote-add --if-not-exists flatpark https://dl.flatpark.org/flatpark.flatpakrepo\nflatpak install flatpark com.dbxio.dbx Updates then arrive through the regular flatpak update . See the DBX page on FlatPark for details. Self-Hosted (Docker) DBX provides a web version that can be deployed via Docker. The examples use\nthe latest tag to pull the current release. docker run -d --pull=always --name dbx -p 4224:4224 -v dbx-data:/app/data t8y2/dbx:latest This uses the cross-platform dbx-data named volume. Users in China can use\nthe CNB image, docker.cnb.cool/dbxio.com/dbx:latest , for faster pulls. For Docker Compose, deploy/docker-compose.yml remains the source-build\nconfiguration. To deploy a published image, use deploy/docker-compose.release.yml : docker compose -f deploy/docker-compose.release.yml up -d services : dbx : image : t8y2/dbx:latest # For faster pulls in China, use the CNB image instead: # image: docker.cnb.cool/dbxio.com/dbx:latest pull_policy : always ports :\n      - \" 4224:4224 \" volumes :\n      - dbx-data:/app/data restart : unless-stopped volumes : dbx-data : Open http://localhost:4224 in your browser.",
+      "stars_today": 264,
+      "language": "Rust"
+    },
+    {
+      "title": "openai/whisper",
+      "slug": "openai-whisper",
+      "url": "https://github.com/openai/whisper",
+      "abstract": "Whisper [Blog] [Paper] [Model card] [Colab example] Whisper is a general-purpose speech recognition model. It is trained on a large dataset of diverse audio and is also a multitasking model that can perform multilingual speech recognition, speech translation, and language identification. Approach A Transformer sequence-to-sequence model is trained on various speech processing tasks, including multilingual speech recognition, speech translation, spoken language identification, and voice activity detection. These tasks are jointly represented as a sequence of tokens to be predicted by the decoder, allowing a single model to replace many stages of a traditional speech-processing pipeline. The multitask training format uses a set of special tokens that serve as task specifiers or classification targets. Setup We used Python 3.9.9 and PyTorch 1.10.1 to train and test our models, but the codebase is expected to be compatible with Python 3.8-3.11 and recent PyTorch versions. The codebase also depends on a few Python packages, most notably OpenAI's tiktoken for their fast tokenizer implementation. You can download and install (or update to) the latest release of Whisper with the following command: pip install -U openai-whisper Alternatively, the following command will pull and install the latest commit from this repository, along with its Python dependencies: pip install git+https://github.com/openai/whisper.git To update the package to the latest version of this repository, please run: pip install --upgrade --no-deps --force-reinstall git+https://github.com/openai/whisper.git It also requires the command-line tool ffmpeg to be installed on your system, which is available from most package managers: # on Ubuntu or Debian sudo apt update && sudo apt install ffmpeg # on Arch Linux sudo pacman -S ffmpeg # on MacOS using Homebrew (https://brew.sh/) brew install ffmpeg # on Windows using Chocolatey (https://chocolatey.org/) choco install ffmpeg # on Windows using Scoop (https://scoop.sh/) scoop install ffmpeg You may need rust installed as well, in case tiktoken does not provide a pre-built wheel for your platform. If you see installation errors during the pip install command above, please follow the Getting started page to install Rust development environment. Additionally, you may need to configure the PATH environment variable, e.g. export PATH=\"$HOME/.cargo/bin:$PATH\" . If the installation fails with No module named 'setuptools_rust' , you need to install setuptools_rust , e.g. by running: pip install setuptools-rust Available models and languages There are six model sizes, four with English-only versions, offering speed and accuracy tradeoffs.\nBelow are the names of the available models and their approximate memory requirements and inference speed relative to the large model.\nThe relative speeds below are measured by transcribing English speech on a A100, and the real-world speed may vary significantly depending on many factors including the language, the speaking speed, and the available hardware. Size Parameters English-only model Multilingual model Required VRAM Relative speed tiny 39 M tiny.en tiny ~1 GB ~10x base 74 M base.en base ~1 GB ~7x small 244 M small.en small ~2 GB ~4x medium 769 M medium.en medium ~5 GB ~2x large 1550 M N/A large ~10 GB 1x turbo 809 M N/A turbo ~6 GB ~8x The .en models for English-only applications tend to perform better, especially for the tiny.en and base.en models. We observed that the difference becomes less significant for the small.en and medium.en models.\nAdditionally, the turbo model is an optimized version of large-v3 that offers faster transcription speed with a minimal degradation in accuracy. Whisper's performance varies widely depending on the language. The figure below shows a performance breakdown of large-v3 and large-v2 models by language, using WERs (word error rates) or CER (character error rates, shown in Italic ) evaluated on the Common Voice 15 and Fleurs datasets. Additional WER/CER metrics corresponding to the other models and datasets can be found in Appendix D.1, D.2, and D.4 of the paper , as well as the BLEU (Bilingual Evaluation Understudy) scores for translation in Appendix D.3. Command-line usage The following command will transcribe speech in audio files, using the turbo model: whisper audio.flac audio.mp3 audio.wav --model turbo The default setting (which selects the turbo model) works well for transcribing English. However, the turbo model is not trained for translation tasks . If you need to translate non-English speech into English , use one of the multilingual models ( tiny , base , small , medium , large ) instead of turbo . For example, to transcribe an audio file containing non-English speech, you can specify the language: whisper japanese.wav --language Japanese To translate speech into English, use: whisper japanese.wav --model medium --language Japanese --task translate Note: The turbo model will return the original language even if --task translate is specified. Use medium or large for the best translation results. Run the following to view all available options: whisper --help See tokenizer.py for the list of all available languages. Python usage Transcription can also be performed within Python: import whisper model = whisper . load_model ( \"turbo\" ) result = model . transcribe ( \"audio.mp3\" ) print ( result [ \"text\" ]) Internally, the transcribe() method reads the entire file and processes the audio with a sliding 30-second window, performing autoregressive sequence-to-sequence predictions on each window. Below is an example usage of whisper.detect_language() and whisper.decode() which provide lower-level access to the model. import whisper model = whisper . load_model ( \"turbo\" ) # load audio and pad/trim it to fit 30 seconds audio = whisper . load_audio ( \"audio.mp3\" ) audio = whisper . pad_or_trim ( audio ) # make log-Mel spectrogram and move to the same device as the model mel = whisper . log_mel_spectrogram ( audio , n_mels = model . dims . n_mels ). to ( model . device ) # detect the spoken language _ , probs = model . detect_language ( mel ) print ( f\"Detected language: { max ( probs , key = probs . get ) } \" ) # decode the audio options = whisper . DecodingOptions () result = whisper . decode ( model , mel , options ) # print the recognized text print ( result . text ) More examples Please use the 🙌 Show and tell category in Discussions for sharing more example usages of Whisper and third-party extensions such as web demos, integrations with other tools, ports for different platforms, etc. License Whisper's code and model weights are released under the MIT License. See LICENSE for further details.",
+      "stars_today": 130,
+      "language": "Python"
+    },
+    {
+      "title": "langchain-ai/deepagents",
+      "slug": "langchain-ai-deepagents",
+      "url": "https://github.com/langchain-ai/deepagents",
+      "abstract": "The batteries-included agent harness. Deep Agents is an open source agent harness — an opinionated agent that runs out of the box. Extend, override, or replace any piece. Principles: Opinionated — defaults tuned for long-horizon, multi-step work Extensible — override or replace any piece without forking Model-agnostic — works with any LLM that supports tool calling: frontier, open-weight, or local Production-ready — built on LangGraph (streaming, persistence, checkpointing) with first-class tracing, evaluation, and deployment via LangSmith Features include: Sub-agents — delegate tasks to agents with isolated context windows Filesystem — read, write, edit, or search over pluggable local, sandboxed, or remote backends Context management — summarize long threads and offload tool outputs to disk Shell access — run commands in your sandbox of choice Persistent memory — pluggable state and store backends for cross-session recall Human-in-the-loop — approve, edit, or reject tool calls before they run Skills — reusable behaviors the agent can load on demand Tools — bring your own functions or any MCP server Deep Agents is available as a JavaScript/TypeScript library — see deepagents.js . Note Deep Agents Code — a pre-built coding agent in your terminal, similar to Claude Code or Cursor, powered by any LLM. Install with curl -LsSf https://langch.in/dcode | bash . See the documentation for the full feature set. Quickstart uv add deepagents from deepagents import create_deep_agent agent = create_deep_agent ( model = \"openai:gpt-5.5\" , tools = [ my_custom_tool ], system_prompt = \"You are a research assistant.\" ,\n) result = agent . invoke ({ \"messages\" : \"Research LangGraph and write a summary\" }) The agent can plan, read/write files, and manage its own context. Add your own tools, swap models, customize prompts, configure sub-agents, and more. See the documentation for full details. Tip For developing, debugging, and deploying AI agents and LLM applications, see LangSmith . FAQ How is this different from LangGraph or LangChain? LangGraph is the graph runtime. LangChain's create_agent is a minimal agent harness on top of it. Deep Agents is a more opinionated harness on top of create_agent — same building blocks, but with filesystem, sub-agents, context management, and skills bundled in. For how the three relate, see the LangChain ecosystem overview . Does this work with open-weight or local models? Yes. Any model that supports tool calling works — frontier APIs (OpenAI, Anthropic, Google), open-weight models hosted on providers like Baseten or Fireworks, and self-hosted models via Ollama, vLLM, or llama.cpp. Use any LangChain chat model . Can I use this in production? Yes! Deep Agents is built on LangGraph, designed for production agent deployments. Pair it with LangSmith for tracing, evaluation, and monitoring. See Going to production for the full guide. When should I use Deep Agents vs. LangChain or LangGraph directly? All three are layers in the same stack — see the LangChain ecosystem overview for how they relate. Use Deep Agents when you want the full harness — planning, context management, delegation — out of the box. Use LangChain's create_agent when you want a lighter harness without the bundled middleware. Drop to LangGraph when the agent loop itself isn't the right shape and you need a custom graph. The layers compose: any LangGraph CompiledStateGraph can be passed in as a sub-agent to a Deep Agent, so custom orchestration plugs in alongside the harness's defaults. Resources Examples — working agents and patterns Documentation — conceptual overviews and guides LangChain ecosystem overview — how Deep Agents, LangChain, LangGraph, and LangSmith fit together API reference — complete reference for all public classes, functions, and types Discussions — community forum for technical questions, ideas, and feedback LangChain Academy — Comprehensive, free courses on LangChain libraries and products, made by the LangChain team. Contributing Guide — how to contribute and find good first issues Code of Conduct — community guidelines and standards Acknowledgements Inspired by Claude Code: an attempt to identify what makes it general-purpose, and push that further. Security Deep Agents follows a \"trust the LLM\" model. The agent can do anything its tools allow. Enforce boundaries at the tool/sandbox level, not by expecting the model to self-police. See the security policy for more information.",
+      "stars_today": 111,
+      "language": "Python"
+    },
+    {
+      "title": "fishaudio/fish-speech",
+      "slug": "fishaudio-fish-speech",
+      "url": "https://github.com/fishaudio/fish-speech",
+      "abstract": "Fish Speech English | 簡體中文 | Portuguese | 日本語 | 한국어 | العربية | Español Important License Notice This codebase and its associated model weights are released under FISH AUDIO RESEARCH LICENSE . Please refer to LICENSE for more details. We will take action against any violation of the license. Warning Legal Disclaimer We do not hold any responsibility for any illegal usage of the codebase. Please refer to your local laws about DMCA and other related laws. Quick Start For Human Here are the official documents for Fish Audio S2, follow the instructions to get started easily. Installation Command Line Inference WebUI Inference Server Inference Docker Setup Important For SGLang server, please read SGLang-Omni README . For vLLM Omni server, please read vLLM-Omni Fish Speech S2 Pro Recipe and the User Guide . For LLM Agent Install and configure Fish-Audio S2 by following the instructions here: https://speech.fish.audio/install/ Fish Audio S2 Pro State-of-the-art multilingual text-to-speech (TTS) system, redefining the boundaries of voice generation. Fish Audio S2 Pro is the most advanced multimodal model developed by Fish Audio . Trained on over 10 million hours of audio data covering more than 80 languages , S2 Pro combines a Dual-Autoregressive (Dual-AR) architecture with reinforcement learning (RL) alignment to generate speech that is exceptionally natural, realistic, and emotionally rich, leading the competition among both open-source and closed-source systems. The core strength of S2 Pro lies in its support for sub-word level fine-grained control of prosody and emotion using natural language tags (e.g., [whisper] , [excited] , [angry] ), while natively supporting multi-speaker and multi-turn conversation generation. Visit the Fish Audio website for a live playground, or read our technical report and blog post for more details. Model Variants Model Size Availability Description S2-Pro 4B parameters HuggingFace Full-featured flagship model with maximum quality and stability More details of the model can be found in the technical report . Benchmark Results Benchmark Fish Audio S2 Seed-TTS Eval — WER (Chinese) 0.54% (best overall) Seed-TTS Eval — WER (English) 0.99% (best overall) Audio Turing Test (with instruction) 0.515 posterior mean EmergentTTS-Eval — Win Rate 81.88% (highest overall) Fish Instruction Benchmark — TAR 93.3% Fish Instruction Benchmark — Quality 4.51 / 5.0 Multilingual (MiniMax Testset) — Best WER 11 of 24 languages Multilingual (MiniMax Testset) — Best SIM 17 of 24 languages On Seed-TTS Eval, S2 achieves the lowest WER among all evaluated models including closed-source systems: Qwen3-TTS (0.77/1.24), MiniMax Speech-02 (0.99/1.90), Seed-TTS (1.12/2.25). On the Audio Turing Test, 0.515 surpasses Seed-TTS (0.417) by 24% and MiniMax-Speech (0.387) by 33%. On EmergentTTS-Eval, S2 achieves particularly strong results in paralinguistics (91.61% win rate), questions (84.41%), and syntactic complexity (83.39%). Highlights Fine-Grained Inline Control via Natural Language S2 Pro brings unprecedented \"soul\" to speech. Using simple [tag] syntax, you can precisely embed emotional instructions at any position in the text. 15,000+ Unique Tags Supported : Not limited to fixed presets; S2 supports free-form text descriptions . Try [whisper in small voice] , [professional broadcast tone] , or [pitch up] . Rich Emotion Library : [pause] [emphasis] [laughing] [inhale] [chuckle] [tsk] [singing] [excited] [laughing tone] [interrupting] [chuckling] [excited tone] [volume up] [echo] [angry] [low volume] [sigh] [low voice] [whisper] [screaming] [shouting] [loud] [surprised] [short pause] [exhale] [delight] [panting] [audience laughter] [with strong accent] [volume down] [clearing throat] [sad] [moaning] [shocked] Innovative Dual-Autoregressive (Dual-AR) Architecture S2 Pro adopts a master-slave Dual-AR architecture consisting of a decoder-only transformer and an RVQ audio codec (10 codebooks, ~21 Hz): Slow AR (4B parameters) : Operates along the time axis, predicting the primary semantic codebook. Fast AR (400M parameters) : Generates the remaining 9 residual codebooks at each time step, reconstructing exquisite acoustic details. This asymmetric design achieves peak audio fidelity while significantly boosting inference speed. Reinforcement Learning (RL) Alignment S2 Pro utilizes Group Relative Policy Optimization (GRPO) for post-training alignment. We use the same model suite for data cleaning and annotation directly as Reward Models, perfectly resolving the distribution mismatch between pre-training data and post-training objectives. Multi-Dimensional Reward Signals : Comprehensively evaluates semantic accuracy, instruction adherence, acoustic preference scoring, and timbre similarity to ensure every second of generated speech feels intuitive to humans. Extreme Streaming Performance (Powered by SGLang) As the Dual-AR architecture is structurally isomorphic to standard LLMs, S2 Pro natively supports all SGLang inference acceleration features, including Continuous Batching, Paged KV Cache, CUDA Graph, and RadixAttention-based Prefix Caching. Performance on a single NVIDIA H200 GPU: Real-Time Factor (RTF) : 0.195 Time-to-First-Audio (TTFA) : ~100 ms Extreme Throughput : 3,000+ acoustic tokens/s while maintaining RTF < 0.5 Robust Multilingual Support S2 Pro supports over 80 languages without requiring phonemes or language-specific preprocessing: Tier 1 : Japanese (ja), English (en), Chinese (zh) Tier 2 : Korean (ko), Spanish (es), Portuguese (pt), Arabic (ar), Russian (ru), French (fr), German (de) Global Coverage : sv, it, tr, no, nl, cy, eu, ca, da, gl, ta, hu, fi, pl, et, hi, la, ur, th, vi, jw, bn, yo, xsl, cs, sw, nn, he, ms, uk, id, kk, bg, lv, my, tl, sk, ne, fa, af, el, bo, hr, ro, sn, mi, yi, am, be, km, is, az, sd, br, sq, ps, mn, ht, ml, sr, sa, te, ka, bs, pa, lt, kn, si, hy, mr, as, gu, fo, etc. Native Multi-Speaker Generation Fish Audio S2 allows users to upload reference audio containing multiple speakers, and the model processes each speaker's features via the <|speaker:i|> token. You can then control the model's performance via speaker ID tokens, enabling a single generation to include multiple speakers. There is no longer a need to upload separate reference audio for each individual speaker. Multi-Turn Generation Thanks to the expansion of the model context, our model can now leverage previous information to improve the expressiveness of subsequent generated content, thereby increasing the naturalness of the dialogue. Rapid Voice Cloning Fish Audio S2 supports accurate voice cloning using short reference samples (typically 10-30 seconds). The model captures timbre, speaking style, and emotional tendencies, producing realistic and consistent cloned voices without additional fine-tuning.\nFor SGLang Server usage, please refer to the SGLang-Omni README . Credits VITS2 (daniilrobnikov) Bert-VITS2 GPT VITS MQTTS GPT Fast GPT-SoVITS Qwen3 Tech Report @misc { fish-speech-v1.4 , title = { Fish-Speech: Leveraging Large Language Models for Advanced Multilingual Text-to-Speech Synthesis } , author = { Shijia Liao and Yuxuan Wang and Tianyu Li and Yifan Cheng and Ruoyi Zhang and Rongzhi Zhou and Yijin Xing } , year = { 2024 } , eprint = { 2411.01156 } , archivePrefix = { arXiv } , primaryClass = { cs.SD } , url = { https://arxiv.org/abs/2411.01156 } ,\n} @misc { liao2026fishaudios2technical , title = { Fish Audio S2 Technical Report } , author = { Shijia Liao and Yuxuan Wang and Songting Liu and Yifan Cheng and Ruoyi Zhang and Tianyu Li and Shidong Li and Yisheng Zheng and Xingwei Liu and Qingzheng Wang and Zhizhuo Zhou and Jiahua Liu and Xin Chen and Dawei Han } , year = { 2026 } , eprint = { 2603.08823 } , archivePrefix = { arXiv } , primaryClass = { cs.SD } , url = { https://arxiv.org/abs/2603.08823 } , \n}",
+      "stars_today": 88,
+      "language": "Python"
+    },
+    {
+      "title": "0x4m4/hexstrike-ai",
+      "slug": "0x4m4-hexstrike-ai",
+      "url": "https://github.com/0x4m4/hexstrike-ai",
+      "abstract": "HexStrike AI MCP Agents v6.0 AI-Powered MCP Cybersecurity Automation Platform Advanced AI-powered penetration testing MCP framework with 150+ security tools and 12+ autonomous AI agents 📋 What's New • 🏗️ Architecture • 🚀 Installation • 🛠️ Features • 🤖 AI Agents • 📡 API Reference Follow Our Social Accounts Architecture Overview HexStrike AI MCP v6.0 features a multi-agent architecture with autonomous AI agents, intelligent decision-making, and vulnerability intelligence. %%{init: {\"themeVariables\": {\n  \"primaryColor\": \"#b71c1c\",\n  \"secondaryColor\": \"#ff5252\",\n  \"tertiaryColor\": \"#ff8a80\",\n  \"background\": \"#2d0000\",\n  \"edgeLabelBackground\":\"#b71c1c\",\n  \"fontFamily\": \"monospace\",\n  \"fontSize\": \"16px\",\n  \"fontColor\": \"#fffde7\",\n  \"nodeTextColor\": \"#fffde7\"\n}}}%%\ngraph TD\n    A[AI Agent - Claude/GPT/Copilot] -->|MCP Protocol| B[HexStrike MCP Server v6.0]\n    \n    B --> C[Intelligent Decision Engine]\n    B --> D[12+ Autonomous AI Agents]\n    B --> E[Modern Visual Engine]\n    \n    C --> F[Tool Selection AI]\n    C --> G[Parameter Optimization]\n    C --> H[Attack Chain Discovery]\n    \n    D --> I[BugBounty Agent]\n    D --> J[CTF Solver Agent]\n    D --> K[CVE Intelligence Agent]\n    D --> L[Exploit Generator Agent]\n    \n    E --> M[Real-time Dashboards]\n    E --> N[Progress Visualization]\n    E --> O[Vulnerability Cards]\n    \n    B --> P[150+ Security Tools]\n    P --> Q[Network Tools - 25+]\n    P --> R[Web App Tools - 40+]\n    P --> S[Cloud Tools - 20+]\n    P --> T[Binary Tools - 25+]\n    P --> U[CTF Tools - 20+]\n    P --> V[OSINT Tools - 20+]\n    \n    B --> W[Advanced Process Management]\n    W --> X[Smart Caching]\n    W --> Y[Resource Optimization]\n    W --> Z[Error Recovery]\n    \n    style A fill:#b71c1c,stroke:#ff5252,stroke-width:3px,color:#fffde7\n    style B fill:#ff5252,stroke:#b71c1c,stroke-width:4px,color:#fffde7\n    style C fill:#ff8a80,stroke:#b71c1c,stroke-width:2px,color:#fffde7\n    style D fill:#ff8a80,stroke:#b71c1c,stroke-width:2px,color:#fffde7\n    style E fill:#ff8a80,stroke:#b71c1c,stroke-width:2px,color:#fffde7 Loading How It Works AI Agent Connection - Claude, GPT, or other MCP-compatible agents connect via FastMCP protocol Intelligent Analysis - Decision engine analyzes targets and selects optimal testing strategies Autonomous Execution - AI agents execute comprehensive security assessments Real-time Adaptation - System adapts based on results and discovered vulnerabilities Advanced Reporting - Visual output with vulnerability cards and risk analysis Installation Quick Setup to Run the hexstrike MCPs Server # 1. Clone the repository git clone https://github.com/0x4m4/hexstrike-ai.git cd hexstrike-ai # 2. Create virtual environment python3 -m venv hexstrike-env source hexstrike-env/bin/activate # Linux/Mac # hexstrike-env\\Scripts\\activate   # Windows # 3. Install Python dependencies pip3 install -r requirements.txt Installation and Setting Up Guide for various AI Clients: Installation & Demo Video Watch the full installation and setup walkthrough here: YouTube - HexStrike AI Installation & Demo Supported AI Clients for Running & Integration You can install and run HexStrike AI MCPs with various AI clients, including: 5ire (Latest version v0.14.0 not supported for now) VS Code Copilot Roo Code Cursor Claude Desktop Any MCP-compatible agent Refer to the video above for step-by-step instructions and integration examples for these platforms. Install Security Tools Core Tools (Essential): # Network & Reconnaissance nmap masscan rustscan amass subfinder nuclei fierce dnsenum\nautorecon theharvester responder netexec enum4linux-ng # Web Application Security gobuster feroxbuster dirsearch ffuf dirb httpx katana\nnikto sqlmap wpscan arjun paramspider dalfox wafw00f # Password & Authentication hydra john hashcat medusa patator crackmapexec\nevil-winrm hash-identifier ophcrack # Binary Analysis & Reverse Engineering gdb radare2 binwalk ghidra checksec strings objdump\nvolatility3 foremost steghide exiftool Cloud Security Tools: prowler scout-suite trivy\nkube-hunter kube-bench docker-bench-security Browser Agent Requirements: # Chrome/Chromium for Browser Agent sudo apt install chromium-browser chromium-chromedriver # OR install Google Chrome wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add - echo \" deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main \" | sudo tee /etc/apt/sources.list.d/google-chrome.list\nsudo apt update && sudo apt install google-chrome-stable Start the Server # Start the MCP server python3 hexstrike_server.py # Optional: Start with debug mode python3 hexstrike_server.py --debug # Optional: Custom port configuration python3 hexstrike_server.py --port 8888 Verify Installation # Test server health curl http://localhost:8888/health # Test AI agent capabilities curl -X POST http://localhost:8888/api/intelligence/analyze-target \\\n  -H \" Content-Type: application/json \" \\\n  -d ' {\"target\": \"example.com\", \"analysis_type\": \"comprehensive\"} ' AI Client Integration Setup Claude Desktop Integration or Cursor Edit ~/.config/Claude/claude_desktop_config.json : { \"mcpServers\" : { \"hexstrike-ai\" : { \"command\" : \" python3 \" , \"args\" : [ \" /path/to/hexstrike-ai/hexstrike_mcp.py \" , \" --server \" , \" http://localhost:8888 \" ], \"description\" : \" HexStrike AI v6.0 - Advanced Cybersecurity Automation Platform \" , \"timeout\" : 300 , \"disabled\" : false }\n  }\n} VS Code Copilot Integration Configure VS Code settings in .vscode/settings.json : { \"servers\" : { \"hexstrike\" : { \"type\" : \" stdio \" , \"command\" : \" python3 \" , \"args\" : [ \" /path/to/hexstrike-ai/hexstrike_mcp.py \" , \" --server \" , \" http://localhost:8888 \" ]\n    }\n  }, \"inputs\" : []\n} Features Security Tools Arsenal 150+ Professional Security Tools: 🔍 Network Reconnaissance & Scanning (25+ Tools) Nmap - Advanced port scanning with custom NSE scripts and service detection Rustscan - Ultra-fast port scanner with intelligent rate limiting Masscan - High-speed Internet-scale port scanning with banner grabbing AutoRecon - Comprehensive automated reconnaissance with 35+ parameters Amass - Advanced subdomain enumeration and OSINT gathering Subfinder - Fast passive subdomain discovery with multiple sources Fierce - DNS reconnaissance and zone transfer testing DNSEnum - DNS information gathering and subdomain brute forcing TheHarvester - Email and subdomain harvesting from multiple sources ARP-Scan - Network discovery using ARP requests NBTScan - NetBIOS name scanning and enumeration RPCClient - RPC enumeration and null session testing Enum4linux - SMB enumeration with user, group, and share discovery Enum4linux-ng - Advanced SMB enumeration with enhanced logging SMBMap - SMB share enumeration and exploitation Responder - LLMNR, NBT-NS and MDNS poisoner for credential harvesting NetExec - Network service exploitation framework (formerly CrackMapExec) 🌐 Web Application Security Testing (40+ Tools) Gobuster - Directory, file, and DNS enumeration with intelligent wordlists Dirsearch - Advanced directory and file discovery with enhanced logging Feroxbuster - Recursive content discovery with intelligent filtering FFuf - Fast web fuzzer with advanced filtering and parameter discovery Dirb - Comprehensive web content scanner with recursive scanning HTTPx - Fast HTTP probing and technology detection Katana - Next-generation crawling and spidering with JavaScript support Hakrawler - Fast web endpoint discovery and crawling Gau - Get All URLs from multiple sources (Wayback, Common Crawl, etc.",
+      "stars_today": 87,
+      "language": "Python"
+    },
+    {
+      "title": "stalwartlabs/stalwart",
+      "slug": "stalwartlabs-stalwart",
+      "url": "https://github.com/stalwartlabs/stalwart",
+      "abstract": "Secure, scalable mail & collaboration server with comprehensive protocol support 🛡️ (IMAP, JMAP, SMTP, CalDAV, CardDAV, WebDAV) Features Stalwart is an open-source mail & collaboration server with JMAP, IMAP4, POP3, SMTP, CalDAV, CardDAV and WebDAV support and a wide range of modern features. It is written in Rust and designed to be secure, fast, robust and scalable. Key features: Email server with complete protocol support: JMAP: JMAP for Mail server. JMAP for Sieve Scripts . WebSocket , Blob Management and Quotas extensions. IMAP: IMAP4rev2 and IMAP4rev1 server. ManageSieve server. Numerous extensions supported. POP3: POP3 server. STLS and SASL support as well as other extensions . SMTP: SMTP server with built-in DMARC , DKIMv2 , DKIMv1 , SPF and ARC support for message authentication. Strong transport security through DANE , MTA-STS and SMTP TLS reporting. Automated DKIM key rotation and management. Inbound throttling and filtering with granular configuration rules, sieve scripting, MTA hooks and milter integration. Distributed virtual queues with delayed delivery, priority delivery, quotas, routing rules and throttling support. Envelope rewriting and message modification. Collaboration server: Calendaring and scheduling: CalDAV and CalDAV Scheduling support. JMAP for Calendars support. Contact management: CardDAV support. JMAP for Contacts support. File storage: WebDAV support. JMAP for File Storage support. Sharing with fine-grained access controls: WebDAV ACL support. JMAP Sharing support. Spam and Phishing built-in filter: Comprehensive set of filtering rules on par with popular solutions. LLM-driven spam filtering and message analysis. Statistical spam classifier with collaborative filtering, automatic training capabilities and address book integration. DNS Blocklists ( DNSBLs ) checking of IP addresses, domains, and hashes. Collaborative digest-based spam filtering with Pyzor . Phishing protection against homographic URL attacks, sender spoofing and other techniques. Trusted reply tracking to recognize and prioritize genuine e-mail replies. Sender reputation monitoring by IP address, ASN, domain and email address. Greylisting to temporarily defer unknown senders. Spam traps to set up decoy email addresses that catch and analyze spam. Flexible : Pluggable storage backends with RocksDB , FoundationDB , PostgreSQL , mySQL , SQLite , S3-Compatible , Azure and Redis support. Full-text search available in 17 languages using the built-in search engine or via Meilisearch , ElasticSearch , OpenSearch , PostgreSQL or mySQL backends. Sieve scripting language with support for all registered extensions . Email aliases, mailing lists, subaddressing and catch-all addresses support. Automated DNS management. Automatic account configuration and discovery with autoconfig and autodiscover . Multi-tenancy support with domain and tenant isolation. Disk quotas per user and tenant. Secure and robust : Encryption at rest with S/MIME or OpenPGP . Automatic TLS certificate provisioning with ACME using TLS-ALPN-01 , DNS-01 , DNS-PERSIST-01 or HTTP-01 challenges. Automated blocking of IP addresses that attack, abuse or scan the server for exploits. Rate limiting. Security audited (read the report ). Memory safe (thanks to Rust). Scalable and fault-tolerant : Designed to handle growth seamlessly, from small setups to large-scale deployments of thousands of nodes. Built with fault tolerance and high availability in mind, recovers from hardware or software failures with minimal operational impact. Peer-to-peer cluster coordination or with Kafka , Redpanda , NATS or Redis . Kubernetes , Apache Mesos and Docker Swarm support for automated scaling and container orchestration. Read replicas, sharded blob storage and in-memory data stores for high performance and low latency. Authentication and Authorization : OpenID Connect authentication. OAuth 2.0 authorization with authorization code and device authorization flows. LDAP , OIDC , SQL or built-in authentication backend support. Two-factor authentication with Time-based One-Time Passwords ( 2FA-TOTP ) Application passwords (App Passwords). Roles and permissions. Access Control Lists (ACLs). Observability : Logging and tracing with OpenTelemetry , journald, log files and console support. Metrics with OpenTelemetry and Prometheus integration. Webhooks for event-driven automation. Alerts with email and webhook notifications. Live tracing and metrics. Web-based administration : Dashboard with real-time statistics and monitoring. Account, domain, group and mailing list management. SMTP queue management for messages and outbound DMARC and TLS reports. Report visualization interface for received DMARC, TLS-RPT and Failure (ARF) reports. Configuration of every aspect of the mail server. Log viewer with search and filtering capabilities. Self-service portal for password reset and encryption-at-rest key management. Screenshots Presentation Want a deeper dive? Need to explain to your boss why Stalwart is the perfect fit? Whether you're evaluating options, making a case to your team, or simply curious about how it all works under the hood, these slides walk you through the key features, architecture, and benefits of Stalwart. Browse the slides to see what makes it stand out. Get Started Install Stalwart on your server by following the instructions for your platform: Linux / MacOS / FreeBSD Windows Docker All documentation is available at stalw.art/docs . Support If you are having problems running Stalwart, found a bug, or just have a question, please head to the Stalwart Support Portal at support.stalw.art .\nAdditionally, you may purchase an Enterprise License to obtain priority support from Stalwart Labs LLC, including response-time commitments and a private Priority Support area on the portal. Contributing We welcome contributions, but to keep the project maintainable there are a few things to know before opening a pull request. Because of the high volume of low-quality, AI-generated submissions, pull requests are limited to a list of vouched contributors; to be added, post at support.stalw.art describing the change you would like to submit, together with a link to the proposed change. At this stage only bug fixes and translations are accepted, and new features are not, unless they involve just a few lines of code.\nFor the full guidelines, please read CONTRIBUTING.md . Roadmap Stalwart has reached an exciting point in its journey, it’s now feature complete . All the core functionality and open standard email and collaboration protocols that we set out to support are in place. In other words, Stalwart already does everything you’d expect from a modern, standards-compliant mail and collaboration platform. The next major milestone is all about refinement: finalizing the database schema and focusing on performance optimizations to ensure everything runs as efficiently and reliably as possible. Once that’s done, we’ll be ready to roll out version 1.0 . Of course, development doesn’t stop there. The community has contributed hundreds of great ideas for improvements and new features, everything from subtle usability tweaks to entirely new integrations. You can see the full list of proposals over on our GitHub issues . If there’s something you’d like to see prioritized, just give it a thumbs up as we plan to implement enhancements based on the community’s votes. Sponsorship Your support is crucial in helping us continue to improve the project, add new features, and maintain the highest level of quality. By becoming a sponsor , you help fund the development and future of Stalwart. As a thank-you, sponsors who contribute $5 per month or more will automatically receive a Enterprise edition license. And, sponsors who contribute $30 per month or more, also have access to Premium Support from Stalwart Labs.",
+      "stars_today": 35,
+      "language": "Rust"
+    },
+    {
+      "title": "googleworkspace/cli",
+      "slug": "googleworkspace-cli",
+      "url": "https://github.com/googleworkspace/cli",
+      "abstract": "gws One CLI for all of Google Workspace — built for humans and AI agents. Drive, Gmail, Calendar, and every Workspace API. Zero boilerplate. Structured JSON output. 40+ agent skills included. Note This is not an officially supported Google product. ⬇️ Download the latest release for your OS gws doesn't ship a static list of commands. It reads Google's own Discovery Service at runtime and builds its entire command surface dynamically. When Google Workspace adds an API endpoint or method, gws picks it up automatically. Important This project is under active development. Expect breaking changes as we march toward v1.0. Contents Prerequisites Installation Quick Start Why gws? Authentication AI Agent Skills Advanced Usage Environment Variables Exit Codes Architecture Troubleshooting Development Prerequisites Node.js 18+ — for npm install (or download a pre-built binary from GitHub Releases ) A Google Cloud project — required for OAuth credentials. You can create one via the Google Cloud Console or with the gcloud CLI or with the gws auth setup command. A Google account with access to Google Workspace Installation The recommended way to install gws is to download the pre-built binary for your OS and architecture from the GitHub Releases page. Extract the archive and place the gws binary in your $PATH . For convenience, you can also use npm to automate downloading the appropriate binary from GitHub Releases: npm install -g @googleworkspace/cli Or build from source: cargo install --git https://github.com/googleworkspace/cli --locked A Nix flake is also available at github:googleworkspace/cli nix run github:googleworkspace/cli On macOS and Linux, you can also install via Homebrew : brew install googleworkspace-cli Quick Start gws auth setup # walks you through Google Cloud project config gws auth login # subsequent OAuth login gws drive files list --params ' {\"pageSize\": 5} ' Why gws? For humans — stop writing curl calls against REST docs. gws gives you --help on every resource, --dry-run to preview requests, and auto‑pagination. For AI agents — every response is structured JSON. Pair it with the included agent skills and your LLM can manage Workspace without custom tooling. # List the 10 most recent files gws drive files list --params ' {\"pageSize\": 10} ' # Create a spreadsheet gws sheets spreadsheets create --json ' {\"properties\": {\"title\": \"Q1 Budget\"}} ' # Send a Chat message gws chat spaces messages create \\\n  --params ' {\"parent\": \"spaces/xyz\"} ' \\\n  --json ' {\"text\": \"Deploy complete.\"} ' \\\n  --dry-run # Introspect any method's request/response schema gws schema drive.files.list # Stream paginated results as NDJSON gws drive files list --params ' {\"pageSize\": 100} ' --page-all | jq -r ' .files[].name ' Authentication The CLI supports multiple auth workflows so it works on your laptop, in CI, and on a server. Which setup should I use? I have… Use gcloud installed and authenticated gws auth setup (fastest) A GCP project but no gcloud Manual OAuth setup An existing OAuth access token GOOGLE_WORKSPACE_CLI_TOKEN Existing Credentials GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE Interactive (local desktop) Credentials are encrypted at rest (AES-256-GCM) with the key stored in your OS keyring (or ~/.config/gws/.encryption_key when GOOGLE_WORKSPACE_CLI_KEYRING_BACKEND=file ). gws auth setup # one-time: creates a Cloud project, enables APIs, logs you in gws auth login # subsequent scope selection and login gws auth setup requires the gcloud CLI . If you don't have gcloud , use the manual setup below instead. Warning Scope limits in testing mode: If your OAuth app is unverified (testing mode),\nGoogle limits consent to ~25 scopes. The recommended scope preset includes 85+\nscopes and will fail for unverified apps (especially for @gmail.com accounts).\nChoose individual services instead to filter the scope picker: gws auth login -s drive,gmail,sheets Manual OAuth setup (Google Cloud Console) Use this when gws auth setup cannot automate project/client creation, or when you want explicit control. Open Google Cloud Console in the target project: OAuth consent screen: https://console.cloud.google.com/apis/credentials/consent?project=<PROJECT_ID> Credentials: https://console.cloud.google.com/apis/credentials?project=<PROJECT_ID> Configure OAuth branding/audience if prompted: App type: External (testing mode is fine) Add your account under Test users Create an OAuth client: Type: Desktop app Download the client JSON and save it to: ~/.config/gws/client_secret.json Important You must add yourself as a test user. In the OAuth consent screen, click Test users → Add users and enter your Google account email. Without this,\nlogin will fail with a generic \"Access blocked\" error. Then run: gws auth login Browser-assisted auth (human or agent) You can complete OAuth either manually or with browser automation. Human flow : run gws auth login , open the printed URL, approve scopes. Agent-assisted flow : the agent opens the URL, selects account, handles consent prompts, and returns control once the localhost callback succeeds. If consent shows \"Google hasn't verified this app\" (testing mode), click Continue .\nIf scope checkboxes appear, select required scopes (or Select all ) before continuing. Headless / CI (export flow) Complete interactive auth on a machine with a browser. Export credentials: gws auth export --unmasked > credentials.json On the headless machine: export GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE=/path/to/credentials.json\ngws drive files list # just works Service Account (server-to-server) Point to your key file; no login needed. export GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE=/path/to/service-account.json\ngws drive files list Pre-obtained Access Token Useful when another tool (e.g. gcloud ) already mints tokens for your environment. export GOOGLE_WORKSPACE_CLI_TOKEN= $( gcloud auth print-access-token ) Precedence Priority Source Set via 1 Access token GOOGLE_WORKSPACE_CLI_TOKEN 2 Credentials file GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE 3 Encrypted credentials gws auth login 4 Plaintext credentials ~/.config/gws/credentials.json Environment variables can also live in a .env file. AI Agent Skills The repo ships 100+ Agent Skills ( SKILL.md files) — one for every supported API, plus higher-level helpers for common workflows and 50 curated recipes for Gmail, Drive, Docs, Calendar, and Sheets. See the full Skills Index for the complete list. # Install all skills at once npx skills add https://github.com/googleworkspace/cli # Or pick only what you need npx skills add https://github.com/googleworkspace/cli/tree/main/skills/gws-drive\nnpx skills add https://github.com/googleworkspace/cli/tree/main/skills/gws-gmail OpenClaw setup # Symlink all skills (stays in sync with repo) ln -s $( pwd ) /skills/gws- * ~ /.openclaw/skills/ # Or copy specific skills cp -r skills/gws-drive skills/gws-gmail ~ /.openclaw/skills/ The gws-shared skill includes an install block so OpenClaw auto-installs the CLI via npm if gws isn't on PATH. Gemini CLI Extension Authenticate the CLI first: gws auth setup Install the extension into the Gemini CLI: gemini extensions install https://github.com/googleworkspace/cli Installing this extension gives your Gemini CLI agent direct access to all gws commands and Google Workspace agent skills. Because gws handles its own authentication securely, you simply need to authenticate your terminal once prior to using the agent, and the extension will automatically inherit your credentials. Advanced Usage Multipart Uploads gws drive files create --json ' {\"name\": \"report.pdf\"} ' --upload ./report.pdf Pagination Flag Description Default --page-all Auto-paginate, one JSON line per page (NDJSON) off --page-limit <N> Max pages to fetch 10 --page-delay <MS> Delay between pages 100 ms Google Sheets — Shell Escaping Sheets ranges use ! which bash interprets as history expansion.",
+      "stars_today": 29,
+      "language": "Rust"
+    },
+    {
+      "title": "trailofbits/skills",
+      "slug": "trailofbits-skills",
+      "url": "https://github.com/trailofbits/skills",
+      "abstract": "Trail of Bits Skills Marketplace A Claude Code plugin marketplace from Trail of Bits providing skills to enhance AI-assisted security analysis, testing, and development workflows. Codex can load this marketplace through its Claude marketplace compatibility. Also see: claude-code-config · skills-curated · claude-code-devcontainer · dropkit Installation Claude Code Marketplace /plugin marketplace add trailofbits/skills Browse and Install Plugins /plugin menu Codex Codex supports Claude plugin marketplaces directly, so this repository does not need Codex-specific sidecar metadata. Install the marketplace with: codex plugin marketplace add trailofbits/skills\ncodex plugin list\ncodex plugin add < plugin-name > @trailofbits Local Development To add the marketplace locally (e.g., for testing or development), navigate to the parent directory of this repository: cd /path/to/parent  # e.g., if repo is at ~/projects/skills, be in ~/projects\n/plugins marketplace add ./skills Available Plugins Smart Contract Security Plugin Description building-secure-contracts Smart contract security toolkit with vulnerability scanners for 6 blockchains entry-point-analyzer Identify state-changing entry points in smart contracts for security auditing Code Auditing Plugin Description agentic-actions-auditor Audit GitHub Actions workflows for AI agent security vulnerabilities audit-context-building Build deep architectural context through ultra-granular code analysis burpsuite-project-parser Search and extract data from Burp Suite project files c-review Comprehensive C/C++ security review with clustered parallel workers and SARIF output differential-review Security-focused differential review of code changes with git history analysis dimensional-analysis Annotate codebases with dimensional analysis comments to detect unit mismatches and formula bugs fp-check Systematic false positive verification for security bug analysis with mandatory gate reviews insecure-defaults Detect insecure default configurations, hardcoded credentials, and fail-open security patterns rust-review Comprehensive Rust security review covering safe/unsafe boundary, memory safety, concurrency, panic-DoS, FFI, and async runtime with SARIF output semgrep-rule-creator Create and refine Semgrep rules for custom vulnerability detection semgrep-rule-variant-creator Port existing Semgrep rules to new target languages with test-driven validation sharp-edges Identify error-prone APIs, dangerous configurations, and footgun designs static-analysis Static analysis toolkit with CodeQL, Semgrep, and SARIF parsing supply-chain-risk-auditor Audit supply-chain threat landscape of project dependencies testing-handbook-skills Skills from the Testing Handbook : fuzzers, static analysis, sanitizers, coverage trailmark Code graph analysis, bounded subagent context slicing, Mermaid diagrams, mutation testing triage, and protocol verification variant-analysis Find similar vulnerabilities across codebases using pattern-based analysis vulnerability-triage-brocards Triage vulnerability reports using 7 brocards to accept, dismiss, or request more info before deeper analysis Malware Analysis Plugin Description yara-authoring YARA detection rule authoring with linting, atom analysis, and best practices Verification Plugin Description constant-time-analysis Detect compiler-induced timing side-channels in cryptographic code mutation-testing Configure mewt/muton mutation testing campaigns — scope targets, tune timeouts, optimize long runs property-based-testing Property-based testing guidance for multiple languages and smart contracts spec-to-code-compliance Specification-to-code compliance checker for blockchain audits zeroize-audit Detect missing or compiler-eliminated zeroization of secrets in C/C++ and Rust Reverse Engineering Plugin Description dwarf-expert Interact with and understand the DWARF debugging format Mobile Security Plugin Description firebase-apk-scanner Scan Android APKs for Firebase security misconfigurations Development Plugin Description ask-questions-if-underspecified Clarify requirements before implementing devcontainer-setup Create pre-configured devcontainers with Claude Code and language-specific tooling gh-cli Intercept GitHub URL fetches and redirect to the authenticated gh CLI git-cleanup Safely clean up git worktrees and local branches with gated confirmation workflow github-triage Triage open GitHub issues and PRs: merge ready bot/approved PRs, review unreviewed ones via subagents, close resolved issues with cited comments, cross-link pending fixes, and score the rest with local-only priority and change-size estimates let-fate-decide Draw Tarot cards using cryptographic randomness to add entropy to vague planning modern-python Modern Python tooling and best practices with uv, ruff, and pytest open-sourcing Prepare a repository for public release: secrets hygiene, licensing, CI readiness, and release automation seatbelt-sandboxer Generate minimal macOS Seatbelt sandbox configurations second-opinion Run code reviews using external LLM CLIs (OpenAI Codex, Google Gemini) on changes, diffs, or commits. Bundles Codex's built-in MCP server. skill-improver Iterative skill refinement loop using automated fix-review cycles Team Management Plugin Description culture-index Interpret Culture Index survey results for individuals and teams Tooling Plugin Description claude-in-chrome-troubleshooting Diagnose and fix Claude in Chrome MCP extension connectivity issues Infrastructure Plugin Description debug-buttercup Debug Buttercup Kubernetes deployments Trophy Case Bugs discovered using Trail of Bits Skills. Found something? Let us know! When reporting bugs you've found, feel free to mention: Found using Trail of Bits Skills Skill Bug constant-time-analysis Timing side-channel in ML-DSA signing Contributing We welcome contributions! See AGENTS.md for skill authoring guidelines, and\nrun make check before you push — it runs most of CI locally (see AGENTS.md for\nwhat it does not cover). License This work is licensed under a Creative Commons Attribution-ShareAlike 4.0 International License . Made by Trail of Bits .",
+      "stars_today": 17,
+      "language": "Python"
+    }
+  ],
+  "papers": {
+    "hf": [],
+    "others": [
+      {
+        "title": "LLM-Assisted Optimisation of Multi-RIS Placement and Beamforming in Smart Warehouses",
+        "slug": "llm-assisted-optimisation-of-multi-ris-placement-and",
+        "url": "https://www.semanticscholar.org/paper/fff1c69e06909d67623d11d2b2daa31d4d39b413",
+        "abstract": "In this paper, we propose an optimisation framework for deployment of multiple reconfigurable intelligent surfaces (RISs) to meet the wireless coverage demands for smart warehouses. Specifically, we are the first to formulate a unified network optimisation task that jointly considers RIS placement and beamforming to maximize overall network coverage with a deterministic channel model to accurately describe the multipath effect for the warehouse. To address this problem, we design a hybrid optimisation framework composed of three synergistic modules. (1) A Large Language Model (LLM) acts as a semantic planner that generates physically feasible multi-RIS configurations, jointly determining the placement and beamforming directions guided by structured prompts and environment-aware embeddings. (2) A Genetic Algorithm (GA) module performs local numerical refinements to enhance the precision of LLM-generated solutions under physical constraints. (3) A Diversity Reflection and Correction (DiRect) module evaluates structural similarity among candidate configurations and triggers additional semantic regeneration to maintain exploration diversity. These three modules form an alternating iterative process in which LLM reasoning, GA-based evolution, and DiRect-driven regeneration collectively guide the optimisation toward high-coverage configurations. Extensive simulations validate the effectiveness and robustness of the proposed framework. Compared with traditional heuristics, reinforcement learning methods, and LLM-guided baselines, our hybrid framework achieves 10%–15% higher coverage within 10–20 iterations. The performance consistently scales with the number of RISs and element sizes, and remains stable under varying transmitter positions, demonstrating strong adaptability to complex smart warehouse layouts. Overall, the proposed hybrid optimisation framework provides a scalable and physically grounded solution for RIS-assisted network deployment optimisation in realistic industrial environments.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 1,
+        "published_date": "2026-08-01",
+        "authors": [
+          "Chenyang Yuan",
+          "Jinbo Hou",
+          "Gang Yu",
+          "Kehai Qiu",
+          "Kezhi Wang",
+          "Haonan Hu",
+          "Jie Zhang"
+        ]
+      },
+      {
+        "title": "MSHLoRA: A multi-stage multi-scale diverse adapter framework for efficient expert-level adaptation of large language models",
+        "slug": "mshlora-a-multi-stage-multi-scale-diverse-adapter-framework",
+        "url": "https://www.semanticscholar.org/paper/ff64ad9eaa2e5d860303be3d46910950623009f7",
+        "abstract": "MSHLoRA: A multi-stage multi-scale diverse adapter framework for efficient expert-level adaptation of large language models. Expert systems with applications",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 1,
+        "published_date": "2026-08-01",
+        "authors": [
+          "Xueguang Li",
+          "Junfeng Miao",
+          "Sahraoui Dhelim"
+        ]
+      },
+      {
+        "title": "Dynamics of a stochastic reaction-diffusion HIV/AIDS model on scale-free networks",
+        "slug": "dynamics-of-a-stochastic-reaction-diffusion-hiv-aids-model",
+        "url": "https://www.semanticscholar.org/paper/e90b92a033bc18fcf8535ba7f2d4877770aabeb6",
+        "abstract": "Dynamics of a stochastic reaction-diffusion HIV/AIDS model on scale-free networks. Applied Mathematics Letters",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 1,
+        "published_date": "2026-08-01",
+        "authors": [
+          "Baozhou Gao",
+          "Yantao Luo",
+          "Zhidong Teng"
+        ]
+      },
+      {
+        "title": "Can humans actually be trusted to detect LLM-generated texts? Assessing reviewers’ accuracy and confidence",
+        "slug": "can-humans-actually-be-trusted-to-detect-llm-generated-texts",
+        "url": "https://www.semanticscholar.org/paper/da41981d0990fdba0ab65f98641a8bc8da89ee93",
+        "abstract": "Can humans actually be trusted to detect LLM-generated texts? Assessing reviewers’ accuracy and confidence. Research Methods in Applied Linguistics",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 1,
+        "published_date": "2026-08-01",
+        "authors": [
+          "Michelle Richter",
+          "Tove Larsson"
+        ]
+      },
+      {
+        "title": "AstroHSP: A hybrid supervision framework for robust monocular astronaut pose estimation",
+        "slug": "astrohsp-a-hybrid-supervision-framework-for-robust-monocular",
+        "url": "https://www.semanticscholar.org/paper/d78a14a185d63b23d36009418d4d3a59901d4767",
+        "abstract": "Accurate 3D human pose estimation is critical for astronaut safety and ergonomic analysis, yet it remains a fundamental challenge under severe deformation, heavy self-occlusion, and extreme domain shift, particularly in the absence of 3D ground-truth annotations. To address this problem, we propose AstroHSP, a robust two-stage framework that integrates domain-adaptive 2D pose estimation with uncertainty-aware 3D pose lifting. In the first stage, a mixed-domain training strategy combined with a novel Domain-Adaptive Batch Normalization mechanism is adopted to achieve stable and consistent 2D keypoint predictions under extreme appearance distortions and severe occlusions. In the second stage, we design an advanced 2D-to-3D lifting module that employs a dual-stream Transformer to model spatio-temporal dependencies and incorporates a conditional diffusion model to iteratively refine coarse 3D poses, thereby effectively modeling and mitigating inherent depth uncertainty. To cope with the practical unavailability of 3D ground truth in highly constrained target domains, we further introduce a two-stage hybrid training strategy, in which the model is first pre-trained with full supervision on public datasets and subsequently fine-tuned through joint optimization that retains full supervision on public data while introducing weak geometric constraints on the target domain. We introduce AstPose, a dataset collected from real space missions, and conduct comprehensive evaluations across multiple datasets, including clothing-heavy and highly constrained scenarios. AstroHSP demonstrates superior performance across multiple datasets, affirming the efficacy of our specialized design for robust 3D pose generalization in highly constrained domains.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 1,
+        "published_date": "2026-08-01",
+        "authors": [
+          "Haohang Jian",
+          "Yuhao Xiao",
+          "Xiongwu Xiao",
+          "Jianguo Yan",
+          "Zhigang Tu"
+        ]
+      },
+      {
+        "title": "Reducing Experimental Data Requirements in CNN-based damage detection through Transfer Learning",
+        "slug": "reducing-experimental-data-requirements-in-cnn-based-damage",
+        "url": "https://www.semanticscholar.org/paper/ff6674b4a2441c58cb196f949061b6764f123b3b",
+        "abstract": "While neural networks represent a promising approach for evaluating sensor data to assess damage presence, location and severity, large amounts of data are required for training. However, the generation of experimental data is both labor-intensive and costly. Transfer learning is a well-established method in deep learning that enables the reuse of knowledge from pre-trained models to improve performance and reduce data requirements across various domains such as computer vision and natural language processing. Its application within the field of strain-based structural health monitoring (SHM) has received little attention from currently published literature.\nThis work develops a resource-efficient transfer learning approach for strain-based SHM. While the Convolutional Neural Network (CNN) model learns relationships between strain distribution and crack geometry in an aluminum beam from Finite Element (FE) data, fine-tuning adapts it to experimental conditions, accounting for factors such as measurement noise, increasing overall accuracy and robustness.\nAn encoder-decoder CNN (UNet) is initially trained with synthetic data from FE simulations. The model is then fine-tuned based on a smaller experimental Digital Image Correlation (DIC) dataset obtained from an aluminum beam subjected to a four-point bending fatigue test. For this purpose, the encoder part of the CNN is frozen, while parameters of the final layers of the decoder are updated. The approach is validated with respect to its accuracy, robustness and applicability for SHM systems.\nThe presented approach significantly reduces the experimental data requirements while improving damage detection performance for an aluminum beam under four-point bending. This study demonstrates that transfer learning enables efficient adaptation to real-world conditions, offering a cost-effective and scalable solution for data-driven SHM.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-01",
+        "authors": [
+          "Finja Rentzsch holm",
+          "Tobias Schalm",
+          "Jorge Luis Jiménez Aparicio",
+          "K. Schröder"
+        ]
+      },
+      {
+        "title": "LLM-driven power system transient stability assessment: From automated simulation to neural architecture design",
+        "slug": "llm-driven-power-system-transient-stability-assessment-from",
+        "url": "https://www.semanticscholar.org/paper/fab163d151b1f974c42ae055b7e5ce9c299eee1d",
+        "abstract": "LLM-driven power system transient stability assessment: From automated simulation to neural architecture design. Sustainable Energy Technologies and Assessments",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-01",
+        "authors": [
+          "L. Hu",
+          "Yu Wang",
+          "Bikash Pal"
+        ]
+      },
+      {
+        "title": "CISMG-Nav: A Cross-Task Incremental Semantic Memory Graph-Driven Vision-and-Language Navigation Framework",
+        "slug": "cismg-nav-a-cross-task-incremental-semantic-memory-graph",
+        "url": "https://www.semanticscholar.org/paper/f8db0ac622a2b06ec9a1365352cbb0766e3416b6",
+        "abstract": "Vision-and-Language Navigation (VLN) is a crucial indicator for evaluating embodied intelligence. However, existing VLN methods face several challenges. First, the agent typically relies only on short-term memory, making it difficult to reuse accumulated experiences and environmental perceptions. Second, the semantic topological graph exhibits an inherent contradiction between representation granularity and computational efficiency, while its relational reasoning capability remains fundamentally limited. To address these issues, this letter proposes a Cross-task Incremental Semantic Memory Graph-Driven Vision-and-Language Navigation Framework (CISMG-Nav). The agent stores and updates environmental perception information by maintaining a Cross-task Incremental Semantic Memory Graph (CISMG). Specifically, CISMG integrates topological structures with semantic attributes. The observed semantic information is structurally encoded as nodes with semantic attributes, while edges represent reachability relations. Additionally, commonsense co-occurring objects are introduced to enhance semantic expressiveness and relational reasoning capability. We further propose a global-local hierarchical navigation strategy. At the global level, the agent performs semantic-guided path planning based on the CISMG, while at the local level, it achieves fine-grained goal location through a large language model. Experiments on R2R-CE dataset and real-world environments demonstrate that CISMG-Nav significantly improves navigation success rates. Compared with existing training-free methods, our framework maintains a zero-shot setting while achieving superior performance.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-01",
+        "authors": [
+          "Yuying Xi",
+          "Shuo Liu",
+          "Bao Pang",
+          "Tuo Zhou",
+          "Yong Song",
+          "Xianfeng Yuan",
+          "Qingyang Xu"
+        ]
+      },
+      {
+        "title": "KidMind: An open framework to develop and benchmark LLMs for empathetic companionship and knowledge reasoning in Chinese child mental health support",
+        "slug": "kidmind-an-open-framework-to-develop-and-benchmark-llms-for",
+        "url": "https://www.semanticscholar.org/paper/f8b299090ece2a91f8436176fb8a371e61c802c3",
+        "abstract": "KidMind: An open framework to develop and benchmark LLMs for empathetic companionship and knowledge reasoning in Chinese child mental health support. Knowledge-Based Systems",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-01",
+        "authors": [
+          "Gang Hu",
+          "T. Wei",
+          "Jingyao Luo",
+          "Zekang Huang",
+          "Xinghao Zhao",
+          "Shiyuan Chen",
+          "Kang Wang",
+          "Fang Liu",
+          "Min Peng",
+          "Qianqian Xie",
+          "Zhengpeng Zhao",
+          "Yuanyuan Pu"
+        ]
+      },
+      {
+        "title": "Efficient and Privacy-Preserving Federated Knowledge Learning for Distributed LLM",
+        "slug": "efficient-and-privacy-preserving-federated-knowledge",
+        "url": "https://www.semanticscholar.org/paper/f85d3d9c7b08f2e213a1e5c4d37b9256ead2f4a7",
+        "abstract": "Federated learning (FL) stands out as a promising solution to address the ever-increasing data scarcity problem of large language model (LLM) training through collecting data from distributed sources. The unique challenges however exist in three aspects, the extreme large communication overhead due to frequent model aggregation, the suboptimal performance due to data heterogeneity, and privacy leakage risk due to model parameter exchange. To address these issues, we propose Federated Knowledge Learning (FKL), a novel token-level knowledge sharing framework tailored for LLM to achieve effective task relevant knowledge aggregation. FKL offers the following advantages: (1) Adaptive Flexibility: Clients and servers can employ models customized for their specific tasks while ensuring seamless collaboration. Each node within the system functions independently and can be flexibly adapted as needed. (2) Communication Efficiency: Instead of huge model or parameter exchange, the unique knowledge sharing mechanism of FKL can significantly reduce the communication overhead while delivering superior performance. (3) Privacy Safeguards: The distributed token-level knowledge-sharing mechanism ensures privacy by de-identifying sensitive information and mitigating potential leakage risks. Experiments on LLMs (125M–7B parameters) validate FKL's versatility, achieving 50% higher accuracy on GLUE benchmarks and a notable 0.7x improvement in privacy task response quality compared to existing FL-based LLM approaches.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-01",
+        "authors": [
+          "Wei Sun",
+          "Xianda Wang",
+          "Zhicheng Liang",
+          "Tianyi Gong",
+          "Wanshun Lan",
+          "Yingchun Chen",
+          "Haoyue Li",
+          "Fangxin Wang"
+        ]
+      },
+      {
+        "title": "EdgeSD: Efficient Speculative Decoding With Vision-Decoding Disaggregation for MLLM Inference in Edge-Cloud Networks",
+        "slug": "edgesd-efficient-speculative-decoding-with-vision-decoding",
+        "url": "https://www.semanticscholar.org/paper/f4864bde0b68b441b89f1ed559ecdca4bacc2cec",
+        "abstract": "The deployment of multimodal large language models (MLLMs) in edge-cloud networks faces critical challenges, including computational resource heterogeneity, memory bottlenecks, and bandwidth constraints. To address these issues, we propose EdgeSD, a novel framework that accelerates MLLM inference by integrating speculative decoding (SD) with edge-cloud collaboration. First, EdgeSD decouples the vision encoding and decoding processes of the draft MLLM across heterogeneous edge servers (ESs). This disaggregation architecture overcomes single-node memory constraints, enabling optimized resource utilization and high-resolution input processing. Second, to resolve the communication bottleneck and computational burden inherent in this distributed architecture, EdgeSD integrates a bandwidth-aware dynamic image token merging (ITM) method. Unlike general pruning techniques, this EdgeSD-specific ITM method focuses on minimizing inter-ES transmission latency for vision-decoding disaggregation while maintaining draft quality. Third, to optimize SD efficiency on consumer-grade ESs, EdgeSD employs an adaptive and scalable token tree structure solved using a parallel delta-stepping algorithm. This structure maximizes the number of accepted tokens under strict edge latency constraints. Extensive experiments on six multimodal datasets and five benchmarks with various MLLM pairs demonstrate that EdgeSD achieves substantial acceleration and throughput gains in edge-cloud collaboration scenarios using a lightweight draft MLLM, achieving 3.04-5.12x speedup compared to baseline methods.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-01",
+        "authors": [
+          "Hualong Huang",
+          "Wenhan Zhan",
+          "Hancong Duan",
+          "Kai Peng",
+          "Geyong Min",
+          "Zijia Zhao",
+          "Zitian Zhao",
+          "Yalan Ye"
+        ]
+      },
+      {
+        "title": "What is (More) ethical in AI when ethical principles compete? Prioritization, LLM behavior, and governance gaps",
+        "slug": "what-is-more-ethical-in-ai-when-ethical-principles-compete",
+        "url": "https://www.semanticscholar.org/paper/f45141cad9d4c9ed168d69fe06b061c10d6e284e",
+        "abstract": "What is (More) ethical in AI when ethical principles compete? Prioritization, LLM behavior, and governance gaps. Computers in Human Behavior Reports",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-01",
+        "authors": [
+          "P. Kotzanikolaou",
+          "Thomas K. Dasaklis",
+          "Vassilis Christodoulakis",
+          "Vangelis Malamas"
+        ]
+      },
+      {
+        "title": "Time-fractional anisotropic diffusion model for multiplicative noise removal",
+        "slug": "time-fractional-anisotropic-diffusion-model-for",
+        "url": "https://www.semanticscholar.org/paper/f2f87b9afb4c56b120256b812aa51b721aeb214f",
+        "abstract": "Time-fractional anisotropic diffusion model for multiplicative noise removal. Computers & Mathematics with Applications",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-01",
+        "authors": [
+          "Rajkumar Alugunuri",
+          "Sarita Panda",
+          "Mahipal Jetta",
+          "Meraj Alam",
+          "Padmaja Yinukula"
+        ]
+      },
+      {
+        "title": "Residual-guided multiscale diffusion model for low-dose CT denoising",
+        "slug": "residual-guided-multiscale-diffusion-model-for-low-dose-ct",
+        "url": "https://www.semanticscholar.org/paper/f2c82879a82eb2eff7f974b9afb04a873549eb26",
+        "abstract": "Residual-guided multiscale diffusion model for low-dose CT denoising. Biomedical Signal Processing and Control",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-01",
+        "authors": [
+          "Ju Zhang",
+          "Jikang Chen",
+          "Guangyu Liu",
+          "Yun Cheng",
+          "Qing-Song Chen"
+        ]
+      },
+      {
+        "title": "Generative large language models for predictive maintenance planning",
+        "slug": "generative-large-language-models-for-predictive-maintenance",
+        "url": "https://www.semanticscholar.org/paper/f17a4ef32654efb2bee68f21ca2969d31a5379d2",
+        "abstract": "Generative large language models for predictive maintenance planning. Computers & industrial engineering",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-01",
+        "authors": [
+          "G. Jones",
+          "John Williams",
+          "T. Berg",
+          "Scott Lawson",
+          "Luke Birt",
+          "Ashley Stowe",
+          "Xueping Li"
+        ]
+      },
+      {
+        "title": "Leveraging semantic fusion and generative reasoning using large language models for context-aware and explainable sexism detection",
+        "slug": "leveraging-semantic-fusion-and-generative-reasoning-using",
+        "url": "https://www.semanticscholar.org/paper/f0a33442a0075160e69fd4db28b72360cf3e395b",
+        "abstract": "Leveraging semantic fusion and generative reasoning using large language models for context-aware and explainable sexism detection. Engineering applications of artificial intelligence",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-01",
+        "authors": [
+          "Aakash Gupta",
+          "Naveen Saini",
+          "Prasun Chandra Tripathi"
+        ]
+      },
+      {
+        "title": "Learning From Success and Failure: Acquiring Adaptive Dialogue Strategies for Social Robots",
+        "slug": "learning-from-success-and-failure-acquiring-adaptive",
+        "url": "https://www.semanticscholar.org/paper/f0846a18bad3e16c3a93010c79ac028bf40f412b",
+        "abstract": "Traditional dialogue systems for social robots require both dialogue strategies and user attribute recognition, each demanding specialized expertise. However, data collection is costly in real-world deployments, and the resulting datasets often include many failure cases. In this study, we aim to automate the acquisition of dialogue strategies by leveraging both successful and failed interactions using a vision-language model (VLM) and a large language model (LLM). We propose an architecture in which user attributes, recognized by the VLM, along with dialogue history, are fed into the LLM to generate dialogue strategies tailored to specific user attributes. We extracted dialogue strategies from an interaction dataset collected through a field experiment and evaluated their effectiveness. The results demonstrate that explicitly representing failure strategies complements success strategies and improves performance. Our findings highlight a practical pipeline for constructing and maintaining an interpretable strategy repository from in-the-wild deployment logs by recycling abundant failure interactions as reusable constraints, ultimately reducing the development cost of social robots.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-01",
+        "authors": [
+          "Sanae Yamashita",
+          "Yuki Okafuji"
+        ]
+      },
+      {
+        "title": "Advances of large language models for smart manufacturing",
+        "slug": "advances-of-large-language-models-for-smart-manufacturing",
+        "url": "https://www.semanticscholar.org/paper/edc9134557f7db258583d9da6d66cc8d332cbe0a",
+        "abstract": "Advances of large language models for smart manufacturing. Journal of manufacturing systems",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-01",
+        "authors": [
+          "Chong Chen",
+          "Li Li",
+          "Josefa Mula",
+          "Ying Liu"
+        ]
+      },
+      {
+        "title": "Fusing generative AI and ML-FFs for inverse design and high-fidelity dynamic simulation of fused-ring aromatic hydrocarbons",
+        "slug": "fusing-generative-ai-and-ml-ffs-for-inverse-design-and-high",
+        "url": "https://www.semanticscholar.org/paper/ec2994b873646ee3b98cc87729e3223fcb1d64ac",
+        "abstract": "Fusing generative AI and ML-FFs for inverse design and high-fidelity dynamic simulation of fused-ring aromatic hydrocarbons. Cell Reports Physical Science",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-01",
+        "authors": [
+          "Zhengwu Long",
+          "Lingyun You"
+        ]
+      },
+      {
+        "title": "Generative AI-driven sustainability in supply chains: A micro foundation of dynamic capability towards a socially responsible supply chain to achieve greater societal change",
+        "slug": "generative-ai-driven-sustainability-in-supply-chains-a-micro",
+        "url": "https://www.semanticscholar.org/paper/eb6652d8f8fc53da33c6f11214d47175bd0eca68",
+        "abstract": "Generative AI-driven sustainability in supply chains: A micro foundation of dynamic capability towards a socially responsible supply chain to achieve greater societal change. Technological forecasting & social change",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-01",
+        "authors": [
+          "Sanjeev Yadav",
+          "Ashutosh Samadhiya",
+          "Anil Kumar",
+          "K. K. Pandey",
+          "Sunil Luthra",
+          "A. El Jaouhari"
+        ]
+      },
+      {
+        "title": "Energy- and AoI-Aware Hierarchical Personalized Federated Learning for Distributed Edge Systems With Selective LLM Module Exchange",
+        "slug": "energy-and-aoi-aware-hierarchical-personalized-federated",
+        "url": "https://www.semanticscholar.org/paper/e891140ee421589931b41748ed7d49d12076e776",
+        "abstract": "Distributed edge systems require federated learning (FL) frameworks that can jointly support timely model updates, user-level personalization, and communication-efficient coordination. However, conventional hierarchical FL (HFL) methods mainly focus on reducing communication overhead and often struggle to maintain model freshness and local adaptability in multitier environments with heterogeneous data and resource constraints. To address these challenges, we propose an energy- and age-of-information (AoI)-aware hierarchical personalized FL (EA-HPFL) framework. The proposed method introduces two key ideas: 1) selective module exchange, in which clients communicate only lightweight adapter, head, or other trainable submodule updates instead of full-model parameters; and 2) deterministic AoI- and energy-aware aggregation, in which freshness and energy indicators guide client- and edge-level aggregation. This design enables efficient hierarchical coordination while preserving local personalization under non-IID data distributions. Experimental results on wearable stress and affect detection (WESAD), human-activity recognition (HAR), and Amazon-EN show that EA-HPFL provides a favorable tradeoff among communication efficiency, update freshness, and personalized performance across diverse edge settings. In particular, the proposed framework maintains competitive accuracy while substantially reducing the overhead associated with full-model exchange, and the revised TinyLlama-based Amazon-EN evaluation further confirms its effectiveness in a large language model (LLM)-oriented setting. These results demonstrate the practical value of AoI-aware coordination and selective submodule exchange for scalable and adaptive FL in real-time intelligent edge systems.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-01",
+        "authors": [
+          "F. Solat",
+          "Joohyung Lee"
+        ]
+      },
+      {
+        "title": "HWDP-FDM: hierarchical wavelet-guided dual-path fusion diffusion model for low-dose CT denoising",
+        "slug": "hwdp-fdm-hierarchical-wavelet-guided-dual-path-fusion",
+        "url": "https://www.semanticscholar.org/paper/e8702e36eb39ab98962996d0a5ab22951f3a0f72",
+        "abstract": "HWDP-FDM: hierarchical wavelet-guided dual-path fusion diffusion model for low-dose CT denoising. Biomedical Signal Processing and Control",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-01",
+        "authors": [
+          "Yunjia Gui",
+          "Ke Lu",
+          "Chuang Jia",
+          "Jian Xue"
+        ]
+      },
+      {
+        "title": "AI-Generated Fingerprint Forgery Detection for Tiny Partial Fingerprint Sensors Using Multigenerative Model Framework With Feature Augmentation",
+        "slug": "ai-generated-fingerprint-forgery-detection-for-tiny-partial",
+        "url": "https://www.semanticscholar.org/paper/e53c9ac3a954f42a1bbdd2df61108dcd9f44672f",
+        "abstract": "With the rapid advancement of generative AI, fingerprint sensing systems face increasing threats from sophisticated forgery attacks. This letter investigates AI-generated fingerprint forgeries for capacitive tiny partial fingerprint sensors using generative adversarial networks-based and diffusion-generated samples. We propose a generalized detection framework using a parallel binary classifier and multiclassifier architecture integrated with feature augmentation. Through multigenerative training, the proposed method captures subtle sensing artifacts from different generative models and improves generalization to unseen forgeries. Experimental results on the in-house sensor dataset achieve average accuracies of 88.57% under the single-generative model protocol and 92.62% under the multigenerative model protocol. Cross-dataset evaluations on NIST, FVC, and LivDet further achieve 94.90%, 93.91%, and 95.80%, respectively. This work supports effective fingerprint presentation attack detection for practical biometric sensing systems.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-01",
+        "authors": [
+          "Mao-Hsiu Hsu",
+          "Bojun Zhang"
+        ]
+      },
+      {
+        "title": "Corrigendum to “The double-edged sword effect of generative AI applications on corporate innovation” [Technovation 154 (2026) 103561]",
+        "slug": "corrigendum-to-the-double-edged-sword-effect-of-generative",
+        "url": "https://www.semanticscholar.org/paper/e3a987909ba7e74f72ebe2048ae04c9ef42736b2",
+        "abstract": "Corrigendum to “The double-edged sword effect of generative AI applications on corporate innovation” [Technovation 154 (2026) 103561]. Technovation",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-01",
+        "authors": [
+          "Xiaobin Zhang",
+          "Mengxi Yang",
+          "Yimei Hu",
+          "Yongwei Wang",
+          "Weijie Wu"
+        ]
+      },
+      {
+        "title": "0089 Identifying culprit drugs in inpatient drug-induced rashes using large language models",
+        "slug": "0089-identifying-culprit-drugs-in-inpatient-drug-induced",
+        "url": "https://www.semanticscholar.org/paper/e39a9f21b14fd4b004fc2991fe732caa195cc42a",
+        "abstract": "0089 Identifying culprit drugs in inpatient drug-induced rashes using large language models. Journal of Investigative Dermatology",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-01",
+        "authors": [
+          "J. Lee",
+          "Y. Huang",
+          "R. Ramessur",
+          "F. Kernizan",
+          "D. Kim",
+          "J. Gelfand"
+        ]
+      },
+      {
+        "title": "The chat dilemma: Usefulness, risk, ethics, and student intentions to use generative AI in higher education",
+        "slug": "the-chat-dilemma-usefulness-risk-ethics-and-student",
+        "url": "https://www.semanticscholar.org/paper/e0d3efccea8aa4ddbb6d9f5a68f4dc2bd7bcaabc",
+        "abstract": "The chat dilemma: Usefulness, risk, ethics, and student intentions to use generative AI in higher education. Technology and Society",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-01",
+        "authors": [
+          "Lana Jurcec",
+          "Maja Kolega",
+          "Irena Miljkovic Krecar"
+        ]
+      },
+      {
+        "title": "Retraction notice to Integrating Generative AI Into Evidence Synthesis: Opportunities, Safeguards, and Methodological Refinements: [JVAL Volume 29, June 2026, 4609].",
+        "slug": "retraction-notice-to-integrating-generative-ai-into-evidence",
+        "url": "https://www.semanticscholar.org/paper/dfb753a43841871dd6c9ba87e10552ad749abb67",
+        "abstract": "Retraction notice to Integrating Generative AI Into Evidence Synthesis: Opportunities, Safeguards, and Methodological Refinements: [JVAL Volume 29, June 2026, 4609].. Value in Health",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-01",
+        "authors": [
+          "Weihao Cheng",
+          "Hangyu Zhu",
+          "Yuanyuan Lian"
+        ]
+      },
+      {
+        "title": "Autonomous construction of crop pest and disease knowledge graphs at scale via LLM-driven expert modeling",
+        "slug": "autonomous-construction-of-crop-pest-and-disease-knowledge",
+        "url": "https://www.semanticscholar.org/paper/d83869ada1e96ba10754518b2526579c3db04324",
+        "abstract": "Autonomous construction of crop pest and disease knowledge graphs at scale via LLM-driven expert modeling. Computers and Electronics in Agriculture",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-01",
+        "authors": [
+          "Hao Wu",
+          "Nengfu Xie",
+          "Jingchao Fan",
+          "Xiaolin Wang",
+          "Hailong Liu",
+          "Huoguo Zheng",
+          "Qian Xu",
+          "Zhibo Meng",
+          "Xin Wang",
+          "Qianjie Lv"
+        ]
+      },
+      {
+        "title": "Goal versus duty? Persuading seniors to use generative AI-enabled medical applications",
+        "slug": "goal-versus-duty-persuading-seniors-to-use-generative-ai",
+        "url": "https://www.semanticscholar.org/paper/d7cb4728ab6a94d1b185fb4e4699ca42667587a5",
+        "abstract": "Goal versus duty? Persuading seniors to use generative AI-enabled medical applications. Technovation",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-01",
+        "authors": [
+          "Changze Li",
+          "Yunkai Zhai",
+          "Jie Zhao",
+          "Mengran Xiong",
+          "Pan Gao",
+          "Tian Cheng",
+          "Yichuan Wang"
+        ]
+      },
+      {
+        "title": "Beyond single and earthbound: Exploring multi-image grounding in remote sensing with Large Vision-Language Models",
+        "slug": "beyond-single-and-earthbound-exploring-multi-image-grounding",
+        "url": "https://www.semanticscholar.org/paper/d69838030668fb3d55ab7061f620f21a10f5d884",
+        "abstract": "Beyond single and earthbound: Exploring multi-image grounding in remote sensing with Large Vision-Language Models. Isprs Journal of Photogrammetry and Remote Sensing",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-01",
+        "authors": [
+          "Xiao An",
+          "C. Zhong",
+          "Jiaxing Sun",
+          "Jun Liu",
+          "Wei He"
+        ]
+      }
+    ]
+  }
+}
