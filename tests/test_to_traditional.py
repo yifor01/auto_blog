@@ -119,6 +119,26 @@ class TestTaiwanTermMisconversion:
     def test_control_widget_not_mangled(self):
         assert to_traditional("控件") == "控制項"
 
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "該獎項每年吸引數百款產品參選",  # 語料實測 1 處；改壞成「吸參數百款」
+            "檢索引數量偏低需要調整",
+            "牽引數值需要重新校正",
+            "指引數量不足以支撐決策",
+            "援引數十篇論文佐證",  # 不用「數據」——那是 s2twp 詞庫的正常轉換，與本條無關
+        ],
+    )
+    def test_yinshu_fix_does_not_eat_verb_plus_yin(self, text):
+        """`引數→參數` 需要負向後顧：「動詞＋引」＋「數」會自然拼出 `引數`。
+
+        這條在 `_TERM_FIXES` 裡當定值替換時是靜默誤傷——2026-08-02 把
+        `repair-content` 擴到 output/posts 正文才第一次真的碰到它（在那之前
+        純繁體欄位被兩層守門擋著，這條規則從來沒套上去過）。
+        """
+        assert to_traditional(text) == text
+        assert to_traditional_shape_only(text) == text
+
     def test_correct_taiwan_terms_are_preserved(self):
         """修正表不能誤傷 s2twp 本來就轉對的詞。"""
         assert to_traditional("软件") == "軟體"
@@ -278,6 +298,60 @@ class TestVariantFixGateProtectsTraditional:
     def test_gate_lets_genuinely_simplified_through(self):
         """守門不能矯枉過正：整段簡體仍須完整轉換 + 套變體修正。"""
         assert to_traditional("更复杂的托盘设计") == "更複雜的托盤設計"
+
+
+class TestLayerBGateProtectsTraditional:
+    """Layer B 的逐段守門（2026-08-02）：只採納「原片段真的含簡體」的變更。
+
+    why：`to_traditional_shape_only()` 的 docstring 原本宣稱「s2tw 無詞庫，對繁體
+    輸入冪等」——**這句是錯的**。s2tw 仍帶 TWVariants 的一簡對多繁分歧規則，對
+    純繁體輸入照樣改寫：
+
+        「證明了透過實驗」→「證明瞭透過實驗」   ← LLM 生成的就是繁中，每天在壞
+
+    實測 2026-08-01 當天 23 篇裡 2 篇中招，全語料 `output/posts` + `output/blogs`
+    已有 47 個檔案被寫入 `證明瞭 / 說明瞭 / 表明瞭`。
+
+    守門用 difflib 對齊，逐 opcode 判「這段原文含不含簡體」。判準沿用既有的
+    `_is_simplified_char()`（含 `_NOT_SIMPLIFIED_EVIDENCE` 的干/托 例外）——
+    不可改用 `OpenCC("t2s")` 或 `OpenCC("s2t")` 直接判：`s2t('干') == '幹'`，
+    會讓「受到干擾」過門後被改成「受到幹擾」。
+    """
+
+    @pytest.mark.parametrize(
+        "traditional_text",
+        [
+            "PRISM2 的成功證明了多模態對話是關鍵",  # 證明了 → 證明瞭（171 處，最高頻）
+            "這個架構正是為了解決長上下文而生",  # 為了解 → 為瞭解
+            "這只是一個初步結果",  # 只是 → 隻是
+            "儀表板顯示訓練損失下降",  # 儀表板 → 儀錶板
+            "昂貴的定制晶片並非必要",  # 定制 → 定製
+            "目前的局限與未來方向",  # 局限 → 侷限
+            "預測分布的形狀相當集中",  # 分布 → 分佈
+            "資料污染檢測是必要步驟",  # 污染 → 汙染
+            "受到干擾的訊號需要濾波",  # 干擾 → 幹擾（守門字 `干` 的反例）
+        ],
+    )
+    def test_pure_traditional_input_is_untouched(self, traditional_text):
+        assert to_traditional_shape_only(traditional_text) == traditional_text
+
+    @pytest.mark.parametrize(
+        "simplified, expected",
+        [
+            ("这个应该转换", "這個應該轉換"),
+            ("干扰信号很强", "干擾信號很強"),  # 簡體 + 守門字共存，仍須轉
+            ("为了解决这个问题", "為了解決這個問題"),
+            ("应用于文档处理", "應用於文檔處理"),  # 無詞庫：文档→文檔，不是檔案
+        ],
+    )
+    def test_gate_lets_genuinely_simplified_through(self, simplified, expected):
+        """守門不能矯枉過正：Layer B 存在的理由就是擦掉 LLM 偶發吐出的簡體字。"""
+        assert to_traditional_shape_only(simplified) == expected
+
+    def test_layer_b_is_idempotent_on_its_own_output(self):
+        """跑兩次要等於跑一次——`backfill` 與 `--supplement` 每天會重讀重寫。"""
+        once = to_traditional_shape_only("这个模型证明了扩展法则依然成立")
+        assert to_traditional_shape_only(once) == once
 
 
 class TestOpenCCVersionGuard:

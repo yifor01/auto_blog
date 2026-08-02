@@ -32,6 +32,7 @@ from src.collectors.hf_papers import (
 from src.logger import get_logger
 from src.models import _LAYER_A_FIELDS, strip_media_tags
 from src.utils import (
+    _apply_term_fixes,
     _apply_variant_fixes,
     _is_simplified_char,
     normalize_url_light,
@@ -207,13 +208,41 @@ _TYPO_FIXES = {
     "係統論證": "系統論證",
     "係統電氣": "系統電氣",
     # ── 瞭 / 了 ──
-    # 一律右錨定：`瞭解`／`一目瞭然` 是正確台灣用法（語料 52 處），通用的
+    # 右錨定組：`瞭解`／`一目瞭然` 是正確台灣用法（語料 52 處），通用的
     # `指明瞭→指明了` 會弄壞「指明瞭解決方案」。
     "指明瞭靶子": "指明了靶子",
     "指明瞭方向": "指明了方向",
     "鮮明瞭：": "鮮明了：",
     "證明瞭向": "證明了向",
     "證明瞭三維": "證明了三維",
+    #
+    # 動詞白名單組（2026-08-02）：**刻意左錨定**，是上面「一律右錨定」的例外。
+    #
+    # why 這批不能右錨定：`證明瞭` 在語料有 40 處，右鄰字幾乎不重複
+    # （即/透/只/僅/其/在/利/該/無/落/連/「/空白/`/英數…），逐一右錨定要列 40 條，
+    # 而每漏一條就是永久落地的錯字。左錨定的安全性改由**動詞白名單本身**提供：
+    # 「證明 / 說明 / 展示」這類動詞後面接的只可能是助詞「了」。
+    #
+    # 驗收（照本表的既有方法，先改再看改了什麼）：這 9 條套遍
+    # data/raw + data/scored + output/{lists,posts,blogs}，命中 75 處、全部人工過目，
+    # 0 誤傷；未被涵蓋的 67 處 `瞭` 全部是合法的 `瞭解` / `一目瞭然` / `據瞭解`。
+    #
+    # ⚠️ 已知理論反例：「這證明瞭解程度不足」（證明＋瞭解程度）會被改成
+    # 「證明了解程度」。全語料 0 例，而同形狀的 `提出瞭解決方案`／`採用瞭解耦`
+    # 各 1 例**確實是錯字**（應為「提出了解決」「採用了解耦」）——兩者靠負向前瞻
+    # 也分不開，故取語料實證的那一側。日後若真的出現，收窄成右錨定即可。
+    #
+    # 成因見 `utils._gate_conversion`：s2tw 對繁體不冪等，把 LLM 寫的「證明了」
+    # 轉成「證明瞭」。守門已在生產端擋住，本組負責回補守門上線前的存量。
+    "證明瞭": "證明了",
+    "說明瞭": "說明了",
+    "展示瞭": "展示了",
+    "揭示瞭": "揭示了",
+    "定義瞭": "定義了",
+    "提出瞭": "提出了",
+    "採用瞭": "採用了",
+    "寫明瞭": "寫明了",
+    "為瞭": "為了",  # `為瞭` 在任何脈絡都不是詞，本條無歧義
     # ── 隻 / 只 ──
     # 一律**兩側**錨定。右錨定不夠：`一隻有毒的蜘蛛`／`一隻會飛的鳥`／`一隻是黑的`
     # 都合法；左錨定也不夠：`而是隻身前往` 合法。語料裡 `隻` 共 43 處，其中 30 處
@@ -392,6 +421,11 @@ def _clean_value(value: str, stats: dict) -> str:
     錯字修正排在**最後**且無守門：`_to_traditional_safe()` 只碰「含簡體字」的欄位，
     修不到純繁體欄位裡的既有錯字；而它自己在重跑時可能又把 `干預` 轉回 `幹預`，
     放在後面才能保證整條鏈的不動點唯一。
+
+    `_apply_term_fixes()`（2026-08-02 補上）同理。它在 `utils` 那邊宣稱「無守門、
+    兩層都套」，但 repair 這層走的是 `_to_traditional_safe()`，**含簡體才轉**的
+    守門把它一起遮蔽了——結果是純繁體欄位裡的 `引數` / `擴充套件` / `區域性` /
+    `繫結` 跑幾次 repair 都修不到（實測 output/posts 正文 657 處）。
     """
     unescaped = html.unescape(value)
     if unescaped != value:
@@ -405,7 +439,7 @@ def _clean_value(value: str, stats: dict) -> str:
     if converted != stripped:
         stats["simplified_converted"] += 1
 
-    fixed = _apply_typo_fixes(converted)
+    fixed = _apply_typo_fixes(_apply_term_fixes(converted))
     if fixed != converted:
         stats["typos_fixed"] += 1
 
@@ -653,24 +687,40 @@ def _repair_lists_file(
 
 
 def _repair_post_file(path: Path, stats: dict, dry_run: bool) -> None:
-    """只改 frontmatter 的 `title:` 行。
+    """frontmatter 的 `title:` 行走完整清洗；body 只做**定值錯字替換**。
 
-    body 一律不動：那是 LLM 生成內容，裡面的 `&amp;` 可能是字面意義、`<script>`
-    可能在程式碼區塊裡。檔名也不動——slug 是 Astro 頁面 id，改名會斷連結與
-    localStorage 已讀記錄。
+    why body 不走 `_clean_value()`：那是 LLM 生成內容，裡面的 `&amp;` 可能是字面
+    意義、`<script>` 可能在程式碼區塊裡，entity 解碼與媒體標記剝除都會改壞它。
+    簡→繁同理——程式碼區塊裡的字串不該被轉。
+
+    why body 仍要做錯字替換（2026-08-02 從「body 一律不動」放寬）：定值的
+    詞→詞替換沒有上述風險，而 body 正是錯字量最大的地方——實測 657 處
+    （`引數` 360 / `擴充套件` 215 / `區域性` 50 / `繫結` 32），而且**跑幾次
+    repair 都修不到**，因為它們只存在於純繁體正文裡，兩層守門都擋著。
+
+    檔名不動——slug 是 Astro 頁面 id，改名會斷連結與 localStorage 已讀記錄。
     """
     text = path.read_text(encoding="utf-8")
     fm = _FRONTMATTER_RE.match(text)
     if not fm:
         return
     # 在 frontmatter 區塊內找，但位移一律換算回全檔座標（切片時才不會錯位）
-    m = _TITLE_LINE_RE.search(text, fm.start(1), fm.end(1))
-    if not m:
+    # 切成 frontmatter / body 兩段各自處理；fm 的座標落在 head 內，仍然有效
+    head, body = text[: fm.end(0)], text[fm.end(0) :]
+
+    m = _TITLE_LINE_RE.search(head, fm.start(1), fm.end(1))
+    if m:
+        new_title, changed = _clean_field(m.group(1), stats)
+        if changed:
+            head = head[: m.start(1)] + new_title + head[m.end(1) :]
+
+    new_body = _apply_typo_fixes(_apply_term_fixes(body))
+    if new_body != body:
+        stats["typos_fixed"] += 1
+
+    if head + new_body == text or dry_run:
         return
-    new_title, changed = _clean_field(m.group(1), stats)
-    if not changed or dry_run:
-        return
-    path.write_text(text[: m.start(1)] + new_title + text[m.end(1) :], encoding="utf-8")
+    path.write_text(head + new_body, encoding="utf-8")
     stats["files_written"] += 1
 
 

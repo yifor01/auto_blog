@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import difflib
 import itertools
 import json
 import os
@@ -66,7 +67,7 @@ _opencc_unavailable = False
 # 需要守門的那類（OpenCC 挑錯繁體分支）在下面的 `_VARIANT_FIXES`，兩者請勿合併。
 _TERM_FIXES = {
     # ── s2twp 誤轉：轉了但選錯詞 ──
-    "引數": "參數",  # 参数 parameter
+    # `引數` 不列在這裡——它需要負向後顧，見 `_YINSHU_RE`。
     "擴充套件": "擴展",  # 扩展 extension
     "解除安裝": "卸載",  # 卸载 offload（非軟體 uninstall）
     "區域性": "局部",  # 局部 local / partial
@@ -80,7 +81,19 @@ _TERM_FIXES = {
 }
 
 
+# `参数`→`引數` 是 s2twp 的誤轉，但 `引數` 這兩個字也會由「動詞＋引」＋「數」
+# 自然拼出來，定值替換會把它改壞：
+#
+#     該獎項每年吸引數百款產品參選  →  每年吸參數百款   ← 語料實測 1 處
+#
+# 全語料掃過的安全前綴只有這五個（`索引數`／`牽引數`／`指引數`／`援引數` 目前
+# 0 例，一併擋住是因為它們與 `吸引數` 同構，出現只是時間問題）。
+# 這條沒有跟其他條目一起放進 `_TERM_FIXES`，是因為 `str.replace` 表達不了負向後顧。
+_YINSHU_RE = re.compile(r"(?<![吸牽指索援])引數")
+
+
 def _apply_term_fixes(text: str) -> str:
+    text = _YINSHU_RE.sub("參數", text)
     for wrong, right in _TERM_FIXES.items():
         text = text.replace(wrong, right)
     return text
@@ -90,7 +103,11 @@ def _apply_term_fixes(text: str) -> str:
 # 的證據。`干擾`/`干預`、`托盤`/`委托` 在台灣繁體是天天出現的正常用字，但
 # `s2tw('干') == '幹'`、`s2tw('托') == '託'`——把它們當簡體證據，等於讓一整個
 # 純繁體欄位過門，接著被詞組規則改壞。與 `repair.py` 共用同一份定義。
-_NOT_SIMPLIFIED_EVIDENCE = frozenset("干托")
+#
+# `污`（2026-08-02 追加）：`s2tw('污') == '汙'`。兩字皆通、教育部以「汙」為主，
+# 但 AI 語料裡「資料污染 / 上下文污染」是既有寫法，不該由轉換層代為統一。
+# 它同時是 Layer B 守門的判準，漏掉會讓純繁體句子被改成「資料汙染」。
+_NOT_SIMPLIFIED_EVIDENCE = frozenset("干托污")
 
 
 @lru_cache(maxsize=None)
@@ -103,12 +120,18 @@ def _is_simplified_char(ch: str) -> bool:
     繁體正文裡本來就大量出現；只有 `了` / `面` / `杆` / `只` 這類才是真的單字元
     不動、純靠詞組規則才被改寫。
 
-    OpenCC 不可用時 `to_traditional_shape_only()` 原樣回傳 → 一律判定為非簡體 →
-    變體修正整個退化成 no-op，這是刻意的安全降級。
+    OpenCC 不可用時一律判定為非簡體 → 變體修正與 Layer B 守門整個退化成 no-op，
+    這是刻意的安全降級。
+
+    why 直接用 `_opencc_shape_converter` 而不是 `to_traditional_shape_only()`：
+    後者自 2026-08-02 起會呼叫本函式做守門，走回去就是無限遞迴。單一字元不會
+    觸發 `_TERM_FIXES`（表裡沒有單字條目），兩者對單字元的結果等價。
     """
     if ch in _NOT_SIMPLIFIED_EVIDENCE:
         return False
-    return to_traditional_shape_only(ch) != ch
+    if not _init_opencc():
+        return False
+    return _opencc_shape_converter.convert(ch) != ch
 
 
 # ──────────────────────────────────────────────────────────
@@ -268,18 +291,51 @@ def to_traditional(text: str) -> str:
         return text
 
 
+def _gate_conversion(original: str, converted: str) -> str:
+    """逐段守門：只採納「原片段真的含簡體」的變更，其餘保留原文。
+
+    s2tw 沒有 TWPhrases 詞庫，但**仍帶 TWVariants 的一簡對多繁分歧規則**，這些
+    規則靠上下文挑分支，對純繁體輸入照樣改寫。全語料實測的高頻誤改：
+
+        證明了 → 證明瞭 (171)   儀表板 → 儀錶板 (25)   定制 → 定製 (14)
+        只是   → 隻是           局限   → 侷限 (30)     污染 → 汙染 (29)
+
+    守門判準沿用 `_is_simplified_char()`（含 `干`/`托` 的例外表）。**不可改用
+    `OpenCC("s2t")` 判**：`s2t('干') == '幹'`，「受到干擾」會過門後變「受到幹擾」。
+
+    insert opcode（原片段為空）一律否決——s2tw 是字元級對映，不該憑空長出字。
+    """
+    parts: list[str] = []
+    for tag, i1, i2, j1, j2 in difflib.SequenceMatcher(
+        None, original, converted, autojunk=False
+    ).get_opcodes():
+        seg = original[i1:i2]
+        if tag == "equal" or any(_is_simplified_char(c) for c in seg):
+            parts.append(converted[j1:j2])
+        else:
+            parts.append(seg)
+    return "".join(parts)
+
+
 def to_traditional_shape_only(text: str) -> str:
     """Layer B（生成端）：只修字形，不動詞彙。
 
     LLM 產出的內容本來就該是繁中，Layer B 存在只為擦掉免費 model 偶發吐出的
     簡體字（如 Agnes 的「应」）。若這裡也套 s2twp 的詞庫，會把 Layer A 已經
     轉好的繁體詞再轉一次——「文档」→（A）「文件」→（B）「檔案」，這正是
-    站上「最新程式庫檔案餵進 LLM」的來源。s2tw 無詞庫，對繁體輸入冪等。
+    站上「最新程式庫檔案餵進 LLM」的來源。
+
+    **s2tw 對繁體輸入並不冪等**（本 docstring 在 2026-08-02 前宣稱它冪等，是
+    錯的）——一簡對多繁的分歧規則會把「證明了」改成「證明瞭」。因此轉換結果
+    必須再過 `_gate_conversion()`，只放行原文真的含簡體的片段。
+
+    `_TERM_FIXES` 排在守門之後：它修的是「詞彙選錯」，無守門、兩層都套。
     """
     if not text or not _init_opencc():
         return text
     try:
-        return _apply_term_fixes(_opencc_shape_converter.convert(text))
+        converted = _opencc_shape_converter.convert(text)
+        return _apply_term_fixes(_gate_conversion(text, converted))
     except Exception as e:
         _logger.debug("to_traditional_shape_only failed", extra={"error": str(e)[:160]})
         return text

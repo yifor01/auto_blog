@@ -31,6 +31,18 @@ HN_UNSPACED = (
 )  # data/raw/2026-04-05.json — len 157, space_ratio 0.0191
 
 
+def _raw_s2tw(text: str) -> str:
+    """裸 OpenCC s2tw，**繞過 Layer B 的守門**。
+
+    只用在「前提斷言」——證明 OpenCC 本身真的會把這段繁體改壞，測試才不是空砲。
+    `to_traditional_shape_only()` 自 2026-08-02 起自帶逐段守門（`_gate_conversion`），
+    拿它當前提會恆為 no-op：那是 Layer B 修好了，不代表 repair 這層的守門可以拆。
+    """
+    from opencc import OpenCC
+
+    return OpenCC("s2tw").convert(text)
+
+
 def _write(path, obj):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(obj, ensure_ascii=False), encoding="utf-8")
@@ -738,10 +750,8 @@ def test_does_not_convert_already_traditional_text(repo, text):
     `里` / `干` / `托` 單字元就會變，不屬於這一類——見
     `test_traditional_gan_tuo_are_not_simplified_evidence`。
     """
-    from src.utils import to_traditional_shape_only
-
     # 前提：不擋的話這段真的會被改，否則本測試是空砲
-    assert to_traditional_shape_only(text) != text
+    assert _raw_s2tw(text) != text
 
     _write(repo / "data/raw/2026-07-27.json", [
         {"source": "rss", "source_name": "量子位", "title": text,
@@ -769,10 +779,8 @@ def test_traditional_gan_tuo_are_not_simplified_evidence(repo, text, wrong):
     欄位過門、接著被詞組規則改壞。實測 data/raw 有 11 個純繁體欄位唯一觸發條件
     就是這兩個字，落地結果是 `干預`→`幹預`、`托盤`→`託盤`、`安托`→`安託`，全錯。
     """
-    from src.utils import to_traditional_shape_only
-
     # 前提：這段真的是「不排除就會被改壞」，否則本測試是空砲
-    assert wrong in to_traditional_shape_only(text)
+    assert wrong in _raw_s2tw(text)
 
     _write(repo / "data/raw/2026-07-27.json", [
         {"source": "rss", "source_name": "量子位", "title": text,
@@ -1150,23 +1158,25 @@ def test_variant_fixes_only_applied_to_converted_fields(repo):
 
 
 def test_variant_fixes_run_after_convergence_end_to_end(repo):
-    """端到端：兩輪收斂造出 `託盤`，修正表在迴圈後把它修回 `托盤`。
+    """端到端：兩輪收斂會造出 `託盤`，修正表在迴圈後把它修回 `托盤`。
 
     這是生產環境真實機制的最小重現（data/raw/2026-04-05.json#12）：
     第一輪 `托盘`→`托盤`（對），但 `佣金` 的 `佣` 仍是 evidence，第二輪把已經
     是繁體的整段再餵一次 → `託盤`（錯），最後由修正表導回。
-    """
-    import src.repair as repair_mod
 
+    2026-08-02 起 Layer B 自帶逐段守門，第二輪不再漂移，這條漂移路徑在生產上
+    已經斷了。**修正表仍是必要的第二道防線**（歷史資料早就寫進 `託盤`），所以
+    前提改用裸 `_raw_s2tw` 重現舊路徑，主斷言仍驗 `repair_all` 的落地結果。
+    """
     dirty = "代理组/托盘图标，佣金"
-    # 前提：收斂後（套表前）確實是錯的，否則本測試測不到修正表
+    # 前提：不擋的話，兩輪收斂確實會造出錯誤的 `託盤`
     mid = dirty
     for _ in range(5):
-        nxt = repair_mod._convert_once(mid)
+        nxt = _raw_s2tw(mid)
         if nxt == mid:
             break
         mid = nxt
-    assert "託盤" in mid, "前提不成立：收斂後應該出現錯誤的 託盤"
+    assert "託盤" in mid, "前提不成立：裸 s2tw 收斂後應該出現錯誤的 託盤"
 
     _write(repo / "data/raw/2026-07-27.json", [
         {"source": "chatpaper", "source_name": "C", "title": dirty,
@@ -1237,6 +1247,16 @@ TYPO_CASES = [
     ("指明瞭靶子", "還是靠表面模式蒙對了？這為後續的訓練指明瞭靶子", "還是靠表面模式蒙對了？這為後續的訓練指明了靶子"),
     ("指明瞭方向", "也為產業智慧化、高階化發展指明瞭方向", "也為產業智慧化、高階化發展指明了方向"),
     ("鮮明瞭：", "它過去留給大家的印象太鮮明瞭：便宜", "它過去留給大家的印象太鮮明了：便宜"),
+    # 動詞白名單組（左錨定）——脈絡全部取自 output/posts 實際被 Layer B 寫壞的正文
+    ("證明瞭", "這項研究證明瞭「幾何先驗」的必要性", "這項研究證明了「幾何先驗」的必要性"),
+    ("說明瞭", "這份報告整體說明瞭一件事：規模仍有效", "這份報告整體說明了一件事：規模仍有效"),
+    ("展示瞭", "這篇教學展示瞭如何利用向量檢索", "這篇教學展示了如何利用向量檢索"),
+    ("揭示瞭", "技術文章揭示瞭如何透過快取降低成本", "技術文章揭示了如何透過快取降低成本"),
+    ("定義瞭", "這套工具集定義瞭如何將「代理」標準化", "這套工具集定義了如何將「代理」標準化"),
+    ("提出瞭", "`flash` 提出瞭解決方案，值得一試", "`flash` 提出了解決方案，值得一試"),
+    ("採用瞭", "RCD 採用瞭解耦的兩階段設計", "RCD 採用了解耦的兩階段設計"),
+    ("寫明瞭", "招生簡章直接寫明瞭物化生三科限制", "招生簡章直接寫明了物化生三科限制"),
+    ("為瞭", "這個架構正是為瞭解決長上下文而生", "這個架構正是為了解決長上下文而生"),
     ("證明瞭向", "Zeilinger院士特別指出:“團隊證明瞭向變分量子電路中注入",
      "Zeilinger院士特別指出:“團隊證明了向變分量子電路中注入"),
     ("證明瞭三維", "用127頁論文成功證明瞭三維情況下（n=3）的掛谷集猜想",
@@ -1353,7 +1373,9 @@ def test_every_typo_fix_entry_has_a_test():
     "在招崗位一併取消",                    # 一併 正確
     "這張表是關係統計資料的來源",          # 擋 係統化
     "難度係數拉滿了",                      # 係數 正確
-    "這份文件說明瞭解決方案的取捨",        # 擋 指明瞭／證明瞭（瞭解 正確）
+    # 2026-08-02 移除「這份文件說明瞭解決方案的取捨」：它要讀成「說明＋瞭解＋決方案」
+    # 才成立，而「決方案」不是詞——正確寫法本來就是「說明了解決方案」。全語料 8 處
+    # `說明瞭` 全部是「說明＋了」，0 處是「說明＋瞭解」，故收進 `_TYPO_FIXES`。
     "誰高誰低一目瞭然",                    # 一目瞭然 正確
     "讓使用者快速瞭解專案結構",
     "一隻會飛的鳥很罕見",                  # 擋 不是隻會
@@ -1458,7 +1480,10 @@ def test_typo_fixes_reach_all_four_writers(repo):
     assert lists["papers"]["others"][0]["title"] == fixed
     body = post.read_text(encoding="utf-8")
     assert f'title: "{fixed}"' in body
-    assert f"\n\n{text}\n" in body, "post body 不得被動到"
+    # 2026-08-02 起 post body 也做定值錯字替換（entity 解碼與簡→繁仍只限 title 行）。
+    # 原斷言是「body 不得被動到」——那讓 output/posts 正文的 657 處錯字跑幾次
+    # repair 都修不到，因為它們只存在於純繁體正文裡、兩層守門都擋著。
+    assert f"\n\n{fixed}\n" in body, "post body 的錯字也要修"
 
 
 def test_typo_fixes_counted_but_not_written_in_dry_run(repo):
