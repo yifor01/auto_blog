@@ -390,6 +390,59 @@ def repair_content(
         console.print(f"寫入 [bold]{stats['files_written']}[/bold] 個檔案")
 
 
+@app.command(name="opencc-candidates")
+def opencc_candidates(
+    days: int = typer.Option(7, "--days", "-n", help="掃最近 N 天"),
+    all_history: bool = typer.Option(False, "--all", help="掃全歷史（OpenCC 升版後用）"),
+    rebuild_groups: bool = typer.Option(
+        False, "--rebuild-groups", help="重建歧義組表（僅 OpenCC 升版時需要）"
+    ),
+):
+    """掃出簡→繁修正表的候選（零 LLM、純離線）。產出報告供人工審查，永不自動改表。"""
+    from src.opencc_candidates import (
+        GROUPS_PATH,
+        OpenCCVersionMismatch,
+        build_ambiguity_groups,
+        load_decisions,
+        render_report,
+        save_ambiguity_groups,
+        save_report,
+        scan,
+    )
+
+    if rebuild_groups:
+        doc = build_ambiguity_groups()
+        path = save_ambiguity_groups(doc)
+        console.print(
+            f"歧義組表已重建：[green]{len(doc['groups'])}[/green] 組 "
+            f"(OpenCC {doc['opencc_version']}) → {path}"
+        )
+        console.print(
+            "[yellow]提醒：字典換版代表既有 decisions.jsonl 整批需重審[/yellow]"
+        )
+        return
+
+    try:
+        result = scan(days=None if all_history else days)
+    except (FileNotFoundError, OpenCCVersionMismatch) as e:
+        console.print(f"[red]{e}[/red]")
+        raise typer.Exit(1)
+
+    decisions = load_decisions()
+    path = save_report(render_report(result, decisions))
+    console.print(
+        f"掃描 [bold]{result.days_scanned}[/bold] 天 / "
+        f"[bold]{result.items}[/bold] 筆 → "
+        f"[green]{len(result.candidates)}[/green] 個未裁決 pattern"
+        + (f"（另有 {len(result.suppressed)} 個已裁決被略過）" if result.suppressed else "")
+    )
+    console.print(f"報告：[bold]{path}[/bold]")
+    # 假陽性率實測 90–95%，這行是避免審查者把候選數當成錯字數。
+    console.print(
+        "[yellow]提醒：候選≠錯字。核准需 ≥2 篇不同文章 + 反例欄位 + 外部交叉核對[/yellow]"
+    )
+
+
 @app.command(name="analyze-scores")
 def analyze_scores(
     target_date: str = typer.Option(None, "--date", "-d", help="目標日期 (YYYY-MM-DD), 預設今天"),
