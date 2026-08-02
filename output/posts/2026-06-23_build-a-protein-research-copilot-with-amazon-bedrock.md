@@ -22,7 +22,7 @@ TL;DR：結合 Bedrock AgentCore 與 ESM-C 300M 嵌入模型，將複雜的蛋�
 該系統採用 tool-use 模式，由一個 Strands Agent 協調三個專門工具來處理完整的研究流程。其核心設計理念是維持部署簡單，同時確保關注點分離（separation of concerns）。
 
 當研究人員提交自然語言查詢時，流程如下：
-解析自然語言查詢 → 轉換為結構化引數 → 利用蛋白質 embedding 搜尋相似胜肽 → 結合科學背景總結結果。
+解析自然語言查詢 → 轉換為結構化參數 → 利用蛋白質 embedding 搜尋相似胜肽 → 結合科學背景總結結果。
 
 系統由以下五個關鍵元件構成：
 - **Strands Agents SDK**：負責協調單一 Agent 內的三個專門工具。
@@ -37,7 +37,7 @@ TL;DR：結合 Bedrock AgentCore 與 ESM-C 300M 嵌入模型，將複雜的蛋�
 
 🎯 **實務啟示**
 
-對於 AI 工程師而言，此案例展示瞭如何將「特定領域模型（ESM-C 300M）」與「代理框架（Bedrock AgentCore）」結合。關鍵在於將複雜的專業搜尋流程拆解為多個專門工具，再由一個 Orchestrator 負責排程，這能有效降低部署複雜度，同時提供直覺的自然語言操作介面。
+對於 AI 工程師而言，此案例展示了如何將「特定領域模型（ESM-C 300M）」與「代理框架（Bedrock AgentCore）」結合。關鍵在於將複雜的專業搜尋流程拆解為多個專門工具，再由一個 Orchestrator 負責排程，這能有效降低部署複雜度，同時提供直覺的自然語言操作介面。
 
 🔗 **來源**
 - 標題：Build a protein research copilot with Amazon Bedrock AgentCore

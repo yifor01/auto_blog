@@ -10,7 +10,7 @@ generated_at: '2026-07-16T08:12:26.514005'
 
 📌 【Soofi Consortium 開源】Soofi S 30B-A3B：德英雙語混合 Mamba-Transformer MoE 基礎模型
 
-TL;DR：開放德英 base model，31.6B 引數每 token 僅啟用 3.2B，開源基礎模型中雙語均分最高。
+TL;DR：開放德英 base model，31.6B 參數每 token 僅啟用 3.2B，開源基礎模型中雙語均分最高。
 
 當多數開源基礎模型仍由英語語料主導，一組德國研究聯盟直接發表了一個專為德語與英語設計、且號稱在完全開放 base model 中雙語總分最高的模型——而且它把 Mamba-2 與 MoE 塞進了同一個架構裡。
 
@@ -20,7 +20,7 @@ Soofi Consortium 發布了 Soofi S 30B-A3B 的預訓練報告，這是一個針�
 
 🧩 **52 層混合堆疊：Mamba-2、MoE 與少量 GQA**
 
-Soofi S 是一個 Mixture-of-Experts (MoE) 混合 Mamba Transformer 基礎模型，總引數約 31.6B，每個 token 啟用約 3.2B。網路共有 52 層，組成如下：
+Soofi S 是一個 Mixture-of-Experts (MoE) 混合 Mamba Transformer 基礎模型，總參數約 31.6B，每個 token 啟用約 3.2B。網路共有 52 層，組成如下：
 
 - 23 層 Mamba-2 sequence-mixing 層
 - 23 層 granular MoE 層

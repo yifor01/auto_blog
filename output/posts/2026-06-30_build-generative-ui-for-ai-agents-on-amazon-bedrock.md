@@ -25,7 +25,7 @@ Amazon Bedrock AgentCore 是一個用於安全、大規模構建與執行 AI Age
 - Agent2Agent (A2A)：連線 Agent 與其他 Agent。
 - AG-UI：連線 Agent 與使用者。
 
-當開發者部署帶有 AG-UI 標記的 Agent 容器時，AgentCore 會扮演透明代理 (transparent proxy) 的角色，負責處理身分驗證（透過 SigV4 或 Amazon Cognito 的 OAuth 2.0）、會話隔離 (session isolation)、擴充套件以及可觀測性。
+當開發者部署帶有 AG-UI 標記的 Agent 容器時，AgentCore 會扮演透明代理 (transparent proxy) 的角色，負責處理身分驗證（透過 SigV4 或 Amazon Cognito 的 OAuth 2.0）、會話隔離 (session isolation)、擴展以及可觀測性。
 
 💡 **實作路徑：從 FAST 模板到 CopilotKit**
 
@@ -37,7 +37,7 @@ Amazon Bedrock AgentCore 是一個用於安全、大規模構建與執行 AI Age
 
 🎯 **實務啟示**
 
-對於開發 AI Agent 的工程師而言，採用 AG-UI 這種標準化協定的核心價值在於「靈活性」。你不再需要為每一種前端框架撰寫專用的 API 對接邏輯，只要後端遵循 AG-UI 規範，即可在不同前端環境中實現一致的互動體驗，並利用 Bedrock AgentCore 處理繁瑣的基礎設施（如驗證與擴充套件）問題。
+對於開發 AI Agent 的工程師而言，採用 AG-UI 這種標準化協定的核心價值在於「靈活性」。你不再需要為每一種前端框架撰寫專用的 API 對接邏輯，只要後端遵循 AG-UI 規範，即可在不同前端環境中實現一致的互動體驗，並利用 Bedrock AgentCore 處理繁瑣的基礎設施（如驗證與擴展）問題。
 
 🔗 **來源**
 - 標題：Build generative UI for AI agents on Amazon Bedrock AgentCore with the AG-UI protocol

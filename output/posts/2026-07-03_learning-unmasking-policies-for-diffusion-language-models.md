@@ -21,7 +21,7 @@ TL;DR：提出用 RL 訓練輕量化 Policy，取代 Diffusion LLM 取樣時的�
 
 🧩 **將取樣過程形式化為馬可夫決策過程 (MDP)**
 
-為瞭解決上述問題，研究團隊提出不再依賴經驗法則，而是直接「訓練」一個取樣程式。其技術路徑如下：
+為了解決上述問題，研究團隊提出不再依賴經驗法則，而是直接「訓練」一個取樣程式。其技術路徑如下：
 1. **環境定義**：將 masked diffusion 的取樣過程定義為一個馬可夫決策過程 (MDP)，其中 dLLM 本身即作為環境 (environment)。
 2. **Policy 設計**：設計一個輕量化的策略模型，僅使用單層 Transformer。
 3. **運作流程**：該 Policy 接收 dLLM 輸出的 token 信心值 $\rightarrow$ 決定哪些 token 應該被去遮蔽 (unmasking decisions)。
@@ -35,7 +35,7 @@ TL;DR：提出用 RL 訓練輕量化 Policy，取代 Diffusion LLM 取樣時的�
 
 🎯 **實務啟示**
 
-對於開發 dLLM 的工程師而言，這項研究提供了一個將「取樣策略」從硬編碼的閾值轉向「可學習模型」的新方向。透過引入輕量化 Policy，可以減少對超引數調校的依賴，並在全擴散生成場景中獲得更好的效能。
+對於開發 dLLM 的工程師而言，這項研究提供了一個將「取樣策略」從硬編碼的閾值轉向「可學習模型」的新方向。透過引入輕量化 Policy，可以減少對超參數調校的依賴，並在全擴散生成場景中獲得更好的效能。
 
 🔗 **來源**
 - 標題：Learning Unmasking Policies for Diffusion Language Models

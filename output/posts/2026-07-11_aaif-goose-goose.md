@@ -24,9 +24,9 @@ Goose 採用 Rust 編寫，旨在提供高效能與良好的可移植性。它�
 
 這種多介面設計讓使用者可以根據習慣選擇最舒適的操作模式，無論是喜歡滑鼠操作的桌面使用者，還是偏好鍵盤快捷鍵的開發者都能上手。
 
-🔌 **廣泛的模型與擴充套件生態系**
+🔌 **廣泛的模型與擴展生態系**
 
-Goose 的核心優勢在於其靈活的後端支援與標準化的擴充套件協議：
+Goose 的核心優勢在於其靈活的後端支援與標準化的擴展協議：
 - **多供應商支援**：內建支援超過 15 個 AI 供應商，包括 Anthropic、OpenAI、Google、Ollama、OpenRouter、Azure、Bedrock 等。使用者可以使用 API keys，或是透過 ACP 連線現有的 Claude、ChatGPT 或 Gemini 訂閱方案。
 - **Model Context Protocol (MCP)**：Goose 透過 MCP 開放標準，連線超過 70 種擴充功能（Extensions）。這意味著它可以輕鬆存取外部工具、資料來源或服務，擴大了 Agent 的能力範圍。
 
@@ -36,7 +36,7 @@ Goose 屬於 Agentic AI Foundation (AAIF) 的一部分，而 AAIF 隸屬於 Linu
 
 🎯 **實務啟示**
 
-對於尋求將 AI Agent 整合到現有開發流程的工程師來說，Goose 提供了一個標準化的入口點。其對 MCP 的支援特別值得關注，因為這正在成為連線 LLM 與外部工具的關鍵標準。如果你需要在本機執行一個能切換多個模型、並能輕易擴充套件功能的 Agent，Goose 是一個值得評估的選擇。
+對於尋求將 AI Agent 整合到現有開發流程的工程師來說，Goose 提供了一個標準化的入口點。其對 MCP 的支援特別值得關注，因為這正在成為連線 LLM 與外部工具的關鍵標準。如果你需要在本機執行一個能切換多個模型、並能輕易擴展功能的 Agent，Goose 是一個值得評估的選擇。
 
 🔗 **來源**
 - 標題：aaif-goose/goose

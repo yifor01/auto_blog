@@ -47,7 +47,7 @@ Dialog-RSN-1 採取了一種折衷但高效的架構：它在輸入端是「音�
 
 🎯 **實務啟示**
 
-對於開發語音 AI 的工程師來說，Dialog-RSN-1 證明瞭「音訊感知輸入 + 獨立 TTS 輸出」可能是平衡「語氣理解」與「發音控制」與「計算成本」的最佳實踐路徑。
+對於開發語音 AI 的工程師來說，Dialog-RSN-1 證明了「音訊感知輸入 + 獨立 TTS 輸出」可能是平衡「語氣理解」與「發音控制」與「計算成本」的最佳實踐路徑。
 
 🔗 **來源**
 - 標題：PolyAI Releases Dialog-RSN-1: An Audio-Native Dialog Model That Fuses Turn-Taking, Speech Recognition, Function Calling, And Response

@@ -32,7 +32,7 @@ README 指出，目前已不建議使用 npm 進行安裝。根據作業系統�
 
 💡 **可擴充的外掛系統與回饋機制**
 
-為了強化功能，此專案提供了一系列外掛（Plugins），允許開發者透過自定義指令與代理（Agents）來擴充套件 Claude Code 的能力。
+為了強化功能，此專案提供了一系列外掛（Plugins），允許開發者透過自定義指令與代理（Agents）來擴展 Claude Code 的能力。
 
 此外，Anthropic 內建了直接的回饋路徑，使用者可以在工具內使用 `/bug` 指令直接回報問題，或透過 GitHub issue 與 Discord 社群進行交流。
 

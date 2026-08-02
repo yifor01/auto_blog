@@ -23,7 +23,7 @@ TL;DR：利用 Tunix 與 GRPO 框架，透過自定義獎勵函式與 LoRA 輕�
 為了讓訓練過程能執行在單一加速器（single-accelerator）環境中，該工作流採取了以下技術組合：
 
 - **GRPO (Group Relative Policy Optimization)**：透過群組取樣（group-sampled generations）來最佳化策略，讓模型在多個生成結果中學習更好的推理路徑。
-- **LoRA Adapters**：不更新模型全量引數，僅訓練 LoRA 介面卡權重，大幅降低記憶體需求。
+- **LoRA Adapters**：不更新模型全量參數，僅訓練 LoRA 介面卡權重，大幅降低記憶體需求。
 - **技術棧**：基於 JAX、Flax、Tunix 與 Qwix 構建，並利用 TensorFlow 處理部分資料，同時確保 TensorFlow 不會佔用加速器資源，將算力完全留給 JAX。
 
 📊 **多維度獎勵函式（Reward Functions）**
@@ -36,7 +36,7 @@ TL;DR：利用 Tunix 與 GRPO 框架，透過自定義獎勵函式與 LoRA 輕�
 
 🎯 **實務啟示**
 
-對於希望在有限算力下提升模型推理能力的工程師，這套流程提供了兩個關鍵啟示：首先，透過「格式獎勵」與「正確性獎勵」的組合，可以有效引導模型產生結構化思考；其次，GRPO 搭配 LoRA 的組合證明瞭在單一 GPU/TPU 上執行強化學習（RL）的可行性，無需龐大的運算叢集即可最佳化特定任務的推理邏輯。
+對於希望在有限算力下提升模型推理能力的工程師，這套流程提供了兩個關鍵啟示：首先，透過「格式獎勵」與「正確性獎勵」的組合，可以有效引導模型產生結構化思考；其次，GRPO 搭配 LoRA 的組合證明了在單一 GPU/TPU 上執行強化學習（RL）的可行性，無需龐大的運算叢集即可最佳化特定任務的推理邏輯。
 
 🔗 **來源**
 - 標題：Training Gemma-3 for Structured Mathematical Reasoning with Tunix GRPO, LoRA Adapters, and GSM8K Rewards

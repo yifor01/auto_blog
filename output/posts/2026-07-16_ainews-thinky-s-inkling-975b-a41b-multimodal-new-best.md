@@ -18,15 +18,15 @@ TL;DR：Thinking Machines 推出開放權重多模態 MoE 模型 Inkling，主�
 
 根據 Latent Space 的 AINews 整理，Thinking Machines Lab 發表了 Inkling，這不是一個追求 state-of-the-art 的旗艦模型，而是一個定位為「可客製化多模態基底模型」的開放權重（open-weights）家族。Mira Murati 稱其為公司「第一個從零訓練、開放權重的模型」，並在自家 Tinker 平臺提供同日 fine-tuning。
 
-🧩 **975B 總引數、41B 活躍的 MoE 多模態架構**
+🧩 **975B 總參數、41B 活躍的 MoE 多模態架構**
 
 README 性質的報導指出，Inkling 是一個 Mixture-of-Experts (MoE) transformer，技術規格如下：
-- 總引數 975B，活躍引數 41B（標記為 975B-A41B）
+- 總參數 975B，活躍參數 41B（標記為 975B-A41B）
 - 支援最多 1M tokens 的上下文視窗
 - 預訓練語料達 45 trillion tokens，涵蓋文字、圖片、音訊與影片
 - 原生支援文字、圖片、音訊推理，並透過可控制的 thinking effort 平衡成本與效能
 
-同家族也預覽了較輕量的 Inkling-Small：活躍引數 12B（276B-A12B），使用類似訓練配方，主打更低成本與延遲下的強效能。
+同家族也預覽了較輕量的 Inkling-Small：活躍參數 12B（276B-A12B），使用類似訓練配方，主打更低成本與延遲下的強效能。
 
 🎯 **開放權重與同日微調，對工程師的實際意義**
 

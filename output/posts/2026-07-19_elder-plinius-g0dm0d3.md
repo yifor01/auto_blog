@@ -26,7 +26,7 @@ README 列出幾項關鍵架構與功能設計：
 - ULTRAPLINIAN：跨 5 個層級（12–60 個 OpenRouter 模型）的多模型評估引擎，採複合評分（composite scoring）。
 - 本機模型：可透過 Ollama、LM Studio、llama.cpp 或 vLLM 在本機硬體跑 ULTRAPLINIAN。
 - Parseltongue：輸入擾動引擎，含 3 個強度層級、共 33 種紅隊技術。
-- AutoTune：針對 20 種查詢情境的自適應取樣引數引擎。
+- AutoTune：針對 20 種查詢情境的自適應取樣參數引擎。
 - 隱私控制：預設僅收集 metadata 等級的應用遙測，可切到 No-Log 或 Local-only 模式關閉。
 - 本機歷史：對話與設定儲存在本機（README 片段至此截斷）。
 

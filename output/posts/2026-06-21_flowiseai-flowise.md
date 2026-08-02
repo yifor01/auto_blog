@@ -9,7 +9,7 @@ generated_at: '2026-06-21T19:50:03.933570'
 
 📌 【開源專案】Flowise：透過視覺化介面快速建置 AI Agents
 
-TL;DR：一個讓開發者能以視覺化方式建置 AI Agents 的開源工具，支援自定義部署與模組化擴充套件。
+TL;DR：一個讓開發者能以視覺化方式建置 AI Agents 的開源工具，支援自定義部署與模組化擴展。
 
 想要建置 AI Agent 但不想在繁瑣的程式碼中定義每個流程？Flowise 提供了一種直觀的視覺化方法，讓 AI 代理的建置過程從撰寫程式碼轉向視覺化組裝。
 
@@ -28,7 +28,7 @@ Flowise 在技術實作上採用單一儲存庫 (mono repository) 管理，將�
 
 - 直接安裝：只要 Node.js 版本在 20.0.0 以上，可透過 `npm install -g flowise` 安裝後直接執行 `npx flowise start`。
 - Docker 部署：支援 Docker Compose 一鍵啟動，或直接使用 Docker Image 進行本地建置與執行。
-- 自主託管：除了雲端版本 (Flowise Cloud)，專案也詳細說明瞭 Self Host 的部署流程。
+- 自主託管：除了雲端版本 (Flowise Cloud)，專案也詳細說明了 Self Host 的部署流程。
 
 👨‍💻 **開發者整合與建置指南**
 

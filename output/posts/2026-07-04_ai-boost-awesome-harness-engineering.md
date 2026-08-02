@@ -25,7 +25,7 @@ TL;DR：專注於 Agent 外圍支架（Scaffolding）的資源清單，定義如
 
 - **執行與規劃**：涵蓋 Agent Loop、任務分解（Task Decomposition）以及任務執行器與編排（Task Runners & Orchestration）。
 - **資料與記憶**：包含上下文傳遞與壓縮（Context Delivery & Compaction）、記憶體與狀態管理（Memory & State）。
-- **能力擴充套件**：聚焦於工具設計（Tool Design）、技能開發以及 MCP（Model Context Protocol）。
+- **能力擴展**：聚焦於工具設計（Tool Design）、技能開發以及 MCP（Model Context Protocol）。
 - **安全與驗證**：包含許可權與授權（Permissions & Authorization）、沙盒環境、驗證與 CI 整合（Verification & CI Integration）。
 - **開發者體驗**：提供可觀測性與追蹤（Observability & Tracing）、除錯（Debugging）以及人機協作（Human-in-the-Loop）的實作方式。
 

@@ -33,7 +33,7 @@ Astryx 在設計 API、檔案與 CLI 時，特別考慮到了現代的開發模�
 
 🎯 **實務啟示**
 
-對於需要建構大規模、高度可擴充套件 UI 的團隊，Astryx 提供了一個極佳的參考範本：如何在高一致性（Design System）與高靈活性（Swizzle/CSS Overrides）之間取得平衡，並在設計之初就將 AI 自動化開發納入考量。
+對於需要建構大規模、高度可擴展 UI 的團隊，Astryx 提供了一個極佳的參考範本：如何在高一致性（Design System）與高靈活性（Swizzle/CSS Overrides）之間取得平衡，並在設計之初就將 AI 自動化開發納入考量。
 
 🔗 **來源**
 - 標題：facebook/astryx

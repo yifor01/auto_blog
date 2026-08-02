@@ -22,7 +22,7 @@ TL;DR：Cisco 發布 Antares 系列 SLM，透過結合 CWE 描述與終端機指
 
 Cisco 釋出的 Antares 是一系列專為「漏洞定位（Vulnerability Localization）」任務設計的安全小語言模型（SLM）。其核心目標是：給定一個漏洞描述與一個程式碼庫，找出包含該缺陷的檔案。
 
-*   **模型規格**：包含 350M、1B 及 3B 引數的三種 decoder-only transformer 架構。
+*   **模型規格**：包含 350M、1B 及 3B 參數的三種 decoder-only transformer 架構。
 *   **技術底層**：皆從 IBM Granite 4.0 檢查點（checkpoints）初始化，並共享相同的 tokenizer 與架構，包含 grouped-query attention、SwiGLU MLPs、RMSNorm 與 RoPE。
 *   **運作機制**：模型並非作為獨立的序列模型評估，而是在受限的迴圈中執行。模型僅接收 CWE 類別描述，不提供公告文本或檔案提示，並透過 Docker 沙盒（停用網路）發出唯讀的終端機指令，指令輸出會截斷至 2,000 字元。
 

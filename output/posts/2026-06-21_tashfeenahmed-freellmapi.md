@@ -27,7 +27,7 @@ FreeLLMAPI 的核心設計在於將複雜的後端聚合在一個 `/v1/chat/comp
 - 額度追蹤：追蹤每個 API Key 的使用量，確保使用量維持在各家免費層級的上限內。
 - 安全儲存：所有 API Key 均以加密方式儲存。
 
-🛠️ **支援的提供者與擴充套件性**
+🛠️ **支援的提供者與擴展性**
 
 該專案目前支援 16 家免費提供者，包括：
 Google, Groq, Cerebras, NVIDIA, Mistral, OpenRouter, GitHub Models, Cohere, Cloudflare, HuggingFace, Z.ai (Zhipu), Ollama, Kilo, Pollinations, LLM7, OVH AI Endpoints 與 OpenCode Zen。

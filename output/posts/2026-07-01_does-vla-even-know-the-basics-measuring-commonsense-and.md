@@ -26,7 +26,7 @@ TL;DR：新提出的 Act2Answer 評估協議，要求 VLA 模型透過物理動�
 
 🎯 **實務啟示**
 
-對於開發 Embodied AI 的工程師而言，這提醒我們在評估 VLA 模型時，不能僅依賴成功率（Success Rate）這類表層指標。透過設計如 Act2Answer 這種將「知識檢索」與「物理動作」繫結的測試，能更精準地診斷模型是「真的懂常識」還是僅僅是「模仿動作序列」。
+對於開發 Embodied AI 的工程師而言，這提醒我們在評估 VLA 模型時，不能僅依賴成功率（Success Rate）這類表層指標。透過設計如 Act2Answer 這種將「知識檢索」與「物理動作」綁定的測試，能更精準地診斷模型是「真的懂常識」還是僅僅是「模仿動作序列」。
 
 🔗 **來源**
 - 標題：Does VLA Even Know the Basics? Measuring Commonsense and World Knowledge Retention in Vision-Language-Action Models

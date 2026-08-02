@@ -32,7 +32,7 @@ BlockPilot 提出了一種「例項自適應策略學習」(Instance-Adaptive Po
 
 🎯 **實務啟示**
 
-對於部署 Diffusion 模型的工程師而言，這項研究證明瞭「預測預測長度」比「設定固定長度」更有效率。在實作推論最佳化時，可以考慮將 prefilling 的特徵作為輸入，來動態調整投機解碼的引數，而非採取一刀切的設定。
+對於部署 Diffusion 模型的工程師而言，這項研究證明了「預測預測長度」比「設定固定長度」更有效率。在實作推論最佳化時，可以考慮將 prefilling 的特徵作為輸入，來動態調整投機解碼的參數，而非採取一刀切的設定。
 
 🔗 **來源**
 - 標題：BlockPilot: Instance-Adaptive Policy Learning for Diffusion-based Speculative Decoding

@@ -26,11 +26,11 @@ Open WebUI 的設計核心在於其高度的靈活性，允許開發者自由組
 - 快速安裝：可透過 pip 或 uv 直接安裝。
 - 容器化部署：支援 Docker（提供 :ollama 與 :cuda 標記的映像檔）以及 Kubernetes（支援 kubectl, kustomize 或 helm）。
 
-🔐 **企業級的許可權管理與擴充套件能力**
+🔐 **企業級的許可權管理與擴展能力**
 
 為了滿足組織內部的管理需求，該專案不僅僅是一個對話視窗，還包含了：
 - 細粒度 RBAC：管理員可以定義詳細的角色 (Roles)、群組 (Groups) 與許可權，確保使用者僅能存取其所需的資源。
-- 外掛系統：透過 Filters、Actions、Pipes、Tools 與 Skills 擴充套件功能。
+- 外掛系統：透過 Filters、Actions、Pipes、Tools 與 Skills 擴展功能。
 - 外部服務連線：支援透過 MCP、MCPO 以及 OpenAPI tool servers 連線外部服務，可用於建立自定義整合、速率限制 (rate limits)、審核流程或資料連線。
 
 🎯 **實務啟示**

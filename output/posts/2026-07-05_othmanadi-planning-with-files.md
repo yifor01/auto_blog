@@ -30,12 +30,12 @@ TL;DR：透過在磁碟維護規劃檔案，讓 AI 編碼 Agent 能在崩潰或 
 - **自主與閘門模式 (Autonomous and Gated modes)**：提供可選擇開啟的執行選項。
 - **完成閘門 (Completion gate)**：這是一個關鍵機制，會將 Agent 攔截並持有，直到計畫真正完成為止，防止 Agent 在任務未完時提前結束。
 
-🧩 **標準化整合與社群擴充套件**
+🧩 **標準化整合與社群擴展**
 
-該專案透過 `SKILL.md` 標準，可安裝於超過 60 種不同的 Agent 中。由於其設計靈活性，社群已衍生出多種擴充套件版本：
+該專案透過 `SKILL.md` 標準，可安裝於超過 60 種不同的 Agent 中。由於其設計靈活性，社群已衍生出多種擴展版本：
 
 - **工作流最佳化**：如 `devis` 引入面試優先 (Interview-first) 的工作流。
-- **能力擴充套件**：`multi-manus-planning` 增加多專案支援與 Git 同步；`plan-cascade` 實現多層級任務編排與平行執行。
+- **能力擴展**：`multi-manus-planning` 增加多專案支援與 Git 同步；`plan-cascade` 實現多層級任務編排與平行執行。
 - **特定場景**：`agentfund-skill` 嘗試將里程碑託管引入 Agent 募資；`openclaw-github-repo-commander` 則將其用於七階段的 GitHub 倉庫審計與清理。
 
 🎯 **實務啟示**

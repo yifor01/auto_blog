@@ -24,7 +24,7 @@ Agentic RAG 讓語言模型能迭代式推理、產生搜尋查詢、檢索證�
 - keyword search（關鍵字搜尋）
 - paragraph-reading（段落閱讀）
 
-Agent 可檢索句子層級（sentence-level）證據，並僅在必要時擴充套件更多上下文。訓練時使用的 reward 同時考量四項：answer accuracy（答案正確性）、grounded reading（有根據的閱讀）、complementary search（互補搜尋）、turn efficiency（回合效率）。
+Agent 可檢索句子層級（sentence-level）證據，並僅在必要時擴展更多上下文。訓練時使用的 reward 同時考量四項：answer accuracy（答案正確性）、grounded reading（有根據的閱讀）、complementary search（互補搜尋）、turn efficiency（回合效率）。
 
 📊 **多跳推理基準上的表現提升**
 
@@ -35,7 +35,7 @@ Agent 可檢索句子層級（sentence-level）證據，並僅在必要時擴充
 
 📊 **學到的策略具可解釋的略讀與掃描行為**
 
-定性分析與消融研究（qualitative and ablation analyses）顯示，學到的 policy 發展出可解釋的 skimming 與 scanning 行為：用 semantic search 做廣泛探索、paragraph reading 做區域性驗證、keyword search 找特定實體證據。這顯示學會協調檢索訊號與上下文粒度，對 agent 正確推理相當關鍵。
+定性分析與消融研究（qualitative and ablation analyses）顯示，學到的 policy 發展出可解釋的 skimming 與 scanning 行為：用 semantic search 做廣泛探索、paragraph reading 做局部驗證、keyword search 找特定實體證據。這顯示學會協調檢索訊號與上下文粒度，對 agent 正確推理相當關鍵。
 
 🎯 **實務啟示**
 

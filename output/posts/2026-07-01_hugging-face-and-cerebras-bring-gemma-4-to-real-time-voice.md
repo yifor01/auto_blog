@@ -17,7 +17,7 @@ TL;DR：結合開放式語音堆疊與 Cerebras 超高速推論，Gemma 4 讓�
 
 1. **語音輸入** →  
 2. **語音辨識**：使用 Nvidia 的 Parakeet 轉成文字  
-3. **語言模型推論**：將文字送入 Google DeepMind 研發的 Gemma 4（31 B 引數）在 Cerebras 硬體上執行  
+3. **語言模型推論**：將文字送入 Google DeepMind 研發的 Gemma 4（31 B 參數）在 Cerebras 硬體上執行  
 4. **文字轉語音**：採用阿里巴巴的 Qwen‑3 TTS 產生回應語音  
 5. **語音回覆**：即時播放給使用者  
 
@@ -29,7 +29,7 @@ TL;DR：結合開放式語音堆疊與 Cerebras 超高速推論，Gemma 4 讓�
 
 ⚙️ **Cerebras 與 Hugging Face 的合作亮點**
 
-- **即時推論**：Cerebras 的 ASIC 設計讓 31 B 引數的 Gemma 4 能在毫秒級完成一次前向傳播。  
+- **即時推論**：Cerebras 的 ASIC 設計讓 31 B 參數的 Gemma 4 能在毫秒級完成一次前向傳播。  
 - **全開放堆疊**：從語音辨識到 TTS 的每個元件皆公開，開發者可自行審核或替換。  
 - **跨平臺整合**：結合 Nvidia、Google DeepMind、Alibaba 等生態系資源，展示了多方合作的可行性。
 

@@ -17,7 +17,7 @@ TL;DR：透過 llama.cpp 與 Pi 結合，可在消費級硬體上執行 Mythos �
 
 🧩 **Qwythos 模型：輕量化且具備長文本處理能力**
 
-Qwythos-9B-Claude-Mythos-5-1M 是一個基於 Qwen3.5 架構開發的 9B（90 億引數）推理與程式碼模型。其設計核心在於：
+Qwythos-9B-Claude-Mythos-5-1M 是一個基於 Qwen3.5 架構開發的 9B（90 億參數）推理與程式碼模型。其設計核心在於：
 - 針對本地開發流程、Agentic development（代理開發）以及長文本（long-context）任務進行最佳化。
 - 模型規模適中，足以在消費級硬體上執行，同時能勝任實際的程式碼開發任務。
 

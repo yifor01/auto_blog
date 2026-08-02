@@ -16,7 +16,7 @@ TL;DR：Google 推出 LiteRT.js，把原生推理執行環境搬進瀏覽器，�
 
 🤔 **從 TensorFlow Lite 改名而來的在地推理庫**
 
-LiteRT 是 Google 的裝置端（on-device）推理函式庫，前身就是 TensorFlow Lite。這次推出的 LiteRT.js 是它的 JavaScript 繫結（binding），能直接在瀏覽器內執行 .tflite 模型。推理全程留在本地端，Google 指出這帶來更好的使用者隱私、零伺服器成本，以及極低延遲。
+LiteRT 是 Google 的裝置端（on-device）推理函式庫，前身就是 TensorFlow Lite。這次推出的 LiteRT.js 是它的 JavaScript 綁定（binding），能直接在瀏覽器內執行 .tflite 模型。推理全程留在本地端，Google 指出這帶來更好的使用者隱私、零伺服器成本，以及極低延遲。
 
 🧩 **不是新格式，而是把原生 runtime 編譯成 Wasm**
 

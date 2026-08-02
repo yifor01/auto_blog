@@ -27,7 +27,7 @@ BioNeMo Agent Toolkit 是一個開源儲存庫，其核心理念是將生物模�
    - 底層由 cuEquivariance（針對結構模型）與 Parabricks（針對基因組學）等函式庫進行效能加速。
 
 2. **Agent 準備介面 (Agent-ready Interfaces)**
-   - **BioNeMo Skills**：為每個能力建立封裝，明確定義模型的用途、必要輸入、選用引數、預期產出以及失敗模式。
+   - **BioNeMo Skills**：為每個能力建立封裝，明確定義模型的用途、必要輸入、選用參數、預期產出以及失敗模式。
    - **MCP 伺服器封裝**：針對尚未封裝成 NIM 的開放模型，使用 Model Context Protocol (MCP) 伺服器進行封裝。
    - 這讓 Agent 能自主地發現、選擇、呼叫並解析生物分子模型的結果。
 
@@ -42,7 +42,7 @@ RFdiffusion $\rightarrow$ ProteinMPNN $\rightarrow$ OpenFold3
 
 🎯 **實務啟示**
 
-對於 AI 工程師而言，這套工具集定義瞭如何將「專業領域模型」轉化為「Agent 技能」的標準化路徑：定義明確的輸入輸出 $\rightarrow$ 描述失敗模式 $\rightarrow$ 封裝為可呼叫服務 $\rightarrow$ 組合成工作流。這種模式可以被遷移到其他需要高度專業領域知識的 AI Agent 應用場景中。
+對於 AI 工程師而言，這套工具集定義了如何將「專業領域模型」轉化為「Agent 技能」的標準化路徑：定義明確的輸入輸出 $\rightarrow$ 描述失敗模式 $\rightarrow$ 封裝為可呼叫服務 $\rightarrow$ 組合成工作流。這種模式可以被遷移到其他需要高度專業領域知識的 AI Agent 應用場景中。
 
 🔗 **來源**
 - 標題：NVIDIA BioNeMo Agent Toolkit Turns Biomolecular Models Into Callable Skills for AI Agents in Drug Discovery

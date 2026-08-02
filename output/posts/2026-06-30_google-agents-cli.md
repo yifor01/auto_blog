@@ -15,7 +15,7 @@ TL;DR：透過為 Coding Agent 注入專屬技能，簡化在 Gemini Enterprise 
 
 🧩 **將開發能力「注入」給 Coding Agent**
 
-`agents-cli` 並非傳統意義上的開發工具，而是一套為 Coding Agent 設計的指令與技能集。它讓 AI 助手（如 Antigravity CLI、Claude Code 或 Codex）能夠直接掌握建構、擴充套件、治理與最佳化企業級代理（Enterprise-grade agents）的能力，開發者不再需要記憶所有複雜的 CLI 指令或服務細節。
+`agents-cli` 並非傳統意義上的開發工具，而是一套為 Coding Agent 設計的指令與技能集。它讓 AI 助手（如 Antigravity CLI、Claude Code 或 Codex）能夠直接掌握建構、擴展、治理與最佳化企業級代理（Enterprise-grade agents）的能力，開發者不再需要記憶所有複雜的 CLI 指令或服務細節。
 
 🧩 **四大核心技能模組**
 

@@ -11,11 +11,11 @@ generated_at: '2026-07-05T19:30:03.823760'
 
 TL;DR：提供一套 Python SDK，讓開發者專注於 Agent 行為設計，而非底層執行邏輯。
 
-開發 AI Agent 時，最令人頭痛的往往不是定義 Agent 要做什麼，而是如何處理狀態管理、建立可擴充套件的基礎設施以及管理複雜的 Agentic Loop。Google 這次推出的 Antigravity SDK 正是為了簡化這套流程。
+開發 AI Agent 時，最令人頭痛的往往不是定義 Agent 要做什麼，而是如何處理狀態管理、建立可擴展的基礎設施以及管理複雜的 Agentic Loop。Google 這次推出的 Antigravity SDK 正是為了簡化這套流程。
 
 🧩 **將執行基礎設施抽象化，專注於 Agent 行為**
 
-Antigravity SDK 是一個專為 Antigravity 與 Gemini 設計的 Python SDK。其核心理念是提供一個安全、可擴充套件且具備狀態（stateful）的基礎設施層。
+Antigravity SDK 是一個專為 Antigravity 與 Gemini 設計的 Python SDK。其核心理念是提供一個安全、可擴展且具備狀態（stateful）的基礎設施層。
 
 透過將「Agent 如何執行」的複雜度進行抽象化，開發者不再需要從零開始建構 Agentic Loop，而能將開發重心轉移到「Agent 應該執行什麼任務」的邏輯設計上。
 
@@ -31,7 +31,7 @@ Antigravity SDK 是一個專為 Antigravity 與 Gemini 設計的 Python SDK。�
 
 💡 **整合 Gemini Enterprise Agent Platform (原 Vertex AI)**
 
-對於企業級使用者，該 SDK 支援與 Gemini Enterprise Agent Platform（原 Vertex AI）整合。開發者只需在 `LocalAgentConfig` 中將 `vertex` 引數設為 `True`，並指定 GCP 專案與位置即可。
+對於企業級使用者，該 SDK 支援與 Gemini Enterprise Agent Platform（原 Vertex AI）整合。開發者只需在 `LocalAgentConfig` 中將 `vertex` 參數設為 `True`，並指定 GCP 專案與位置即可。
 
 **實作範例：**
 ```python

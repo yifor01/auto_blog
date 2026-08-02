@@ -10,19 +10,19 @@ generated_at: '2026-07-17T08:10:56.936305'
 
 📌 【Moonshot AI】Kimi K3 2.8T-A50B：號稱史上最大開放權重模型
 
-TL;DR：Kimi K3 以 2.8T 引數、百萬上下文亮相，定位前沿級開放模型但體驗仍落後頂級閉源。
+TL;DR：Kimi K3 以 2.8T 參數、百萬上下文亮相，定位前沿級開放模型但體驗仍落後頂級閉源。
 
-當大家還在討論 Z.ai GLM 的聲量，Moonshot AI 直接把開放權重模型的引數規模拉到了一個新量級：2.8T。這不只是數字競賽，而是試圖把「開源」與「前沿級能力」的界線再往前推。
+當大家還在討論 Z.ai GLM 的聲量，Moonshot AI 直接把開放權重模型的參數規模拉到了一個新量級：2.8T。這不只是數字競賽，而是試圖把「開源」與「前沿級能力」的界線再往前推。
 
 🤔 **從 K2.5 到 K3 的跳躍，規模就是重點**
 
-根據 Latent Space 的 AINews 整理，Moonshot AI 正式發表 Kimi K3，官方將其定位為「Open Frontier Intelligence（開放前沿智慧）」。在正式公告前，已有多個帳號流出或從 App 端挖出資訊，指出 K3 為 2.8T 引數，若權重如期釋出，將是史上最大的開放權重模型。
+根據 Latent Space 的 AINews 整理，Moonshot AI 正式發表 Kimi K3，官方將其定位為「Open Frontier Intelligence（開放前沿智慧）」。在正式公告前，已有多個帳號流出或從 App 端挖出資訊，指出 K3 為 2.8T 參數，若權重如期釋出，將是史上最大的開放權重模型。
 
 🧩 **官方列出的架構與產品設計重點**
 
 Moonshot 官方介紹中提及 Kimi K3 的主要規格與設計：
 
-- 總引數量 2.8T，並具備 1M-token 上下文
+- 總參數量 2.8T，並具備 1M-token 上下文
 - 原生多模態輸入（native multimodal input）
 - 採用 Kimi Delta Attention (KDA) 與 Attention Residuals
 - 已在 Kimi.com、Kimi Work、Kimi Code 與 API 上線，開放權重預計於 2026 年 7 月 27 日釋出

@@ -28,7 +28,7 @@ TL;DR：提出一種遮罩離散擴散模型，透過最佳化 token 精煉與�
 
 🎯 **實務啟示**
 
-對於開發影像生成模型的工程師而言，這項研究提供了一個方向：在離散擴散路徑上，透過強化 token 的精煉機制而非單純增加引數，可能是在維持訓練效率的同時，提升高解析度合成品質的有效手段。
+對於開發影像生成模型的工程師而言，這項研究提供了一個方向：在離散擴散路徑上，透過強化 token 的精煉機制而非單純增加參數，可能是在維持訓練效率的同時，提升高解析度合成品質的有效手段。
 
 🔗 **來源**
 - 標題：Nemotron-Labs-Diffusion-Image: Advancing Masked Discrete Diffusion for High-Resolution Image Synthesis

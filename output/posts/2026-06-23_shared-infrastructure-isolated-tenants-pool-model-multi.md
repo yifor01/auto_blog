@@ -8,7 +8,7 @@ model: google/gemma-4-31b-it:free
 generated_at: '2026-06-23T20:31:38.472150'
 ---
 
-📌 【AWS 技術分享】用 Amazon Bedrock AgentCore 打造隔離且可擴充套件的多租戶 AI 應用
+📌 【AWS 技術分享】用 Amazon Bedrock AgentCore 打造隔離且可擴展的多租戶 AI 應用
 
 TL;DR：透過 Tier → Tenant → User 三層架構，在共用基礎設施上實現租戶間的資料隔離與成本追蹤。
 

@@ -26,7 +26,7 @@ TL;DR：Microsoft 推出開源治理工具包，透過政策執行、身分識�
 *   **Identity（身分識別）**：為每個 Agent 分配獨立且可追溯的身分，即使在共享基礎設施的情況下也能精確定位。
 *   **Sandboxing（沙盒隔離）**：限制 Agent 的操作範圍，降低潛在風險對主系統的衝擊。
 *   **SRE（Site Reliability Engineering）**：結合可靠工程實踐，確保 Agent 系統的穩定性與可觀測性。
-*   **Framework Agnostic（框架無關）**：強調「One pip install, any framework」，意即只需一次安裝即可支援各種主流的 AI Agent 框架，無需進行複雜的框架繫結。
+*   **Framework Agnostic（框架無關）**：強調「One pip install, any framework」，意即只需一次安裝即可支援各種主流的 AI Agent 框架，無需進行複雜的框架綁定。
 
 📊 **OWAS LLM01:2025 視角下的安全必要性**
 根據 OWASP LLM01:2025 標準，目前尚無百分之百防範提示注入的方法。Andriushchenko 等人於 ICLR 2025 發表的研究指出，某些攻擊的成功率高達 100%。這證實了僅靠提示詞工程無法作為唯一的安全控制表面，必須依賴更底層的治理機制。

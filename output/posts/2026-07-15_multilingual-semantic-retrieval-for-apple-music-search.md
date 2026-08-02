@@ -16,8 +16,8 @@ TL;DR：Apple Music 用多語語意檢索系統提升長尾查詢召回，線上
 🤔 **長尾與跨語查詢成為召回瓶頸**
 Apple Music 服務 150 多個 storefront（商店），支援數十種語言，曲庫每天增長數十萬首。在這種規模下，錯別字、音譯（transliteration）與跨語言查詢的搜尋召回，成為會話品質的關鍵驅動因子；尤其是佔大多數獨特查詢的長尾查詢（tail queries），其檢索難度最高。
 
-🧩 **305M 引數 Siamese bi-encoder 與混合檢索架構**
-這篇發表於 RecSys 2026 的論文提出一套多語言語意檢索系統，核心為一個 305M 引數的 Siamese bi-encoder，從 GTE-multilingual-base 微調（fine-tuned）而來，訓練採用 curriculum-scheduled multi-objective training（課程排程多目標訓練）。
+🧩 **305M 參數 Siamese bi-encoder 與混合檢索架構**
+這篇發表於 RecSys 2026 的論文提出一套多語言語意檢索系統，核心為一個 305M 參數的 Siamese bi-encoder，從 GTE-multilingual-base 微調（fine-tuned）而來，訓練採用 curriculum-scheduled multi-objective training（課程排程多目標訓練）。
 
 部署上，系統透過混合檢索架構（hybrid retrieval architecture）整合進現有搜尋堆疊：將 dense nearest-neighbor（密集最近鄰）結果與既有的 token-based index（基於字詞的索引）混合，並使用 quantile distribution matching（分位數分佈匹配）對齊分數分佈。這樣做的好處是，下游 ranker 無需重新訓練即可上線。
 

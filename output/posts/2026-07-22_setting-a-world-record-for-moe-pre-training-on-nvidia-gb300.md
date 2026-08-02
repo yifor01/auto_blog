@@ -25,10 +25,10 @@ TL;DR：NVIDIA GB300 NVL72 透過硬體與軟體協同設計，在 DeepSeek-V3 �
 
 📊 **DeepSeek-V3 訓練創下世界紀錄**
 
-在訓練 DeepSeek-V3 (671B) 的過程中，NVIDIA GB300 NVL72 展現了卓越的擴充套件性：
+在訓練 DeepSeek-V3 (671B) 的過程中，NVIDIA GB300 NVL72 展現了卓越的擴展性：
 
 *   **效能指標**：每顆 GPU 達到了 1,648 TFLOPs 的預訓練效能。
-*   **線性擴充套件性**：當規模從 256 顆 GPU 擴充套件至 1,024 顆 GPU 時，每顆 GPU 的吞吐量（throughput）仍能維持在 97% 以上。
+*   **線性擴展性**：當規模從 256 顆 GPU 擴展至 1,024 顆 GPU 時，每顆 GPU 的吞吐量（throughput）仍能維持在 97% 以上。
 
 💡 **軟體創新：驅動 3x 到 10x 的效能提升**
 
@@ -36,7 +36,7 @@ TL;DR：NVIDIA GB300 NVL72 透過硬體與軟體協同設計，在 DeepSeek-V3 �
 
 🎯 **實務啟示**
 
-對於處理超大規模 MoE 模型的工程師而言，單純堆疊運算單元已不足夠；未來訓練效能的關鍵在於「擴充套件（Scale-up）」與「擴散（Scale-out）」網路的緊密耦合，以及軟體層級對大規模分散式訓練的最佳化能力。
+對於處理超大規模 MoE 模型的工程師而言，單純堆疊運算單元已不足夠；未來訓練效能的關鍵在於「擴展（Scale-up）」與「擴散（Scale-out）」網路的緊密耦合，以及軟體層級對大規模分散式訓練的最佳化能力。
 
 🔗 **來源**
 - 標題：Setting a World Record for MoE Pre-Training on NVIDIA GB300 NVL72

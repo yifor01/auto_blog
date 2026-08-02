@@ -10,21 +10,21 @@ score: 97
 
 這是一篇針對「產業新聞」型別的技術部落格文章。
 
-📌 【AINews】Thinking Machines 發布 Inkling 系列：975B 引數規模開源，主打原生多模態與高效推理
+📌 【AINews】Thinking Machines 發布 Inkling 系列：975B 參數規模開源，主打原生多模態與高效推理
 
-TL;DR：Thinking Machines 推出 Inkling 開源模型家族，以 975B 引數 MoE 架構實現文本、影像與音訊的原生多模態推理。
+TL;DR：Thinking Machines 推出 Inkling 開源模型家族，以 975B 參數 MoE 架構實現文本、影像與音訊的原生多模態推理。
 
 🎣 **不追求 Benchmark 資料極致，而是打造實用的開源基石**
 
 當大多數研究重點都放在刷高 Benchmark 分數時，Thinking Machines Lab 選擇了另一條路。他們剛發布了 Inkling 系列，這不是一個為了刷榜而生的旗艦模型，而是一個旨在提供高度可定製性、具備實用價值的開源權重（open-weights）多模態基礎模型。
 
-🧩 **975B 引數規模與原生多模態能力**
+🧩 **975B 參數規模與原生多模態能力**
 
 Inkling 採用 Mixture-of-Experts (MoE) 架構，其設計核心在於平衡效能與成本，並透過可控的「思考強度」來達成高效推理。
 
 * **模型架構與規模**：
-  * 主力模型 Inkling：總引數 975B，每次推論時僅動用 41B 引數（active parameters）。
-  * Inkling-Small：較輕量化的版本，動用引數為 12B。
+  * 主力模型 Inkling：總參數 975B，每次推論時僅動用 41B 參數（active parameters）。
+  * Inkling-Small：較輕量化的版本，動用參數為 12B。
 * **訓練規模與資料**：
   * 預訓練資料量達 45 兆 (trillion) tokens。
   * 資料涵蓋文本、影像、音訊與影片。

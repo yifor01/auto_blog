@@ -28,7 +28,7 @@ Langflow 將 AI 代理（Agent）與工作流的構建過程視覺化，讓開�
 - **多代理編排**：支援 Multi-agent orchestration，包含對話管理與檢索（Retrieval）功能。
 - **多樣化的部署路徑**：建構完成的工作流可以部署為 API，或匯出為 JSON 格式以整合至任何 Python 應用程式中。
 - **MCP 伺服器支援**：可將工作流部署為 MCP (Model Context Protocol) 伺服器，使工作流能直接作為工具被 MCP 使用者端呼叫。
-- **可觀測性與安全性**：整合 LangSmith 與 LangFuse 等工具以監控執行狀況，並提供企業級的安全性與可擴充套件性。
+- **可觀測性與安全性**：整合 LangSmith 與 LangFuse 等工具以監控執行狀況，並提供企業級的安全性與可擴展性。
 
 🚀 **低門檻的安裝與啟動方式**
 

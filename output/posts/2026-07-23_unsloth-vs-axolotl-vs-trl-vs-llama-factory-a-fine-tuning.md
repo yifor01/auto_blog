@@ -14,7 +14,7 @@ score: 80
 
 TL;DR：四大主流微調框架各有側重，Unsloth 專精核心 Kernel 效能，Axolotl 強化並行策略，TRL 提供基礎 API，LLaMA-Factory 則主打零程式碼操作。
 
-面對 LLM 微調，工程師往往在效能（Speed）、記憶體（VRAM）與多 GPU 擴充套件性之間做抉擇。雖然 Unsloth、Axolotl、TRL 與 LLaMA-Factory 最終都執行在 PyTorch 與 Hugging Face 堆疊上，但它們的技術重心完全不同。
+面對 LLM 微調，工程師往往在效能（Speed）、記憶體（VRAM）與多 GPU 擴展性之間做抉擇。雖然 Unsloth、Axolotl、TRL 與 LLaMA-Factory 最終都執行在 PyTorch 與 Hugging Face 堆疊上，但它們的技術重心完全不同。
 
 🧩 **四種框架的核心設計理念**
 

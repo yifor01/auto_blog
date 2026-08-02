@@ -35,7 +35,7 @@ NVIDIA 提出的 Nemotron-Labs-TwoTower 採取了「雙塔」架構，將上述�
 
 - **模型組成**：兩座塔均由 Mamba-2、self-attention 與混合專家 (MoE) 層交錯組成。
 - **層數配置**：每座塔共有 52 層（23 層 Mamba-2、6 層 self-attention、23 層 MoE）。
-- **引數規模**：總引數約 60B，每座塔每個 token 的啟用引數約 3B。MoE 包含 128 個可路由專家（每次啟用 6 個）以及 2 個共享專家。
+- **參數規模**：總參數約 60B，每座塔每個 token 的啟用參數約 3B。MoE 包含 128 個可路由專家（每次啟用 6 個）以及 2 個共享專家。
 - **訓練量**：去噪塔使用約 2.1T tokens 進行訓練，僅為骨幹模型 25T tokens 預訓練量的一小部分。
 
 📊 **效能表現：速度大幅提升且品質損失極低**
@@ -46,7 +46,7 @@ NVIDIA 提出的 Nemotron-Labs-TwoTower 採取了「雙塔」架構，將上述�
 
 🎯 **實務啟示**
 
-對於追求極高吞吐量 (Throughput) 的工程師來說，TwoTower 證明瞭「凍結強大 AR 骨幹 + 訓練輕量去噪塔」的方案可行。這種設計在不犧牲太多品質的前提下，能將生成過程從「單一 token 序列」轉向「區塊並行精煉」，為大規模文字生成提供更高效的替代方案。
+對於追求極高吞吐量 (Throughput) 的工程師來說，TwoTower 證明了「凍結強大 AR 骨幹 + 訓練輕量去噪塔」的方案可行。這種設計在不犧牲太多品質的前提下，能將生成過程從「單一 token 序列」轉向「區塊並行精煉」，為大規模文字生成提供更高效的替代方案。
 
 🔗 **來源**
 - 標題：NVIDIA Releases Nemotron-Labs-TwoTower: an Open-Weight Diffusion Language Model Built on a Frozen Autoregressive Nemotron-3-Nano-30B-A3B Backbone

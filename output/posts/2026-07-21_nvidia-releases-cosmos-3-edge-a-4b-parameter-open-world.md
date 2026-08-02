@@ -10,7 +10,7 @@ generated_at: '2026-07-21T08:28:08.970826'
 
 這篇內容屬於「產業新聞」，我將針對 NVIDIA 發布 Cosmos 3 Edge 模型及其技術架構進行轉寫。
 
-📌 【NVIDIA 新發布】Cosmos 3 Edge：4B 引數模型實現機器人邊緣端推理與動作生成
+📌 【NVIDIA 新發布】Cosmos 3 Edge：4B 參數模型實現機器人邊緣端推理與動作生成
 
 TL;DR：NVIDIA 發布 Cosmos 3 Edge，讓機器人能在受限的邊緣裝置上進行即時環境理解與動作生成。
 
@@ -39,7 +39,7 @@ Cosmos 3 系列包含 Cosmos 3 Nano (16B) 與 Cosmos 3 Super (64B)，而本次�
 
 📊 **Cosmos 3 系列產品規格對照**
 
-| 型號 | 引數規模 | 備註 |
+| 型號 | 參數規模 | 備註 |
 | :--- | :--- | :--- |
 | Cosmos 3 Super | 64B | 2026/05/31 於 GTC Taipei 發布 |
 | Cosmos 3 Nano | 16B | 2026/05/31 於 GTC Taipei 發布 |
@@ -47,7 +47,7 @@ Cosmos 3 系列包含 Cosmos 3 Nano (16B) 與 Cosmos 3 Super (64B)，而本次�
 
 🎯 **實務啟示**
 
-對於開發機器人與視覺 AI 代理（Vision AI agents）的工程師而言，Cosmos 3 Edge 的推出意味著複雜的世界模型推理不再僅限於雲端，具備高引數規模的模型正逐漸走向裝置端（On-device），這對需要低延遲與高隱私性的工業與醫療自動化至關重要。
+對於開發機器人與視覺 AI 代理（Vision AI agents）的工程師而言，Cosmos 3 Edge 的推出意味著複雜的世界模型推理不再僅限於雲端，具備高參數規模的模型正逐漸走向裝置端（On-device），這對需要低延遲與高隱私性的工業與醫療自動化至關重要。
 
 🔗 **來源**
 - 標題：NVIDIA Releases Cosmos 3 Edge: A 4B-Parameter Open World Model That Reasons and Generates Robot Actions On-Device

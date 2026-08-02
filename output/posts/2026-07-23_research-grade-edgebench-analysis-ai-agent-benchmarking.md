@@ -33,7 +33,7 @@ EdgeBench 是一個針對進階 AI Agent 設計的基準測試，其評估邏輯
 💡 **深入探究 Scaling Laws 與評分機制**
 
 透過分析 EdgeBench 的資料，研究者可以進行更深層的科學觀察：
-- **Scaling Curves**：利用 log-sigmoid 曲線來擬合 Scaling Laws，觀察效能隨引數或資源增加的趨勢。
+- **Scaling Curves**：利用 log-sigmoid 曲線來擬合 Scaling Laws，觀察效能隨參數或資源增加的趨勢。
 - **效能增益分析**：衡量不同類別的分數提升，並找出哪些任務在模型演進中獲得了最大的增益。
 - **分數標準化**：研究 SForge 重縮放函式 (Rescale functions) 如何將原始評估輸出轉化為標準化的基準測試分數。
 

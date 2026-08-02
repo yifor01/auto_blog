@@ -15,7 +15,7 @@ TL;DR：Cars24 匯入 OpenAI 語音與聊天 Agent，每月處理逾百萬分鐘
 
 🤔 **流失的潛在客戶與人力瓶頸**
 
-Cars24 面對的是大量且即時的買賣車對話需求。根據 OpenAI 部落格所述，他們透過 OpenAI 驅動的語音（voice）與聊天（chat）agent，將對話處理能力擴充套件到相當可觀的量級，並把 agentic workflows 帶到公司內不同團隊。
+Cars24 面對的是大量且即時的買賣車對話需求。根據 OpenAI 部落格所述，他們透過 OpenAI 驅動的語音（voice）與聊天（chat）agent，將對話處理能力擴展到相當可觀的量級，並把 agentic workflows 帶到公司內不同團隊。
 
 📊 **每月逾百萬分鐘對話，挽回 12% 流失商機**
 

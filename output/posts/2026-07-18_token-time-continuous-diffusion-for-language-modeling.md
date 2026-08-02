@@ -28,7 +28,7 @@ TTCD（token time continuous diffusion）是一種新的擴散語言模型，其
 
 📊 **160M 模型在 OpenWebText 的表現**
 
-作者訓練了一個 1.6 億引數的 TTCD 模型，使用 OpenWebText 資料集，隨後進行 self-distill。
+作者訓練了一個 1.6 億參數的 TTCD 模型，使用 OpenWebText 資料集，隨後進行 self-distill。
 
 - 在高加速下，無條件生成品質與同規模、同資料、同 self-distill 的數個現有模型相當。
 - 條件生成則優於這些對比模型。
@@ -37,7 +37,7 @@ TTCD（token time continuous diffusion）是一種新的擴散語言模型，其
 
 ⚠️ **素材未提及的細節**
 
-摘要未說明具體的評估指標數值、架構層數、訓練超引數，也未提及與哪些特定模型逐一對比，因此無法進一步量化差距。
+摘要未說明具體的評估指標數值、架構層數、訓練超參數，也未提及與哪些特定模型逐一對比，因此無法進一步量化差距。
 
 🎯 **實務啟示**
 

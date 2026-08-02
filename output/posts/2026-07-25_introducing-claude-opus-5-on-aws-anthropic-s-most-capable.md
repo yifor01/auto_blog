@@ -30,7 +30,7 @@ Claude Opus 5 是 Anthropic 目前能力最強的 Opus 模型。根據官方描�
 透過 Amazon Bedrock 與 Claude Platform on AWS，工程師可以在現有的 AWS 環境中直接部署模型，並享有以下優勢：
 
 - **預設零資料保留 (Zero Data Retention, ZDR)**：在 Amazon Bedrock 上使用時，預設提供 ZDR 服務，確保企業資料治理與安全性，無需擔心資料被保留。
-- **下一代推論引擎**：利用 Bedrock 的推論技術，在維持區域資料駐留（Regional data residency）與企業級安全性的同時，實現零維運介入的推論擴充套件。
+- **下一代推論引擎**：利用 Bedrock 的推論技術，在維持區域資料駐留（Regional data residency）與企業級安全性的同時，實現零維運介入的推論擴展。
 - **統一的開發體驗**：透過 Claude Platform on AWS，使用者可以在 AWS Console 中獲得與 Anthropic 原生平臺一致的 API、功能與控制台體驗，並與 AWS 帳單與身份驗證系統整合。
 
 🎯 **實務啟示**

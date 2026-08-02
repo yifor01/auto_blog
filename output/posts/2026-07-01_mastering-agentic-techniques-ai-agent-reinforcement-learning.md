@@ -21,7 +21,7 @@ TL;DR：NVIDIA 以 Nemotron 3 Super 搭配 NeMo RL 生態系，將可驗證�
 🧩 NVIDIA 生態系概覽  
 - **Nemotron 3 Super**：NVIDIA 最新的開源大模型，支援後續的 RL 微調。  
 - **NeMo RL**：完整的強化學習框架，包含  
-  - **NeMo Gym**：可擴充套件的環境模擬平臺，用於設計代理人任務與即時評估。  
+  - **NeMo Gym**：可擴展的環境模擬平臺，用於設計代理人任務與即時評估。  
   - **NeMo Data Designer**：自動產生合成資料與可驗證獎勵，降低手動標註成本。  
 - 這套工具鏈允許開發者在「開放模型」上進行後訓練，從而在企業內部部署時保有資料與智慧財產的完整控制權。
 
@@ -37,7 +37,7 @@ TL;DR：NVIDIA 以 Nemotron 3 Super 搭配 NeMo RL 生態系，將可驗證�
 - **資源完整**：從環境建置、資料合成到訓練監控，NVIDIA 提供一條龍解決方案，降低開發門檻。
 
 🎯 實務啟示  
-如果你的團隊正面臨「模型在特定領域表現不佳」的痛點，可先挑選 Nemotron 3 Super 作為基礎模型，利用 NeMo Gym 建立簡易的任務環境，並以 NeMo Data Designer 產生可驗證獎勵。從小規模測試開始，逐步擴充套件至完整企業工作流，確保每一次策略更新都能得到即時、可信的回饋。
+如果你的團隊正面臨「模型在特定領域表現不佳」的痛點，可先挑選 Nemotron 3 Super 作為基礎模型，利用 NeMo Gym 建立簡易的任務環境，並以 NeMo Data Designer 產生可驗證獎勵。從小規模測試開始，逐步擴展至完整企業工作流，確保每一次策略更新都能得到即時、可信的回饋。
 
 🔗 來源
 - 標題：Mastering Agentic Techniques: AI Agent Reinforcement Learning

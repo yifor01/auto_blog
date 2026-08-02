@@ -30,7 +30,7 @@ GEAR 提出了一種 Guided End-to-End AutoRegression 框架，旨在讓 VQ Toke
 
 🎯 **實務啟示**
 
-對於開發影像生成模型的工程師而言，GEAR 的設計證明瞭「聯合訓練」能比「分階段訓練」更有效地最佳化特徵品質。若目前的 VQ-VAE 或 VQGAN 瓶頸在於 Token 質素限制了生成器的表現，考慮引入表示對齊與可微的讀出機制可能是提升品質的關鍵方向。
+對於開發影像生成模型的工程師而言，GEAR 的設計證明了「聯合訓練」能比「分階段訓練」更有效地最佳化特徵品質。若目前的 VQ-VAE 或 VQGAN 瓶頸在於 Token 質素限制了生成器的表現，考慮引入表示對齊與可微的讀出機制可能是提升品質的關鍵方向。
 
 🔗 **來源**
 - 標題：GEAR: Guided End-to-End AutoRegression for Image Synthesis

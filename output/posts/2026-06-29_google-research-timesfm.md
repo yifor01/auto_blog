@@ -15,11 +15,11 @@ TL;DR：Google 開源的預訓練時間序列基礎模型，支援 16k 長上下
 
 🧩 **Decoder-only 架構與模型演進**
 
-TimesFM 採用 decoder-only 的基礎模型設計，旨在提供通用的時間序列預測能力。根據專案更新紀錄，模型在版本迭代中進行了顯著的效能與引數最佳化：
+TimesFM 採用 decoder-only 的基礎模型設計，旨在提供通用的時間序列預測能力。根據專案更新紀錄，模型在版本迭代中進行了顯著的效能與參數最佳化：
 
 - **TimesFM 2.5 版本更新**：
-    - **引數縮減**：引數規模從 500M 降低至 200M，提升了模型效率。
-    - **上下文擴充套件**：支援的 context length 從 2048 大幅提升至 16k，能處理更長的歷史資料。
+    - **參數縮減**：參數規模從 500M 降低至 200M，提升了模型效率。
+    - **上下文擴展**：支援的 context length 從 2048 大幅提升至 16k，能處理更長的歷史資料。
     - **功能恢復**：重新加入了透過 XReg 支援的共變數（covariate）功能。
 
 🛠️ **從快速部署到深度微調的工程路徑**
@@ -27,7 +27,7 @@ TimesFM 採用 decoder-only 的基礎模型設計，旨在提供通用的時間�
 對於工程師而言，TimesFM 提供了多種整合路徑，從簡單的 API 呼叫到深度自定義：
 
 1. **企業級整合**：透過 BigQuery ML（SQL 查詢）、Google Sheets 以及 Vertex Model Garden（Dockerized endpoint）提供不同層級的部署選項。
-2. **自定義微調**：專案已提供使用 HuggingFace Transformers 與 PEFT (LoRA) 的 fine-tuning 範例，允許開發者針對特定領域資料進行引數高效微調。
+2. **自定義微調**：專案已提供使用 HuggingFace Transformers 與 PEFT (LoRA) 的 fine-tuning 範例，允許開發者針對特定領域資料進行參數高效微調。
 3. **Agent 整合**：最新更新已加入對 AGENTS 的支援，並提供相關的 SKILL.md 指南。
 
 ⚠️ **版本相容性提醒**

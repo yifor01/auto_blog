@@ -35,9 +35,9 @@ Anthropic 推出了 Claude Security 外掛（目前處於 Beta 階段），這�
 
 📊 **四種效能層級與動態配置**
 
-掃描的規模由四種努力程度（effort tiers）決定：low、medium、high 與 max。系統會根據選擇的層級，動態調整以下引數：
+掃描的規模由四種努力程度（effort tiers）決定：low、medium、high 與 max。系統會根據選擇的層級，動態調整以下參數：
 
-| 引數 | Low / Medium | High / Max |
+| 參數 | Low / Medium | High / Max |
 | :--- | :--- | :--- |
 | 最大元件數量 | 12 個 | 24 個 |
 | 研究人員數量 (Researchers) | 1 位 | 2 位 |

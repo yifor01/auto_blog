@@ -43,7 +43,7 @@ TL;DR：透過 Strands 與 AgentCore 建立三層評估框架，大幅提升 AI 
 
 對於想要將 AI Agent 推向生產環境的工程師，這套藍圖提供了高度可複製的價值。雖然範例使用 AWS 服務，但其「評估驅動開發」的邏輯是通用的。
 
-針對開發者，該專案提供了對應的儲存庫（Repository），包含一個可部署的藍圖（Blueprint）。在實作時，需特別注意安全性：該範例採用了最小許可權原則（Least-privilege IAM roles）、使用 AWS Systems Manager Parameter Store 儲存 API 金鑰（而非環境變數），並透過型別引數（Typed parameters）來防止注入攻擊（Injection attacks）。
+針對開發者，該專案提供了對應的儲存庫（Repository），包含一個可部署的藍圖（Blueprint）。在實作時，需特別注意安全性：該範例採用了最小許可權原則（Least-privilege IAM roles）、使用 AWS Systems Manager Parameter Store 儲存 API 金鑰（而非環境變數），並透過型別參數（Typed parameters）來防止注入攻擊（Injection attacks）。
 
 🔗 **來源**
 - 標題：Evaluating AI Agents: A production blueprint with Strands and AgentCore

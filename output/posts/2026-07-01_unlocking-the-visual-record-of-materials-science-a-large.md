@@ -28,7 +28,7 @@ TL;DR：MatMMExtract 管線能將複雜的科學圖表拆解並自動標註，�
 
 🎯 **實務啟示**
 
-對於從事科學 AI 的工程師而言，這套管線證明瞭利用 LLM 來處理非結構化科學文獻並將其轉化為高品質訓練資料的可行性。這類自動化標註流程能大幅降低建立領域特定（Domain-specific）多模態資料集的成本，未來可用於開發能「閱讀」並「理解」材料科學圖表的專業 AI 模型。
+對於從事科學 AI 的工程師而言，這套管線證明了利用 LLM 來處理非結構化科學文獻並將其轉化為高品質訓練資料的可行性。這類自動化標註流程能大幅降低建立領域特定（Domain-specific）多模態資料集的成本，未來可用於開發能「閱讀」並「理解」材料科學圖表的專業 AI 模型。
 
 🔗 **來源**
 - 標題：Unlocking the Visual Record of Materials Science: A Large-Scale Multimodal Dataset from Scientific Literature

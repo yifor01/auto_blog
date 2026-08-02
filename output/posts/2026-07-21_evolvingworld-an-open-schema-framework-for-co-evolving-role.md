@@ -18,7 +18,7 @@ TL;DR：透過開放式架構，讓角色與世界狀態能隨著劇情發展持
 
 🧩 **EvolvingWorld：角色與世界的雙模態共演架構**
 
-為瞭解決上述問題，EvolvingWorld 將文學模擬建模為一個「長程過程 (long-horizon process)」，其中角色互動、場景推進以及角色與世界的狀態更新，都必須持續且一致地進行。
+為了解決上述問題，EvolvingWorld 將文學模擬建模為一個「長程過程 (long-horizon process)」，其中角色互動、場景推進以及角色與世界的狀態更新，都必須持續且一致地進行。
 
 該架構由兩個耦合模組組成：
 - **角色代理 (Character Agent)**：負責多角色角色扮演 (role-play) 以及持久的角色設定演進 (profile evolution)。

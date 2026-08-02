@@ -45,7 +45,7 @@ AgentScope 2.0 的核心設計理念是「Extensible Middleware System」。它�
 
 1.  **安全優先**：利用其內建的許可權系統與沙箱機制，降低 Agent 失控風險。
 2.  **信任模型**：減少過度設計的流程約束，讓模型在寬鬆的結構下發揮推理能力，可能獲得更自然的互動體驗。
-3.  **擴充套件性**：其事件驅動架構（Event System）與 Human-in-the-loop 支援，便於後續整合前端介面與人工審核流程。
+3.  **擴展性**：其事件驅動架構（Event System）與 Human-in-the-loop 支援，便於後續整合前端介面與人工審核流程。
 
 🔗 **來源**
 - 標題：agentscope-ai/agentscope

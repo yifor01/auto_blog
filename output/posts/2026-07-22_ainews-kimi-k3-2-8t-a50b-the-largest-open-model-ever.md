@@ -14,18 +14,18 @@ score: 84
 
 ***
 
-📌 【AINews】Moonshot AI 釋出 Kimi K3：擁有 2.8T 引數，挑戰 Frontier-class 開源模型新高度
+📌 【AINews】Moonshot AI 釋出 Kimi K3：擁有 2.8T 參數，挑戰 Frontier-class 開源模型新高度
 
-TL;DR：Moonshot AI 推出 Kimi K3，以 2.8T 引數規模與原生多模態能力，挑戰頂尖閉源模型。
+TL;DR：Moonshot AI 推出 Kimi K3，以 2.8T 參數規模與原生多模態能力，挑戰頂尖閉源模型。
 
 🚀 **開源模型規模的重大突破**
 
-Moonshot AI 正式發表了 Kimi K3，並將其定位為「Open Frontier Intelligence」（開源前沿智慧）。這款模型具備 2.8T 總引數規模，若後續如期於 2026 年 7 月 27 日釋出權重，預期將成為史上規模最大的開源權重模型。
+Moonshot AI 正式發表了 Kimi K3，並將其定位為「Open Frontier Intelligence」（開源前沿智慧）。這款模型具備 2.8T 總參數規模，若後續如期於 2026 年 7 月 27 日釋出權重，預期將成為史上規模最大的開源權重模型。
 
 🧩 **技術架構與核心功能**
 
 根據 Moonshot AI 提供的官方資訊，Kimi K3 在技術設計上有以下關鍵特性：
-- 總引數規模達 2.8T。
+- 總參數規模達 2.8T。
 - 支援 1M-token 的長上下文（Context Window）。
 - 具備原生多模態輸入能力（Native multimodal input）。
 - 採用 Kimi Delta Attention (KDA) 與 Attention Residuals 技術。

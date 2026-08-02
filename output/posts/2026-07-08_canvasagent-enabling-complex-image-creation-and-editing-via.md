@@ -39,7 +39,7 @@ CanvasAgent 的核心在於其「視覺工具協調機制」。根據摘要，�
 
 🎯 **實務啟示：從「生成」轉向「編排」**
 
-對於 AI 工程師而言，CanvasAgent 代表了一種思維轉變：在處理極度複雜的視覺任務時，單純擴大模型引數可能不是唯一解。透過模組化工具的協調（Orchestration），可以讓系統更具可解釋性與可控性。未來在構建影像處理 Pipeline 時，不妨考慮引入 Agent 架構，將複雜任務拆解為多個標準化工具的呼叫序列，以提升最終輸出的穩定性與精準度。
+對於 AI 工程師而言，CanvasAgent 代表了一種思維轉變：在處理極度複雜的視覺任務時，單純擴大模型參數可能不是唯一解。透過模組化工具的協調（Orchestration），可以讓系統更具可解釋性與可控性。未來在構建影像處理 Pipeline 時，不妨考慮引入 Agent 架構，將複雜任務拆解為多個標準化工具的呼叫序列，以提升最終輸出的穩定性與精準度。
 
 🔗 **來源**
 - 標題：CanvasAgent: Enabling Complex Image Creation and Editing via Visual Tool Orchestration

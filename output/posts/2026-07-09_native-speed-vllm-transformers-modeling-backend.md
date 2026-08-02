@@ -30,13 +30,13 @@ transformers 函式庫已成為機器學習的參考標準，支援超過 450 �
 HuggingFace 將 transformers 建模後端與 vLLM 的手寫原生實作進行對比，測試物件為三款不同型別的 Qwen3 模型（皆在 8×H100 節點上測試）：
 - 4B 稠密模型（單 GPU）
 - 32B 稠密模型（使用 Tensor Parallelism）
-- 235B 引數 FP8 混合專家模型（使用 Data + Expert Parallelism）
+- 235B 參數 FP8 混合專家模型（使用 Data + Expert Parallelism）
 
 測試結果顯示，transformers 建模後端的吞吐量（throughput）在上述所有測試中，均達到或超越了原生實作的表現。
 
-🎯 **實務啟示：單一引數即可啟動極速推論**
+🎯 **實務啟示：單一參數即可啟動極速推論**
 
-對於工程師而言，這意味著部署新模型的門檻大幅降低。只要更新 vLLM 套件並使用特定引數，即可直接執行 Hugging Face 模型而無需等待原生移植版本。
+對於工程師而言，這意味著部署新模型的門檻大幅降低。只要更新 vLLM 套件並使用特定參數，即可直接執行 Hugging Face 模型而無需等待原生移植版本。
 
 安裝與更新指令：
 `uv pip install --upgrade vllm --torch-backend auto`

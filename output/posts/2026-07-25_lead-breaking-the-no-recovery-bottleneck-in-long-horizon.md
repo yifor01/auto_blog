@@ -25,7 +25,7 @@ TL;DR：LEAD 透過引入短期未來驗證與重疊 Rollouts，解決極端任�
 為了克服這個瓶頸，研究者提出了 **Lookahead-Enhanced Atomic Decomposition (LEAD)** 方法，其核心設計理念如下：
 
 1. **引入短期未來驗證**：在分解的過程中，納入短程的未來驗證機制。
-2. **聚合重疊 Rollouts**：透過整合具有重疊部分的 Rollouts（模擬執行過程），在保持分解帶來的穩定性的同時，保留足夠的區域性上下文（local context）來修正錯誤。
+2. **聚合重疊 Rollouts**：透過整合具有重疊部分的 Rollouts（模擬執行過程），在保持分解帶來的穩定性的同時，保留足夠的局部上下文（local context）來修正錯誤。
 
 📊 **解決 Checkers 遊戲的複雜度挑戰**
 
@@ -38,7 +38,7 @@ TL;DR：LEAD 透過引入短期未來驗證與重疊 Rollouts，解決極端任�
 
 🎯 **實務啟示**
 
-對於開發複雜推理工作流（Reasoning Workflow）的工程師來說，這項研究提醒我們：任務分解並非「越細越好」。在設計 Agent 或推理鏈時，必須在「任務隔離度」與「錯誤自我修正能力」之間取得平衡，確保模型在面對區域性錯誤時，仍有機會透過上下文資訊進行糾偏。
+對於開發複雜推理工作流（Reasoning Workflow）的工程師來說，這項研究提醒我們：任務分解並非「越細越好」。在設計 Agent 或推理鏈時，必須在「任務隔離度」與「錯誤自我修正能力」之間取得平衡，確保模型在面對局部錯誤時，仍有機會透過上下文資訊進行糾偏。
 
 🔗 **來源**
 - 標題：LEAD: Breaking the No-Recovery Bottleneck in Long-Horizon Reasoning

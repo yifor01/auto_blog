@@ -9,7 +9,7 @@ generated_at: '2026-07-14T08:00:09.762258'
 
 📌 【Weak-to-Strong Generalization】利用 RL 政策位移，將小模型成果蒸餾至大模型
 
-TL;DR：透過 Direct On-Policy Distillation，利用 RL 產生的政策位移作為隱式獎勵，實現高效的模型規模擴充套件。
+TL;DR：透過 Direct On-Policy Distillation，利用 RL 產生的政策位移作為隱式獎勵，實現高效的模型規模擴展。
 
 🤔 **如何讓大模型繼承小模型的強化學習能力？**
 
@@ -25,7 +25,7 @@ TL;DR：透過 Direct On-Policy Distillation，利用 RL 產生的政策位移�
 
 🎯 **實務啟示**
 
-對於資源有限的開發團隊，這種「從弱到強」（Weak-to-Strong）的蒸餾策略，提供了一種在不重複進行高成本 RL 訓練的情況下，實現模型效能擴充套件的新思路。
+對於資源有限的開發團隊，這種「從弱到強」（Weak-to-Strong）的蒸餾策略，提供了一種在不重複進行高成本 RL 訓練的情況下，實現模型效能擴展的新思路。
 
 🔗 **來源**
 - 標題：Weak-to-Strong Generalization via Direct On-Policy Distillation

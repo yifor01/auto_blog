@@ -21,7 +21,7 @@ Opik 由 Comet 開發，是一個開源平臺，旨在簡化 LLM 應用從開發
 
 - **全面觀測 (Comprehensive Observability)**：支援 LLM 呼叫的深度 tracing、對話日誌記錄以及 Agent 活動追蹤。
 - **進階評估 (Advanced Evaluation)**：提供強大的 Prompt 評估機制、LLM-as-a-judge 評估模式以及實驗管理功能。
-- **生產就緒 (Production-Ready)**：內建可擴充套件的監控儀錶板，並支援在生產環境中設定線上評估規則。
+- **生產就緒 (Production-Ready)**：內建可擴展的監控儀錶板，並支援在生產環境中設定線上評估規則。
 - **Agent 最佳化器 (Opik Agent Optimizer)**：提供專屬 SDK 與一系列最佳化工具，用於提升 Prompt 與 Agent 的表現。
 - **安全護欄 (Opik Guardrails)**：協助開發者實作安全且負責任的 AI 實作規範。
 

@@ -31,9 +31,9 @@ TL;DR：NVIDIA 發布可攜式指令集，協助 AI Agent 正確呼叫 CUDA-X �
 1. **互動式安裝**：
    執行 `npx skills add nvidia/skills`，CLI 會引導你選擇要安裝的 Skill 以及目標 Agent。
 2. **指定安裝**：
-   若已知 Skill 名稱（例如 `cuopt-numerical-optimization-api`），可使用 `--skill` 引數跳過選擇步驟。
+   若已知 Skill 名稱（例如 `cuopt-numerical-optimization-api`），可使用 `--skill` 參數跳過選擇步驟。
 3. **指定目標 Agent**：
-   透過 `--agent` 引數，可將 Skill 安裝至特定的 Agent 例項。
+   透過 `--agent` 參數，可將 Skill 安裝至特定的 Agent 例項。
 
 一旦安裝完成，當 Agent 載入 Skills 並遇到相關任務時，就會自動引用這些指令。例如，當使用者要求「使用 cuOpt 解決線性規劃問題」時，Agent 會依據 Skill 指引呼叫正確的 Python API。
 

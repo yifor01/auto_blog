@@ -30,7 +30,7 @@ README 指出，專案由幾個關鍵設計組成：
 
 💡 **部署彈性與模型自由**
 
-專案強調不繫結使用者的筆電：可在 5 美元 VPS、GPU 叢集，或閒置近乎零成本的 serverless 架構上執行；也能從 Telegram 遙控位於雲端 VM 的 agent。模型切換只需 `hermes model` 指令，支援 Nous Portal、OpenRouter、OpenAI、自託管端點等，無須改程式碼、無供應商鎖定。
+專案強調不綁定使用者的筆電：可在 5 美元 VPS、GPU 叢集，或閒置近乎零成本的 serverless 架構上執行；也能從 Telegram 遙控位於雲端 VM 的 agent。模型切換只需 `hermes model` 指令，支援 Nous Portal、OpenRouter、OpenAI、自託管端點等，無須改程式碼、無供應商鎖定。
 
 🎯 **實務啟示**
 

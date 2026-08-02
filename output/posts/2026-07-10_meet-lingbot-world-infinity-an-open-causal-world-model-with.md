@@ -29,7 +29,7 @@ TL;DR：螞蟻集團推出 14B 因果影片生成模型，透過 MoBA 遮罩解�
 
 📊 **模型規模與訓練流程**
 
-- **模型尺寸**：主模型為 14B 引數；另提供 1.3B 的輕量化版本，可部署於單張 GPU。
+- **模型尺寸**：主模型為 14B 參數；另提供 1.3B 的輕量化版本，可部署於單張 GPU。
 - **預訓練**：使用修正流插值 (rectified-flow interpolation) 最佳化條件流匹配 (conditional flow-matching) 目標。
 - **後訓練**：將多步驟的 Teacher 模型壓縮為少步驟的 Student 模型，並在長自捲動軌跡 (long self-rollout trajectories) 上應用 DMD 技術。
 

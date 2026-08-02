@@ -22,7 +22,7 @@ Apple 研究團隊提出的 Length Value Model (LenVM) 提出了一個全新的�
 - **問題形式化**：將長度建模視為一個「價值估計」（Value estimation）問題。
 - **獎勵機制**：為每個生成的 Token 分配一個恆定的負獎勵（Constant negative reward）。
 - **預測目標**：模型預測一個有界且經過折現（Discounted return）的報酬，這個報酬可以作為剩餘生成時程（Generation horizon）的單調代理指標（Monotone proxy）。
-- **技術優勢**：這種設計使得監督訊號具備「無須標註（Annotation-free）」、「密集（Dense）」、「無偏（Unbiased）」且「可擴充套件（Scalable）」的特性。
+- **技術優勢**：這種設計使得監督訊號具備「無須標註（Annotation-free）」、「密集（Dense）」、「無偏（Unbiased）」且「可擴展（Scalable）」的特性。
 
 📊 **精準匹配長度，效能與效率兼得**
 

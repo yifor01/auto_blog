@@ -19,7 +19,7 @@ TL;DR：MXC 讓開發者以統一的 JSON 設定與 TypeScript SDK，在 Windows
 - 針對 macOS 使用 Seatbelt，Linux 則提供 LXC、Bubblewrap，Windows 有 Windows Sandbox 等。
 
 🗂 **JSON‑Based Configuration**  
-- MXC 使用版本化的 JSON schema 定義執行引數與安全政策。  
+- MXC 使用版本化的 JSON schema 定義執行參數與安全政策。  
 - 透過 TypeScript SDK，開發者可程式化產生或修改這些設定檔，實作「policy‑driven」的沙盒化。  
 - 目前支援的政策專案包括檔案系統（只讀 / 可寫路徑清單）與網路存取，Windows 尚未支援拒絕路徑。
 

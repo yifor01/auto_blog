@@ -19,25 +19,25 @@ TL;DR：Rubin 架構透過 HBM4 與硬體創新，實現 Agentic AI 每單位能
 
 🧩 **Rubin 架構：專為代理型工作負載最佳化**
 
-NVIDIA Rubin GPU 是 Vera Rubin 平臺的中心，旨在解決 Agentic AI 在多步驟推理過程中的效能瓶頸。其技術關鍵在於將資料中心重新想像為單一運算單元，以應對超大規模引數模型的運算需求。
+NVIDIA Rubin GPU 是 Vera Rubin 平臺的中心，旨在解決 Agentic AI 在多步驟推理過程中的效能瓶頸。其技術關鍵在於將資料中心重新想像為單一運算單元，以應對超大規模參數模型的運算需求。
 
 📊 **硬體規格與效能表現**
 
 根據 NVIDIA 提供的資訊，Rubin 架構在硬體規格上有顯著提升：
 - **電能效率**：與 Blackwell 架構相比，每單位能量的 Agentic 吞吐量（agentic throughput）提升了高達 10 倍。
-- **核心規模**：搭載 3360 億個電晶體、224 個 SM（Streaming Multiprocessors）以及 896 個具備擴充套件精度的 Tensor Cores。
+- **核心規模**：搭載 3360 億個電晶體、224 個 SM（Streaming Multiprocessors）以及 896 個具備擴展精度的 Tensor Cores。
 - **記憶體效能**：配備 288 GB HBM4 記憶體，提供 22 TB/s 的頻寬。
 - **推理引擎**：採用第三代 Transformer Engine。
 
 💡 **針對複雜推理的關鍵創新技術**
 
 為了極大化 Tokens/sec（每秒 Token 數）與 Tokens/watt（每瓦 Token 數），Rubin 引入了多項針對性設計：
-- **最佳化 MoE 擴充套件與長上下文**：透過增強型 Tensor Memory Accelerator、inline descriptor updates（內聯描述符更新）以及 activation sparsity（啟用稀疏化）來提升效能。
+- **最佳化 MoE 擴展與長上下文**：透過增強型 Tensor Memory Accelerator、inline descriptor updates（內聯描述符更新）以及 activation sparsity（啟用稀疏化）來提升效能。
 - **降低延遲**：利用 adaptive compression（自適應壓縮）與 fine-grained dependent kernel triggering（細粒度依賴核心觸發）技術，最小化 kernel 轉換延遲。
 
 🏢 **Rack Scale：Vera Rubin NVL72 的規模化能力**
 
-在機架規模（Rack scale）上，NVIDIA Vera Rubin NVL72 整合了多項技術以支援萬億引數（multitrillion-parameter）規模的模型：
+在機架規模（Rack scale）上，NVIDIA Vera Rubin NVL72 整合了多項技術以支援萬億參數（multitrillion-parameter）規模的模型：
 - **散熱與電力**：整合液冷技術（liquid cooling）與 DSX MaxLPS 電力平滑技術。
 - **架構設計**：採用無電纜（cable-free）的 MGX 架構，並配備可熱插拔（hot-swappable）的 NVLink switch trays。
 - **密度提升**：在相同的功耗限制下，可容納多達 40% 的 GPU 數量。

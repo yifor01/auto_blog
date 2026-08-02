@@ -15,7 +15,7 @@ TL;DR：OpenSpec 提供一套靈活的規格定義框架，透過 `/opsx` 指令
 
 🧩 **拒絕瀑布式開發，擁抱靈活迭代**
 
-OpenSpec 的設計理念核心在於「流動而非僵化（fluid not rigid）」與「迭代而非瀑布（iterative not waterfall）」。它不只適用於從零開始的全新專案（greenfield），更強調對現有舊有專案（brownfield）的支援，使其能從個人小專案擴充套件至企業級規模。
+OpenSpec 的設計理念核心在於「流動而非僵化（fluid not rigid）」與「迭代而非瀑布（iterative not waterfall）」。它不只適用於從零開始的全新專案（greenfield），更強調對現有舊有專案（brownfield）的支援，使其能從個人小專案擴展至企業級規模。
 
 💡 **以 Artifact 為導向的 `/opsx` 工作流**
 

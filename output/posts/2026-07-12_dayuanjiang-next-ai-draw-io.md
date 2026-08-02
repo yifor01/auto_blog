@@ -27,11 +27,11 @@ Next AI Draw.io 是一個基於 Next.js 開發的 Web 應用，其核心理念�
 
 🛠️ **靈活的部署與模型支援**
 
-該專案提供了極高的部署靈活性與模型擴充套件性，方便開發者快速搭建自己的繪圖服務：
+該專案提供了極高的部署靈活性與模型擴展性，方便開發者快速搭建自己的繪圖服務：
 - **多平臺部署**：支援 Vercel、Cloudflare Workers 以及 EdgeOne Pages。
 - **容器化部署**：提供 Docker 支援，方便在私有伺服器執行。
 - **模型配置**：支援多模型配置 (Multi-Model Configuration) 與伺服器端多提供者支援 (Multi-Provider Support)。值得注意的是，目前的 Demo 站點由字節跳動 (ByteDance) 贊助，使用 glm-4.7 模型。
-- **擴充套件能力**：專案中提及包含 MCP Server 與 Claude Code CLI 的整合。
+- **擴展能力**：專案中提及包含 MCP Server 與 Claude Code CLI 的整合。
 
 🎯 **實務啟示**
 

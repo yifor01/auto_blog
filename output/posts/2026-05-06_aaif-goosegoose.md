@@ -13,7 +13,7 @@ generated_at: 2026-05-06T20:29:34.878533
 
 🤔 **從 Block 到 Linux Foundation，開源 Agent 的治理轉折**
 
-goose 並非一個新的實驗性專案，而是一個已經在運作的本地 AI Agent。隨著它從 `block/goose` 遷移至 `aaif-goose/goose`，這意味著它正式脫離單一企業主導，轉由 Linux Foundation 的 AAIF 進行治理。對於企業用戶與開發者來說，這降低了供應鏈風險，也讓生態系（如擴充套件與標準協議）的發展更具長期可靠性。
+goose 並非一個新的實驗性專案，而是一個已經在運作的本地 AI Agent。隨著它從 `block/goose` 遷移至 `aaif-goose/goose`，這意味著它正式脫離單一企業主導，轉由 Linux Foundation 的 AAIF 進行治理。對於企業用戶與開發者來說，這降低了供應鏈風險，也讓生態系（如擴展與標準協議）的發展更具長期可靠性。
 
 🧪 **Rust 打造的跨平台三合一架構**
 

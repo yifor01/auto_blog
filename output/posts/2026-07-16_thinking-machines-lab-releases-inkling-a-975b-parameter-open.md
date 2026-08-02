@@ -10,9 +10,9 @@ generated_at: '2026-07-16T08:11:36.828072'
 
 📌 【Thinking Machines Lab 釋出 Inkling】975B 多模態 MoE 開放權重，思考力可調
 
-TL;DR：Inkling 是 975B 引數開放權重多模態 MoE，41B 活化引數，主打可微調客製化。
+TL;DR：Inkling 是 975B 參數開放權重多模態 MoE，41B 活化參數，主打可微調客製化。
 
-當多數實驗室把最強模型鎖在 API 後面，Thinking Machines Lab 直接把從零訓練的 975B 引數多模態模型權重開放出來，還說「這只是拿來給你改的基底」。
+當多數實驗室把最強模型鎖在 API 後面，Thinking Machines Lab 直接把從零訓練的 975B 參數多模態模型權重開放出來，還說「這只是拿來給你改的基底」。
 
 🤔 **從零訓練、開放權重，定位在客製化基底**
 
@@ -32,15 +32,15 @@ Attention 與常規不同：sliding-window 與 global layers 以 5:1 比例交�
 
 📊 **預訓練規模與小模型預覽**
 
-Pretraining 涵蓋 45 trillion tokens 的文字、影像、音訊、影片；context window 最高 1M tokens。實驗室也預覽 Inkling-Small：276B 引數 MoE、12B 活化引數，多數 benchmark 持平或超越大型版本，權重待測試結束後釋出。
+Pretraining 涵蓋 45 trillion tokens 的文字、影像、音訊、影片；context window 最高 1M tokens。實驗室也預覽 Inkling-Small：276B 參數 MoE、12B 活化參數，多數 benchmark 持平或超越大型版本，權重待測試結束後釋出。
 
 🧩 **訓練與後訓練設定**
 
-訓練在 NVIDIA GB300 NVL72 系統上進行，大矩陣權重用 Muon、其餘引數用 Adam。後訓練從 SFT 起步，使用合成資料，包含由 Kimi K2.5 生成的資料；摘要指出多數運算（most compute）投入此階段，但未說明細節。
+訓練在 NVIDIA GB300 NVL72 系統上進行，大矩陣權重用 Muon、其餘參數用 Adam。後訓練從 SFT 起步，使用合成資料，包含由 Kimi K2.5 生成的資料；摘要指出多數運算（most compute）投入此階段，但未說明細節。
 
 🎯 **實務啟示**
 
-對想自建領域模型的團隊，Inkling 提供一個開放權重、支援百萬上下文與多模態輸入的大規模基底，可在 Tinker 上 fine-tune。其可控活化引數（41B / 12B）與可客製定位，適合做為自架推論與下游微調的起點，但仍需等權重與基準細節完整公開再評估實際成本。
+對想自建領域模型的團隊，Inkling 提供一個開放權重、支援百萬上下文與多模態輸入的大規模基底，可在 Tinker 上 fine-tune。其可控活化參數（41B / 12B）與可客製定位，適合做為自架推論與下游微調的起點，但仍需等權重與基準細節完整公開再評估實際成本。
 
 🔗 **來源**
 - 標題：Thinking Machines Lab Releases Inkling: A 975B-Parameter Open-Weights Multimodal MoE With 41B Active Parameters And Controllable Thinking Effort

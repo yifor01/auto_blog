@@ -27,7 +27,7 @@ TL;DR：Microsoft 提供一套可複用的 AI 指令集，讓 Copilot 掌握 Fab
 - **維運模組 (`fabric-operations`)**：專注於診斷與效能調查。
 - **Power BI 模組 (`powerbi-authoring`)**：涵蓋語義模型、Power BI 報表技能及 PBIP 工作流。
 
-此外，若只需要特定工作負載，還可以使用 `--filter` 引數進行精確安裝，例如：
+此外，若只需要特定工作負載，還可以使用 `--filter` 參數進行精確安裝，例如：
 - `sqldw-*`（SQL Data Warehouse）
 - `spark-*`（Spark）
 - `eventhouse-*`（Eventhouse）

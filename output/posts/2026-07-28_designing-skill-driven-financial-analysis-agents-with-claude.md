@@ -43,7 +43,7 @@ TL;DR：透過 Python 實作 Anthropic 的金融服務架構，實現自動化�
 
 🎯 **實務啟示**
 
-這套架構展示瞭如何透過 MCP (Model Context Protocol) 連接器與結構化的技能註冊機制，將 LLM 從「聊天機器人」提升為具備專業領域知識、能處理複雜數值運算並產出正式交付物 (Deliverables) 的專業代理人。
+這套架構展示了如何透過 MCP (Model Context Protocol) 連接器與結構化的技能註冊機制，將 LLM 從「聊天機器人」提升為具備專業領域知識、能處理複雜數值運算並產出正式交付物 (Deliverables) 的專業代理人。
 
 🔗 **來源**
 - 標題：Designing Skill-Driven Financial Analysis Agents with Claude, Python, MCP Connectors, and Automated Deliverables

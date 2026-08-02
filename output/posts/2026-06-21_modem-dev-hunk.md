@@ -28,7 +28,7 @@ hunk 不僅支援標準的 Git 流程，還針對現代版本控制工具進行�
 
 - **Git 深度整合**：指令模式映象 Git 的 diff 習慣，例如 `hunk diff` 檢視當前變更（含未追蹤檔案），`hunk show` 檢視特定 commit。
 - **原生支援 Jujutsu 與 Sapling**：能自動偵測 jj 或 Sapling 工作區，並直接使用其原生的 revsets 進行查詢。
-- **即時監控模式**：透過 `--watch` 引數，可以在工作區變更時自動重新載入，適合在 Agent 寫 Code 時即時監控。
+- **即時監控模式**：透過 `--watch` 參數，可以在工作區變更時自動重新載入，適合在 Agent 寫 Code 時即時監控。
 - **純檔案比對**：無需 VCS 也能直接比對兩個檔案（例如 `hunk diff before.ts after.ts`）。
 
 🛠️ **快速安裝與啟動**

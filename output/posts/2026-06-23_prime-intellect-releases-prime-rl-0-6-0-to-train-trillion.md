@@ -8,15 +8,15 @@ model: google/gemma-4-31b-it:free
 generated_at: '2026-06-23T20:24:53.466911'
 ---
 
-📌 Prime Intellect 發布 prime-rl 0.6.0：支援兆引數 MoE 模型的 Agentic RL 訓練
+📌 Prime Intellect 發布 prime-rl 0.6.0：支援兆參數 MoE 模型的 Agentic RL 訓練
 
-TL;DR：開源框架 prime-rl 0.6.0 透過非同步 RL 與 FP8 最佳化，讓兆引數 MoE 模型能高效處理長序列軟體工程任務。
+TL;DR：開源框架 prime-rl 0.6.0 透過非同步 RL 與 FP8 最佳化，讓兆參數 MoE 模型能高效處理長序列軟體工程任務。
 
 在訓練大型模型處理複雜的 Agentic 任務（如軟體工程）時，最令人頭痛的不是平均速度，而是那些執行數小時的「長尾離群值」。如果所有 GPU 都要等待這些慢速任務完成才能更新策略，運算資源將被嚴重浪費。
 
 🧩 **非同步 RL 架構解決 GPU 空轉問題**
 
-prime-rl 採用非同步強化學習（Asynchronous RL）設計，將訓練器（Trainer）與推論系統（Inference systems）解耦，使其能獨立執行與擴充套件。
+prime-rl 採用非同步強化學習（Asynchronous RL）設計，將訓練器（Trainer）與推論系統（Inference systems）解耦，使其能獨立執行與擴展。
 
 - **權重即時推送**：一旦最佳化器完成步驟，推論策略會立即更新，無需等待所有 rollout 完成。
 - **快取管理機制**：已發出的 rollout 會保留其活動的字首快取（prefix cache），這意味著單次 rollout 產出的 token 可能混合了多個不同版本的策略。
@@ -40,7 +40,7 @@ Prime Intellect 團隊利用此框架訓練 zai-org/GLM-5.1 處理軟體工程�
 
 🎯 **實務啟示**
 
-對於需要訓練兆引數 MoE 模型（如 Kimi-K2.7-Code 或 NVIDIA-Nemotron-3-Ultra）且面臨長序列 Agentic 任務的工程師，prime-rl 提供的「非同步更新」與「推論/訓練解耦」架構，是降低 GPU 空轉率、提升吞吐量的關鍵實作方向。
+對於需要訓練兆參數 MoE 模型（如 Kimi-K2.7-Code 或 NVIDIA-Nemotron-3-Ultra）且面臨長序列 Agentic 任務的工程師，prime-rl 提供的「非同步更新」與「推論/訓練解耦」架構，是降低 GPU 空轉率、提升吞吐量的關鍵實作方向。
 
 🔗 **來源**
 - 標題：Prime Intellect Releases prime-rl 0.6.0 to Train Trillion-Parameter MoE Models on Agentic RL Workloads

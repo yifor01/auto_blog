@@ -16,7 +16,7 @@ TL;DR：OpenAI 內部自動紅隊模型 GPT-Red 專找 prompt injection 漏洞�
 
 🤔 **為什麼需要自動化紅隊**
 
-OpenAI 指出，人類 red-teaming 耗時且難以擴充套件；現有的 robustness 評測已被最新模型刷到飽和。同時攻擊面持續擴大：agent 會透過瀏覽器、連線的 app、本機檔案與工具讀取第三方資料，這些能力是實際工作所需，但也讓攻擊者能有機會在資料中埋入精心設計的指令（prompt injection）。
+OpenAI 指出，人類 red-teaming 耗時且難以擴展；現有的 robustness 評測已被最新模型刷到飽和。同時攻擊面持續擴大：agent 會透過瀏覽器、連線的 app、本機檔案與工具讀取第三方資料，這些能力是實際工作所需，但也讓攻擊者能有機會在資料中埋入精心設計的指令（prompt injection）。
 
 🧩 **GPT-Red 不是靜態基準，而是一個會迭代的攻擊模型**
 
@@ -36,7 +36,7 @@ OpenAI 表示，訓練末期 GPT-Red 幾乎攻破所有與其對抗的模型，�
 
 🎯 **實務啟示**
 
-對工程師來說，這顯示大規模 self-play RL 可用於持續產出多樣攻擊，緩解人類紅隊無法擴充套件的瓶頸；在設計 agent 系統時，應預設第三方資料通道（檔案、網頁、工具輸出）都是潛在 injection 來源，並以「必須完成任務且不能被騙」作為防禦評估基準。
+對工程師來說，這顯示大規模 self-play RL 可用於持續產出多樣攻擊，緩解人類紅隊無法擴展的瓶頸；在設計 agent 系統時，應預設第三方資料通道（檔案、網頁、工具輸出）都是潛在 injection 來源，並以「必須完成任務且不能被騙」作為防禦評估基準。
 
 🔗 **來源**
 - 標題：OpenAI Details GPT-Red: An Internal Automated Red-Teaming Model That Beat Human Red-Teamers 84% To 13% On Prompt Injection

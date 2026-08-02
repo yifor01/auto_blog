@@ -25,12 +25,12 @@ Interfaze 推出 diffusion-gemma-asr-small，其核心差異在於捨棄了傳�
 
 🧩 **僅訓練 0.16% 權重，將 ASR 能力注入 26B 模型**
 
-此模型將語音能力整合進 Google 的 26B MoE 模型 DiffusionGemma（每次啟用 4B 引數，包含 128 個專家與 top-8 路由）。
+此模型將語音能力整合進 Google 的 26B MoE 模型 DiffusionGemma（每次啟用 4B 參數，包含 128 個專家與 top-8 路由）。
 
 為了達成此目標，研究團隊採取了極其輕量化的訓練策略：
 - 凍結 26B 的主幹網路（Backbone）。
-- 僅訓練一個約 42M 引數的介面卡（Adapter）。
-- 訓練引數僅佔整體權重的約 0.16%，但足以讓單一介面卡處理 6 種語言。
+- 僅訓練一個約 42M 參數的介面卡（Adapter）。
+- 訓練參數僅佔整體權重的約 0.16%，但足以讓單一介面卡處理 6 種語言。
 
 ⚠️ **為何不能直接餵入原始波形？**
 
@@ -43,7 +43,7 @@ Interfaze 推出 diffusion-gemma-asr-small，其核心差異在於捨棄了傳�
 
 🎯 **實務啟示**
 
-對於 ML 工程師而言，這個專案展示了「模組化組合」的強大潛力：利用 Whisper 做特徵提取 $\rightarrow$ 輕量化 Adapter 做對接 $\rightarrow$ 強大的 MoE 模型做平行生成。這證明瞭即使主幹網路完全凍結，只要特徵對齊正確，極少量的引數更新（42M）也能賦予大型模型全新的跨模態能力。
+對於 ML 工程師而言，這個專案展示了「模組化組合」的強大潛力：利用 Whisper 做特徵提取 $\rightarrow$ 輕量化 Adapter 做對接 $\rightarrow$ 強大的 MoE 模型做平行生成。這證明了即使主幹網路完全凍結，只要特徵對齊正確，極少量的參數更新（42M）也能賦予大型模型全新的跨模態能力。
 
 🔗 **來源**
 - 標題：Interfaze Ships diffusion-gemma-asr-small, an Open-Source Diffusion ASR Model Transcribing Six Languages via DiffusionGemma’s Parallel Denoising Decoder

@@ -22,7 +22,7 @@ TL;DR：透過 Stardog 建構語意層，讓 Amazon Bedrock AgentCore 無需 ETL
 
 🧩 **解決方案：Stardog 語意層結合 Amazon Bedrock AgentCore**
 
-這篇來自 AWS ML 的文章展示瞭如何利用 Stardog 的 Semantic AI Application 建構一個語意層，並執行 Strands Agents 代理在 Amazon Bedrock AgentCore 上。該架構的關鍵在於：
+這篇來自 AWS ML 的文章展示了如何利用 Stardog 的 Semantic AI Application 建構一個語意層，並執行 Strands Agents 代理在 Amazon Bedrock AgentCore 上。該架構的關鍵在於：
 
 1.  **無需 ETL 的跨來源查詢**：Stardog 連線 Amazon Aurora 和 Amazon Redshift，透過語意對映解決資料定義不一致的問題，讓代理可以直接查詢這些來源回答「客戶 360 度」等複雜問題，而不需要事先進行 Extract, Transform, Load (ETL)。
 2.  **AgentCore 的整合優勢**：選擇 AgentCore 是因為它將入站認證（inbound auth）、託管服務與工具憑證整合為單一受管理服務，簡化了部署複雜性。

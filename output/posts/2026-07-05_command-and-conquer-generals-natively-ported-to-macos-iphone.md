@@ -33,7 +33,7 @@ DirectX 8 → DXVK → Vulkan
 
 🎯 **實務啟示**
 
-這個專案展示了利用 DXVK 型別的轉譯層，將舊版 DirectX 遊戲移植到非 Windows 平臺的可能性。對於工程師而言，這證明瞭只要解決指令集編譯（ARM64）與圖形 API 轉譯（DX8 → Vulkan）這兩個核心問題，即使是 20 年前的舊引擎也能在現代行動裝置上原生執行。
+這個專案展示了利用 DXVK 型別的轉譯層，將舊版 DirectX 遊戲移植到非 Windows 平臺的可能性。對於工程師而言，這證明了只要解決指令集編譯（ARM64）與圖形 API 轉譯（DX8 → Vulkan）這兩個核心問題，即使是 20 年前的舊引擎也能在現代行動裝置上原生執行。
 
 🔗 **來源**
 - 標題：Command and Conquer Generals natively ported to macOS, iPhone, iPad using Fable

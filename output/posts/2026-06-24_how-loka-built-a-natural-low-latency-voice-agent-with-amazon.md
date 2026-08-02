@@ -39,7 +39,7 @@ Loka 採用 Amazon Nova 2 Sonic 重新構建語音代理，旨在解決上述痛
 
 🎯 **實務啟示**
 
-對於開發語音代理的工程師而言，這個案例證明瞭「端到端」或更整合的語音模型比「STT $\rightarrow$ LLM $\rightarrow$ TTS」的組合更具競爭力。若你的應用場景（如銷售、客服）對即時性要求極高，應優先考慮能直接處理語音訊號的模型，以保留語調等非文字資訊，並消除累加延遲。
+對於開發語音代理的工程師而言，這個案例證明了「端到端」或更整合的語音模型比「STT $\rightarrow$ LLM $\rightarrow$ TTS」的組合更具競爭力。若你的應用場景（如銷售、客服）對即時性要求極高，應優先考慮能直接處理語音訊號的模型，以保留語調等非文字資訊，並消除累加延遲。
 
 🔗 **來源**
 - 標題：How Loka Built a Natural, Low-Latency Voice Agent with Amazon Nova 2 Sonic

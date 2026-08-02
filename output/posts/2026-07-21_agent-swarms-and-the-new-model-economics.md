@@ -19,7 +19,7 @@ TL;DR：透過最佳化 Agent Swarm 架構，Cursor 在建構 SQLite 任務中�
 
 Cursor 在今年早些時候進行了一項實驗，試圖測試 Agent Swarm（智慧體叢集）協作完成目標的規模極限。當時的研究假設是：叢集協作將解鎖更高層級的任務規模與複雜度。
 
-- **初步實驗**：嘗試讓一個長期運作的 Swarm 從零開始建構一個 Web Browser。雖然這個實驗證明瞭可行性（Proof of Concept），但產出的軟體品質遠未達到成熟標準。當時的方法是從空白畫布開始，透過「爬山演算法 (Hill-climbing)」試圖尋找穩定的系統。
+- **初步實驗**：嘗試讓一個長期運作的 Swarm 從零開始建構一個 Web Browser。雖然這個實驗證明了可行性（Proof of Concept），但產出的軟體品質遠未達到成熟標準。當時的方法是從空白畫布開始，透過「爬山演算法 (Hill-climbing)」試圖尋找穩定的系統。
 - **目前的目標**：不再僅僅是觀察實驗結果，而是要深入理解 Swarm 的運作機制，從「經驗主義」轉向「刻意工程 (Engineering it deliberately)」。
 
 🧩 **挑戰 SQLite：從檔案到 Rust 實作**

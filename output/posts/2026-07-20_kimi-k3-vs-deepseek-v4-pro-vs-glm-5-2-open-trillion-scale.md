@@ -12,21 +12,21 @@ generated_at: '2026-07-20T08:52:35.246975'
 
 TL;DR：三款中文實驗室開源 MoE 模型比能力、授權與推論成本，Kimi K3 智慧指數暫居開源第一。
 
-三家來自中國的實驗室，如今同時站上開源權重（open-weight）排行榜頂端。當模型引數衝破兆級、上下文來到百萬 token，團隊真正要決定的從來不是「誰最強」，而是「能不能用、授權卡不卡、跑起來貴不貴」。
+三家來自中國的實驗室，如今同時站上開源權重（open-weight）排行榜頂端。當模型參數衝破兆級、上下文來到百萬 token，團隊真正要決定的從來不是「誰最強」，而是「能不能用、授權卡不卡、跑起來貴不貴」。
 
 🤔 **三款模型都是稀疏 MoE，但規模差很大**
 
 Moonshot AI 的 Kimi K3、DeepSeek 的 V4 Pro，以及智譜 AI（Zhipu AI）的 GLM-5.2，都是稀疏 Mixture-of-Experts（MoE）架構，具備百萬 token 上下文視窗，主攻長程編碼與 agent 工作負載。
 
-所謂「兆級引數」並非三者皆然：
-- Kimi K3：總引數 2.8T（2.8 兆），DeepSeek V4 Pro：1.6T。
-- GLM-5.2：總引數 744B，是三者中總引數最小的一款；它入榜是因為在 K3 釋出前曾領先開源權重領域。
+所謂「兆級參數」並非三者皆然：
+- Kimi K3：總參數 2.8T（2.8 兆），DeepSeek V4 Pro：1.6T。
+- GLM-5.2：總參數 744B，是三者中總參數最小的一款；它入榜是因為在 K3 釋出前曾領先開源權重領域。
 
 🧩 **各家架構與釋出重點**
 
-- Kimi K3：2.8T 引數的 Stable LatentMoE 模型，每個 token 啟動 896 個專家中的 16 個；Moonshot 未公開確切的活躍引數量。特色包含原生視覺（native vision）、1M token 上下文、以及 always-on reasoning；Moonshot 稱其為首個開源 3T 等級模型。
-- DeepSeek V4 Pro：1.6T 引數 MoE，活躍引數 49B，採用 384 個 routed experts 加 1 個 shared expert；具 1M token 上下文與 384K 最大輸出。另有較小的 V4 Flash 變體（總引數 284B、活躍 13B）應對低成本負載；權重已放於 Hugging Face。
-- GLM-5.2：744B 引數 MoE，活躍引數約 40B，1M token 上下文；智譜提供 High 與 Max 兩種 reasoning 模式，並附 API 存取。
+- Kimi K3：2.8T 參數的 Stable LatentMoE 模型，每個 token 啟動 896 個專家中的 16 個；Moonshot 未公開確切的活躍參數量。特色包含原生視覺（native vision）、1M token 上下文、以及 always-on reasoning；Moonshot 稱其為首個開源 3T 等級模型。
+- DeepSeek V4 Pro：1.6T 參數 MoE，活躍參數 49B，採用 384 個 routed experts 加 1 個 shared expert；具 1M token 上下文與 384K 最大輸出。另有較小的 V4 Flash 變體（總參數 284B、活躍 13B）應對低成本負載；權重已放於 Hugging Face。
+- GLM-5.2：744B 參數 MoE，活躍參數約 40B，1M token 上下文；智譜提供 High 與 Max 兩種 reasoning 模式，並附 API 存取。
 
 📊 **用同一套評測看智慧指數，K3 暫居開源之首**
 
@@ -44,7 +44,7 @@ K3 整體排名第 3，僅次於 Claude Fable 5 與 GPT-5.6 Sol，與 Opus 4.8�
 
 🎯 **實務啟示**
 
-對 AI/ML 團隊來說，這三款模型代表開源權重首次在規模與長上下文上逼近頂級閉源模型。選型時不應只看總引數，活躍引數與變體（如 V4 Flash）才是影響推論成本與部署門檻的關鍵；若需穩定橫向比較，優先參考 Artificial Analysis Intelligence Index 這類統一基準，避開各廠商自報數字的框架偏差。
+對 AI/ML 團隊來說，這三款模型代表開源權重首次在規模與長上下文上逼近頂級閉源模型。選型時不應只看總參數，活躍參數與變體（如 V4 Flash）才是影響推論成本與部署門檻的關鍵；若需穩定橫向比較，優先參考 Artificial Analysis Intelligence Index 這類統一基準，避開各廠商自報數字的框架偏差。
 
 🔗 **來源**
 - 標題：Kimi K3 vs DeepSeek V4 Pro vs GLM-5.2: Open Trillion-Scale MoE Models Compared on Benchmarks, License, and Serving Cost

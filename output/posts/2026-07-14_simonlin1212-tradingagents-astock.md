@@ -49,7 +49,7 @@ TL;DR：基於 TradingAgents 進行 A 股特化，整合 7 種分析師角色與
 本專案僅供學習研究與技術演示，不構成任何投資建議。投資決策請諮詢持牌專業機構。
 
 🎯 **實務啟示**
-對於研究多 Agent 協作（Multi-Agent Collaboration）的工程師來說，此專案展示瞭如何透過「領域知識（Domain Knowledge）」將通用型 AI 框架轉化為具備特定市場邏輯的專業工具。
+對於研究多 Agent 協作（Multi-Agent Collaboration）的工程師來說，此專案展示了如何透過「領域知識（Domain Knowledge）」將通用型 AI 框架轉化為具備特定市場邏輯的專業工具。
 
 🔗 **來源**
 - 標題：simonlin1212/TradingAgents-astock

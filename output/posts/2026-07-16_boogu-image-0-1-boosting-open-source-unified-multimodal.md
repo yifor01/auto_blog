@@ -33,7 +33,7 @@ Boogu-Image-0.1 是一個開源統一多模態理解與生成模型家族，包�
 作者宣稱，在高度受限的運算預算下，透過以下方向可大幅強化生成與編輯表現：
 - 針對模型理解能力做定向改進
 - 提升資料品質與訓練流程（training pipelines）
-- 搭配 agentic inference-time scaling（推論期 Agent 式擴充套件）
+- 搭配 agentic inference-time scaling（推論期 Agent 式擴展）
 
 這意味著不一定需要龐大單一模型或系統整合，也能逼近封閉系統結果。
 
@@ -45,7 +45,7 @@ Boogu-Image-0.1 是一個開源統一多模態理解與生成模型家族，包�
 
 🎯 **實務啟示**
 
-對資源有限的團隊，這篇工作釋出的權重、程式碼與 recipes（Apache 2.0 授權）提供可落地的統一多模態起點；其「資料品質 + 訓練流程 + 推論期擴充套件」的路線，也比盲目堆引數更適合預算受限的場景。
+對資源有限的團隊，這篇工作釋出的權重、程式碼與 recipes（Apache 2.0 授權）提供可落地的統一多模態起點；其「資料品質 + 訓練流程 + 推論期擴展」的路線，也比盲目堆參數更適合預算受限的場景。
 
 🔗 **來源**
 - 標題：Boogu-Image-0.1: Boosting Open-Source Unified Multimodal Understanding and Generation

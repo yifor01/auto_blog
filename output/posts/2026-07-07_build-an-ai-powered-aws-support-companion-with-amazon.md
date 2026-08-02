@@ -109,6 +109,6 @@ generated_at: '2026-07-07T21:14:11.751399'
 
 ## 結論  
 
-透過將 **Amazon Bedrock AgentCore**、**Strands Agents**、**Model Context Protocol** 與 **Amazon Nova Pro**（經 Amazon Bedrock）結合，並以 **AWS CloudFormation** 與 **AWS Amplify** 完成一鍵部署，本文展示瞭如何將原本分散在多個主控臺與工具中的 AWS 故障排除流程，縮減為單一的對話式體驗。此做法不只減少了上下文切換所帶來的時間浪費，也讓團隊能將更多精力放在真正的問題解決上，而非工具切換與資訊搜尋的雜務上。  
+透過將 **Amazon Bedrock AgentCore**、**Strands Agents**、**Model Context Protocol** 與 **Amazon Nova Pro**（經 Amazon Bedrock）結合，並以 **AWS CloudFormation** 與 **AWS Amplify** 完成一鍵部署，本文展示了如何將原本分散在多個主控臺與工具中的 AWS 故障排除流程，縮減為單一的對話式體驗。此做法不只減少了上下文切換所帶來的時間浪費，也讓團隊能將更多精力放在真正的問題解決上，而非工具切換與資訊搜尋的雜務上。  
 
 如需完整的程式碼與部署說明，請參考上述原始文章連結。祝您開發順利！

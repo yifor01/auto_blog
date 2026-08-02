@@ -22,7 +22,7 @@ TL;DR：透過將 spherical RoPE 與語義失真引導注入預訓練 DiT，在�
 
 SpheRoPE 提出了一套無需訓練 (Zero-shot) 與無需最佳化 (Optimization-free) 的框架，主要透過兩種技術手段將球面先驗注入預訓練的 DiT 中：
 
-1. **Spherical RoPE**：將旋轉位置嵌入 (Rotary Positional Embedding, RoPE) 擴充套件至球面座標，使模型在處理位置資訊時能感知球面的幾何結構。
+1. **Spherical RoPE**：將旋轉位置嵌入 (Rotary Positional Embedding, RoPE) 擴展至球面座標，使模型在處理位置資訊時能感知球面的幾何結構。
 2. **語義失真引導 (Semantic Distortion Guidance)**：利用引導機制來克服全景圖特有的拓撲約束，確保生成內容在球面投影下的語義一致性。
 
 💡 **無需訓練即可落地的技術路徑**
@@ -31,7 +31,7 @@ SpheRoPE 提出了一套無需訓練 (Zero-shot) 與無需最佳化 (Optimizatio
 
 🎯 **實務啟示**
 
-對於需要開發全景生成功能的工程師而言，這項研究證明瞭透過修改位置編碼 (Positional Embedding) 與引導機制，可以讓既有的 2D 生成模型具備處理非歐幾裡得空間（如球面）的能力。這提供了一種高效的路徑：與其耗費資源訓練專用模型，不如思考如何將空間先驗注入現有架構。
+對於需要開發全景生成功能的工程師而言，這項研究證明了透過修改位置編碼 (Positional Embedding) 與引導機制，可以讓既有的 2D 生成模型具備處理非歐幾裡得空間（如球面）的能力。這提供了一種高效的路徑：與其耗費資源訓練專用模型，不如思考如何將空間先驗注入現有架構。
 
 🔗 **來源**
 - 標題：SpheRoPE: Zero-Shot Optimization-Free 360 Panorama Generation with Spherical RoPE

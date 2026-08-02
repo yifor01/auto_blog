@@ -32,7 +32,7 @@ TL;DR：Claude Code 以自然語言指令在終端機中即時操作程式碼、
   irm https://claude.ai/install.ps1 | iex
   ```  
 - **WinGet（Windows）**：`winget install Anthropic.ClaudeCode`  
-- npm 版已棄用，說明檔案中提供了完整的解除安裝與除錯步驟。  
+- npm 版已棄用，說明檔案中提供了完整的卸載與除錯步驟。  
 
 🚀 **外掛機制延伸功能**  
 - 專案內 `plugins` 目錄收錄多個官方外掛，讓使用者自行定義指令或新增代理。  

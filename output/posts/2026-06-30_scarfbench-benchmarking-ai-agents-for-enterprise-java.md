@@ -33,7 +33,7 @@ TL;DR：ScarfBench 推出專為 Java 框架遷移設計的基準測試，衡量 
 
 🎯 **實務啟示**
 
-對於開發 AI Coding Agent 的工程師而言，ScarfBench 提供了一個更貼近現實的驗證維度：衡量 AI 的能力不應只看程式碼的相似度，而應將「可編譯性」與「執行時行為」作為核心指標。如果你正在開發企業級遷移工具，應將測試重點從單一函式的正確性，擴充套件到整個應用程式的端到端部署驗證。
+對於開發 AI Coding Agent 的工程師而言，ScarfBench 提供了一個更貼近現實的驗證維度：衡量 AI 的能力不應只看程式碼的相似度，而應將「可編譯性」與「執行時行為」作為核心指標。如果你正在開發企業級遷移工具，應將測試重點從單一函式的正確性，擴展到整個應用程式的端到端部署驗證。
 
 🔗 **來源**
 - 標題：ScarfBench: Benchmarking AI Agents for Enterprise Java Framework Migration

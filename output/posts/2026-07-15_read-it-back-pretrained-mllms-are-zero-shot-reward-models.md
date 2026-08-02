@@ -23,12 +23,12 @@ SpectraReward 的核心操作：對生成影像進行單次 image-conditioned、
 進一步提出 Self-SpectraReward，適用於 unified multimodal models：讓 policy 自身的 understanding branch 擔任 generation branch 的獎勵模型，形成無外部獎勵模型、無外部知識的閉環自我改善框架。
 
 📊 橫跨多模型多演算法的實證覆蓋
-實驗設計涵蓋兩個 diffusion models、三個 RL 演算法、九個來自四個 MLLM 家族（引數規模 4B 到 235B）的 reward MLLM 主幹，並在五個 out-of-distribution text-to-image 基準上驗證。
+實驗設計涵蓋兩個 diffusion models、三個 RL 演算法、九個來自四個 MLLM 家族（參數規模 4B 到 235B）的 reward MLLM 主幹，並在五個 out-of-distribution text-to-image 基準上驗證。
 
 結果顯示，SpectraReward 與 Self-SpectraReward 皆能顯著且一致地提升生成表現，並超越先前基於 MLLM 的獎勵訓練方法。
 
 💡 獎勵模型越大不一定越好
-進一步分析指出，更大的 reward MLLM 並非總能帶來更好效果；而 Self-SpectraReward 甚至可以匹敵或超越引數規模大得多的外部獎勵模型。這暗示 reward 與 policy 之間的對齊（reward-policy alignment）才是影像生成 RL 有效的關鍵因素。
+進一步分析指出，更大的 reward MLLM 並非總能帶來更好效果；而 Self-SpectraReward 甚至可以匹敵或超越參數規模大得多的外部獎勵模型。這暗示 reward 與 policy 之間的對齊（reward-policy alignment）才是影像生成 RL 有效的關鍵因素。
 
 🎯 直接重用現成 MLLM 省下訓練成本
 對工程師而言，這代表在實作文字生成圖片 RL 時，可嘗試直接接入預訓練 MLLM 計算 prompt 復原似然，免去標註與訓練獎勵模型的流程；若採用統一多模態架構，更能搭建自我獎勵閉環，降低對外部模型的依賴。

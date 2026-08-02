@@ -35,7 +35,7 @@ README 指出，harness 是模型外的 scaffolding：負責組裝上下文、�
 
 🎯 **能完全本地端跑起來的實務價值**
 
-SpaceXAI 強調一項實際產出：Grok Build 現在可 fully local-first 運作。自行編譯後，指向本地推論（local inference），並從 config.toml 驅動所有設定；執行 `grok inspect` 會印出 harness 在當前目錄發現的內容，包含 config 來源、instructions、skills、plugins、hooks 與 MCP servers。對重視資料主權與離線開發的團隊，這比雲端繫結型 CLI 更有彈性。
+SpaceXAI 強調一項實際產出：Grok Build 現在可 fully local-first 運作。自行編譯後，指向本地推論（local inference），並從 config.toml 驅動所有設定；執行 `grok inspect` 會印出 harness 在當前目錄發現的內容，包含 config 來源、instructions、skills、plugins、hooks 與 MCP servers。對重視資料主權與離線開發的團隊，這比雲端綁定型 CLI 更有彈性。
 
 🔗 **來源**
 - 標題：SpaceXAI Open-Sources Grok Build: The Rust Agent Harness, TUI, and Tool Layer Behind Its Coding CLI

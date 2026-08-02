@@ -28,14 +28,14 @@ NVIDIA Vera CPU 採用 Olympus 核心，設計重點在於應對 Agentic AI 的�
 為了確保多個執行緒能持續獲得充足資料，Vera 架構整合了多項高速互連技術：
 - **Scalable Coherency Fabric**：提供 3.4 TB/s 的晶片內頻寬（on-die bandwidth）與統一快取（unified cache）。
 - **SOCAMM2 LPDDR5X 記憶體模組**：提供高 RAS（可靠性、可用性與可維護性）與高效率，總體頻寬可達 1.2 TB/s。
-- **NVLink-C2C**：實現安全且具擴充套件性的資料移動，並支援單 NUMA 雙插槽（dual-socket）架構。
+- **NVLink-C2C**：實現安全且具擴展性的資料移動，並支援單 NUMA 雙插槽（dual-socket）架構。
 
 🛡️ **安全與可預測的吞吐量**
 
 在 AI 工廠（AI factory）的環境下，Agent 的穩定執行至關重要。Vera 架構透過以下技術確保效能與安全：
 - **可預測的延遲**：確保 Agent 的每個步驟都能一致地完成。
 - **硬體安全**：支援 Confidential Computing（機密運算），在 AI 工廠中提供安全的虛擬機器（VM）隔離。
-- **標準介面支援**：整合 PCIe 6.4 與 CXL 3.1，提供高度擴充套件性。
+- **標準介面支援**：整合 PCIe 6.4 與 CXL 3.1，提供高度擴展性。
 
 🎯 **實務啟示**
 

@@ -27,7 +27,7 @@ DOPD (Dual On-policy Distillation) 旨在解決 On-policy 蒸餾中的特權錯�
 
 💡 **適用於大型語言模型與視覺語言模型**
 
-根據摘要指出，這種方法在 Large Models 以及視覺語言模型（Vision-Language Models, VLM）中均能有效提升能力轉移的品質，證明瞭該機制在不同模態模型上的通用性。
+根據摘要指出，這種方法在 Large Models 以及視覺語言模型（Vision-Language Models, VLM）中均能有效提升能力轉移的品質，證明了該機制在不同模態模型上的通用性。
 
 🎯 **實務啟示**
 

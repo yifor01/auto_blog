@@ -16,7 +16,7 @@ TL;DR：NeMo Automodel 與 Diffusers 整合，讓 Hub 上擴散模型免轉檔�
 
 🤔 **Diffusers 成為擴散模型事實標準，但訓練擴充仍是痛點**
 
-🤗 Diffusers 函式庫已成為 FLUX.1-dev（文字轉影像）、Wan 2.1 與 HunyuanVideo（文字轉影片）等開源模型的預設家園，提供一致的推論、適配與管線組合介面。隨著訓練與微調需求上升，工程師需要具備記憶體高效分片（memory-efficient sharding）、latent caching、multiresolution bucketing，以及能從 1 張 GPU 平滑擴充套件到數百張的配置工具。
+🤗 Diffusers 函式庫已成為 FLUX.1-dev（文字轉影像）、Wan 2.1 與 HunyuanVideo（文字轉影片）等開源模型的預設家園，提供一致的推論、適配與管線組合介面。隨著訓練與微調需求上升，工程師需要具備記憶體高效分片（memory-efficient sharding）、latent caching、multiresolution bucketing，以及能從 1 張 GPU 平滑擴展到數百張的配置工具。
 
 🧩 **NeMo Automodel 補上生產級分散式訓練缺口**
 

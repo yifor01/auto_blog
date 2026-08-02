@@ -12,7 +12,7 @@ generated_at: 2026-05-15T20:30:48.573071
 你以為 AI Coding Agent 只是裝在 IDE 裡的外掛？現在它的核心被抽離出來，可以跨平台、跨 UI 運行，長時間工作也不會因視窗重置而中斷。
 
 🤔 **AI Coding Agent 的結構債問題**  
-Cline 已經是數百萬開發者使用的開源 AI coding agent，但隨著功能不疊加在原始的 agent loop 與 VS Code 擴充套件上，維護與遷移到新環境變得愈來愈困難。團隊發現，繼續在既有架構上「再加一層」只會加深結構債，影響跨平台移植與長期運行的穩定性。
+Cline 已經是數百萬開發者使用的開源 AI coding agent，但隨著功能不疊加在原始的 agent loop 與 VS Code 擴展上，維護與遷移到新環境變得愈來愈困難。團隊發現，繼續在既有架構上「再加一層」只會加深結構債，影響跨平台移植與長期運行的穩定性。
 
 🧪 **將 agent harness 抽離為獨立的 TypeScript SDK**  
 本週 Cline 發布了 @cline/sdk，一個開放原始碼的 TypeScript 套件，內部結構分層：  
@@ -28,8 +28,8 @@ Cline 已經是數百萬開發者使用的開源 AI coding agent，但隨著功�
 💡 **關鍵洞察：將「提供者邏輯」與「agent 核心」分離，讓 LLM 切換變成純粹的設定變更**  
 所有 LLM 特定的程式碼被封裝在 @cline/llms 中，agent loop 只透過抽象介面呼叫。這意味著開發者若想換用另一個模型服務（例如從 OpenAI 切換到本地 vLLM），只需要修改 SDK 的設定檔，而無需觸碰 agent 核心程式碼。這樣的「提供者與執行環境解耦」大幅降低了建構多模型、多平台 agent 的複雜度。
 
-⚠️ **目前的限制：SDK 仍在早期階段，IDE 擴充套件正在遷移中**  
-公告中明確提到，IDE 擴充套件（VS Code、JetBrains 等）正在逐步遷移到新 SDK 上，因此部分功能可能仍依賴舊實作。此外，SDK 以 TypeScript 為主，若團隊主要使用其他語言 stack，可能需要自行建置適配層。最後，文件僅列出了已支援的 LLM 提供者，未來新增提供者仍需看社群貢獻。
+⚠️ **目前的限制：SDK 仍在早期階段，IDE 擴展正在遷移中**  
+公告中明確提到，IDE 擴展（VS Code、JetBrains 等）正在逐步遷移到新 SDK 上，因此部分功能可能仍依賴舊實作。此外，SDK 以 TypeScript 為主，若團隊主要使用其他語言 stack，可能需要自行建置適配層。最後，文件僅列出了已支援的 LLM 提供者，未來新增提供者仍需看社群貢獻。
 
 🎯 **實務啟示：開發者可直接利用 @cline/sdk 建構跨平台、可換模型的 AI coding agent**  
 - 如果你正在打造自己的 agent 工具，可將 @cline/sdk 作為基礎，專注於業務邏輯與工具開發，而不必重新實作 agent loop 或 provider 介面。  

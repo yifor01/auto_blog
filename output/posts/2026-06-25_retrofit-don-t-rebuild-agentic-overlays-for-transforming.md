@@ -16,7 +16,7 @@ TL;DR：透過「Agentic Overlays」薄層封裝，讓傳統 REST 服務無需�
 
 🤔 **REST API 與 A2A 通訊的本質衝突**
 
-傳統的 REST 服務設計核心在於確定性 (Deterministic) 與無狀態的請求-回應流程，透過定義明確的端點與引數來執行 CRUD 操作。然而，新興的 A2A 框架要求 Agent 能透過後設資料（例如 Agent Card）互相發現並協商能力，這種自主協作的模式讓許多既有的 REST 服務被排除在 A2A 生態系之外。
+傳統的 REST 服務設計核心在於確定性 (Deterministic) 與無狀態的請求-回應流程，透過定義明確的端點與參數來執行 CRUD 操作。然而，新興的 A2A 框架要求 Agent 能透過後設資料（例如 Agent Card）互相發現並協商能力，這種自主協作的模式讓許多既有的 REST 服務被排除在 A2A 生態系之外。
 
 🧩 **透過 Agentic Overlays 實現「舊瓶裝新酒」**
 

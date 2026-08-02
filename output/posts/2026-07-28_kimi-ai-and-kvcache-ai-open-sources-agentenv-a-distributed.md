@@ -39,7 +39,7 @@ AgentENV (AENV) 透過整合 Firecracker microVM，精準填補了上述兩者�
 
 🎯 **實務啟示**
 
-對於需要進行 Agentic RL 或需要安全執行模型生成程式碼的系統，AgentENV 提供了一套成熟的解決方案，證明瞭透過微型虛擬機 (microVM) 與層疊檔案系統，可以在維持強隔離性的同時，達到足以支撐大規模訓練的擴展性。
+對於需要進行 Agentic RL 或需要安全執行模型生成程式碼的系統，AgentENV 提供了一套成熟的解決方案，證明了透過微型虛擬機 (microVM) 與層疊檔案系統，可以在維持強隔離性的同時，達到足以支撐大規模訓練的擴展性。
 
 🔗 **來源**
 - 標題：Kimi AI and kvcache-ai Open Sources ‘AgentENV’: A Distributed System that Powers Agentic Reinforcement Learning (RL) Training for Kimi K3

@@ -33,11 +33,11 @@ bojieli 在 GitHub 上維護的 `ai-agent-book` 倉庫，是《深入理解 AI A
 
 倉庫提供中文 PDF（原版）、英文、泰米爾語、越南語 PDF，後三者為社群貢獻翻譯，內容可能滯後於中文原版。正文原始碼為 `book/introduction.md`、`book/chapter1.md` 至 `book/chapter10.md` 與 `book/afterword.md`。
 
-若要自行編譯，README 指出需安裝 pandoc、xelatex、ElegantBook 檔案類與相關字型，執行 `cd book && bash build_pdf.sh`；圖表由 `book/gen_*_figs.py` 生成，排版細節見 `book/preamble.tex` 與 `book/*.lua`。
+若要自行編譯，README 指出需安裝 pandoc、xelatex、ElegantBook 文件類與相關字型，執行 `cd book && bash build_pdf.sh`；圖表由 `book/gen_*_figs.py` 生成，排版細節見 `book/preamble.tex` 與 `book/*.lua`。
 
 🎯 **實務啟示**
 
-對 AI/ML 工程師來說，這個倉庫把「設計原理」與「工程實踐」繫結在同一份開源內容裡：想動手的人可以直接跑配套程式碼，想深入的人能從 Markdown 正文讀起，甚至自己編譯最新 PDF。若你正在搭建 Agent 系統，第 2 章上下文工程與第 6 章評估方法特別值得優先翻。
+對 AI/ML 工程師來說，這個倉庫把「設計原理」與「工程實踐」綁定在同一份開源內容裡：想動手的人可以直接跑配套程式碼，想深入的人能從 Markdown 正文讀起，甚至自己編譯最新 PDF。若你正在搭建 Agent 系統，第 2 章上下文工程與第 6 章評估方法特別值得優先翻。
 
 🔗 **來源**
 - 標題：bojieli/ai-agent-book

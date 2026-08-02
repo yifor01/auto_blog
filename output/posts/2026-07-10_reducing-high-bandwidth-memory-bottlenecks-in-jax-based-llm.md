@@ -8,21 +8,21 @@ model: google/gemma-4-31b-it:free
 generated_at: '2026-07-11T08:12:47.923658'
 ---
 
-📌 JAX 主機解除安裝緩解 HBM 瓶頸，提升大模型訓練吞吐  
+📌 JAX 主機卸載緩解 HBM 瓶頸，提升大模型訓練吞吐  
 
 TL;DR：將啟用移至 pinned 主記憶體並流回反向傳播，可將吞吐提升最高 57% 並支援更大批次。  
 
 🎣 當模型、序列長度與批次持續增大時，GPU 高頻寬記憶體（HBM）常在運算資源被充分利用前就成為瓶頸，導致訓練效能受限。  
 
 🤔 背景或問題  
-大型語言模型訓練需要同時容納模型權重、梯度、最佳化器狀態、通訊緩衝區以及中間啟用，這些都佔用 GPU 的 HBM。隨著模型規模、序列長度與批次增大，HBM 容量往往成為首要擴充套件瓶頸。  
+大型語言模型訓練需要同時容納模型權重、梯度、最佳化器狀態、通訊緩衝區以及中間啟用，這些都佔用 GPU 的 HBM。隨著模型規模、序列長度與批次增大，HBM 容量往往成為首要擴展瓶頸。  
 
 🧩 方法或架構  
-NVIDIA 部落格介紹的 JAX 主機解除安裝（host offloading）機制，會選擇性地將部分啟用移至 pinned 主記憶體，並在反向傳播階段透過管線化傳輸（pipelined transfers）將資料流回 GPU。為了隱藏延遲，該方法結合了 Latency Hiding Scheduler 與專用的複製串流（dedicated copy streams），並透過 XLA 自訂排程旗標（custom scheduling flags）來排程啟用傳輸與運算、通訊的重疊。正確的重疊是達到最佳效能的關鍵，需透過分析工具（如 NVIDIA Nsight Systems）驗證非同步資料移動與記憶體使用率是否符合預期。  
+NVIDIA 部落格介紹的 JAX 主機卸載（host offloading）機制，會選擇性地將部分啟用移至 pinned 主記憶體，並在反向傳播階段透過管線化傳輸（pipelined transfers）將資料流回 GPU。為了隱藏延遲，該方法結合了 Latency Hiding Scheduler 與專用的複製串流（dedicated copy streams），並透過 XLA 自訂排程旗標（custom scheduling flags）來排程啟用傳輸與運算、通訊的重疊。正確的重疊是達到最佳效能的關鍵，需透過分析工具（如 NVIDIA Nsight Systems）驗證非同步資料移動與記憶體使用率是否符合預期。  
 
 📊 資料或結果  
 在 NVIDIA GB200 NVL72 平臺上，使用 MaxText 框架對 DeepSeek‑V3 671B 與 Llama 3.1 405B 進行實驗，結果顯示：  
-- 與僅依賴啟用重新計算（activation rematerialization）相比，主機解除安裝結合 Latency Hiding Scheduler 與管線化傳輸可帶來最高 **57%** 的吞吐提升。  
+- 與僅依賴啟用重新計算（activation rematerialization）相比，主機卸載結合 Latency Hiding Scheduler 與管線化傳輸可帶來最高 **57%** 的吞吐提升。  
 - 此技術解鎖了原本受限於 GPU 記憶體的批次大小，使得更大批次成為可能。  
 - 收益在大規模稀疏混合專家（sparse MoE）模型上最為顯著。  
 

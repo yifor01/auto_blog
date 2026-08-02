@@ -15,7 +15,7 @@ TL;DR：建構程式碼結構圖並經由 MCP 提供精準上下文，減少 AI 
 AI 程式碼審查工具在 review 任務中，往往反覆重新讀取整個程式碼庫的大半內容。這不只是慢，還在默默燒掉你的 token 配額。
 
 🤔 為什麼 AI 審 code 會浪費 token
-README 指出，常見的 AI coding 工具在執行 review 相關任務時，會重複讀取程式碼庫中很大一部分的檔案。作者宣稱 code-review-graph 就是為瞭解決這個問題而做：讓 AI 助手只讀「真正有關係」的程式碼。
+README 指出，常見的 AI coding 工具在執行 review 相關任務時，會重複讀取程式碼庫中很大一部分的檔案。作者宣稱 code-review-graph 就是為了解決這個問題而做：讓 AI 助手只讀「真正有關係」的程式碼。
 
 🧩 核心設計：Tree-sitter 建圖 + 增量追蹤 + MCP
 這個專案的做法是：
@@ -32,7 +32,7 @@ README 提供的最小可行流程如下：
 3. 建圖：`code-review-graph build` → 解析你的程式碼庫
 4. 重啟編輯器或工具讓配置生效
 
-`install` 會自動判斷你是用 `uvx` 還是 `pip` / `pipx` 安裝，產生對應配置。若只想針對單一平臺設定，可加 `--platform` 引數，例如：
+`install` 會自動判斷你是用 `uvx` 還是 `pip` / `pipx` 安裝，產生對應配置。若只想針對單一平臺設定，可加 `--platform` 參數，例如：
 - `code-review-graph install --platform codex`（僅配置 Codex）
 - `code-review-graph install --platform cursor`（僅配置 Cursor）
 - `code-review-graph install --platform claude-code`（僅配置 Claude Code）

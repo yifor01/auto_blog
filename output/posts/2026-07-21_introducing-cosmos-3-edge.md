@@ -9,21 +9,21 @@ generated_at: '2026-07-21T08:26:05.782006'
 
 這篇內容屬於**開源專案（GitHub/Hugging Face）與產業新聞**的結合，重點在於 NVIDIA 發布的新模型及其在邊緣運算（Edge Computing）的應用能力。
 
-📌 【NVIDIA 開源新動作】Cosmos 3 Edge 登場：4B 引數模型讓機器人實現即時推理與動作生成
+📌 【NVIDIA 開源新動作】Cosmos 3 Edge 登場：4B 參數模型讓機器人實現即時推理與動作生成
 
-TL;DR：NVIDIA 發布 4B 引數開源世界模型 Cosmos 3 Edge，專為邊緣裝置設計，實現機器人即時控制。
+TL;DR：NVIDIA 發布 4B 參數開源世界模型 Cosmos 3 Edge，專為邊緣裝置設計，實現機器人即時控制。
 
 🎣 **從資料中心走向物理世界：邊緣運算的挑戰**
 
 要在工廠、倉庫或醫院等現實環境中運作，物理 AI 系統必須具備三大能力：理解場景變化、預測下一步發展，並判斷動作對世界的影響。然而，要在記憶體受限的邊緣裝置上實現資料中心等級的效能，一直是技術上的瓶頸。
 
-🧩 **4B 引數的小型世界模型 (World Model)**
+🧩 **4B 參數的小型世界模型 (World Model)**
 
-NVIDIA 在 Hugging Face 的 Cosmos 3 儲存庫中發布了 Cosmos 3 Edge。這是一個擁有 40 億（4-billion）引數的開源世界模型，旨在協助機器人和視覺 AI 代理（Vision AI Agents）理解環境、進行即時推理，並在邊緣裝置上生成機器人動作。
+NVIDIA 在 Hugging Face 的 Cosmos 3 儲存庫中發布了 Cosmos 3 Edge。這是一個擁有 40 億（4-billion）參數的開源世界模型，旨在協助機器人和視覺 AI 代理（Vision AI Agents）理解環境、進行即時推理，並在邊緣裝置上生成機器人動作。
 
 📊 **在 VANTAGE-Bench 表現領先，且具備即時控制能力**
 
-作為一個經過後訓練（Post-trained）的世界動作模型（World Action Model, WAM），Cosmos 3 Edge 在同規模（4B 引數）模型中展現了強大的競爭力：
+作為一個經過後訓練（Post-trained）的世界動作模型（World Action Model, WAM），Cosmos 3 Edge 在同規模（4B 參數）模型中展現了強大的競爭力：
 
 - **視覺分析能力**：在 VANTAGE-Bench 排名第一。
 - **機器人策略學習**：達到目前技術的最佳水準（State-of-the-art）。

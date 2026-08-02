@@ -33,7 +33,7 @@ RxBrain（全名 Hy-Embodied-RxBrain）把體現計畫表示成單一 planning s
 
 評測方面，論文提出 RxBrain-Bench，用來檢查模型能否透過聯合文字與視覺元件來表示體現計畫，而非各自獨立的理解或生成。
 
-實驗顯示，RxBrain 能維持體現理解與生成能力，並產出具有耦合文字推理、world state prediction 與 joint subgoal planning 的計畫。作者也將 RxBrain 擴充套件到連續機器人動作生成，在無大規模 action-data 預訓練下，展現出有潛力的真實機器人表現。
+實驗顯示，RxBrain 能維持體現理解與生成能力，並產出具有耦合文字推理、world state prediction 與 joint subgoal planning 的計畫。作者也將 RxBrain 擴展到連續機器人動作生成，在無大規模 action-data 預訓練下，展現出有潛力的真實機器人表現。
 
 ⚠️ **仍是初步探索**
 

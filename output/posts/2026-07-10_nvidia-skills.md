@@ -36,7 +36,7 @@ TL;DR：透過 npx skills CLI，開發者可直接為 AI 代理安裝 NVIDIA 認
    ```  
    `<skill-name>` 必須來自於 Skill 目錄中的名稱。  
 3. **指定目標代理**  
-   透過 `--agent` 引數可以將 Skill 安裝到特定的代理環境中（具體用法請參考專案說明）。  
+   透過 `--agent` 參數可以將 Skill 安裝到特定的代理環境中（具體用法請參考專案說明）。  
 4. **使用時機**  
    安裝完成後，該 Skill 會在代理下次載入技能並遇到相關任務時自動生效。例如，對代理說「solve a linear programming problem with cuOpt」，它會依照該 Skill 的指引呼叫 cuOpt Python API。
 

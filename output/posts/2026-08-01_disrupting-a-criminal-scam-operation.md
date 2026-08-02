@@ -23,7 +23,7 @@ TL;DR：OpenAI 成功瓦解一個位於柬埔寨的詐騙組織，該組織利�
 
 🎯 **實務啟示**
 
-對於 AI 開發者而言，這再次證明瞭落實安全性對齊（Alignment）與監控惡意使用行為（Malicious uses）的重要性，確保模型不會被轉化為大規模犯罪的生產力工具。
+對於 AI 開發者而言，這再次證明了落實安全性對齊（Alignment）與監控惡意使用行為（Malicious uses）的重要性，確保模型不會被轉化為大規模犯罪的生產力工具。
 
 🔗 **來源**
 - 標題：Disrupting a Criminal Scam Operation

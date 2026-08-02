@@ -31,8 +31,8 @@ TL;DR：Langflow 讓開發者用拖拉介面快速組合 LLM、向量資料庫�
 - 內建與 LangSmith、LangFuse 等觀測平臺的整合，提供執行追蹤與效能監控。  
 - 支援市面上主要 LLM（如 OpenAI、Anthropic、Meta）與向量資料庫，並持續擴充 AI 工具庫。  
 
-🛡️ **企業級安全與可擴充套件性**  
-- README 提到平臺具備企業級的安全機制與可擴充套件架構，適合在生產環境部署。  
+🛡️ **企業級安全與可擴展性**  
+- README 提到平臺具備企業級的安全機制與可擴展架構，適合在生產環境部署。  
 
 🖱️ **Langflow Desktop**  
 - 為免手動管理 Python 環境，Langflow 提供 Windows 與 macOS 的桌面版，所有相依套件已打包，直接下載即可使用。  

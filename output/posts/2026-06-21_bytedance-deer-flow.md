@@ -19,7 +19,7 @@ DeerFlow (Deep Exploration and Efficient Research Flow) 的核心設計在於它
 
 - **子代理協調 (Sub-agents Orchestration)**：將複雜任務拆解並由多個子代理協同完成。
 - **記憶體與沙箱 (Memory & Sandboxes)**：提供記憶體儲存與沙箱環境，確保執行過程的可控性與連續性。
-- **可擴充套件技能 (Extensible Skills)**：透過可擴充套件的技能集，讓 Agent 能執行多樣化的操作。
+- **可擴展技能 (Extensible Skills)**：透過可擴展的技能集，讓 Agent 能執行多樣化的操作。
 
 💡 **2.0 版本採取完全重寫，與 v1 毫無關聯**
 
@@ -34,7 +34,7 @@ DeerFlow (Deep Exploration and Efficient Research Flow) 的核心設計在於它
 - **外部整合**：
     - **搜尋與爬蟲**：整合了由 BytePlus 開發的智慧搜尋與爬蟲工具集 InfoQuest。
     - **追蹤與監控**：支援 LangSmith 與 Langfuse 進行 Tracing 追蹤。
-    - **擴充套件能力**：支援 MCP Server 與 IM Channels 整合。
+    - **擴展能力**：支援 MCP Server 與 IM Channels 整合。
 
 🎯 **實務啟示**
 

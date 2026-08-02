@@ -22,7 +22,7 @@ CLI-Anything 的核心理念是將各種軟體封裝成 Agent 易於理解與呼
 專案提供了一個名為 CLI-Hub 的管理機制，讓社群能共同建構並分享軟體介面：
 - **安裝與管理**：使用者可透過 `pip install cli-anything-hub` 安裝，隨後使用 `cli-hub install <name>` 即可瀏覽並安裝社群開發的 CLI。
 - **社群貢獻**：開發者可以透過提交 Pull Request (PR) 將自己開發的 CLI 加入 Hub，更新後會立即生效。
-- **擴充套件路徑**：若有特定軟體需求，使用者可提交 wishlist 請求，或申請成為貢獻者來建構新的 CLI harness。
+- **擴展路徑**：若有特定軟體需求，使用者可提交 wishlist 請求，或申請成為貢獻者來建構新的 CLI harness。
 
 📊 **從 CAD 到地圖：實作的產出成果**
 

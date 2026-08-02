@@ -12,7 +12,7 @@ generated_at: '2026-07-19T08:02:27.549073'
 TL;DR：wigolo 提供無金鑰、免雲端、不計費的本地網頁工具集，直接接上你的 coding agent。
 
 🎣 開場鉤子
-當 AI 代理每次搜尋、爬取網頁都要繫結 API 金鑰、擔心雲端費用飆漲，KnockOutEZ 推出的 wigolo 反其道而行：所有資料留在本地，用量再大也不會收到帳單。
+當 AI 代理每次搜尋、爬取網頁都要綁定 API 金鑰、擔心雲端費用飆漲，KnockOutEZ 推出的 wigolo 反其道而行：所有資料留在本地，用量再大也不會收到帳單。
 
 🤔 為誰解決什麼問題
 wigolo 鎖定使用 AI agent 的開發者與自架代理的團隊，目標是給 agent 一個「耐用介面（durable surface）」處理所有網頁相關任務——包含 search、fetch、crawl、extract、cache、find-similar、research，以及 autonomous gather loops。它強調 local-first：不需要 API keys、不連雲端、不按量計費，且任何被讀取的內容都不會離開 ~/.wigolo/ 資料夾。

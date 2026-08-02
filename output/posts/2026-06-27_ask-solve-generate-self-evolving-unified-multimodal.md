@@ -40,7 +40,7 @@ TL;DR：提出一套自我演進框架，透過內建三個角色產生一致性
 
 🎯 **實務啟示**
 
-這項研究證明瞭「自我監督」在多模態領域的可能性。對於工程師而言，這提供了一種新思路：透過設計內部的角色對抗或一致性檢查（例如：生成問題 $\rightarrow$ 回答 $\rightarrow$ 根據回答生成影像 $\rightarrow$ 再次描述），可以在缺乏高質量標註資料的情況下，利用海量無標註影像來強化模型的通用能力。
+這項研究證明了「自我監督」在多模態領域的可能性。對於工程師而言，這提供了一種新思路：透過設計內部的角色對抗或一致性檢查（例如：生成問題 $\rightarrow$ 回答 $\rightarrow$ 根據回答生成影像 $\rightarrow$ 再次描述），可以在缺乏高質量標註資料的情況下，利用海量無標註影像來強化模型的通用能力。
 
 🔗 **來源**
 - 標題：Ask, Solve, Generate: Self-Evolving Unified Multimodal Understanding and Generation via Self-Consistency Rewards

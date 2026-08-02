@@ -18,7 +18,7 @@ TL;DR：Gigatoken 是一款 Rust 實作的 BPE Tokenizer，處理效能最高可
 
 🧩 **核心設計：Rust 驅動與兩種使用模式**
 
-Gigatoken 是一個使用 Rust 語言撰寫並提供 Python 繫結（Bindings）的 Byte-Pair Encoding (BPE) Tokenizer。其程式碼結構由 66.2% 的 Rust 與 33.3% 的 Python 組成。
+Gigatoken 是一個使用 Rust 語言撰寫並提供 Python 綁定（Bindings）的 Byte-Pair Encoding (BPE) Tokenizer。其程式碼結構由 66.2% 的 Rust 與 33.3% 的 Python 組成。
 
 根據 README，使用者有兩種方式可以使用：
 1. **原生 API (Native API)**：讓 Rust 直接讀取檔案，這是達成極致吞吐量（Throughput）的關鍵，也是效能測試資料的來源。

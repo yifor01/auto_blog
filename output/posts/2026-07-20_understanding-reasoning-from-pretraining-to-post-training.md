@@ -20,7 +20,7 @@ TL;DR：研究以西洋棋為受控測試平臺，證實 pretraining loss 可預
 🧩 **把西洋棋當成完整訓練管線的代理任務**
 
 研究遵循標準 LLM 訓練流程，建立受控實驗：
-- Pretraining：從 5M 到 1B 引數的語言模型，在人類西洋棋對局上做 pretraining。
+- Pretraining：從 5M 到 1B 參數的語言模型，在人類西洋棋對局上做 pretraining。
 - Supervised Fine-Tuning（SFT）：使用合成推理軌跡（synthetic reasoning traces）進行微調。
 - RL：在具可驗證獎勵的西洋棋謎題上執行 RL。
 

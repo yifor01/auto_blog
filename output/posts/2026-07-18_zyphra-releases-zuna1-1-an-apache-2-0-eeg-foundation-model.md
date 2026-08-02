@@ -18,13 +18,13 @@ TL;DR：Zyphra 釋出 ZUNA1.1 EEG 基礎模型，可接受任意通道佈局與�
 🤔 **真實 EEG 的亂度，逼出模型彈性**
 Zyphra 本週釋出 ZUNA1.1，延續早先開放授權的 EEG 基礎模型 ZUNA1。這次主要改動是「彈性」而非原始準確度躍進。實務上，EEG session 長度參差不齊，montage（電極配置）從消費級頭帶到高密度研究帽差異極大；ZUNA1 僅能處理固定五秒區段，ZUNA1.1 則接受 0.5 到 30 秒的可變長度輸入，並能跨任意通道佈局運作。
 
-🧩 **380M 引數的 masked diffusion autoencoder**
-README 指出，ZUNA1.1 是一個 380M 引數的 masked diffusion autoencoder（遮罩擴散自動編碼器），針對頭皮 EEG 訊號設計。給定部分通道子集時，它可：
+🧩 **380M 參數的 masked diffusion autoencoder**
+README 指出，ZUNA1.1 是一個 380M 參數的 masked diffusion autoencoder（遮罩擴散自動編碼器），針對頭皮 EEG 訊號設計。給定部分通道子集時，它可：
 - 對現有 EEG 段落與通道去雜訊（denoise）
 - 重建缺失通道
 - 根據頭皮上的物理座標，預測未曾記錄位置的新通道訊號
 
-引數量與 ZUNA1 相同，可在消費級 GPU 執行，多數工作負載在 CPU 上也有可接受表現。
+參數量與 ZUNA1 相同，可在消費級 GPU 執行，多數工作負載在 CPU 上也有可接受表現。
 
 ⚙️ **靠 4D 旋轉位置編碼做到 channel-agnostic**
 彈性來自 tokenization 設計。ZUNA 是 transformer encoder–decoder 擴散自動編碼器，流程如下：

@@ -13,7 +13,7 @@ score: 68
 
 TL;DR：Gemini Intelligence 將自動化 40 多款 App 任務，並透過摺疊機、手錶與眼鏡實現全方位 AI 體驗。
 
-在 Galaxy Unpacked 2026 活動中，Google 展示瞭如何透過 AI 技術，讓三星的新款摺疊手機、智慧手錶與眼鏡提升生產力，讓科技更貼近使用者的日常需求。
+在 Galaxy Unpacked 2026 活動中，Google 展示了如何透過 AI 技術，讓三星的新款摺疊手機、智慧手錶與眼鏡提升生產力，讓科技更貼近使用者的日常需求。
 
 🧩 **Gemini Intelligence 橫跨 40 多款熱門 App 實現任務自動化**
 
@@ -28,7 +28,7 @@ Google 為最新的 Samsung Galaxy Z Fold8 與 Flip8 系列匯入了 Gemini Inte
 
 ⌚ **從手腕到眼鏡：打造無須觸碰手機的 AI 體驗**
 
-除了手機，Google 正將 Gemini 的能力擴充套件到穿戴式裝置：
+除了手機，Google 正將 Gemini 的能力擴展到穿戴式裝置：
 - **Galaxy Watch 9**：使用者可以更輕鬆地透過手腕存取 Gemini。
 - **智慧眼鏡 (Intelligent Eyewear)**：預計於今年秋季推出，將提供免手動的感應控制 (gesture controls)，讓使用者無需觸碰手機即可獲得 AI 協助。
 

@@ -29,7 +29,7 @@ xAI 在其終端機程式設計代理（coding agent）Grok Build 中推出了 `
 `/goal` 並非獨立產品，而是 Grok Build 這一 CLI 工具中的一個模式。Grok Build 作為軟體工程的終端代理，具備以下技術特性：
 - **本地 codebase 存取**：直接在終端機執行，能讀取本地檔案並執行命令。
 - **平行處理**：能將大型工作委派給多個專業的子代理（subagents）平行執行。
-- **擴充套件能力**：原生支援讀取 `AGENTS.md`、外掛、hooks、skills 以及 MCP（Model Context Protocol）伺服器，將代理連線至外部工具與資料。
+- **擴展能力**：原生支援讀取 `AGENTS.md`、外掛、hooks、skills 以及 MCP（Model Context Protocol）伺服器，將代理連線至外部工具與資料。
 - **控制機制**：提供「計畫模式」可在編輯前要求使用者核准計畫，並透過進度清單與導向指令（steering commands）解決長時程執行時的監控問題。
 
 🎯 **實務啟示：開發者的角色轉變**

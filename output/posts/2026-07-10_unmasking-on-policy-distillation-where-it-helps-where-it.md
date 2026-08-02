@@ -23,8 +23,8 @@ On‑policy 蒸餾能為每個 token 提供密集監督，有助於訓練推理�
 🧩 **方法或架構**  
 論文提出一個 **training‑free 診斷框架**，操作 granularity 達到「per token、per question、per teacher」：  
 
-1. **理想 per‑node gradient** – 定義為能最大程度提升學生模型成功機率的引數更新。  
-2. **可擴充套件的 targeted‑rollout 演算法** – 用以高效估計上述理想梯度，即使在長鏈中間思考（chain‑of‑thought）情境下也適用。  
+1. **理想 per‑node gradient** – 定義為能最大程度提升學生模型成功機率的參數更新。  
+2. **可擴展的 targeted‑rollout 演算法** – 用以高效估計上述理想梯度，即使在長鏈中間思考（chain‑of‑thought）情境下也適用。  
 3. **梯度對齊分數（gradient alignment score）** – 計算理想梯度與任意給定蒸餾梯度的餘弦相似度，用來量測特定配置逼近理想訊號的程度。  
 
 此框架不需要實際進行完整訓練，即可在不同教師模型或不同監督上下文的效果。  

@@ -15,7 +15,7 @@ Copilot CLI 或 VS Code 中的 GitHub Copilot 雖然強大，但它們對特定 
 
 🧩 **透過 Skill 補足 AI Agent 的領域知識缺口**
 
-Microsoft 推出的 `microsoft/skills` 專案旨在提供一套可複用的技能集，讓 AI 編碼助手能更有效率地與 Azure SDKs 及 Microsoft AI Foundry 協作。目前該專案包含 175 個可供瀏覽與安裝的技能，且正處於積極開發狀態，持續更新 SDK 模式並擴充套件測試。
+Microsoft 推出的 `microsoft/skills` 專案旨在提供一套可複用的技能集，讓 AI 編碼助手能更有效率地與 Azure SDKs 及 Microsoft AI Foundry 協作。目前該專案包含 175 個可供瀏覽與安裝的技能，且正處於積極開發狀態，持續更新 SDK 模式並擴展測試。
 
 ⚙️ **快速安裝與整合方式**
 

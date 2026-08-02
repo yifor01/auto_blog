@@ -25,7 +25,7 @@ generated_at: 2026-05-28T21:29:21.033615
 💡 **使用情境與實務建議**  
 - 想在本機環境中試用 AI 輔助編程，又不想將原始碼上傳至雲端。  
 - 需要在網路不穩或離線的情況下仍能獲得程式碼協助。  
-- 搭配 IDE（VS Code、Cursor、Windsurf）時，可先在 IDE 中安裝相應擴充套件，亦可選擇使用桌面應用程式（執行 `codex app`）或直接造訪 Codex App 頁面。  
+- 搭配 IDE（VS Code、Cursor、Windsurf）時，可先在 IDE 中安裝相應擴展，亦可選擇使用桌面應用程式（執行 `codex app`）或直接造訪 Codex App 頁面。  
 - 若偏好雲端服務，仍可透過 `chatgpt.com/codex` 使用 OpenAI 提供的網頁版 Codex。  
 
 ⚠️ **需要注意的限制與前置條件**  

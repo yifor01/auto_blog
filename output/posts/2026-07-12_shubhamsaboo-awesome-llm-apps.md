@@ -26,7 +26,7 @@ TL;DR：提供 100 多個經過測試、可直接 Clone 並部署的 AI Agent �
 
 🌐 **模型無關的設計，靈活切換供應商**
 
-為了避免被單一模型繫結，該專案採取 Provider-agnostic 設計。開發者僅需修改設定（Config），即可在不同模型之間切換，支援包括 Claude, Gemini, OpenAI, xAI, Qwen 與 Llama 等主流模型。
+為了避免被單一模型綁定，該專案採取 Provider-agnostic 設計。開發者僅需修改設定（Config），即可在不同模型之間切換，支援包括 Claude, Gemini, OpenAI, xAI, Qwen 與 Llama 等主流模型。
 
 🎯 **實務啟示**
 

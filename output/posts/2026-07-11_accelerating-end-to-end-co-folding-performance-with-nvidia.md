@@ -9,7 +9,7 @@ generated_at: '2026-07-11T09:34:11.514131'
 
 📌 **NVIDIA BioNeMo：讓 AI Agent 跑生物預測不再卡關**
 
-TL;DR：NVIDIA 推出 BioNeMo Agent Toolkit，將 MSA 生成、共摺疊推論與多 GPU 擴充套件全線加速，讓 AI Agent 能高效處理大型蛋白質複合體。
+TL;DR：NVIDIA 推出 BioNeMo Agent Toolkit，將 MSA 生成、共摺疊推論與多 GPU 擴展全線加速，讓 AI Agent 能高效處理大型蛋白質複合體。
 
 🎣 **當 AI Agent 想要「思考」蛋白質結構，速度就是生命**
 
@@ -21,7 +21,7 @@ TL;DR：NVIDIA 推出 BioNeMo Agent Toolkit，將 MSA 生成、共摺疊推論�
 
 1.  **MSA 生成加速**：使用 MMseqs2-GPU，針對 NVIDIA Hopper 和 Blackwell 架構進行了最佳化。相較於傳統使用 CPU JackHMMER 的方法，速度提升高達 177 倍。這意味著 Agent 在準備序列比對資料時，等待時間大幅縮減。
 2.  **共摺疊推論最佳化**：透過 cuEquivariance 與 OpenFold3 NIM（NVIDIA Inference Microservice）進行整合。cuEquivariance 將 OpenFold3 的前向傳遞執行時間縮短至原本的三分之一，並將序列長度限制延伸至約 5.9k tokens。
-3.  **多 GPU 擴充套件能力**：引入 Fold-CP（Context Parallelism，上下文平行處理）技術，降低單張 GPU 的記憶體需求至 O(N/P)，使得龐大的分子複合體也能被建模。
+3.  **多 GPU 擴展能力**：引入 Fold-CP（Context Parallelism，上下文平行處理）技術，降低單張 GPU 的記憶體需求至 O(N/P)，使得龐大的分子複合體也能被建模。
 
 📊 **硬體效能資料揭曉**
 
@@ -29,7 +29,7 @@ TL;DR：NVIDIA 推出 BioNeMo Agent Toolkit，將 MSA 生成、共摺疊推論�
 
 *   **MSA 生成**：在 Hopper/Blackwell 架構下，比 CPU JackHMMER 快 177 倍。
 *   **單一 GPU 極限**：OpenFold3 NIM 在單張 B300 GPU 上可處理高達 6,400 tokens 的序列。
-*   **多 GPU 擴充套件**：使用 64 張 B300 GPU，可建模高達 32,000 tokens 的大型組裝體。
+*   **多 GPU 擴展**：使用 64 張 B300 GPU，可建模高達 32,000 tokens 的大型組裝體。
 
 這組資料顯示，NVIDIA 正在將原本需要大量資源才能處理的「不可行」問題，轉化為標準化的計算任務。
 
@@ -45,7 +45,7 @@ TL;DR：NVIDIA 推出 BioNeMo Agent Toolkit，將 MSA 生成、共摺疊推論�
 *   **硬體門檻與效益**：雖然需要 NVIDIA Hopper/Blackwell 架構及多張 B300 GPU 來發揮極致效能，但對於大型藥物發現計畫來說，這種規模的計算資源投入能顯著加速從候選化合物到結構預測的週期。
 *   **Agent 驅動的管線**：隨著 MSA 生成與推論速度大幅提升，AI Agent 可以更頻繁地執行迭代式探索與最佳化，而不必擔心計算資源的即時可用性。
 
-這套工具包的推出，標誌著生物結構預測從「人工輔助的計算任務」邁向「完全由 AI Agent 驅動的自動化流程」，而速度與擴充套件性正是實現這一轉變的關鍵基礎設施。
+這套工具包的推出，標誌著生物結構預測從「人工輔助的計算任務」邁向「完全由 AI Agent 驅動的自動化流程」，而速度與擴展性正是實現這一轉變的關鍵基礎設施。
 
 🔗 **來源**
 - 標題：Accelerating End-to-End Co-Folding Performance with NVIDIA BioNeMo Agent Toolkit

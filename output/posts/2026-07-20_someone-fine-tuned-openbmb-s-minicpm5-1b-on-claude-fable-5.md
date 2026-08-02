@@ -16,15 +16,15 @@ TL;DR：開發者以 Fable 5 追蹤資料 SFT 小型基模，產出可離線執�
 
 🤔 **從 OpenBMB 基模出發的社群衍生版**
 
-開發者 GnLOLot 發布了 MiniCPM5-1B-Claude-Opus-Fable5-Thinking，這是一個基於 openbmb/MiniCPM5-1B 的微調版本。基模本身是 OpenBMB 正式發布的密集式（dense）1.08B 引數模型，採用標準 LlamaForCausalLM 架構，具備 24 層、grouped-query attention，以及 131,072 token 的上下文長度。OpenBMB 在其對比集合中宣稱達到 1B 級開源 SOTA，且基模原生就帶有 thinking 模板，可透過 enable_thinking 切換 Think 與 No Think 模式。衍生模型保留了該模板與 MiniCPM5 的工具呼叫格式。
+開發者 GnLOLot 發布了 MiniCPM5-1B-Claude-Opus-Fable5-Thinking，這是一個基於 openbmb/MiniCPM5-1B 的微調版本。基模本身是 OpenBMB 正式發布的密集式（dense）1.08B 參數模型，採用標準 LlamaForCausalLM 架構，具備 24 層、grouped-query attention，以及 131,072 token 的上下文長度。OpenBMB 在其對比集合中宣稱達到 1B 級開源 SOTA，且基模原生就帶有 thinking 模板，可透過 enable_thinking 切換 Think 與 No Think 模式。衍生模型保留了該模板與 MiniCPM5 的工具呼叫格式。
 
 🧩 **不是蒸餾，是用教師輸出做監督式微調**
 
 作者強調這不是古典蒸餾（distillation）。做法上是先用教師模型生成大量對話，擷取回覆與 reasoning traces 成為文字，再對較小的基模做 supervised fine-tuning（SFT）。由於沒有人能取得 Claude 的權重或 logits，因此這屬於「對生成輸出做 SFT」，而非權重層級的蒸餾。相對地，OpenBMB 原基模自身使用的是有檔案的 On-Policy Distillation 階段。衍生模型卡片寫明「further fine-tuned on Fable 5 data」以強化 coding 與指令遵循，GGUF 卡片則重述為「post-trained on Fable 5 data」。
 
-⚠️ **1B 引數預算裝不下前沿推理**
+⚠️ **1B 參數預算裝不下前沿推理**
 
-實務上，這個 1B 模型學到的是回應格式與風格的模仿，而非教師模型底層的能力。1B 引數的規模無法容納 frontier-scale 的推理能力。上下文視窗繼承基模 config.json 的 131,072（即 128K）token。GGUF 版本提供給 llama.cpp 相容執行環境使用，不需 API key、不呼叫雲端。
+實務上，這個 1B 模型學到的是回應格式與風格的模仿，而非教師模型底層的能力。1B 參數的規模無法容納 frontier-scale 的推理能力。上下文視窗繼承基模 config.json 的 131,072（即 128K）token。GGUF 版本提供給 llama.cpp 相容執行環境使用，不需 API key、不呼叫雲端。
 
 🎯 **離線小模型的務實定位**
 

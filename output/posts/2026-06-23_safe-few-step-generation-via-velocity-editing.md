@@ -15,7 +15,7 @@ TL;DR：VESFlow 透過編輯速度場（velocity fields），在不需重新訓�
 
 🤔 **在生成速度場中攔截不安全內容**
 
-VESFlow 針對基於 Flow Matching 的生成模型提出了一種「訓練無關」（training-free）的安全機制。其核心理念不在於修改模型引數，而是在生成過程中直接對速度場（velocity fields）進行編輯。
+VESFlow 針對基於 Flow Matching 的生成模型提出了一種「訓練無關」（training-free）的安全機制。其核心理念不在於修改模型參數，而是在生成過程中直接對速度場（velocity fields）進行編輯。
 
 🧩 **透過編輯速度場維持提示詞完整性**
 

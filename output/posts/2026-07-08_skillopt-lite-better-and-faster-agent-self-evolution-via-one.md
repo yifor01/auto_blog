@@ -15,7 +15,7 @@ Agent 系統的自我進化（Self-evolution）一直是熱門研究方向，但
 
 🤔 **消除冗餘，追求輕量最佳化**
 
-傳統的技能最佳化方法通常需要繁瑣的步驟與大量超引數調整。這項研究的核心在於將技能最佳化形式化為「零階最佳化」（Zeroth-Order Optimization, ZOO）。
+傳統的技能最佳化方法通常需要繁瑣的步驟與大量超參數調整。這項研究的核心在於將技能最佳化形式化為「零階最佳化」（Zeroth-Order Optimization, ZOO）。
 
 所謂的零階最佳化，通常指在不依賴梯度資訊的情況下進行最佳化。SkillOpt-Lite 的目標是消除現有方法中的冗餘步驟，同時確保模型在收斂（Convergence）與泛化（Generalization）能力上不掉隊。
 

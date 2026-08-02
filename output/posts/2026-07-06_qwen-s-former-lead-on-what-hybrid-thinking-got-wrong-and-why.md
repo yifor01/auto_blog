@@ -24,13 +24,13 @@ Alibaba Qwen 專案的前技術領袖 Junyang Lin 在其演講「Qwen: Towards a
 - **思考模式 (Thinking mode)**：用於逐步推理 (step-by-step reasoning)。
 - **非思考模式 (Non-thinking mode)**：用於提供近乎即時的回應。
 
-此外，Qwen3 引入了「動態思考預算 (Dynamic thinking budgets)」，允許呼叫者設定模型推理的上限。在語言支援方面，Qwen3 將支援範圍從 29 種擴充套件至 119 種語言與方言。
+此外，Qwen3 引入了「動態思考預算 (Dynamic thinking budgets)」，允許呼叫者設定模型推理的上限。在語言支援方面，Qwen3 將支援範圍從 29 種擴展至 119 種語言與方言。
 
 📊 **模型規模與架構細節**
 
-Qwen3 提供了從 0.6B 到 235B 引數的不同規模，並以 Apache 2.0 協議釋出 GGUF、GPTQ、AWQ 與 MLX 等量化格式。其架構設計分為兩類：
-- **小型 Dense 模型**：繫結輸入與輸出 Embedding，支援 32K 上下文。
-- **大型 Dense 與 MoE 模型**：取消 Embedding 繫結，將上下文擴充套件至 128K。
+Qwen3 提供了從 0.6B 到 235B 參數的不同規模，並以 Apache 2.0 協議釋出 GGUF、GPTQ、AWQ 與 MLX 等量化格式。其架構設計分為兩類：
+- **小型 Dense 模型**：綁定輸入與輸出 Embedding，支援 32K 上下文。
+- **大型 Dense 與 MoE 模型**：取消 Embedding 綁定，將上下文擴展至 128K。
 - **MoE 機制**：在 128 個專家中，每個 token 僅啟用 8 個專家。
 
 💡 **Hybrid Thinking 的實作困境**
@@ -42,9 +42,9 @@ Qwen3 提供了從 0.6B 到 235B 引數的不同規模，並以 Apache 2.0 協�
 Lin 的結論明確指出，未來的開發重心將從單純的模型訓練轉向 Agent 訓練。這意味著接下來的技術突破將聚焦於：
 - 增加更多預訓練量。
 - 匯入具備「環境回饋 (environment feedback)」的強化學習 (RL)。
-- 擴充套件更長的上下文與更多模態 (modalities)。
+- 擴展更長的上下文與更多模態 (modalities)。
 
-對於工程師而言，這暗示了單純提升模型引數或推理能力已不足夠，如何讓模型在與環境互動中學習（Agentic workflow），將是下一階段的關鍵。
+對於工程師而言，這暗示了單純提升模型參數或推理能力已不足夠，如何讓模型在與環境互動中學習（Agentic workflow），將是下一階段的關鍵。
 
 🔗 **來源**
 - 標題：Qwen’s Former Lead on What Hybrid Thinking Got Wrong — and Why He Now Backs Agents

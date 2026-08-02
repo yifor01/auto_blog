@@ -38,7 +38,7 @@ NVIDIA BioNeMo 透過提供「BioNeMo Skills」，將核心的生物分子能力
 
 🎯 **實務啟示**
 
-對於開發科學 AI Agent 的工程師而言，這證明瞭「工具封裝」的重要性。與其依賴 LLM 的通用推理，不如透過定義明確的輸入/輸出規範（如 Model Context Protocol）將專業領域模型轉化為「技能」，讓 Agent 能在受控且可靠的框架下進行科學探索。
+對於開發科學 AI Agent 的工程師而言，這證明了「工具封裝」的重要性。與其依賴 LLM 的通用推理，不如透過定義明確的輸入/輸出規範（如 Model Context Protocol）將專業領域模型轉化為「技能」，讓 Agent 能在受控且可靠的框架下進行科學探索。
 
 🔗 **來源**
 - 標題：Build an AI Scientist for Life Science Discovery with NVIDIA BioNeMo Agent Toolkit

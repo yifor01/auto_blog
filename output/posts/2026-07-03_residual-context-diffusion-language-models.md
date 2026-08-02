@@ -19,11 +19,11 @@ TL;DR：透過 RCD 模組回收被捨棄的 token 資訊，讓 Diffusion LLM 在
 
 🧩 **RCD 模組：將捨棄的資訊轉化為「上下文殘差」**
 
-為瞭解決上述問題，研究團隊提出 Residual Context Diffusion (RCD) 模組。其核心設計理念如下：
+為了解決上述問題，研究團隊提出 Residual Context Diffusion (RCD) 模組。其核心設計理念如下：
 
 - **資訊回收**：將被捨棄的 token 表示 (representations) 轉換為「上下文殘差 (contextual residuals)」。
 - **反饋注入**：將這些殘差重新注入到下一次的去噪 (denoising) 步驟中，讓模型能利用先前保留的上下文資訊。
-- **兩階段訓練**：為了避開反向傳播 (backpropagation) 帶來的記憶體瓶頸，RCD 採用瞭解耦的兩階段訓練管線。
+- **兩階段訓練**：為了避開反向傳播 (backpropagation) 帶來的記憶體瓶頸，RCD 採用了解耦的兩階段訓練管線。
 
 📊 **從 AIME 表現看 RCD 的效能增益**
 
@@ -35,7 +35,7 @@ TL;DR：透過 RCD 模組回收被捨棄的 token 資訊，讓 Diffusion LLM 在
 
 🎯 **實務啟示**
 
-對於開發 Diffusion LLM 的工程師而言，這項研究證明瞭「中間狀態的資訊回收」能顯著降低推論成本。與其單純追求更強的遮蓋策略，將被捨棄的表示轉化為殘差並回饋給模型，可能是提升平行解碼效率、減少去噪迭代次數的有效路徑。
+對於開發 Diffusion LLM 的工程師而言，這項研究證明了「中間狀態的資訊回收」能顯著降低推論成本。與其單純追求更強的遮蓋策略，將被捨棄的表示轉化為殘差並回饋給模型，可能是提升平行解碼效率、減少去噪迭代次數的有效路徑。
 
 🔗 **來源**
 - 標題：Residual Context Diffusion Language Models

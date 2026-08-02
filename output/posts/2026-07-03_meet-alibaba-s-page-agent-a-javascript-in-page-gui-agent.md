@@ -32,7 +32,7 @@ Page Agent 是一個基於 TypeScript 的開源專案（MIT 授權），它將 A
 
 💡 **模型無關設計與模組化架構**
 
-Page Agent 的設計並不繫結特定模型，工程師可以透過任何相容於 OpenAI 的端點（Endpoint）接入自選的 LLM。
+Page Agent 的設計並不綁定特定模型，工程師可以透過任何相容於 OpenAI 的端點（Endpoint）接入自選的 LLM。
 
 在實作架構上，該專案採用 monorepo 管理，將職責拆分為小型套件。其中 `@page-agent/core` 負責核心邏輯，並透過一個 `PageController` 來委派具體操作。此外，其 DOM 處理流程與 Prompt 設計是基於 browser-use 衍生而來。
 

@@ -40,7 +40,7 @@ TL;DR：ARDY 以混合表示與兩階段自回歸 Transformer 去噪，實現即
 
 - **即時應用**：如果你的產品需要根據使用者文字指令即時產生角色動畫（例如 VR 社交、遊戲 NPC 互動），ARDY 的串流式設計可直接嵌入現有渲染管線。  
 - **可控性**：透過 kinematic constraint 輸入，你可以限制關節範圍或保留特定姿勢，避免生成不合理的動作。  
-- **擴充套件性**：混合表示的概念允許未來加入更多控制模態，如聲音節拍或情緒標籤，只要把相應向量融合進 Hybrid Token 即可。  
+- **擴展性**：混合表示的概念允許未來加入更多控制模態，如聲音節拍或情緒標籤，只要把相應向量融合進 Hybrid Token 即可。  
 
 🔗 來源  
 - 標題：ARDY: Autoregressive Diffusion with Hybrid Representation for Interactive Human Motion Generation  

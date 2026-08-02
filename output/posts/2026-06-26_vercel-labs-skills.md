@@ -23,7 +23,7 @@ TL;DR：一個讓開發者能快速安裝並將特定技能（Skills）注入 Cl
 
 1. **永久安裝**：將技能安裝至專案或全域目錄。
    - 安裝指令：`npx skills add vercel-labs/agent-skills`
-   - 可使用 `-g` 引數安裝到使用者目錄，或用 `-s` 指定安裝特定技能。
+   - 可使用 `-g` 參數安裝到使用者目錄，或用 `-s` 指定安裝特定技能。
 
 2. **即時使用（無需安裝）**：直接產生 Prompt 並啟動 Agent。
    - 產生 Prompt 並輸出至 stdout：`npx skills use vercel-labs/agent-skills@web-design-guidelines | claude`

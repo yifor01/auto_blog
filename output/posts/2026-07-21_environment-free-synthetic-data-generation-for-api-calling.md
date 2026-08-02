@@ -13,7 +13,7 @@ TL;DR：透過 LLM 模擬 API 回應，無需實際執行環境即可生成高�
 
 🎣 **擺脫對實體 API 環境的依賴**
 
-訓練具備 API 呼叫能力的 LLM Agent，需要海量的高品質互動軌跡（trajectories）。然而，傳統做法通常需要建置完整的執行環境，包含可執行的 API 以及預先填入資料的後端資料庫，這對大規模擴充套件訓練規模而言，構成了嚴重的技術瓶頸。
+訓練具備 API 呼叫能力的 LLM Agent，需要海量的高品質互動軌跡（trajectories）。然而，傳統做法通常需要建置完整的執行環境，包含可執行的 API 以及預先填入資料的後端資料庫，這對大規模擴展訓練規模而言，構成了嚴重的技術瓶頸。
 
 🧩 **用 LLM 當作「隨選數位世界模型」**
 
@@ -26,11 +26,11 @@ TL;DR：透過 LLM 模擬 API 回應，無需實際執行環境即可生成高�
 
 📊 **在 AppWorld 與 OfficeBench 取得顯著成效**
 
-研究團隊在包含「資訊檢索」與「狀態改變（state-changing）」任務的挑戰性基準測試（AppWorld 與 OfficeBench）上進行了評估。結果顯示，使用這種合成資料進行微調（fine-tuning），能為模型帶來顯著的效能提升，證明瞭無需實際執行環境也能為 API 呼叫 Agent 提供有效的監督訓練。
+研究團隊在包含「資訊檢索」與「狀態改變（state-changing）」任務的挑戰性基準測試（AppWorld 與 OfficeBench）上進行了評估。結果顯示，使用這種合成資料進行微調（fine-tuning），能為模型帶來顯著的效能提升，證明了無需實際執行環境也能為 API 呼叫 Agent 提供有效的監督訓練。
 
 💡 **模擬 API 是大規模訓練的實用解方**
 
-這項研究證實，基於 LLM 的 API 模擬技術，是針對不同 API 生態系訓練 Agent 時，一種具備實用性且可擴充套件（scalable）的解決方案。
+這項研究證實，基於 LLM 的 API 模擬技術，是針對不同 API 生態系訓練 Agent 時，一種具備實用性且可擴展（scalable）的解決方案。
 
 🔗 **來源**
 - 標題：Environment-free Synthetic Data Generation for API-Calling Agents

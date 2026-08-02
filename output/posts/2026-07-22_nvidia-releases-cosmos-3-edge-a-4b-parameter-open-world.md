@@ -10,7 +10,7 @@ score: 105
 
 這篇素材屬於「產業新聞」，將聚焦於 NVIDIA 釋出的新模型及其技術架構。
 
-📌 【NVIDIA 新動態】Cosmos 3 Edge 登場：4B 引數模型讓機器人在邊緣端實現世界模型推理
+📌 【NVIDIA 新動態】Cosmos 3 Edge 登場：4B 參數模型讓機器人在邊緣端實現世界模型推理
 
 TL;DR：NVIDIA 釋出 Cosmos 3 Edge，讓機器人在記憶體受限的邊緣端即可進行視覺推理與動作生成。
 

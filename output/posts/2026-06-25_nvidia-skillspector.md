@@ -11,7 +11,7 @@ generated_at: '2026-06-25T20:20:09.681899'
 
 TL;DR：針對 AI Agent Skills 的安全掃描工具，透過靜態分析與 LLM 評估，偵測漏洞與惡意模式。
 
-當我們使用 Claude Code、Codex CLI 或 Gemini CLI 等 AI Agent 時，通常會安裝各種「Skills」來擴充套件其能力。然而，這些 Skills 往往在極少審核的情況下就被賦予隱含的信任，這為系統留下了巨大的安全漏洞。
+當我們使用 Claude Code、Codex CLI 或 Gemini CLI 等 AI Agent 時，通常會安裝各種「Skills」來擴展其能力。然而，這些 Skills 往往在極少審核的情況下就被賦予隱含的信任，這為系統留下了巨大的安全漏洞。
 
 🤔 **26.1% 的 Agent Skills 潛在風險**
 

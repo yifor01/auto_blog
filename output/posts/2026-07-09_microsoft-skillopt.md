@@ -28,14 +28,14 @@ Harvest（採集） → Mine（挖掘） → Replay（回放） → Consolidate�
 
 🛠️ **廣泛的工具整合與生態支援**
 
-SkillOpt 展現了強大的擴充套件性與整合能力：
+SkillOpt 展現了強大的擴展性與整合能力：
 - **後端支援**：提供跨工具後端與外掛外殼，支援 Claude、Codex、Copilot、Devin 與 OpenClaw。
 - **框架整合**：目前已與 gbrain、gbrain-evals 及 darwin-skill 完成整合。
 - **功能強化**：包含 SearchQA 分割材質化（split materialization）、Windows 系統魯棒性提升以及更強健的 JSON 解析能力。
 
 🎯 **實務啟示**
 
-對於開發 AI Agent 的工程師而言，SkillOpt 提供了一套標準化的「技能演進」框架。這意味著你不再需要盲目地嘗試 Prompt 調整，而是可以透過設定超引數與驗證閘門，以更系統化、可量化的方式讓 Agent 在實作中不斷進化，特別是在需要高度穩定性的編碼任務中，離線回放與鞏固機制能有效降低線上部署的風險。
+對於開發 AI Agent 的工程師而言，SkillOpt 提供了一套標準化的「技能演進」框架。這意味著你不再需要盲目地嘗試 Prompt 調整，而是可以透過設定超參數與驗證閘門，以更系統化、可量化的方式讓 Agent 在實作中不斷進化，特別是在需要高度穩定性的編碼任務中，離線回放與鞏固機制能有效降低線上部署的風險。
 
 🔗 **來源**
 - 標題：microsoft/SkillOpt

@@ -38,7 +38,7 @@ README 提供的做法如下：
 
 🎯 **實務啟示**
 
-對習慣命令列的工程師，Kimi CLI 提供「不離開終端就能請 AI 改程式、跑指令、查檔案」的工作流；若你已在使用 Zed、JetBrains 或 VS Code，可透過 ACP 或擴充套件把 agent 接進現有 IDE。但要注意，此專案正逐步退場，新使用者應直接評估 Kimi Code CLI，以免設定與會話後續還要再遷移一次。
+對習慣命令列的工程師，Kimi CLI 提供「不離開終端就能請 AI 改程式、跑指令、查檔案」的工作流；若你已在使用 Zed、JetBrains 或 VS Code，可透過 ACP 或擴展把 agent 接進現有 IDE。但要注意，此專案正逐步退場，新使用者應直接評估 Kimi Code CLI，以免設定與會話後續還要再遷移一次。
 
 🔗 **來源**
 - 標題：MoonshotAI/kimi-cli

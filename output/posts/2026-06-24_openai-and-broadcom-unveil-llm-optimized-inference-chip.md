@@ -9,9 +9,9 @@ generated_at: '2026-06-24T20:04:09.359781'
 
 📌 OpenAI 與 Broadcom 合作推出 Jalapeño：專為 LLM 推理最佳化的自研晶片
 
-TL;DR：OpenAI 與 Broadcom 推出 Jalapeño 晶片，旨在提升 LLM 推理的效能、效率與系統擴充套件能力。
+TL;DR：OpenAI 與 Broadcom 推出 Jalapeño 晶片，旨在提升 LLM 推理的效能、效率與系統擴展能力。
 
-當 LLM 的推論需求與運算規模呈指數級成長，依賴通用硬體可能已不足以支撐未來的擴充套件需求。OpenAI 與 Broadcom 的這次合作，正式將重心轉向「自研硬體」以突破效能瓶頸。
+當 LLM 的推論需求與運算規模呈指數級成長，依賴通用硬體可能已不足以支撐未來的擴展需求。OpenAI 與 Broadcom 的這次合作，正式將重心轉向「自研硬體」以突破效能瓶頸。
 
 🚀 **Jalapeño：針對推理場景的定製化設計**
 
@@ -19,7 +19,7 @@ OpenAI 與 Broadcom 共同開發的 Jalapeño 是一款專為大型語言模型�
 
 - 效能提升（Performance）：最佳化 LLM 的生成速度。
 - 效率增加（Efficiency）：降低推理時的能源或運算開銷。
-- 系統擴充套件（Scale）：強化在大規模 AI 系統中的部署與橫向擴充套件能力。
+- 系統擴展（Scale）：強化在大規模 AI 系統中的部署與橫向擴展能力。
 
 🎯 **實務啟示**
 

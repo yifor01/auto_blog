@@ -31,7 +31,7 @@ TL;DR：SpectraReward 透過「提示詞還原度」實現 Zero-shot 報酬機�
 
 📊 **實驗結果：效能提升且具備跨模型通用性**
 
-研究人員針對多種配置進行了廣泛的實驗驗證，包含兩種擴散模型（diffusion models）、三種 RL 演算法，以及橫跨 4B 到 235B 引數規模、來自四個不同家族的九種 MLLM 骨幹網路。
+研究人員針對多種配置進行了廣泛的實驗驗證，包含兩種擴散模型（diffusion models）、三種 RL 演算法，以及橫跨 4B 到 235B 參數規模、來自四個不同家族的九種 MLLM 骨幹網路。
 
 - **效能表現**：SpectraReward 與 Self-SpectraReward 在五個分佈外（out-of-distribution）的圖文生成基準測試中，皆展現出顯著且一致的生成效能提升，表現優於以往基於 MLLM 訓練的報酬方法。
 - **關鍵發現**：

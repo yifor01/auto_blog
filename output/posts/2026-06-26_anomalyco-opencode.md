@@ -34,7 +34,7 @@ OpenCode 的安裝指令碼在決定安裝路徑時具有明確的優先順序�
 
 🎯 **實務啟示**
 
-對於想要嘗試 AI Coding Agent 但不想被繫結在單一 IDE 外掛的開發者，OpenCode 提供的 CLI 與獨立桌面 App 形式，讓 AI 助理能更靈活地在不同開發環境間切換。尤其是其對多種套件管理器的支援，大幅降低了在不同作業系統（如 Arch Linux 或 Windows）上的部署門檻。
+對於想要嘗試 AI Coding Agent 但不想被綁定在單一 IDE 外掛的開發者，OpenCode 提供的 CLI 與獨立桌面 App 形式，讓 AI 助理能更靈活地在不同開發環境間切換。尤其是其對多種套件管理器的支援，大幅降低了在不同作業系統（如 Arch Linux 或 Windows）上的部署門檻。
 
 🔗 **來源**
 - 標題：anomalyco/opencode

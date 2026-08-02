@@ -18,9 +18,9 @@ TL;DR：前 OpenAI CTO 創辦的 Thinking Machines 釋出開放權重模型 Inkl
 
 Thinking Machines Lab 由前 OpenAI CTO Mira Murati 創辦，週三上午釋出首個自研模型 Inkling。不同於 OpenAI、Anthropic 或 Google 的旗艦模型，Inkling 是 open-weight（開放權重），外部開發者與企業可直接下載並修改。這也是該公司潛心打造 AI 基礎設施一年半以來，第一個公開的實證。
 
-🧩 **975B 引數的 MoE，每次只動用 41B**
+🧩 **975B 參數的 MoE，每次只動用 41B**
 
-Inkling 採用 mixture-of-experts（MoE，混合專家）架構，總引數達 9750 億，但單一任務只呼叫其中約 410 億引數。這種常見設計能讓極大模型在推理時更快、更省成本。公司發布資料稱，模型以 45 兆 tokens 的文、圖、音、影資料訓練，並原生跨這四種模態推理；不過目前輸出僅限文字，包含程式碼、帶樣式的成品與結構化資料。
+Inkling 採用 mixture-of-experts（MoE，混合專家）架構，總參數達 9750 億，但單一任務只呼叫其中約 410 億參數。這種常見設計能讓極大模型在推理時更快、更省成本。公司發布資料稱，模型以 45 兆 tokens 的文、圖、音、影資料訓練，並原生跨這四種模態推理；不過目前輸出僅限文字，包含程式碼、帶樣式的成品與結構化資料。
 
 💡 **可校正不確定性，思考強度自己調**
 

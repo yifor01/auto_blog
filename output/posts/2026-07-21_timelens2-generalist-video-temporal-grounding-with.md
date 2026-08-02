@@ -26,10 +26,10 @@ TimeLens2 提出了不同的處理方式：
   - **Temporal Wasserstein Reward**：計算合併區間支援下的精確一維 $W_1$ 距離，這提供了一種密集且無需進行片段匹配（Matching-free）的反饋，即便在預測數量不相等或片段破碎的情況下也能運作。
   - **Temporal IoU**：作為補充，提供精確的重疊度（Overlap）反饋。
 
-📊 **超越引數規模，效能全面超越 SOTA**
+📊 **超越參數規模，效能全面超越 SOTA**
 
 在七項基準測試中，TimeLens2 展現了強大的泛化能力：
-- **超越大規模模型**：TimeLens2-4B 與 8B 變體取得了 SOTA（State-of-the-art）表現，超越了引數規模高達 397B 的開源模型。
+- **超越大規模模型**：TimeLens2-4B 與 8B 變體取得了 SOTA（State-of-the-art）表現，超越了參數規模高達 397B 的開源模型。
 - **相對於 Backbone 的提升**：
   - 2B 變體提升了 14.2 mIoU。
   - 4B 變體提升了 13.0 mIoU。
@@ -38,7 +38,7 @@ TimeLens2 提出了不同的處理方式：
 
 🎯 **實務啟示**
 
-對於開發影片理解應用（如自動剪輯、影片搜尋、內容檢索）的工程師來說，TimeLens2 證明瞭透過更精確的時序獎勵設計，較小規模的模型也能在複雜的時間定位任務上，擊敗引數規模極大的模型。
+對於開發影片理解應用（如自動剪輯、影片搜尋、內容檢索）的工程師來說，TimeLens2 證明了透過更精確的時序獎勵設計，較小規模的模型也能在複雜的時間定位任務上，擊敗參數規模極大的模型。
 
 🔗 **來源**
 - 標題：TimeLens2: Generalist Video Temporal Grounding with Multimodal LLMs

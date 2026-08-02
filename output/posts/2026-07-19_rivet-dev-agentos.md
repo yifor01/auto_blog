@@ -17,7 +17,7 @@ TL;DR：近零冷啟動的開源 AI agent OS，號稱比 sandbox 便宜至多 32
 
 傳統 sandbox 提供完整 Linux 環境，代價是開機慢、成本高，且 agent 與你的後端之間往往得繞一層網路與複雜的認證。rivet-dev 推出的 agentOS 想把這件事翻轉：它是一套可攜式的開源 AI agent 作業系統，標榜近零冷啟動（約 6 ms），且成本比 sandbox 低至多 32 倍。
 
-🧩 **跑在程式內的輕量 VM 與直接繫結**
+🧩 **跑在程式內的輕量 VM 與直接綁定**
 
 README 指出，agentOS 是一個跑在你程式內的輕量 VM（lightweight VM），不需要開 VM、也不用拉容器，agent 以極小記憶體負擔在毫秒級啟動。它可嵌入你的後端，agent 透過 bindings 直接呼叫你的函式，沒有網路跳點、也不需要服務間的複雜 auth。
 

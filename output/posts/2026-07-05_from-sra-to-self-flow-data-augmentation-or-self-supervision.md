@@ -25,7 +25,7 @@ TL;DR：研究發現 Diffusion Transformer 的效能提升主因是雜訊維度�
 
 🎯 **實務啟示**
 
-對於開發 Diffusion Transformer 的工程師而言，這項發現提供了一個重要的最佳化方向：如果自對齊的本質是資料增強，那麼在設計訓練流程時，可以將重心放在如何更有效地擴充套件雜訊維度的分佈，而非過度追求複雜的 token 互動機制，以更簡單的方式達成效能提升。
+對於開發 Diffusion Transformer 的工程師而言，這項發現提供了一個重要的最佳化方向：如果自對齊的本質是資料增強，那麼在設計訓練流程時，可以將重心放在如何更有效地擴展雜訊維度的分佈，而非過度追求複雜的 token 互動機制，以更簡單的方式達成效能提升。
 
 🔗 **來源**
 - 標題：From SRA to Self-Flow: Data Augmentation or Self-Supervision?
