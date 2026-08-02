@@ -199,10 +199,19 @@ class TestDecisions:
         assert list(load_decisions(path)) == ["髮→發"]
 
     def test_shipped_ledger_parses(self):
-        # repo 裡那份含 6 行註解的實檔——格式壞掉會讓每週審查整個掃描炸掉。
+        # repo 裡那份實檔（含註解檔頭 + 第一輪 64 條裁決）——格式壞掉會讓每週審查
+        # 整個掃描炸掉，而那是每週才跑一次、壞了要一週後才發現的地方。
         from src.opencc_candidates import DECISIONS_PATH
 
-        assert load_decisions(DECISIONS_PATH) == {}
+        ledger = load_decisions(DECISIONS_PATH)
+        assert ledger
+        assert all(r["verdict"] in ("accepted", "rejected") for r in ledger.values())
+        # accepted 的反例欄位不得留空——鐵則 (b)(c) 在資料層的最後一道防線。
+        assert all(
+            r.get("counterexample")
+            for r in ledger.values()
+            if r["verdict"] == "accepted"
+        )
 
 
 # ──────────────────────────────────────────────────────────
