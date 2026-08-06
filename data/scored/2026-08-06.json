@@ -1,0 +1,739 @@
+[
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "Run production AI agents in n8n with Amazon Bedrock AgentCore harness",
+      "url": "https://aws.amazon.com/blogs/machine-learning/run-production-ai-agents-in-n8n-with-amazon-bedrock-agentcore-harness/",
+      "authors": [
+        "Sundar Raghavan"
+      ],
+      "abstract": "If you build and automate workflows in n8n without writing much code, you’ve probably used its AI Agent node to add a model call to a workflow. It’s a great start. But a production agent needs more than a single model call: memory that lasts beyond one run, tools it can actually use like a browser or a code sandbox, and room to work through longer tasks. Building that scaffolding yourself is the hard part. Amazon Bedrock AgentCore is a platform to build, connect, and optimize agents at scale, with any framework or model. AgentCore harness, a capability of Amazon Bedrock AgentCore, is now generally available and provides that scaffolding for you. A new open-source community node brings it into n8n’s visual editor. You get production agents with persistent memory, real tools, and the model provider of your choice, without writing infrastructure or agent code. You’re not tied to one model either. The node works with Amazon Bedrock, OpenAI, Google Gemini, and LiteLLM-supported providers, and you can switch providers between turns of the same conversation. In this post, you will install the node, @aws/n8n-nodes-agentcore , and build agents step by step in the n8n editor. You will start with an agent that remembers a conversation, scope memory to individual users, add a code interpreter tool, give the agent skills, and finish by running an agent privately in your own virtual private cloud (VPC). The node is open source under the MIT license, and AgentCore harness is powered by Strands Agents , the open source agent framework from AWS. An agent is more than a model. The model reasons, but the harness does the work around it: it runs the orchestration loop, calls tools, manages the context window, keeps state across turns, recovers from failures, and isolates each session. Building that layer is where most teams spend their time. AgentCore harness gives you that layer as a managed capability. You define an agent in configuration, including the model it uses, the tools it calls, the skills it has access to, and the instructions it follows, and AgentCore assembles and runs the loop for you. Each session runs in its own isolated environment with a filesystem and shell, memory across sessions, and web browsing. When configuration isn’t enough, you can export the harness to Strands code and keep running on the same system. n8n’s built-in AI Agent node is a good fit for a single model call in a workflow. The community node goes further by exposing the full harness in the n8n editor. It has one operation with a single deciding field, Harness ARN : The node uses the same AWS credential pattern as the existing n8n AWS Lambda and Amazon Simple Storage Service (Amazon S3) nodes , so it feels familiar if you already automate AWS services in n8n. Before you begin, make sure you have the following: Important: Where you can, use temporary credentials from AWS IAM Identity Center or AWS Security Token Service (AWS STS), and follow the principle of least privilege when you configure IAM permissions. Don’t commit credentials to source control. Note on cost : The AgentCore harness, the managed memory store it provisions, and (if you use it) VPC endpoints are billed AWS resources. Follow the Clean up section at the end to remove what you create for this walkthrough, and refer to the AgentCore documentation for pricing. You configure the AWS credential once, the same way you would for other AWS nodes in n8n. Amazon Bedrock AgentCore API credential in n8n, showing the access key, Region, and execution role ARN, with a successful connection test In this walkthrough, you build an agent that remembers details across turns of a conversation. Memory is on by default, so the node provisions a managed memory store for you and there’s nothing extra to configure. The first run takes about 30-60 seconds while AWS provisions the agent. The output includes the agent’s response, token usage, and a summary of what the node provisioned, including the memory store it created for you. Turn 1. The node output shows the agent’s response and a harness summary that confirms managed memory with a provisioned memory ARN. Now change only the Prompt to Suggest one destination and one dish I’d enjoy, based on what you know about me , keep the same session ID, and run again. Turn 2. The agent recalls the preferences from turn 1, warm beaches and vegetarian, because the conversation persisted through the same session ID. The output field sessionSource reads provided when you supply a session ID, and the input token count rises on turn 2 because the node loads the prior conversation before the agent reasons. If you leave the session ID blank, each run starts a new conversation. When one agent serves many people, you can keep each person’s memory separate with an Actor ID . Memory is scoped by actor and session, so different actors get isolated histories from the same agent. The scoping is a hierarchy: the agent holds the shared configuration, the Actor ID isolates one user’s memory from another’s, and the Session ID isolates individual conversations within an actor. One actor can have many sessions. A different actor with the same session ID still gets its own separate memory. The node configured with an actor ID and session ID for a specific user. Turn 1 for the actor user-alice, which stores a preference. Turn 2 for the same actor. The agent returns the value it stored for this user. A different actor ID keeps its own separate memory. Agents become far more capable when they can use tools. In this walkthrough, you give the agent a code interpreter that runs code in a sandboxed environment. The agent writes and runs code in the sandbox and returns computed results for the mean, median, and standard deviation, rather than estimating them. The harness summary shows one tool configured. You add other tools the same way, including a cloud browser, AgentCore Gateway (a capability of Amazon Bedrock AgentCore), and remote Model Context Protocol (MCP) servers. Skills are bundles of instructions and scripts that give an agent domain knowledge on demand. You load them from the AWS curated catalog, a Git repository, Amazon S3, or a filesystem path, and the harness loads them only when the task calls for them. The agent applies the loaded skills to produce guidance, and the harness summary shows the number of skills configured. For agents that need private network access, you can run the harness in your VPC. You set the network configuration on the credential, so every agent that credential provisions runs privately. The credential configured for VPC mode with subnet and security group IDs. Your subnets don’t need internet access. The harness pulls its managed container image from a private Amazon ECR repository in the same Region, so you need VPC endpoints for Amazon ECR and Amazon S3 rather than a NAT gateway. Refer to the AgentCore harness network configuration documentation for the required endpoints and the execution role permissions. Refer to the AgentCore harness security documentation for the required endpoints and the execution role permissions. The node output for a VPC agent. The harness summary shows the network mode is VPC. Each agent you create is a harness resource in your AWS account, and it can provision a managed memory store. To avoid ongoing charges, delete the agents you no longer need. If you enabled a VPC, you might also want to remove any interface VPC endpoints you created for this walkthrough, because interface endpoints incur charges while they exist. This post walked through memory, per-user scoping, a code interpreter tool, skills, and VPC networking. The node already supports more of the Amazon Bedrock AgentCore harness feature set. Here’s what to try next, each configured the same way you configured the features above: The examples folder in the GitHub repository includes importable workflows for many of these.",
+      "published_date": "2026-08-05",
+      "tags": [
+        "Advanced (300)",
+        "Amazon Bedrock",
+        "Amazon Bedrock AgentCore",
+        "Technical How-to"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, mcp, model context protocol",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 74,
+    "llm_reason": "提供實作步驟，助工程師快速部署 AgentCore，實用且趨勢高。",
+    "novelty": 8,
+    "impact": 12,
+    "trending": 18,
+    "practicality": 19,
+    "blog_worthiness": 17
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "NVIDIA Releases Alpamayo 2 Super: A 34B Open Vision-Language-Action Model for Robotaxis and Autonomous Driving Under OpenMDW-1.1",
+      "url": "https://www.marktechpost.com/2026/08/05/nvidia-alpamayo-2-super-open-vla-model-autonomous-driving/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "NVIDIA has released Alpamayo 2 Super , a 34B-parameter vision-language-action (VLA) mode l for autonomous driving, under an open commercial license. The stated design target is the long-tail events: rare, multi-agent situations that conventional detection-and-prediction stacks handle poorly. The model pairs a 32B VLM backbone, built on NVIDIA Cosmos 3 Super Reasoner and post-trained with reinforcement learning, with a 2.3B diffusion-based action decoder. From one pass over full-surround camera video it emits a planned trajectory, a causal explanation of that trajectory, and a meta-action. Yes, and for commercial use from day one. The weights are released under OpenMDW-1.1, the Linux Foundation’s permissive license for open model distributions; source code is Apache 2.0. The license covers fine-tuning, derivative models and commercial redistribution. NVIDIA is applying OpenMDW across the entire Alpamayo family, so earlier releases introduced for R&D are now deployable commercially without additional permission. Inputs are multi-camera RGB video, text, and egomotion history with timestamps. The validated public notebook profiles use six cameras and four historical frames per camera. Egomotion is 3D translation plus a 3×3 rotation matrix, multi-timestep. The trajectory API returns 64 waypoints spanning 0.1 to 6.4 seconds at 0.1-second intervals. Each waypoint carries ego-frame XYZ and a 3×3 rotation matrix. Training data is roughly 115,000 hours of multi-camera driving video with egomotion and trajectory annotations. It includes about 3,700,000 Chain-of-Causation (CoC) traces — structured, causally linked explanations of driving decisions. Image training data exceeds one billion images. On LingoQA , Alpamayo 2 Super records a Lingo-Judge score of 79.2 and ranks first among nearly 40 models evaluated. In NVIDIA’s testing it beat Qwen2.5-VL 72B by 17.0 points, Gemini 2.5 Pro by 15.1, and GPT-4o by 23.2. Two more numbers matter for planning work. Closed-loop evaluation with AlpaSim on 910 scenarios from the PhysicalAI-AV-NuRec dataset gives an AlpaSim score of 1.50 ± 0.13. Open-loop evaluation on 937 challenging samples from the PhysicalAI-AV dataset gives minADE₆ at 6.4s of 0.911m. For each driving situation, the model produces a trajectory, a CoC trace explaining the decision, a meta-action such as yield or lane change, reasoning auto-labels, and visual question answering with 2D grounding. That combination is what makes the release interesting operationally. Developers can tie what the model observed to the action it chose. CoC traces integrate with NVIDIA Halos safety-validation workflows and support AI safety aligned with ISO/PAS 8800. Used as an autolabeler on proprietary fleet data, NVIDIA says the model compresses annotation cycles from months to days. Check out the NVIDIA blog and Hugging Face model card . Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post NVIDIA Releases Alpamayo 2 Super: A 34B Open Vision-Language-Action Model for Robotaxis and Autonomous Driving Under OpenMDW-1.1 appeared first on MarkTechPost .",
+      "published_date": "2026-08-05",
+      "tags": [
+        "Agentic AI",
+        "AI Infrastructure",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Editors Pick",
+        "Embedding Model",
+        "Language Model",
+        "Large Language Model",
+        "Machine Learning",
+        "New Releases",
+        "Open Source",
+        "Physical AI",
+        "Staff",
+        "Tech News",
+        "Technology",
+        "Uncategorized"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, multi-agent, reasoning, reinforcement learning, fine-tuning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 72,
+    "llm_reason": "新型 VLA 模型，結合 VLM 與 diffusion，具備即時路徑與解釋，值得關注。",
+    "novelty": 12,
+    "impact": 14,
+    "trending": 16,
+    "practicality": 14,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "量子位",
+      "title": "114B參數、6B啟用，Sand.ai剛剛開源全球首個千億MoE影片生成模型",
+      "url": "https://www.qbitai.com/2026/08/466847.html",
+      "authors": [
+        "鹭羽"
+      ],
+      "abstract": "114B參數、6B啟用，Sand.ai剛剛開源全球首個千億MoE影片生成模型 鷺羽 2026-08-05 15:05:41 來源： 量子位 10秒1080P，成本只要5毛錢 鷺羽 發自 凹非寺 量子位 | 公眾號 QbitAI 再牛的大模型，也要放到行業面前公開露個面，才算真交卷。 現下，就有這樣一支清華系團隊再展鋒芒，規模不大、實力卻不小—— 搶先用 MoE架構 把影片生成模型捲上 千億參數 ，程式碼權重還全！開！源！ 模型一齣，直接刷屏國內外科技圈。那麼大，那麼強，說開源就開源。 且先來看看生成效果一探究竟： 影片連結：https://mp.weixin.qq.com/s/Wtw4Ui4whdGEQ8vyWQ3Ipg 如何？最近爆火的AI漫劇，聲臺形表四角俱全。 亦或是來一場酣暢淋漓的長鏡頭，視角跟隨人物動作切換自如。 影片連結：https://mp.weixin.qq.com/s/Wtw4Ui4whdGEQ8vyWQ3Ipg 鬧歸鬧，商業場景也不在話下。 影片連結：https://mp.weixin.qq.com/s/Wtw4Ui4whdGEQ8vyWQ3Ipg 光這運鏡、對焦和人物表現，拉出去和閉源第一梯隊同臺PK，也照樣能打。 不賣關子了，這便是 Sand.ai 的最新力作—— MAGI-2-preview 。繼Magi-1橫空出世後，新模型又一次瞄準開源C位。 模型總參數114B，單次前向只啟用約6B。 按8卡H100當下的行情算，要生成一段10秒1080P影片，其成本僅需5毛錢，差不多隻有行業主流模型的 十分之一 。 Benchmark排名也相當亮眼，MAGI-2-preview在AA影片生成榜單排名 第六 。僅用6B啟用參數，效果就已經非常接近第一梯隊。 好好好，這下影片生成行業，又多了一個千億級新變數。 影片模型Scaling不能照抄LLM 這一變，直擊影片生成模型的 Scaling 路線。 其實這個問題現在看來挺剛需的，做大模型，最怕的事情就是錢不夠燒。 文本模型倒還好，處理的都是離散token，疊參數、加算力，模型就能越滾越強。但影片模型呢？面對的卻是 一整個動態世界 。 每一幀畫面都要被拆成大量空間patch，連續幀還要記錄人物動作、物體關係和鏡頭變化。如果再疊加文本、音訊等資訊，序列長度直接超級加倍…… 如果還用稠密模型，Scaling的訓推成本簡直想都不敢想。 模型要更大、影片要更長、成本還要可承受，這三件事就是擺在影片生成面前的近乎 「不可能三角」 。 圖片由AI生成 當然，解法不是沒有—— MoE 。 所謂MoE，就是把模型容量和單次計算部分解耦。模型可以繼續擁有百億千億的總容量，但每次推理只啟用其中一小部分，成本相對可控。 但影片MoE也有自己的麻煩，首先卡住的是 通訊 。 傳統專家並行會先為token選出Top-K專家，再把token送到專家所在的GPU。換言之，只要啟用專家數越多，需要運輸的資料就越多。 對於本就擁有超長序列的影片模型，這部分通訊成本很快就會蓋過專家計算本身。 更別提 訓練穩定性 ，動態變化的路由、隨時波動的專家負載，以及需要處理的多模態資料，都會讓大模型Scaling過程中常見的問題，在影片MoE上 成倍放大 。 因此影片生成的Scaling路徑，跟大語言模型不完全是一回事。 單純遷移MoE不管用，還要扛得住超長序列和跨卡通訊，同時保證音訊、影片、文本在同一套系統裡順暢協作。 說白了，得從底層開始一點點 重構 。 行業裡很少有人能做到。要說將影片MoE從紙上談兵搬到千億參數影片模型上， Sand.ai是第一個 。 讓千億MoE模型真正跑起來 要想跑通，架構和系統缺一不可。 先打地基，MAGI-2-preview延續了Sand.ai在daVinci-MagiHuman中驗證過的 單流架構 —— 文本、影片和音訊進入同一個Transformer，然後在每一層自注意力裡直接交換資訊。 傳統做法裡，是影片走影片的，音訊走音訊的，最後再靠cross-attention（交叉注意力）把兩邊粘起來。 而MAGI-2-preview是從第一層開始，畫面和聲音就在 共同建模 ，從而更適合處理細微的音畫對應關係，效果be like： 影片連結：https://mp.weixin.qq.com/s/Wtw4Ui4whdGEQ8vyWQ3Ipg 這樣設計還另有額外的好處，統一主幹能夠讓延遲和維護成本比模型串聯低得多，也更 天然適配MoE擴展 。 有了框架，再把專家顆粒度推到極致。 MAGI-2-preview採用Multi-Head LatentMoE的思路，將3072維的隱藏表示拆成12個256維head，再讓 每個head獨立路由 。 同一個token由此被拆進多個低維子空間，有的head更關注人物外觀，有的處理動作和時序，各司其職。 於是在36層主體網路裡，每層總共3072個獨立專家單元，每個token在每個head內選擇6個專家，合計啟用 72個 小專家。 看起來同時呼叫的專家變多了，但每個專家處理的子空間尺寸更小，分工更細， 模型能夠拼湊出更多能力組合 。 作為參照，DeepSeek-V4-Pro等主流MoE大模型的每層專家數大多還停留在幾百個，MAGI-2-preview直接推到了三千級別。 這麼細的專家，單靠通用MoE是實現不了的，還需要一套完整的 自研infra 。 Sand.ai自己寫了 MagiMoE kernel庫 ，把路由、排序、專家計算整條鏈路壓在一起，減少中間結果的視訊記憶體搬運。 還針對Multi-Head MoE的計算形態，前向和反向過程都做了專門最佳化。 並行策略 也重新設計了。 Head Parallel在路由發生之前就按head把計算分配到不同裝置，裝置間傳輸的是形狀固定的head表示，而不是路由後數量不斷變化的專家token。 通訊量不隨啟用專家數波動，影片的長序列就不再是要命的瓶頸。 最佳化器 同樣做了混合設計。矩陣參數用Muon，專家參數用AdamW，不同性質的參數用不同的更新節奏。 最後一環是 資料 。 很多團隊做資料是層層過濾，最後留一個乾淨但窄的資料集。 但生成模型需要的恰恰相反，要的就是多樣性，見得越多，生成才能越逼真。 MAGI-2-preview的思路是從 「刪減」 轉向 「組織」 。 先擴大有效資料的規模，儘量保留廣度，再通過更精準的標註把資料組織起來，讓模型依次學會不同場景、動作、聲音之間的對應關係。 預訓練和後訓練的分工 也隨之變化。 預訓練負責儘可能完整地覆蓋資料分佈，讓基礎模型吃全，後訓練則回到自己更擅長的部分，處理偏好對齊、可控性、安全性和產品適配。 影片連結：https://mp.weixin.qq.com/s/Wtw4Ui4whdGEQ8vyWQ3Ipg 至此，MAGI-2-preview得以跑通 一整套Scaling系統 。 通過模型結構、通訊機制、底層infra和資料體系協同設計，在擴大總容量的同時，把單次啟用參數控制在可執行範圍內。 當然，這裡的6B啟用參數並不等於一款6B稠密模型的實際成本，專家通訊、路由、視訊記憶體和部署方式仍會產生額外開銷。 但作為一款 開源的千億級影片模型 ，效果已然next level～ 尤其是開源，其帶來的變化，要比想像中大得多。 開源不只是「秀肌肉」 過去開源的影片模型大多都是百億級，千億參數直接改變的是整個行業的遊戲規則。 對於 研究者 而言，這是第一次能夠真正解剖千億級影片MoE。 專家如何分工、路由是否穩定、通訊怎樣組織、Scaling規律能否復現，這些問題終於有了公開研究物件。 不必隔著論文空想，這對學術界和中小研究團隊是實打實的基礎設施升級。 對 企業 來說，開源意味著多了一個私有化部署和行業微調的選項。 尤其是金融、醫療、工業等資料敏感行業，資料能否留在本地、模型能否針對業務繼續訓練，重要性並不亞於一次生成效果。 再把視線放大至整個 行業 ，開閉源的競爭維度也將被重新定義。 以前是單純效果比拼，比誰的畫質好、誰更便宜，往後模型能否繼續訓練以及介面是否被單一平臺控制，都將成為對比指標。 一旦開源模型在效果上持續逼近閉源，影片生成也大機率會走上語言模型的老路—— 閉源靠產品體驗和服務穩定性，開源靠部署、控制和開發者生態。 兩條路線，終於開始在更多層面正面碰撞。 在這背後，是 Sand.ai 的非共識再一次得到驗證。 從自迴歸影片生成，到音畫同出，再到千億MoE開源，團隊選擇的道路總是人跡罕至。 這與團隊背景不無關係。 Sand.ai創始人 曹越 是清華大學特等獎學金獲得者、Swin Transformer共同一作，曾聯合創辦光年之外，也曾在智源研究院負責多模態與視覺研究。 團隊其它成員也個個都是頂尖技術流出身，這樣的技術基因，決定了團隊 更願意把資源押在基礎模型和底層infra ，更關注模型的本質，而不是追著熱點跑。 創新工場董事長李開復也曾公開推薦該團隊，稱其為 「AI影片生成界的DeepSeek」 。 這一次則更為激進。 Sand.ai首次將千億參數、MoE和開放權重三件事捏在一起，再用一整套自研系統讓它真正跑起來。 所以這不僅僅是場技術釋出，也是一個團隊對 “影片模型應該怎麼做” 的立場表達。 誠然，MAGI-2-preview還不是影片生成的最終答案，還需等待正式版繼續交卷。 但它先把這件事給做實了—— 千億級MoE，不只屬於語言模型。 也歡迎行業內外借由開源驗證。 開源地址： https://github.com/SandAI-org/MAGI-2-preview 版權所有，未經授權不得以任何形式轉載及使用，違者必究。 AI 影片生成 鷺羽 米哈遊蔡浩宇AI創業生變 2026-07-31 Opus 5遊戲提示詞爆火！24小時復刻3A巨作 2026-07-29 全球首個Agentic擴散模型來了：邊行動邊糾錯，128K上下文追平自迴歸 2026-07-28 菲爾茲獎得主王虹，也發過NeurIPS 2026-07-24 相關閱讀",
+      "published_date": "2026-08-05",
+      "tags": [
+        "資訊",
+        "首頁輪播",
+        "AI",
+        "影片生成"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "量子位",
+        "feed_url": "https://www.qbitai.com/feed"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: moe",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 80,
+    "llm_reason": "首個千億參數MoE影片生成模型，成本低且性能高，具備實際開源價值。",
+    "novelty": 17,
+    "impact": 16,
+    "trending": 18,
+    "practicality": 13,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "How we built an MCP bridge to give our AgentCore-hosted AI agent access to local MCP tools",
+      "url": "https://aws.amazon.com/blogs/machine-learning/how-we-built-an-mcp-bridge-to-give-our-agentcore-hosted-ai-agent-access-to-local-mcp-tools/",
+      "authors": [
+        "Rohan Lekhwani"
+      ],
+      "abstract": "Our agent runs in the cloud, but our users’ spreadsheets live on their laptops. How do you bridge that gap? The Model Context Protocol (MCP) is an open source standard introduced by Anthropic in November 2024 to standardize how AI models connect to external data and tools. MCP follows a client-server architecture where an MCP host, an AI application like Amazon Quick or Claude Code, establishes connections to one or more MCP servers. The MCP protocol supports two transport mechanisms: stdio (standard I/O for communication between local processes on the same machine) and streamable HTTP transport (HTTP-based communication between remote servers and clients). A missing piece is when the MCP server exists locally and the MCP client is remote. This pattern matters for financial managers and analysts who primarily work with Excel and local files. They can use centrally deployed AI agents to act on those files while also drawing context from their browser. This is the same pattern that powers products like Claude Cowork , a cloud agent calling local tools through MCP, but fully self-hosted on AWS with your own model and custom tool servers. Internally, we built a production-grade AI assistant for finance that has seen over 41,000 conversations within a year since launch. In this post, we recreate what we built internally in a simplified form. Our agent, deployed on Amazon Bedrock AgentCore , uses MCP servers that run on a user’s local machine. We bridge the gap between the remote MCP client and the local MCP server by tunneling MCP messages over WebSocket and native messaging. We discuss additional production hardening measures in the What’s Next section. The complete source code is available on GitHub . The MCP Bridge Demo extension summarizing a local Excel workbook. The cloud-hosted agent reads the file directly from the user’s machine through the MCP bridge and streams a structured summary back to the side panel The AgentCore runtime, a capability of Amazon Bedrock AgentCore, anchors an architecture with four components: The following diagram shows the end-to-end message flow. The user sends a message through the extension, which connects to the AgentCore runtime over a presigned WebSocket. When the Strands agent needs to call a tool, it sends an MCP JSON-RPC request wrapped in a JSON envelope back through the WebSocket to the extension. The extension relays the message as-is to the bridge through native messaging. The bridge unwraps the envelope, extracts the JSON-RPC content, and forwards it to the MCP server over stdio. The response travels the reverse path. The bridge wraps the unmodified MCP server response back into an envelope and relays it through the extension to the AgentCore runtime, where the agent consumes the tool result and continues generation. High-level architecture diagram showing all components. The browser extension and MCP Bridge act as relays that wrap and unwrap JSON messages from the AgentCore runtime and JSON-RPC messages from the MCP server The following table shows a single tool call as it travels from the agent to the MCP server, with each hop stripping one layer of wrapping: WebSocket connection: The browser extension connects to the AgentCore runtime over a presigned WebSocket URL. On startup, the side panel sends a presign request through the background script to the native bridge, which uses the user’s local AWS credentials and the bedrock-agentcore software development kit (SDK) to generate a SigV4-signed wss:// URL scoped to the deployed runtime ARN (valid for 5 minutes). The side panel opens a WebSocket to that URL. No credentials ever leave the user’s machine or enter the browser. If the connection drops because of URL expiry or network interruption, the side panel automatically requests a fresh presigned URL after 2 seconds and reconnects, making the expiry window invisible to the user during normal use. MCP initialization: Before discovering tools, the agent performs the standard MCP initialization handshake . It sends an initialize request with the protocol version, waits for the server’s capabilities response, and then sends a notifications/initialized notification. Only after this handshake completes does the server accept tools/list and tools/call requests. Tool discovery: On each user message, the agent calls tools/list and receives an array of tool schemas. It wraps each schema into a Strands AgentTool whose stream() method sends a tools/call request through the bridge. Tools added to the MCP server are automatically available on the next request with no agent code changes. Request-response correlation: Each outbound JSON-RPC request from the agent is assigned a unique ID and registered against an asyncio.Future keyed by (session_id, jsonrpc_id) . When the response arrives back over the WebSocket, it is matched to the waiting Future and resolved. This allows multiple tool calls to be in flight concurrently without ambiguity. We need the extension to talk to a long-running local process without network permissions or per-message user prompts. Native messaging provides exactly this. Both Chrome and Firefox support native messaging for their extensions. The browser looks for a manifest file at a well-known location on the user’s machine that specifies which binary to launch. The native messaging manifest file for Chrome on macOS is as follows: On extension startup, the background script calls chrome.runtime.connectNative(\"com.example.mcp_bridge\") to launch the native app locally. The run_bridge.sh script referenced in the manifest activates the Python environment and starts the bridge: The native messaging host process stays alive for the lifetime of the connection. Each message is serialized as JSON, UTF-8 encoded, and preceded with a 32-bit message length in little-endian byte order. The maximum size of a single message from the native messaging host is 1 MB (to protect the browser from misbehaving native applications). The maximum size of a message sent to the native messaging host is 64 MiB. The MCP Bridge acts as a protocol translator between two worlds: Chrome’s native messaging protocol on one side and the MCP standard (JSON-RPC 2.0 over stdio) on the other. On the inbound path, it strips the 4-byte length header from stdin, parses the JSON body, and unwraps the envelope to extract the raw JSON-RPC message. On the outbound path, it does the reverse: wraps the JSON-RPC response in an envelope and writes it back with the length header. The JSON-RPC content itself passes through untouched. Internally, the bridge runs two concurrent loops connected through a FastMCP proxy. The main loop reads messages from the browser, unwraps them, and places the JSON-RPC content onto an input queue. The FastMCP proxy, started once and kept alive for the bridge’s lifetime, picks messages off this queue, forwards them to the MCP server subprocess over its stdin, and places responses from the server’s stdout onto an output queue. A second background loop reads from the output queue, wraps each response back into an envelope, and writes it to stdout for the browser to receive. This two-loop design decouples the browser’s request timing from the MCP server’s processing speed so the bridge does not block waiting for a slow tool to finish before accepting the next request. The MCP server itself is a child process spawned by the bridge on startup, configured through a mcp.json file. It stays running for the bridge’s lifetime with no per-request process overhead. Adding a new MCP server is a one-line config change. The bridge handles the plumbing. Internal architecture of the MCP Bridge. The MCP Bridge translates messages from the browser extension into the MCP protocol for the MCP server. I/O queues work with a FastMCP proxy server to forward messages to the locally running MCP server and relay messages back to the browser extension The following prerequisites are needed to deploy and test the MCP bridge solution.",
+      "published_date": "2026-08-05",
+      "tags": [
+        "Amazon Bedrock AgentCore",
+        "Expert (400)",
+        "Technical How-to"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, mcp, model context protocol",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 66,
+    "llm_reason": "提供 MCP 代理橋接實作，對遠端 AI 與本地工具整合有實務價值",
+    "novelty": 8,
+    "impact": 12,
+    "trending": 15,
+    "practicality": 14,
+    "blog_worthiness": 17
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "Prime Agent: A self-improving RLM agent",
+      "url": "https://www.primeintellect.ai/blog/prime-agent",
+      "authors": [
+        "Xeophon"
+      ],
+      "abstract": "Prime Agent: A self-improving RLM agent Today, we are launching Prime Agent , our self-improving coding harness designed around two abstractions, the Recursive Language Model (RLM) [ citation ] and Continual Harness [ citation ]. Modern harness designs were built around the capabilities of earlier generations of models, and they do not reflect what frontier models can do today: fixed tool-calling schemas and context compaction force the model to work around its own scaffolding instead of leveraging it. Static, hand-engineered sub-agents, prompts, skills, and memory are set once at design time and never adapt to what the agent learns while running. We believe that harnesses should instead extrapolate on current model capabilities toward the next frontier of reasoning patterns. Prime Agent is built around this principle through two main abstractions: The Recursive Language Model (RLM) treats context as a variable and subagent delegation as function calls inside a REPL. The persistent REPL gives the model programmatic access to its history, sub-agents, and tools, allowing it to write language model programs as actions over its own context. This design allows the agent to process arbitrarily long sessions without losing access to its own past information stored in variables. Continual Harness treats the harness's own state, abstracted as its prompts, skills, memory, and sub-agents, as something the agent can create, read, update, and delete (CRUD) from its own trajectory. When combined with agent-to-agent communication, this mechanism enables orchestration across sub-agents and even across Prime Agent sessions. For example, Prime Agent can spawn persistent sub-agents, message them later in the trajectory, and communicate directly with a different Prime Agent session. These abstractions are powerful for bootstrapping model capabilities. Prime Agent is built to be effective as a general coding assistant, as a default runtime for long-horizon autonomous evaluation, and as a collaborator for research and autoresearch. Prime Agent is fully open-source , and can be installed via: curl -fsSL https://app.primeintellect.ai/prime-agent/install.sh | sh Prime Agent The performance of agent harnesses are tied to both the design of the harness and the capability of the model trained around the harness. We designed Prime Agent to be immediately usable with modern open and closed frontier models, while also providing a feature set that we expect to provide further performance gains as newer generations of models are trained around it. At its core, Prime Agent is designed around programmatic tool and sub-agent calling. Models in Prime Agent use a persistent IPython kernel as their only tool. Other standard harness features are called as functions in the kernel, including sub-agents, which are each implemented as another prime-agent instance. Prime Agent's Architecture RLM and Continual Harness are the two core abstractions; sub-agent CRUD plus Agent2Agent messaging compose them into orchestration. Background Daemon and Agents View. The default view is a text-user interface (TUI) similar to other coding agent harnesses. By default, IPython actions made by the agent are condensed for brevity, but can be expanded to view actions made by the harness. Sub-agents launched in the REPL can also be accessed below the user chatbox. Prime Agent runs a background daemon that owns all live agent sessions over a local socket. You can attach and detach from the session without affecting the underlying agent loop. Each root session tree runs in a recoverable worker process; if a worker crashes, the daemon recovers it from the session JSONL and kernel state snapshot. The Agents View allows you to see and select other live sessions from the daemon. It can be opened by pressing the Left Arrow key (←) on an empty prompt, and lists sessions that are currently running, idle sessions with the daemon still active, and inactive sessions that are currently not loaded in memory. Any of these chats can immediately be entered and interacted with, and pressing space allows users to chat with a session in any state, including steering and queuing of prompts and commands such as /compact . The Agents View is constructed as the central connecting point between agents and subagents, recursively. Any agent is discoverable in an Agents View. Users navigate from an Agents View into an agent's chat, then into the Agents View of its subagents, into a subagent chat, and so on. Because subagents share the same Running-Idle-Inactive state machine as the root agents, they can be removed from memory after 30 minutes of inactivity, and the moment a user or agent addresses any of them, they are reloaded from disk. In highly nested chats, this can save a lot of memory. Session and Context Management. The entire session history of the agent is stored as append-only JSONL files on disk. Each line is a JSON entry, which can include messages, model switches, compaction summaries, or extension entries. Branching, forking, and cloning all happen within the same file by moving the leaf pointer. The full history is always recoverable through /tree . Compaction happens when the context hits a threshold or directly by the agent in the REPL with compact.run() . Compaction is primarily used to clean the main context of the agent, but the full history, including past compactions, can be accessed programmatically in the IPython kernel when needed. The introduction of the REPL requires additional work to manage the IPython state. We asynchronously compact and clean the kernel simultaneously, using a spawned agent to act as a garbage collector. This is necessary to avoid REPL memory built up for each agent. RLM and Programmatic Tool-Calling (PTC) Prime Agent relies on the IPython kernel as its REPL that persists over the session, which it can invoke every turn. On initialization, the kernel pre-imports each skill / tool as a module, including the rlm for recursive programmatic sub-agent calling. The rlm is an asynchronous function, meaning the model can freely invoke and parallelize sub-agent calls in code. Spawning a subagent (e.g. await rlm(\"sub-task\") ) launches a full session with its own model, IPython kernel, session tree, and conversation history. It returns immediately, because all subsequent communication between agents happens through the agent_message.send(...) tool. There are several useful primitives that Prime Agent can choose to launch in this way, such as fanning out sub-agents in parallel, or launching background work. # Parallel fan-out — rlm() returns at task admission with a child handle, # never the child's answer; results arrive as agent_message replies. auth = await rlm ( \"Summarize the authentication flow in auth/. Reply to me when done.\" , name = \"auth-expert\" ) api = await rlm ( \"Summarize the updated HTTP API layer in src/. Reply to me when done.\" , name = \"http-expert\" ) # ... continue independent work; each child replies via # agent_message.send(..., receiver_role=\"parent\") when finished ... # Steer or extend a child mid-flight by role + name await agent_message . send ( \"Also cover middleware error handling.\" , receiver_role = \"child\" , receiver_name = api . name , ) As models continue to improve, new invocation patterns over tool calls and sub-agents will emerge. We expect future generations of models to rely less on hand-holding prompts and more on this kind of direct, programmatic control. Orchestration and Multi-Agent Communication The background daemon manages all live Prime Agent sessions. Prime Agent also enables Agent-to-Agent (A2A) messaging through the daemon, letting any Prime Agent session message any other Prime Agent session using the same mechanism used for messaging persistent sub-agents. This allows for easy orchestration to manage the progress of sub-agent swarms and communication regarding shared resources directly between the affected agents.\n\n(174 points, 32 comments on Hacker News)",
+      "published_date": "2026-08-06",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 174,
+        "num_comments": 32,
+        "hn_url": "https://news.ycombinator.com/item?id=49189075",
+        "object_id": "49189075"
+      }
+    },
+    "rule_score": 30.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, multi-agent, reasoning",
+      "⬆️ HN 熱門: 174 points"
+    ],
+    "llm_score": 68,
+    "llm_reason": "提出自我改進代理新架構，具備高新穎性與實驗性，但缺乏實作細節與可落地性",
+    "novelty": 18,
+    "impact": 13,
+    "trending": 14,
+    "practicality": 8,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "KDnuggets",
+      "title": "Getting Started with GitHub Agentic Workflows",
+      "url": "https://www.kdnuggets.com/getting-started-with-github-agentic-workflows",
+      "authors": [
+        "Shittu Olumide"
+      ],
+      "abstract": "Getting Started with GitHub Agentic Workflows GitHub Agentic Workflows are in public preview. Find out all about them here. By Shittu Olumide , Technical Content Specialist on August 5, 2026 in Artificial Intelligence # Introducing GitHub's Agentic Workflows It's 9 AM on a Monday, and forty-three new issues are sitting in the backlog. Some are real bugs. Some are duplicate feature requests. A couple are just someone venting about a typo. Whoever is on triage duty this week is going to spend the first two hours of their day reading, labelling, and replying to all of them before they can touch anything they actually planned to build. That's the exact kind of work GitHub built Agentic Workflows to take off your plate. On June 11, 2026, GitHub moved Agentic Workflows into public preview , giving every repository the ability to run coding agents inside GitHub Actions to handle exactly this kind of reasoning-heavy, repetitive work. Not code completion. Not a chat sidebar. A scheduled or event-triggered agent that reads an issue, a pull request, or a week's worth of commits, and does something useful with what it finds. This article walks through what the feature actually is, why the security model matters more than the pitch-deck version of it, and how to write, compile, and run your first workflow today. By the end, you'll have a working triage workflow of your own and a clear sense of what's still a bit rough around the edges. # What Are GitHub Agentic Workflows? Strip away the marketing language, and the idea is fairly simple. You write a Markdown file that lives in .github/workflows/ . The top of that file has a small block of YAML frontmatter describing when the workflow runs, what it's allowed to touch, and which AI engine powers it. Below the frontmatter, you write plain-English instructions describing what you want the agent to do. A command-line interface (CLI) tool called gh-aw reads that Markdown file and compiles it into a .lock.yml file, which is a completely ordinary GitHub Actions workflow. That's the part worth sitting with for a second: there is no separate agent runtime bolted onto your repository. It reuses your existing runners, your existing branch protection rules, and your existing policy constraints, because underneath the natural language, it's just Actions . The project is built by GitHub Next and Microsoft Research , and it currently supports four AI engines out of the box: GitHub Copilot, Anthropic's Claude, OpenAI Codex, and Google Gemini, with the option to plug in a custom processor if none of those fit. Copilot is the default engine, and if your organization already pays for a Copilot plan, workflow runs can bill directly to that organization instead of requiring you to manage a separate API key. It also sits inside a bigger idea GitHub calls Continuous AI , which is really just the practice of applying AI systematically across the software lifecycle instead of one prompt at a time. Agentic Workflows is the mechanism for doing that on a schedule or in response to repository events, rather than only when a person happens to be sitting at their keyboard asking Copilot a question. It's also worth being clear about what this is not. It isn't the same thing as Copilot's cloud coding agent, which you kick off manually from an issue or a pull request when you want an agent to implement something specific for you right now. Agentic Workflows is closer to a standing policy: \" every Monday, summarize the week's issue activity \" or \"every time a PR opens, review it for security concerns.\" One is a task you hand off. The other is a habit you build into the repository itself. # Why This Is Worth Paying Attention To GitHub doesn't typically publish adoption numbers this early in a preview, so the fact that they attached named customer quotes to the launch says something about how far along the internal testing already was. Carvana told GitHub the flexibility and built-in controls gave their engineering team enough confidence to run agentic workflows across genuinely complex systems, including changes that touch more than one repository at a time, according to the official changelog . Marks & Spencer described a similar story from a different angle: their developers were losing real sprint hours to the boring stuff — issue triage, dependency maintenance, vulnerability remediation, and routine review — and building a shared catalogue of reusable agentic workflows let teams pick up that automation across any repository without reinventing it each time. Hud.io made a point that's easy to miss if you're only skimming the feature list: getting an agent to open a pull request was never the hard part of this. Trusting the output enough to actually merge it is. That's really the whole thesis behind the security design covered in the next section. Here's the shape of the feature as it stands today, pulled directly from GitHub's own numbers page : Metric Value Supported AI engines 4 built-in (Copilot, Claude, Codex, Gemini), plus custom engine support Security layers 5 (read-only token, zero secrets, network firewall, safe outputs, threat detection) Documented design patterns 18+ (IssueOps, ChatOps, DailyOps, BatchOps, and more) Supported GitHub event triggers 10+ (issues, pull_request, push, schedule, discussion, label, and others) Safe output types 8+ (create-issue, create-pull-request, add-comment, add-label, and others) Installation One command: gh extension install github/gh-aw # The Security Model Is the Real Story Here Most \" AI does your DevOps now \" pitches skip straight past the obvious question: what happens when the agent gets it wrong, or worse, gets manipulated by something hostile sitting inside an issue comment or a file in the repo. Prompt injection through repository content is a known risk with any agent that reads untrusted text, and GitHub built five layers specifically to contain that, rather than pretend it can't happen. Read-only tokens: The agent's GitHub token is scoped to read-only access by default. If it tries to push code, open a PR, or delete a file directly, the token itself doesn't allow it, regardless of what the agent decides to attempt. Zero secrets in the agent process: The process actually running the AI model never receives write tokens, API keys, or credentials of any kind. Those live only in a separate job that runs after the agent has already finished and its proposed output has been checked. If the agent is compromised mid-run, there's nothing in its reach worth stealing. A sandboxed container behind a network firewall: The agent executes inside an isolated container, and all outbound traffic is routed through what GitHub calls the Agent Workflow Firewall , a Squid proxy enforcing an explicit allowlist of domains. Anything outside that allowlist gets dropped at the kernel level, so a compromised agent has no path to quietly phone home with your data. Safe outputs: This is the part worth understanding properly, because it's the mechanism that makes the rest of the model work in practice. The agent can't write to your repository directly at all. Instead, it produces a structured description of what it wants to do — something like \"open an issue with this title and this body.\" A separate job with narrowly scoped write permissions reads that request and applies only what you've explicitly allowed in the workflow's frontmatter: a hard cap of one issue per run, a required title prefix, specific label restrictions, whatever you decide. The agent proposes. A gated, deterministic job disposes. Agentic threat detection: Before any of that output actually lands in your repo, a dedicated threat-detection job runs its own AI-powered scan across the proposed changes, checking for injection attempts, leaked credentials, or suspicious code patterns. If something looks wrong, the whole run fails, and nothing gets written.",
+      "published_date": "2026-08-05",
+      "tags": [],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "KDnuggets",
+        "feed_url": "https://www.kdnuggets.com/feed"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, reasoning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 61,
+    "llm_reason": "GitHub Agentic Workflows 為新功能，但缺乏技術深度，適合入門教學。",
+    "novelty": 6,
+    "impact": 10,
+    "trending": 15,
+    "practicality": 18,
+    "blog_worthiness": 12
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "Beating GPT-5.6 Sol on retrieval with 100x cheaper open models",
+      "url": "https://neon.com/blog/how-castform-neon-beats-frontier-models-on-price-and-efficiency",
+      "authors": [
+        "moonikakiss"
+      ],
+      "abstract": "“Most teams' best training data is just sitting in their databases. The problem is that turning raw data into something usable is hard, and letting agents read, search, and mutate data cheaply at scale requires advanced infra. Pointing Castform at Neon skips both.” Ying Hang Seah, cofounder, Castform A \"good agent\" needs to be strong in 2 areas: Context : can we provide the tools to find the right data? Model : can the model decide what to search for? Neon (Lakebase Postgres) and their new Search extensions solve the first; Castform solves the second. Evolution of agentic search In ~2022, the industry was going all in on embedding search. Every database provider added one, and pgvector was Neon's most downloaded extension. To provide context to LLMs, engineers handcrafted RAG pipelines, which in essence, is some form of embedding similarity search. In ~2025, agents started to gain more traction. Developers started creating multi-hop search workflows, decomposing big problems into smaller ones. Retrieval has shifted from the one-shot search systems to agentic retrieval. Instead of issuing a single query, models plan and search multiple times in a loop. Every loop iteration meant another call to the frontier model, increasing the overall cost and latency per user request. Concretely, a typical multi-turn search request with gpt-5.6-sol takes >10s and costs ~$0.03 end-to-end, making it prohibitively slow and expensive. Meanwhile, small open-weights models are 100x cheaper. But, out of the box, their capabilities lag behind closed api models. RL post-training helps bridge this gap. On specific tasks like search, post-trained open-source models can match & beat frontier models while costing orders of magnitude less per request. That is why we built Castform: to enable developers to RL post-train models without having to deal with machine learning & gpu internals. The goal's to make post-training as approachable as prompt engineering. How does Castform use Neon? Castform's pipeline runs against Neon via Lakebase Search: Stage Neon + Lakebase Search Corpus storage Raw documents live in Postgres on Neon Synthetic data generation Castform training pipeline uses lakebase_text and lakebase_vector to write training tasks RL Training Every rollout's search tool call uses Lakebase Search on Neon Production Inference The final model uses the same search tool call during inference Your best training data already exists To perform RL post-training effectively, you need a task (e.g. answer a user's question), the environment for the agent to run in (e.g. a search tool for your corpus) and a reward function (e.g. is the answer correct?). With all 3 pieces in place, the RL post-training is a loop of trial and error: the model attempts the task given the tools, the reward function scores the attempt, and the feedback signal guides the model on how to hill-climb its way to optimal performance. Yet, most companies do not have a clean dataset of tasks and reward functions ready for post-training. Enterprises do have a large set of proprietary data: internal documentation product records support articles customer interactions wikis operational databases This data contains the knowledge an agent needs, but turning it into an effective training dataset normally requires substantial data engineering and manual labeling. That leads many teams to dismiss post-training for one of two reasons: \"We don't have the training data.\" \"Fine-tuning is too difficult and requires infrastructure we don't have.\" Castform addresses both. It turns an existing corpus into training tasks , then manages the RL loop needed to teach an open-source model how to use that data effectively. Using Castform With Castform, you can turn your company knowledge base into a model: Document (from your data): Trains booked through Navan will be paid by GitLab travel card. Train rides must be standard cabin class with 14 day booking lead time Ground truth (inferred from your data): Train rides must be standard cabin class with a 14 day booking lead time. Question (synthetically generated): When booking a rail trip in Navan, what are the rules for how early I need to reserve it and which seating level I'm expected to choose? With the generated question-answer dataset, Castform lets you scaffold the training run by specifying the tools the agent has access to and a reward function. The reward function specifies what you want your model to get good at. In our case, we want it to retrieve the correct chunks, cite the right sources along with providing the right final answer. def run_tool ( tool , tool_args ): \"\"\"Single tool: hybrid search over Lakebase.\"\"\" if tool == \"search\" : query = tool_args [ \"query\" ] bm25 = neon . lakebase_text (query, k) vector = neon . lakebase_vector (query, k) return rrf_merge (bm25, vector, k) def reward ( trace , ground_truth ): \"\"\"Grade a trace against the ground-truth answer.\"\"\" answer = parse_trace (trace) retrieval = ... # did it retrieve the right source citation = ... # did it cite the right chunk correctness = ... # did it land on the right answer return retrieval + citation + correctness See a comprehensive code example here . Observability: Watch the model learn Castform gives you full observability into your RL run. You can monitor your reward climb with each step, but more importantly you can drop into individual tasks/prompts to watch how the model performs qualitatively, allowing you to debug problems such as broken tools or reward hacking. For more details on how to monitor your training runs, you can check out the Castform blog here . You can also check out our example training run here . Average reward Why Neon 'just works' During training, the agent repeatedly calls Lakebase Search until it has enough context to answer. Across thousands of parallel rollouts, each potentially making dozens of calls, this creates a highly bursty workload. Neon's dynamic compute scaling absorbs these peaks without requiring Castform to provision for maximum capacity around the clock. Training runs get low-latency search when demand spikes, while compute scales down during idle periods. This infrastructure becomes even more valuable as agents move beyond search and begin modifying data. Training stateful agents requires isolated environments that can be created and reset cheaply, preventing one rollout's actions from affecting another or touching production. Neon branching can give each rollout an isolated database state, while time-travel queries make it possible to reconstruct and inspect the state an agent encountered. Combined with autoscaling and scale-to-zero, this creates a path toward training thousands of stateful agent rollouts without maintaining thousands of continuously running environments. Castform makes it easy for any developer to post-train open-source models to be cheaper, faster, better than the frontier. Post-train your first model today at castform.com .\n\n(298 points, 76 comments on Hacker News)",
+      "published_date": "2026-08-06",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 298,
+        "num_comments": 76,
+        "hn_url": "https://news.ycombinator.com/item?id=49186762",
+        "object_id": "49186762"
+      }
+    },
+    "rule_score": 30.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, post-training, synthetic data, fine-tuning",
+      "⬆️ HN 熱門: 298 points"
+    ],
+    "llm_score": 63,
+    "llm_reason": "提供成本效益高的代理式檢索方案，雖創新度有限但實用性高",
+    "novelty": 9,
+    "impact": 12,
+    "trending": 13,
+    "practicality": 14,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Apple ML",
+      "title": "Taming Outlier Tokens in Diffusion Transformers",
+      "url": "https://machinelearning.apple.com/research/taming-outlier-tokens",
+      "authors": [],
+      "abstract": "research area Computer Vision , research area Speech and Natural Language Processing content type paper published August 2026 Taming Outlier Tokens in Diffusion Transformers Authors Xiaoyu Wu†*, Yifei Wang†*, Tsu-Jui Fu, Liang-Chieh Chen, Zhe Gan, Chen Wei† View publication Copy Bibtex We study outlier tokens in Diffusion Transformers (DiTs) for image generation. Prior work has shown that Vision Transformers (ViTs) can produce a small number of high-norm tokens that attract disproportionate attention while carrying limited local information, but their role in generative models remains underexplored. We show that this phenomenon appears in both the encoder and denoiser of modern Representation Autoencoder (RAE)-DiT pipelines: pretrained ViT encoders can produce outlier representations, and DiTs themselves can develop internal outlier tokens, especially in intermediate layers. Moreover, simply masking high-norm tokens does not improve performance, indicating that the problem is not only caused by a few extreme values, but is more closely related to corrupted local patch semantics. To address this issue, we introduce Dual-Stage Registers (DSR), a register-based intervention for both components: trained registers when available, recursive test-time registers otherwise, and diffusion registers for the denoiser. Across ImageNet and large-scale text-to-image generation, these interventions consistently reduce outlier artifacts and improve generation quality. Our results highlight outlier-token control as an important ingredient in building stronger DiTs. † Rice University * Equal contribution Related readings and updates. DiT-Air: Revisiting the Efficiency of Diffusion Model Architecture Design in Text to Image Generation December 11, 2025 research area Computer Vision In this work, we empirically study Diffusion Transformers (DiTs) for text-to-image generation, focusing on architectural choices, text-conditioning strategies, and training protocols. We evaluate a range of DiT-based architectures—including PixArt-style and MMDiT variants—and compare them with a standard DiT variant which directly processes concatenated text and noise inputs. Surprisingly, our findings reveal that the performance of standard… Read more On Inductive Biases That Enable Generalization of Diffusion Transformers September 22, 2025 research area Computer Vision conference NeurIPS Recent work studying the generalization of diffusion models with UNet-based denoisers reveals inductive biases that can be expressed via geometry-adaptive harmonic bases. However, in practice, more recent denoising networks are often based on transformers, e.g., the diffusion transformer (DiT). This raises the question: do transformer-based denoising networks exhibit inductive biases that can also be expressed via geometry-adaptive harmonic… Read more Discover opportunities in Machine Learning. Our research in machine learning breaks new ground every day. Work with us",
+      "published_date": "2026-08-05",
+      "tags": [],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "Apple ML",
+        "feed_url": "https://machinelearning.apple.com/rss.xml"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: text to image, diffusion",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 65,
+    "llm_reason": "提出新方法解決 Diffusion Transformer 的 outlier token 問題，具備實驗驗證與實際改進，適合寫成技術深度文章。",
+    "novelty": 12,
+    "impact": 13,
+    "trending": 13,
+    "practicality": 11,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "How Mobileye transformed support operations using Amazon Bedrock AgentCore",
+      "url": "https://aws.amazon.com/blogs/machine-learning/how-mobileye-transformed-support-operations-using-amazon-bedrock-agentcore/",
+      "authors": [
+        "Adi Jabkowski"
+      ],
+      "abstract": "What if deploying production-grade AI agents required zero infrastructure management, came with enterprise observability built-in, and worked easily with your existing on-premises systems? Mobileye , the autonomous driving pioneer with more than 230 million EyeQ system-on-chips deployed across roughly 1,200 vehicle models worldwide, saw an opportunity to free skilled engineers from routine internal ticket status inquiries. Mobileye’s Data Collection Processing pipeline ingests thousands of drive-recording sessions daily, generating a constant stream of status inquiries from engineers and data teams. Each inquiry previously required manual steps across multiple systems – identifying sessions, cross-referencing visualization tools, validating outputs, and reviewing logs – before composing a response. Using Amazon Bedrock AgentCore, Mobileye deployed an AI Support Agent that cut response times by 90% and exceeded 95% accuracy targets, with zero infrastructure overhead. The results were so compelling that Mobileye transformed AgentCore into a self-service platform for teams across the company to deploy their own AI agents. In this post, we’ll explore how Mobileye deployed an AI support agentic solution on Amazon Bedrock AgentCore – from the support bottleneck that sparked the idea, through the proof of concept that validated it, to the hybrid architecture that bridges on-premises systems with AWS cloud services. This approach is relevant for enterprises struggling to scale AI Agents while maintaining enterprise grade governance and security standards. As Mobileye’s Data Collection pipeline scaled, 66% of support tickets became routine status inquiries requiring engineers to manually navigate 15 clicks across multiple backend systems. This time-consuming process diverted skilled engineers from complex issues while internal users faced longer wait times. Traditional automation approaches – scripting, static workflows, and rule-based decision trees – proved inadequate. While these could handle predictable queries, they lacked the contextual understanding needed to interpret the variability of real-world support requests. The team chose to build an AI agent capable of understanding context and adapting to diverse inquiry patterns. Before full production rollout, Mobileye’s team conducted a proof of concept targeting 95% accuracy in ticket classification with sub-2-minute response times. The agent uses Anthropic Claude foundation models, accessed through Mobileye’s internal LLM Gateway that provides governed, quota-managed access to foundation models on Amazon Bedrock . The critical enabler was the Model Context Protocol (MCP), which gave the agent real-time access to the drive-data processing platform’s APIs -allowing it to query session status, retrieve processing logs, and pull diagnostic information during inference. This meant the agent went far beyond simple ticket classification, becoming an intelligent investigator capable of handling inquiries that were previously resolved through time-consuming manual effort. When users inquired about drive-recording sessions, the agent could determine current state and respond with answers: confirming completed sessions with access details, surfacing specific errors with debugging recommendations and log links for failures, or guiding users through submission processes for missing requests – all in under two minutes with no human intervention. After successfully proving the concept with their AI agent, Mobileye needed to take it to production. This transition required a solution that could meet enterprise-grade requirements while maintaining the flexibility they had demonstrated in their proof of concept. After careful evaluation, they chose to deploy their AI Agent on Amazon Bedrock AgentCore, a fully managed platform to build, connect and optimize AI agents at scale with any framework or model. The decision came down to five key factors: This last point was particularly important. Mobileye’s internal ticketing system operated on-premises and was inaccessible from AWS, so any solution would need to bridge that divide without compromising security or compliance. Following the successful proof of concept, Mobileye moved to production with a sophisticated hybrid architecture featuring clearly defined component roles across two environments. The following table describes the on-premises components that handle local ticketing operations and bridge to cloud-based AI processing. The following table describes the AWS cloud components that provide serverless compute, security, and observability infrastructure for the AI agent. The following table describes Mobileye’s own services that provide data connectivity and governed model access for the agent. The automated workflow follows a streamlined four-step process: The production deployment of Mobileye’s AI Support Agent on AgentCore delivered results that consistently met or surpassed initial targets. Support engineers are freed to focus on complex work – and the team didn’t have to build the infrastructure themselves, because AgentCore provides it out of the box. “Amazon Bedrock AgentCore enabled us to build a production-grade AI agent that delivers measurable business value while maintaining the security and operational standards our enterprise requires. The AI Support Agent has transformed our support operations, saving our engineers hundreds of hours previously spent on routine ticket lookups, and freed them to focus on what they do best.” — Shay Margalit, Principal Engineer, Mobileye With the AI Support Agent delivering results in production, Mobileye faced a new challenge: most developers across the organization lacked the AWS credentials or infrastructure access to deploy agents on AgentCore independently. To address this, the Mobileye Cloud Infra team built an internal agent deployment platform. This internal managed service enables Mobileye developers to deploy production-grade AI agents without AWS expertise or cloud credentials. The process follows these steps: The provisioned infrastructure aligns with Mobileye’s standards for security, cost governance, and operational excellence. CloudWatch Alarms on code exceptions help verify issues surface immediately. What began as a single proof-of-concept has evolved into an enterprise-wide platform where teams can deploy secure, monitored, cost-tracked agents in minutes rather than weeks. The path from manual processes to intelligent automation is shorter than you think, and the results, as Mobileye has shown, can be extraordinary.",
+      "published_date": "2026-08-05",
+      "tags": [
+        "Amazon Bedrock",
+        "Amazon Bedrock AgentCore",
+        "AWS Lambda",
+        "AWS Secrets Manager",
+        "Customer Solutions"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, mcp, model context protocol",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 58,
+    "llm_reason": "案例展示 AI 代理在企業內部的實際效益，技術深度足以寫成文章。",
+    "novelty": 5,
+    "impact": 12,
+    "trending": 12,
+    "practicality": 14,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Meta AI Releases Muse Code (Beta): A Terminal Coding Agent Powered by the New Muse Spark 1.2 Model",
+      "url": "https://www.marktechpost.com/2026/08/05/meta-superintelligence-labs-releases-muse-code/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "Meta AI has released Muse Code (in beta), a terminal coding agent in beta, powered by its new Muse Spark 1.2 model . Meta positions the pair as its next step toward the frontier, with larger models on the way. Muse Code targets complex software engineering across large repositories: it plans changes, writes code, and validates the results. A set of async background agents stays alive for the whole session instead of spawning per task. A local append-only event log records every model call, tool run, approval, and edit, which Meta calls replay-exact and restart-safe. Muse Spark 1.2 was co-trained with the harness itself. Meta also published a kernel-optimization case study running 1,000+ tool calls over as long as 24 hours. Yes. Muse Code ships in beta for macOS and Linux via curl -fsSL https://dev.meta.ai/install.sh | bash . Muse Spark 1.2 is available in Muse Code and the Meta Model API , with expanded global access. The launch post does not mention downloadable weights, so treat this as a hosted dependency. Muse Code runs a simple agent loop plus a set of async background agents. These specialized agents remain active throughout each session. They are not spawned for individual tasks, which Meta says avoids redundant information gathering. They carry out next steps and choose when to report back to the main agent. Meta states this persistence reduces latency and steering on difficult, multi-step tasks. Muse Code uses a local event log. Every model call, tool run, approval, and edit is appended to it. Meta calls this single source of truth replay-exact and restart-safe. After a crash, the agent resumes precisely where it stopped, letting long-running tasks survive failures. Three default skills ship with the agent. /plan turns a task into an approval-gated plan. /grill stress-tests that plan until it holds up. /goal works toward successful completion of the specified objective. Muse Spark 1.2 is a coding-focused update to Muse Spark 1.1 . Meta reports gains in code generation, complex debugging, codebase understanding, and end-to-end developer workflows. The research team significantly scaled up training compute on coding tasks and expanded environment diversity. The model keeps its strength in other areas, including general agents. Three important training details: Meta’s methodology report is unusually specific. Terminal-Bench 2.1 uses all 89 tasks, pass@1 over five attempts. DeepSWE v1.1 covers 113 tasks across 91 repositories and five languages. Meta Internal Coding Bench holds 440 tasks derived from real internal pull requests. Runs execute in isolated Daytona cloud sandboxes. Comparisons include Grok 4.5, Claude Opus 5, GPT-5.6 Terra, Gemini 3.6 Flash, and Kimi K3, each with its own agent product. Meta notes its harness may not be tuned for third-party models. For reference, Meta’s model page lists Muse Spark 1.1 at 80.0 on Terminal-Bench 2.1. Meta tested iterative GPU kernel optimization over 1,000+ tool calls, running up to 24 hours. The model writes, compiles, profiles, and progressively improves kernels against a provided baseline. Benchmarks covered KDA and MLA kernels on NVIDIA Hopper GPUs. For KDA, the baseline is the FLA Triton implementation, with third-party kernel libraries prohibited. Muse Spark 1.2 paired a chunk-parallel preparation kernel with a sequential inter-chunk scan. For MLA, the reference is PyTorch at batch size 1, 64 heads, sequence length 8192, and latent dimension 512. The model built a two-kernel Triton pipeline that reuses the shared KV latent as both K and V. Check out the Technical details , Model (Muse Spark 1.2) and Evaluation Methodology . Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post Meta AI Releases Muse Code (Beta): A Terminal Coding Agent Powered by the New Muse Spark 1.2 Model appeared first on MarkTechPost .",
+      "published_date": "2026-08-05",
+      "tags": [
+        "Agentic AI",
+        "AI Agents",
+        "AI Infrastructure",
+        "AI Shorts",
+        "Artificial Intelligence",
+        "Deep Learning",
+        "Editors Pick",
+        "For Devs",
+        "Generative AI",
+        "Language Model",
+        "Large Language Model",
+        "Machine Learning",
+        "New Releases",
+        "Python",
+        "Software Engineering",
+        "Tech News",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, code generation",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 60,
+    "llm_reason": "新功能但非突破性架構，適合技術產品介紹",
+    "novelty": 9,
+    "impact": 11,
+    "trending": 14,
+    "practicality": 13,
+    "blog_worthiness": 13
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Microsoft’s SkillOpt Shows Optimized Agent Skill Artifacts Transfer Across Model Scales and Between Codex and Claude Code Harnesses",
+      "url": "https://www.marktechpost.com/2026/08/05/microsoft-skillopt-agent-skill-transfer-portability/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "SkillOpt is a text-space optimizer developed by a team of researchers from Microsoft, Shanghai Jiao Tong University, Tongji University, and Fudan University. SkillOpt trains a single natural-language skill document while the target model stays frozen. An optimizer model reads scored rollouts and proposes bounded add/delete/replace edits. A held-out selection split accepts an edit only when the score strictly improves. The exported artifact is one file, best_skill.md . The transfer tables report three columns. Baseline is the target’s no-skill score. Direct is SkillOpt trained in-domain on that exact target. Transferred applies a skill trained elsewhere, with no further optimization. The useful comparison is not transferred versus direct. It is how much of the in-domain gain survives the move. Skills were trained on GPT-5.4 and deployed on smaller variants. Two rows deserve attention. SpreadsheetBench on GPT-5.4-mini keeps 82% of the in-domain gain. That is close to free reuse. The LiveMath row on GPT-5.4-nano is stranger: the transferred skill scores 28.8 against an in-domain SkillOpt result of 27.2. The paper reads this as evidence that some learned procedures are target-model agnostic. The GPT-5.4-nano SpreadsheetBench row is the weak one at 16%. Retention is not uniform, and the paper does not claim it is. Its stated bound is narrower: no row falls below the target’s no-skill baseline. Note the scope. All four rows stay inside one GPT family. Cross-family transfer, such as GPT to Qwen , is not tested. This is the section that matters most for deployment. All rows use GPT-5.5. The first row is the headline. A skill optimized inside Codex lifted Claude Code from 22.1 to 81.8. That slightly exceeds the 80.4 Claude Code reached by training its own skill from scratch. The two harnesses expose different tool and file APIs and different command surfaces. A skill that survives that shift is not encoding command recipes. The research paper attributes SpreadsheetBench’s portability to workbook-level procedures: structure-first inspection, formula-aware verification, and static-value materialization. Those hold regardless of which CLI runs the Python. LiveMath tells the opposite story. Codex → Claude Code retains only 10% of the in-domain gain. The asymmetry is worth sitting with. Procedural skills — how to inspect, verify, and format — appear to be the portable class. Reasoning-heavy skills appear more tied to their training environment. There is no Direct column here. No in-domain SkillOpt run on Omni-MATH is reported, so the comparison is against no-skill only. Gains are positive across all three model scales but small. The research paper’s reading is that the skill retained reusable mathematical procedure after both the test instances and the answer-format conventions changed. The mechanism is stated plainly in the research paper. All three execution modes: direct chat, Codex, Claude Code – consume the same best_skill.md file format. That shared contract is what makes the cross-harness experiment possible in the first place. The Codex harness renders the current skill to a per-task SKILL.md alongside task files, then reads back a compact execution trace. The Claude Code harness mirrors the same workspace contract through the claude CLI. Neither harness gets a bespoke skill format. The artifact’s shape supports portability too. Final skills run 379 to 1,995 tokens across the six benchmarks, with a median near 920. They are assembled from 1 to 4 accepted edits. The paper’s Figure 4 samples one learned rule per benchmark, and all are procedural rather than instance-specific. The SpreadsheetBench rule, verbatim: inspect workbook structure and formulas, then write evaluated static values across the full requested target range instead of relying on Excel recalculation. Training cost is paid once, offline, and measured. The research paper reports 0.6M to 46.4M training tokens per absolute test point, depending on benchmark. SpreadsheetBench sits at 0.6M per point; DocVQA at 46.4M. The optimizer model runs only during training and adds zero inference-time calls at deployment. If a skill trained in one harness holds up in another, that one-time cost spreads across environments. The Codex → Claude Code SpreadsheetBench result is the existence proof. It also implies you can optimize where tooling is cheapest and deploy where the product lives. The audit angle is separate and underrated. The deployed artifact is a text file a domain practitioner can read in minutes. Every change to it is traceable: each step records an edit_apply_report.json with per-edit accept and skip status. Portability plus inspectability is a different operational posture than shipping fine-tuned weights. Resources: Paper , GitHub , Project page , Docs , PyPI and Demo video Baselines referenced: GEPA , TextGrad , EvoSkill and Trace2Skill Benchmarks referenced: SearchQA , SpreadsheetBench , DocVQA , LiveMathematicianBench and ALFWorld The post Microsoft’s SkillOpt Shows Optimized Agent Skill Artifacts Transfer Across Model Scales and Between Codex and Claude Code Harnesses appeared first on MarkTechPost .",
+      "published_date": "2026-08-06",
+      "tags": [
+        "Agentic AI",
+        "AI Agents",
+        "AI Paper Summary",
+        "Applications",
+        "Artificial Intelligence",
+        "Editors Pick",
+        "Opinion",
+        "Software Engineering",
+        "Staff",
+        "Tech News",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, reasoning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 59,
+    "llm_reason": "SkillOpt 提升跨模型技能轉移，具備實用性與可重用性，值得深入探討。",
+    "novelty": 13,
+    "impact": 12,
+    "trending": 11,
+    "practicality": 9,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "newsapi",
+      "source_name": "Github.com",
+      "title": "An SLM trained on $8 ESP32-S3",
+      "url": "https://github.com/Carloscodix/qapla",
+      "authors": [
+        "Carloscodix"
+      ],
+      "abstract": "A char-level transformer trained from scratch on an $8 ESP32-S3. Not inference: the chip runs the full training loop, with backprop written by hand in C. - Carloscodix/qapla",
+      "published_date": "2026-08-05",
+      "tags": [
+        "newsapi"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "newsapi_source": "Github.com",
+        "published_at": "2026-08-05T04:07:27Z"
+      }
+    },
+    "rule_score": 20.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: slm",
+      "⚖️ 來源權重: newsapi +15"
+    ],
+    "llm_score": 66,
+    "llm_reason": "在 $8 ESP32-S3 上完整訓練 Transformer，展示低成本硬體可行性",
+    "novelty": 13,
+    "impact": 12,
+    "trending": 14,
+    "practicality": 13,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "TechCrunch AI",
+      "title": "Meta launches Muse Code, an AI agent for large code bases",
+      "url": "https://techcrunch.com/2026/08/05/meta-launches-muse-code-an-ai-agent-for-large-code-bases/",
+      "authors": [
+        "Lucas Ropek"
+      ],
+      "abstract": "Meta, considered a bit of a straggler in the AI harnesses realm, is making strides to catch up. This week, the company released a new terminal coding agent aimed at programmers looking for assistance with complex tasks across large software code bases. Muse Code, which is currently available in beta, can accomplish “complete software engineering tasks across large repos,” Meta CEO Mark Zuckerberg said in a social media post on Wednesday. Those tasks include “planning changes, writing code, validating the results,” he added. Code, which can be installed with a single command, is powered by Meta’s previously released coding model, Muse Spark. It handles large projects by launching its own agents, which then work simultaneously. “When a job is big enough, it fans out to separate sub-agents working in parallel in isolated worktrees,” Zuckerberg explained. “Your working copy is never touched. In testing we had it build six features for a game simultaneously with no collisions.” The move attempts to position Meta more competitively, and more affordably, with AI lab peers like OpenAI and its coding agent Codex, and Anthropic with Claude Code. “We think that for a lot of workflows and a lot of use cases, this can be an incredibly good option, especially from a cost perspective,” Alexandr Wang, Meta’s AI chief who leads Meta Superintelligence Labs, told the Wall Street Journal. Meta has been attempting to grow its AI presence by pouring money into development. In June, it expanded beyond its core focus of using AI to support its advertising business and entered the enterprise AI market with an agent aimed at customer service and support.",
+      "published_date": "2026-08-05",
+      "tags": [
+        "AI",
+        "Anthropic",
+        "In Brief",
+        "Mark Zuckerberg",
+        "Meta",
+        "OpenAI"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "TechCrunch AI",
+        "feed_url": "https://techcrunch.com/category/artificial-intelligence/feed/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 62,
+    "llm_reason": "Meta新產品，非全新架構，實用性與熱度高",
+    "novelty": 9,
+    "impact": 11,
+    "trending": 15,
+    "practicality": 13,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "newsapi",
+      "source_name": "Cloudflare.com",
+      "title": "The Agent Access Model",
+      "url": "https://blog.cloudflare.com/the-agent-access-model/",
+      "authors": [
+        "Matt Silverlock"
+      ],
+      "abstract": "The Agent Access Model proposes a new architecture to secure task-scoped agents using strict identity brokering, continuous mediation, and stateful trust.",
+      "published_date": "2026-08-05",
+      "tags": [
+        "newsapi"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "newsapi_source": "Cloudflare.com",
+        "published_at": "2026-08-05T13:00:41Z"
+      }
+    },
+    "rule_score": 20.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: newsapi +15"
+    ],
+    "llm_score": 62,
+    "llm_reason": "提出新架構但缺乏實作細節，影響力與實用性有限。",
+    "novelty": 12,
+    "impact": 12,
+    "trending": 15,
+    "practicality": 8,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "The Verge AI",
+      "title": "Rogue AI agents created fake online identities in another hacking attempt",
+      "url": "https://www.theverge.com/ai-artificial-intelligence/975577/aisi-openai-anthropic-agent-hacking",
+      "authors": [
+        "Robert Hart"
+      ],
+      "abstract": "AI News Tech Rogue AI agents created fake online identities in another hacking attempt AISI said AI agents from OpenAI and Anthropic displayed unprecedented ‘autonomy and deception’ in their test. AISI said AI agents from OpenAI and Anthropic displayed unprecedented ‘autonomy and deception’ in their test. by Robert Hart Aug 5, 2026, 3:14 PM UTC Image: The Verge Robert Hart is a London-based reporter at The Verge covering all things AI and a Senior Tarbell Fellow. Previously, he wrote about health, science and tech for Forbes . Yet more rogue AI agents from OpenAI and Anthropic have been caught attempting to hack real targets online without permission. The discoveries add to a growing list of previously unknown incidents that have alarmed AI safety experts and intensified pressure for greater oversight of frontier systems. According to a report from the UK’s AI Security Institute, which evaluates frontier models from top AI labs before they are released, agents powered by OpenAI’s GPT-5.6-Sol and Anthropic’s Mythos 5 went “engaged in sustained, potentially harmful activity directed at real people and organisations.” This included trying to insert malicious code into an open-source project by pressuring real people in charge of it, AISI said. “In an attempt to get the code approved, the agent engaged in social engineering — creating fake online identities and using them to pressure the project’s maintainer to approve the code.” AISI said the attempts, which it detected on July 28th, “were unsuccessful” and had not resulted in real-world harm. However, the organization noted that the incident marked “the first time we have seen risks around autonomy and deception manifest this clearly, without specific prompting, in the real-world.” Unlike OpenAI’s rogue agent that attacked Hugging Face, AISI said this was “not a case of a model escaping its secure test environment,” or sandbox. Safeguards usually imposed on the models had been disabled as part of testing, AISI said, and they had also been permitted access to the internet. “To measure what these models can genuinely do, we test them under conditions that reflect what a capable human attacker could do,” AISI said. The incident stemmed from a single AISI evaluation where agents were tasked with solving a cybersecurity challenge, such as finding a piece of protected data. The challenge was run 122 times across multiple models and all runs were conducted in AISI’s research environment, which uses “virtual machine sandboxing to isolate the agents from other AISI infrastructure.” AISI’s investigation found that in 10 of those, “an AI agent took autonomous, unsanctioned action on the live internet, targeting real people and organisations.” Of 19 such actions, almost all — 17 — came from Anthropic’s Mythos 5. In its post-mortem of the incident, AISI identified several key factors it said contributed to the unsanctioned agent behaviors. It said the agent was persistent, pursuing avenues like trying to trick real people through “deception that, until recently, had been largely theoretical.” The task was also hard, which the organization said could push agents to be more “creative” in their problem-solving. Compounding matters were deficiencies in how internet use was monitored, with AISI suggesting that more dedicated surveillance could have identified the problem sooner. Finally, the organization said the agent hadn’t been specifically instructed not to leverage its internet access or deploy deceptive social engineering techniques in pursuit of its goal. “Previously, it was not clear that such instructions were necessary when using models with alignment training,” AISI said. AISI said the incident should be “interpreted with caution and nuance” but warned the agent’s actions “show signs of novel, potentially deceptive behaviours” that “were to an extent and severity we did not anticipate.” In a blog post , OpenAI acknowledged the breach that happened during AISI’s testing and said it is “committed to working across the industry to strengthen shared practices for conducting high-risk evaluations safely.” OpenAI also disclosed another breach, this time from an external cybersecurity testing partner Irregular, where it said models had been mistakenly granted internet access during cybersecurity exercises. OpenAI said Irregular notified it of the breach on July 29th. “In the coming weeks, we will review our own approach to third-party testing, including how we identify higher-risk evaluations, agree on scope, assess requests to enable internet access or lowered safeguards, set expectations for isolation, credential handling, monitoring, and stop conditions, and establish clearer incident-notification and escalation processes,” OpenAI said. Anthropic posted a less comprehensive response on X, largely emphasizing that the models’ standard safety features had been disabled and that they had not been given “any specific restrictions on how the internet should be used.” It said it was working closely with AISI to gather more details for its own investigation. The findings add to an increasingly tangled mess of rogue actions from agents during testing, many of which only come to light after dedicated hunting and which feature models not released to the public. The unwillingness or inability of AI labs to contain their products has sparked concern over how such breaches could go unnoticed, the safety of frontier AI systems , and worries over the general lack of transparency and oversight the industry faces. These latest disclosures will likely intensify pressure on the federal government for a more comprehensive framework governing AI models following what reports suggest is a vague and poorly-defined testing plan from the Trump administration, and could add to growing calls for some form of slowdown or pause on AI development. Follow topics and authors from this story to see more like this in your personalized homepage feed and to receive email updates. Robert Hart AI Anthropic News OpenAI Security Tech",
+      "published_date": "2026-08-05",
+      "tags": [
+        "AI",
+        "Anthropic",
+        "News",
+        "OpenAI",
+        "Security",
+        "Tech"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "The Verge AI",
+        "feed_url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, alignment, safety",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 46,
+    "llm_reason": "報導安全事件，缺乏技術創新，實用性低",
+    "novelty": 4,
+    "impact": 12,
+    "trending": 14,
+    "practicality": 4,
+    "blog_worthiness": 12
+  },
+  {
+    "item": {
+      "source": "blog",
+      "source_name": "Latent Space",
+      "title": "[AINews] Jeff, Sanjay, Oriol, and Quoc depart DeepMind; Demis to Chair; Koray to SVP — what is going on at GDM???",
+      "url": "https://www.latent.space/p/ainews-jeff-sanjay-oriol-and-quoc",
+      "authors": [
+        "Latent Space"
+      ],
+      "abstract": "It’s tempting to give Meta Spark 1.2 and Muse Code the title story today because of their success launching a 5.6 Terra-level model, together with innovative harness design with a local event log for resumability and persistent background agents, both of which should put other coding agent builders on notice. It’s tempting to highlight Prime Agent , Prime Intellect’s self-improving RLM based harness that claims an incredible 95.5% on ARC-AGI-3 (not yet endorsed by ARC). But it’s hard to beat around the bush — today’s most important story is the coordinated departures of Jeff Dean, Sanjay Ghemawat, Oriol Vinyals, and Quoc Le, some of the most senior engineering and research talent in both Google and in human history, from DeepMind to cofound a new autoresearch startup Discovery Loop : And Demis, who needs no introduction, goes from CEO to Chair and Chief Scientist, while “leaning into” Isomorphic with CTO Koray stepping up to SVP of GDM: All the departures are very amicable; Google is investing in Discovery Loop, and Demis’ increased contributions to long term strategy and Isomorphic in particular will be very welcome by humanity, but surely we are not being told the full story here; why couldn’t Discovery Loop have been done inside Google? That one at least, we have some hints, given GDM’s history of 1000+ coauthor papers for Gemini, vs these 4 superhumans writing this manifesto: When John Jumper left for Anthropic , one could maybe chalk it up to Anthropic’s momentum . When Noam Shazeer joined OpenAI , perhaps one could point to their pioneering work in reasoning models . But couple it with David Silver , Denny Zhou , and other prominent departures, and the 6 months since the last Gemini Pro update , one has to wonder 1) what happened that led to this, 2) how this latest shakeup was decided, 3) if the shuffle is the beginning of the middle of the end or the first prologue of a great and necessary comeback story. After all, Google STILL has great models, talented teams, excellent compute and infrastructure and the greatest trove of training data in human history… AI News for 8/4/2026-8/5/2026. We checked 12 subreddits, 544 Twitters and no further Discords. AINews’ website lets you search all past issues. As a reminder, AINews is now a section of Latent Space . You can opt in/out of email frequencies! Google DeepMind Leadership Reshuffle and the Discovery Loop Spinout A major Google AI reorg landed alongside a high-profile founder exodus : Demis Hassabis is moving to Chair of Google DeepMind and Chief Scientist of Alphabet , explicitly stepping back from day-to-day GDM operations to focus on long-term strategy, AGI, and science. Koray Kavukcuoglu takes operational control as SVP of DeepMind, overseeing Gemini , frontier research, and product/dev teams. The subtext from the ecosystem was clear: this is being read as both a governance reset and an attempt to sharpen product execution around Gemini. At the same time, Discovery Loop launched with one of the strongest founding teams in AI infrastructure/research : Jeff Dean , Sanjay Ghemawat , Oriol Vinyals , and Quoc Le are founding Discovery Loop , a Public Benefit Corporation aimed at automating machine learning, science, and engineering . Dean also shared that Radical Ventures and Khosla Ventures are leading the seed round, with participation from Lightspeed, Kleiner Perkins, Doerr Capital, and Alphabet . The technical read-through is important: rather than another general-purpose model startup, this is explicitly targeting autoresearch / automated discovery loops over scientific and engineering workflows. Why engineers cared : the market reaction wasn’t just “big names left Google.” It was that several people most associated with Google’s deep infra, model-building, and research execution stack are now pursuing a startup centered on automated science. Commentary from Nathan Lambert , Andrew Ng , and others framed it as a historical inflection point for Google’s AI efforts and a strong signal that AI-for-science is becoming a primary frontier, not a side quest . Meta’s Muse Spark 1.2 and Muse Code Push Into the Coding-Agent Race",
+      "published_date": "2026-08-06",
+      "tags": [
+        "blog"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "blog_name": "Latent Space",
+        "blog_url": "https://www.latent.space/"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, reasoning",
+      "⚖️ 來源權重: blog +15"
+    ],
+    "llm_score": 46,
+    "llm_reason": "主要為人事新聞，缺乏技術深度與實作細節",
+    "novelty": 2,
+    "impact": 10,
+    "trending": 18,
+    "practicality": 4,
+    "blog_worthiness": 12
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "How LendingTree built a multi-agent mortgage assistant on Amazon Bedrock",
+      "url": "https://aws.amazon.com/blogs/machine-learning/how-lendingtree-built-a-multi-agent-mortgage-assistant-on-amazon-bedrock/",
+      "authors": [
+        "Eric Hanson"
+      ],
+      "abstract": "Buying a home is one of the biggest financial decisions most people face, and LendingTree built a multi-agent mortgage assistant on Amazon Bedrock to make the process more straightforward. The assistant educates borrowers, understands their situation, and provides tailored options in a natural conversation. Borrowers must weigh purchase or refinance, conventional or government-backed, 15-year or 30-year terms, and fixed or adjustable rates. On top of that, there’s jargon like “discount points,” “origination fees,” and “debt-to-income ratio.” It’s no wonder many people feel lost before they even start. LendingTree has been helping consumers sort through these choices for over 25 years, connecting millions of people with lenders to find competitive mortgage offers. The company was built on a belief that everyone deserves the tools and knowledge to make confident financial decisions. The AI-powered mortgage assistant is that next step. The solution had to meet the same standards that have guided LendingTree from day one: accurate information, transparent guidance, and rigorous protection of user data. Operating within the regulatory requirements of the mortgage industry means content filtering, personally identifiable information (PII) protection, and compliance oversight aren’t optional features. They’re non-negotiable. That made Amazon Bedrock and its built-in guardrails the right foundation. “Our goal was to be a trusted partner in the home-buying journey, a guide that educates consumers, understands their situation, and matches them with the right offer. The foundation models and built-in guardrails in Amazon Bedrock let us deliver that with security and compliance from the start.” — Srinivas Madabushi, SVP Technology, LendingTree Many companies in the industry have added chatbots for basic questions. LendingTree wanted to go further, answering the hard questions and matching borrowers with competitive offers. That took more than one agent. To address these challenges, LendingTree deployed three independent AI agents: a supervisor and two specialized workers (education and matching), coordinated using LangGraph , the Model Context Protocol (MCP) , and foundation models powered by Amazon Bedrock. All agents run containerized services on Amazon Elastic Container Service (Amazon ECS) with AWS Fargate . LendingTree chose Amazon Bedrock for its multi-model flexibility and inherited AWS governance controls, which their compliance team required. The solution was deployed on Amazon ECS instead of Amazon Bedrock AgentCore because it was already in production when AgentCore reached general availability. AgentCore is a platform to build, connect, and optimize agents at scale, with any framework or model. The following figure shows the high-level architecture. LendingTree multi-agent architecture for mortgage guidance (1) The consumer-facing chat interface is a React application running as a containerized service on Amazon ECS with Fargate, serving consumers on web and mobile browsers through a public endpoint. (2) User inputs and model outputs pass through Amazon Bedrock Guardrails for content filtering (such as hate and profanity detection) and PII redaction. Incoming messages are also screened for prompt threats. In parallel with Guardrails, a safety classifier based on a large language model (LLM) enforces LendingTree’s conversational policy. The two safety checks run concurrently, so this added assurance doesn’t add latency. A business-logic layer handles LendingTree’s operational rules: routing complex issues to human support and redirecting off-topic conversations. (3) The Supervisor agent is the orchestrator, built on LangGraph as a state machine that follows a plan-and-execute pattern. It works like a well-organized team: the Supervisor understands the big picture and decides what needs to happen, while the workers handle what they’re each best at. The Supervisor is a graph of nodes and edges. Nodes do the work (intent analysis, execution planning, response composition), and edges decide what happens next based on the result (route to Education, route to Matching, or answer directly). This makes the flow explicit: every path through the system is defined, auditable, and traceable. The Supervisor analyzes user intent with Amazon Nova Pro and produces an execution plan. It then routes to the appropriate worker over MCP using connection pooling for low-latency calls. For model availability by Region, see Supported models by AWS Region in Amazon Bedrock . Not every task needs the most powerful model. The Supervisor implements multi-model architecture, automatically selecting between Amazon Nova Pro (for complex reasoning and critical classification) and Amazon Nova Lite (for conversational responses and lightweight classification) depending on what the task demands. This balances reliability with cost. Planning and execution are separated by design. When a conversation goes wrong, the team can trace exactly which node made which decision. (4) The Education worker is the patient educator. It helps users understand mortgage concepts, explains product differences, and provides guidance through interactive conversation. It runs its own LangGraph workflow and maintains specialized Amazon Bedrock Knowledge Bases , the fully managed retrieval augmented generation (RAG) capability, tailored to its domain, backed by Amazon OpenSearch Service as the vector store. Every response is grounded in real documents rather than relying on model knowledge alone. (5) The Matching worker is the connector. It gathers user preferences and calls LendingTree’s internal offer, eligibility, and rate APIs. From there, it delivers personalized lending options based on the user’s actual situation. It interprets qualification criteria and helps users compare options side by side. (6) Shared services handle conversation memory and session state through the LangGraph PostgreSQL checkpointer on Amazon Relational Database Service (Amazon RDS) . This lets conversations persist across turns, agent handoffs, and service restarts. Users can pause, come back later, or ask follow-ups without losing context. (7) Amazon Bedrock provides a broad set of foundation models suited to a wide range of use cases. These range from complex reasoning and critical classification (Amazon Nova Pro) to cost-efficient conversational responses and lightweight classification (Amazon Nova Lite), all accessible through a single API. Built-in Guardrails deliver configurable safety controls, while Amazon Bedrock Knowledge Bases connect agents to authoritative content through vector stores such as Amazon OpenSearch Service for hybrid retrieval. (8) Internal LendingTree services and APIs provide lender search, rate and product data, eligibility and prequalification checks, offer comparison, and user profile information. (9) All services run on Amazon ECS with AWS Fargate, where each agent scales independently on its own demand signals. Infrastructure is managed through Terraform and deployed through GitLab continuous integration and continuous delivery (CI/CD) pipelines with automated testing and health checks. Suppose a user asks, “What’s the difference between FHA and conventional, and which one fits me?” The message flows through Amazon Bedrock Guardrails (2) for safety screening. The Supervisor agent (3) then loads conversation history from conversation memory (6) and analyzes intent, recognizing two needs: an explanation and a personalized comparison. It routes the educational question to the Education worker (4) over MCP, and the matching question to the Matching worker (5). Each worker operates independently and returns its result. The Supervisor aggregates both into one coherent reply, running the output back through Guardrails before delivering it. The full exchange is checkpointed to PostgreSQL (6), so the next turn picks up with complete context. To the user, it’s one continuous conversation.",
+      "published_date": "2026-08-05",
+      "tags": [
+        "Amazon Bedrock",
+        "Customer Solutions",
+        "Intermediate (200)"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, mcp, model context protocol, multi-agent, reasoning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 39,
+    "llm_reason": "案例說明多代理在 Bedrock 上實作，但缺乏技術深度與可落地程式碼",
+    "novelty": 7,
+    "impact": 10,
+    "trending": 9,
+    "practicality": 3,
+    "blog_worthiness": 10
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "TechCrunch AI",
+      "title": "MacPaw taps Liquid AI to offer on-device inference to devs building for its app store",
+      "url": "https://techcrunch.com/2026/08/05/macpaw-taps-liquid-ai-to-offer-on-device-inference-to-devs-building-for-its-app-store/",
+      "authors": [
+        "Ivan Mehta"
+      ],
+      "abstract": "Ukraine-based app developer MacPaw has partnered with Liquid AI to power its products with locally hosted AI models, and eventually make the tech stack available to developers. The company is also preparing its SetApp app store for AI apps with credit-based plans for users. MacPaw is currently working on its AI assistant Eney, which it unveiled last year , and now plans to build a locally hosted version, for which it has roped in Liquid AI to develop an on-device inference system called Elix as well as a local memory system. “Before training our models, we select an architecture that is different and tailored to the hardware. That allows us to really have the most efficient version of intelligence that runs directly on the device, with benefits like privacy and security,” Liquid AI’s co-founder and CEO Ramin Hasani told TechCrunch. MacPaw’s CEO Oleksandr Kosovan said locally hosted AI models will also give users the ability to run assistants and agentic workflows offline. Notably, Apple already provides its own local models to developers. But Hasani maintains that Liquid AI’s models focus on performance for different capabilities. “We are also building a customization stack around models. This means that with user input, the models can use the data and improve. We want our models to be adaptable and become more intelligent over time,” Hasani said. MacPaw plans to focus more on AI apps for its subscription-based app store, SetApp, which has over 150,000 paying users. Once it locks in the local processing architecture with Liquid AI, MacPaw wants to make the tech available to developers so they can use on-device inference with their apps. Kosovan said the platform will also provide access to other cloud models from companies like Google, acting as a one-stop shop for developers. MacPaw is already experimenting with credit-based pricing for the app store, where users can perform a certain number of AI operations based on the credits they have and the complexity of the task.",
+      "published_date": "2026-08-05",
+      "tags": [
+        "AI",
+        "Apps",
+        "MacPaw",
+        "Liquid AI",
+        "on device AI",
+        "offline ai"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "TechCrunch AI",
+        "feed_url": "https://techcrunch.com/category/artificial-intelligence/feed/"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agentic",
+      "⚖️ 來源權重: rss +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 43,
+    "llm_reason": "本地推理合作缺乏技術創新，影響有限",
+    "novelty": 6,
+    "impact": 10,
+    "trending": 9,
+    "practicality": 8,
+    "blog_worthiness": 10
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "TechCrunch AI",
+      "title": "Hark previews its browser use agent for completing tasks",
+      "url": "https://techcrunch.com/2026/08/05/hark-previews-its-browser-use-agent-for-completing-tasks/",
+      "authors": [
+        "Ivan Mehta"
+      ],
+      "abstract": "Hark , a startup that raised $700 million in Series A funding in May , today launched its agent Hark Handoff, which can use a browser efficiently to complete tasks. The company claims that Handoff can easily navigate websites that have no official APIs, including Target, Walmart, OpenTable, and LinkedIn. It said that the Handoff agent looks at website structure and visual data to understand if it needs to click buttons or type information. The premise is similar to tons of browser-based agents released before. Issue a command, and it will complete tasks for you, including ordering food or coffee, booking travel tickets, filing returns, shopping for essentials, reserving a table at a restaurant, or researching on your behalf by looking at various sources. In a video demo, the company’s CEO, Brett Adcock, showed that the assistant can take a command to build a bouquet with flowers users specify, along with accommodating fuzzy terms like “some of the florist’s choice.” Notably, the video shows only part of the process, so we can’t really gauge its effectiveness. The company said that for this release, it’s using a post-trained model, and plans to pre-train later this year. Hark said that, with this approach, it can refine its data pipeline, training infrastructure, and techniques more quickly. Hark also claims that, unlike large language models (LLMs) predicting the next token, its model can predict the next action — which could be a clock or a keyboard input at a specific place. There are many companies working on computer-use agents, including Google, OpenAI, and Anthropic, with VC-funded startups working on browser-based task automation, such as Browser Use , Polar , Strawberry, and Aside. Hark said that its Handoff agent is faster than the competition and also costs much less than other models like GPT 5.5 and Opus 4.8. The startup has opened a waitlist for its platform and plans to release it by the end of the summer.",
+      "published_date": "2026-08-05",
+      "tags": [
+        "AI",
+        "Startups",
+        "ai agent",
+        "browser agent",
+        "hark"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "TechCrunch AI",
+        "feed_url": "https://techcrunch.com/category/artificial-intelligence/feed/"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, computer use",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 36,
+    "llm_reason": "類似既有瀏覽器代理，缺乏創新與實作細節",
+    "novelty": 4,
+    "impact": 6,
+    "trending": 9,
+    "practicality": 8,
+    "blog_worthiness": 9
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "TechCrunch AI",
+      "title": "Shopify says AI search is driving more traffic and sales, not replacing Google",
+      "url": "https://techcrunch.com/2026/08/05/shopify-says-ai-search-is-driving-more-traffic-and-sales-not-replacing-google/",
+      "authors": [
+        "Sarah Perez"
+      ],
+      "abstract": "E-commerce software maker Shopify seems to be benefiting handily from people using AI to search. On the company’s second-quarter earnings call, Shopify President Harley Finkelstein said AI has become a “complement to search, rather than a substitute for it,” and had particularly benefited the long tail of e-commerce, including the smaller merchants that make up the majority of its customer base. Indeed, the company credited its earnings beat and soaring revenue to AI search, at least partly. This is quite different from how AI is impacting online publishing, where AI summaries have led to a measurable drop in click-through rates, which lowers traffic and consequently eats into advertising revenues. Instead, Shopify believes that AI is a boon to its business. The company noted that AI-driven traffic and orders to Shopify stores had tripled year-over-year in the second quarter. And, this was not a result of AI taking share from search. “In fact, search remains one of our largest sources of buyer traffic to our merchants, and it’s still growing,” Finkelstein told analysts on the call. “Traditional search sessions are up 1.3x over the past two years, holding roughly a third of all storefront sessions.” The e-commerce platform reported strong results in the quarter, with revenue rising 36% to $3.6 billion from a year earlier, outstripping Wall Street’s forecast of $3.4 billion. Gross operating profit rose 31% to $1.71 billion, also ahead of analysts’ expectations of $1.63 billion. The company went into further detail about why AI search was working for its business. “While search engines rank by popularity against a handful of keywords, AI agents make multiple calls into Shopify’s catalog, working with richer structured data to match products with the buyer’s specific intent, rather than just keywords,” Finkelstein explained. “When a buyer asks an AI assistant for the best car seat that fits three across a sedan, traditional search focuses on the keyword ‘car seat.’ An agent, however, understands the actual need, the dimensions, the vehicle type, and the fact that they need three. It searches across all of those constraints at once to find the product that actually works, not just the one that ranks highest,” he said. In other words, AI’s capability to search across many dimensions to find the best product for users is resulting in better conversions for merchants. “Buyers’ shopping journeys are being compressed as half of all AI-referred sessions are landing directly on a product description page. That is 2.5 times more than what we see with traditional search,” Finkelstein added. Plus, the company said 75% of AI-attributed purchases in Q2 happened outside the top 100 categories, or what Shopify called its “sweet spot.” In addition, the company suggested Shopify stands to benefit from AI playing a larger role in transactions thanks to its trusted checkout experience. The company pointed out that it’s also working with AI tools and agents, having built connectors to Claude, ChatGPT, Perplexity, Manus, Replit, and Vercel, as well as vibe-coding platforms like Lovable that let merchants build on Shopify however they choose.",
+      "published_date": "2026-08-05",
+      "tags": [
+        "AI",
+        "Commerce",
+        "AI search",
+        "Shopify"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "TechCrunch AI",
+        "feed_url": "https://techcrunch.com/category/artificial-intelligence/feed/"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, vibe coding",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 34,
+    "llm_reason": "純商業報導，缺乏技術深度與創新，難以成為技術部落格內容",
+    "novelty": 2,
+    "impact": 12,
+    "trending": 11,
+    "practicality": 4,
+    "blog_worthiness": 5
+  }
+]
