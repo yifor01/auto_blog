@@ -1,0 +1,115 @@
+name: Batch Generate Probe (temporary)
+
+# 臨時驗證：在 Actions 上實跑一次「批次生成」的完整 generate 階段（含 pinned 路徑）。
+#
+# 刻意不動 repo：config 的 enabled 與既有 posts 都只在 runner 的工作目錄上改，
+# 不 commit 回 branch——這樣 branch 與 main 的 output/ 不會分歧，合併時零衝突。
+# 產出走 artifact 帶回來看。
+#
+# 用 push + paths 觸發：dispatch 要求 workflow 檔存在於 default branch，這支只活在
+# feature branch；paths 限定本檔，避免之後每次 push 都重跑。驗證完即刪除本檔。
+on:
+  push:
+    branches: [feat/batch-generation-claude-code]
+    paths: ['.github/workflows/batch-generate-probe.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -e . -c constraints.txt
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Enable batch generation (runner only)
+        run: |
+          python3 - <<'PY'
+          import pathlib, re
+          p = pathlib.Path("config.yaml")
+          s = p.read_text(encoding="utf-8")
+          s2, n = re.subn(r"(batch_generation:\n    enabled: )false", r"\g<1>true", s)
+          assert n == 1, f"預期改到 1 處 batch_generation.enabled，實際 {n}"
+          p.write_text(s2, encoding="utf-8")
+          print("batch_generation.enabled -> true")
+          PY
+
+      - name: Clear existing posts (runner only)
+        run: |
+          # 逐篇 checkpoint 會讓已存在的 post 被跳過，pinned 路徑更是完全跳過。
+          # 這裡清掉當日產出讓 generate 真的重跑一次，repo 上的檔案不受影響。
+          ls output/posts/${DATE}_*.md | wc -l
+          rm -f output/posts/${DATE}_*.md
+        env:
+          DATE: '2026-08-11'
+
+      - name: Run generate
+        timeout-minutes: 45
+        env:
+          DATE: '2026-08-11'
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_API_KEY_2: ${{ secrets.OPENROUTER_API_KEY_2 }}
+          OPENROUTER_API_KEY_3: ${{ secrets.OPENROUTER_API_KEY_3 }}
+          AGNES_API_KEY: ${{ secrets.AGNES_API_KEY }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          START=$(date +%s)
+          python -m src.cli generate --date "$DATE"
+          echo "ELAPSED_SECONDS=$(( $(date +%s) - START ))" >> "$GITHUB_ENV"
+
+      - name: Summarise
+        if: always()
+        env:
+          DATE: '2026-08-11'
+        run: |
+          python3 - <<'PY'
+          import collections, os, pathlib, re
+          d = os.environ["DATE"]
+          posts = sorted(pathlib.Path("output/posts").glob(f"{d}_*.md"))
+          models = collections.Counter()
+          bad = []
+          for p in posts:
+              text = p.read_text(encoding="utf-8")
+              m = re.search(r"^model: (.+)$", text, re.MULTILINE)
+              models[m.group(1) if m else "(無)"] += 1
+              body = text.split("---", 2)[2]
+              if "===POST" in body or "===END===" in body:
+                  bad.append(f"{p.name}: 殘留分隔符")
+              if not body.strip().startswith("📌"):
+                  bad.append(f"{p.name}: 開頭非 📌")
+          print(f"產出 {len(posts)} 篇，耗時 {os.environ.get('ELAPSED_SECONDS', '?')}s")
+          for k, v in models.most_common():
+              print(f"  {v:3d}  {k}")
+          batched = sum(v for k, v in models.items() if k.startswith("claude-code/"))
+          print(f"批次路徑 {batched} 篇 / fallback {len(posts) - batched} 篇")
+          if bad:
+              print("問題：")
+              for b in bad:
+                  print("  " + b)
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: batch-posts
+          path: |
+            output/posts/2026-08-11_*.md
+            output/prompts/2026-08-11_*_prompt.md
+          retention-days: 7
