@@ -8,17 +8,21 @@ llm:
   # :free 變體的上游 provider 只能從 429 body 的 provider_name 實測得知（models API 查不到）。
   scoring_models:
     - openai/gpt-oss-20b:free                # 上游 Darkbloom；JSON 乾淨、快
-    - google/gemma-4-26b-a4b-it:free         # 上游 Google AI Studio
+    - google/gemma-4-26b-a4b-it:free         # 上游 Darkbloom / Google AI Studio
     - nvidia/nemotron-3-super-120b-a12b:free # 上游 Nvidia；120B 最後備援（較慢）
   # 生成 chain（繁中品質優先）
+  # 2026-08-11 更新：tencent/hy3:free 轉為純付費（endpoints=0，呼叫回 404 並提示改用 tencent/hy3），
+  # 換上 nemotron-3-ultra。首選與第 3 位同為上游 Nvidia，違反上面的硬規則是刻意的——
+  # 當前 :free 池只剩 15 個 model，繁中寫作實測能用的僅此一個（ling-3.0-tiny 回空字串、
+  # gemma-4-31b 上游 429），中間隔著 Darkbloom/Google 與 Agnes，整條 chain 仍跨 3 個上游。
   generation_models:
-    - tencent/hy3:free                       # 上游 Novita；繁中品質實測佳（econ-news-daily 首選）
-    - google/gemma-4-26b-a4b-it:free         # 上游 Google AI Studio
+    - nvidia/nemotron-3-ultra-550b-a55b:free # 上游 Nvidia；繁中台灣用語實測自然（550B，~26s）
+    - google/gemma-4-26b-a4b-it:free         # 上游 Darkbloom / Google AI Studio
     - nvidia/nemotron-3-super-120b-a12b:free # 上游 Nvidia
     - agnes-2.0-flash                        # Agnes（apihub.agnes-ai.com）：免費 model 全掛時的可用性保險，寫作品質佳
   # Legacy：GeneratedContent.model_used 顯示 / UI 舊 code 仍讀這些 key
   model: openai/gpt-oss-20b:free
-  generation_model: tencent/hy3:free
+  generation_model: nvidia/nemotron-3-ultra-550b-a55b:free
 collectors:
   # 外部文章正文抓取的字元上限（rss / blogs / hackernews / reddit 共用）。
   # 原為寫死的 2000，實測 18 個 RSS 來源全部撞頂且斷在句中；一般新聞全文約 3000-9000 字元。
