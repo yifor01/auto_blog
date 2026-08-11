@@ -23,6 +23,20 @@ llm:
   # Legacy：GeneratedContent.model_used 顯示 / UI 舊 code 仍讀這些 key
   model: openai/gpt-oss-20b:free
   generation_model: nvidia/nemotron-3-ultra-550b-a55b:free
+  # 批次生成：改用本機 Claude Code CLI（headless），一個 session 寫多篇。
+  # enabled: false → 走上面的 OpenRouter 逐篇 chain（預設）；true → 走 CLI 批次，
+  # 批次缺漏或 CLI 不可用時**逐篇退回** OpenRouter，兩條路徑共用同一個入口與寫檔邏輯，
+  # 因此切換只要動這個 bool，不需要 revert 任何 code。
+  #
+  # batch_size 是成本與品質的取捨：每個 CLI session 固定重付約 20-48k input token
+  # 的 Claude Code system prompt（與 prompt 長度無關），批越大攤越省；但單次輸出越長
+  # 後段品質越容易掉，且整批失敗損失越大。4 篇是實測過契約 100% 成立的大小
+  # （4/4 完整、零前導雜訊、47.6s/篇）。
+  batch_generation:
+    enabled: false
+    model: sonnet
+    batch_size: 4
+    timeout_seconds: 900
 collectors:
   # 外部文章正文抓取的字元上限（rss / blogs / hackernews / reddit 共用）。
   # 原為寫死的 2000，實測 18 個 RSS 來源全部撞頂且斷在句中；一般新聞全文約 3000-9000 字元。

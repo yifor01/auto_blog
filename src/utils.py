@@ -7,6 +7,7 @@ import itertools
 import json
 import os
 import re
+import subprocess
 from datetime import date, datetime
 from functools import lru_cache
 from pathlib import Path
@@ -874,6 +875,80 @@ def llm_chat(
 
     _logger.error("All LLM models failed", extra={"tried": chain})
     return ""
+
+
+def claude_code_generate(
+    prompt: str,
+    model: str = "sonnet",
+    timeout: float = 900,
+) -> str:
+    """用本機 Claude Code CLI（headless）跑一次生成，回傳文字；任何失敗回 ""。
+
+    刻意**不**走 `llm_chat`：那條路徑整個建立在 OpenAI SDK 的 `chat.completions`
+    介面上，這裡是 subprocess，沒有 client 物件可用。因此這支沒有 model chain、
+    沒有 key 輪替、沒有 lazy retire——失敗一律回 ""，由 caller 決定 fallback。
+
+    只用於**批次**生成。per-item 呼叫在成本上完全不成立：每個 headless session 都會
+    重新載入完整 Claude Code system prompt + 工具定義，實測即使在空目錄關掉 MCP，
+    問一句 20 字的問題仍是 ~48k input tokens / $0.15 一次，overhead 與 prompt 長度無關。
+    一批 4 篇只付一次這個開銷，per-item 則是每篇都付。
+
+    `--allowed-tools ""` 不是效能考量而是安全邊界：素材來自 RSS / HN / Reddit，
+    是攻擊者可控的輸入，而 pipeline 在 Actions 上跑時 job 有 contents:write。
+    無工具面時最壞情況只是文章內容被誘導，不會變成任意檔案寫入。
+    """
+    argv = [
+        "claude", "-p",
+        "--model", model,
+        "--allowed-tools", "",
+        "--strict-mcp-config", "--mcp-config", '{"mcpServers":{}}',
+        "--output-format", "json",
+    ]
+    # prompt 走 stdin：內容含大量 markdown / 反引號 / $ 且長度上看數萬字元，
+    # 放進 argv 既會撞 ARG_MAX 也把外部素材帶進命令列。
+    try:
+        proc = subprocess.run(
+            argv, input=prompt, capture_output=True, text=True, timeout=timeout,
+        )
+    except FileNotFoundError:
+        _logger.error("claude CLI 不存在，批次生成不可用（npm i -g @anthropic-ai/claude-code）")
+        return ""
+    except subprocess.TimeoutExpired:
+        _logger.error("claude CLI 逾時", extra={"timeout": timeout})
+        return ""
+
+    if proc.returncode != 0:
+        _logger.error(
+            "claude CLI 非零退出", extra={"returncode": proc.returncode, "stderr": (proc.stderr or "")[:300]}
+        )
+        return ""
+
+    try:
+        payload = json.loads(proc.stdout)
+    except (json.JSONDecodeError, TypeError):
+        _logger.error("claude CLI 輸出非合法 JSON", extra={"stdout": (proc.stdout or "")[:300]})
+        return ""
+
+    # exit 0 但 is_error：額度用盡 / rate limit 走這條，result 會是錯誤訊息本身，
+    # 放行的話會被當成文章寫進 output/posts。
+    if payload.get("is_error"):
+        _logger.error("claude CLI 回報錯誤", extra={"result": str(payload.get("result"))[:300]})
+        return ""
+
+    result = payload.get("result") or ""
+    if not result.strip():
+        _logger.error("claude CLI 回傳空內容")
+        return ""
+
+    _logger.info(
+        "claude CLI 批次生成完成",
+        extra={
+            "model": model,
+            "cost_usd": payload.get("total_cost_usd"),
+            "output_tokens": (payload.get("usage") or {}).get("output_tokens"),
+        },
+    )
+    return result
 
 
 def get_http_client() -> httpx.Client:
