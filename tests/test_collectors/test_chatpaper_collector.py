@@ -19,6 +19,7 @@ _CFG = {
 def _resp(items: list[dict]) -> MagicMock:
     r = MagicMock()
     r.status_code = 200
+    r.headers = {}  # 無 x-binary-key → parse_response 走純 JSON 分支
     r.json.return_value = {"items": items}
     return r
 
