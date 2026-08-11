@@ -22,6 +22,7 @@ class SourceType(str, Enum):
     REDDIT = "reddit"
     NEWSAPI = "newsapi"
     SEMANTIC_SCHOLAR = "semantic_scholar"
+    CN_LABS = "cn_labs"
 
 
 # ---- Layer A：剝除來源殘留的媒體標記 ----

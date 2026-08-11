@@ -49,3 +49,10 @@ def test_to_pinned_scored():
     assert "pinned" in scored.rule_reasons
     assert scored.total_score == 0
     assert "官方發布" in scored.llm_reason
+
+
+def test_cn_labs_source_included():
+    """cn_labs 是官方 blog，必須跟 RSS/BLOG 一樣能進 pinned——漏掉這行等於整個
+    collector 收到的官方發布全部退回一般評分池，且完全沒有 log。"""
+    items = [_item("OpenAI", "cn-lab post", source=SourceType.CN_LABS)]
+    assert [it.title for it in select_pinned(items, D, CFG)] == ["cn-lab post"]

@@ -54,6 +54,7 @@ def get_collectors():
     from src.collectors.arxiv_collector import ArxivCollector
     from src.collectors.blog_collector import BlogCollector
     from src.collectors.chatpaper_collector import ChatPaperCollector
+    from src.collectors.cn_labs_collector import CNLabsCollector
     from src.collectors.github_trending import GitHubTrendingCollector
     from src.collectors.hackernews_collector import HackerNewsCollector
     from src.collectors.hf_papers import HFPapersCollector
@@ -68,6 +69,7 @@ def get_collectors():
         ChatPaperCollector(),
         RSSCollector(),
         BlogCollector(),
+        CNLabsCollector(),
         GitHubTrendingCollector(),
         HackerNewsCollector(),
         RedditCollector(),
@@ -83,6 +85,7 @@ COLLECTOR_SOURCE_MAP: dict[str, SourceType] = {
     "hf_papers": SourceType.HF_PAPERS,
     "rss": SourceType.RSS,
     "blogs": SourceType.BLOG,
+    "cn_labs": SourceType.CN_LABS,
     "github": SourceType.GITHUB,
     "hackernews": SourceType.HACKERNEWS,
     "reddit": SourceType.REDDIT,

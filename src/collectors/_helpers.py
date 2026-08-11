@@ -54,6 +54,12 @@ _DOMAIN_TO_ORG: dict[str, str] = {
     "cohere.com": "Cohere",
     "allenai.org": "AI2",
     "xai.com": "xAI",
+    "qwen.ai": "Alibaba",
+    "minimax.io": "MiniMax",
+    # DeepSeek 官方公告發在 API 文件站的子網域，deepseek.com 那條比不到。
+    # （deepseek.ai 是掛在 Vercel 的第三方彙整站，不是官方，刻意不列。）
+    "api-docs.deepseek.com": "DeepSeek",
+    "kimi.com": "Moonshot AI",
 }
 
 

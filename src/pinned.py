@@ -1,6 +1,6 @@
 """頂尖 AI 公司官方 blog 免評分置頂挑選。
 
-命中 config `pinned_organizations` 的 RSS/blog 來源當天（±1 天，容忍 UTC 時差）
+命中 config `pinned_organizations` 的 RSS/blog/cn_labs 來源當天（±1 天，容忍 UTC 時差）
 發布項目，繞過評分直接生成，frontmatter 標 pinned。挑選為純函式、確定性，
 score 階段（排除 pool）與 generate 階段（挑生成對象）呼叫同一份邏輯保持一致。
 """
@@ -37,7 +37,7 @@ def select_pinned(
     hits = [
         it
         for it in items
-        if it.source in (SourceType.RSS, SourceType.BLOG)
+        if it.source in (SourceType.RSS, SourceType.BLOG, SourceType.CN_LABS)
         and abs((target_date - it.published_date).days) <= PINNED_WINDOW_DAYS
         and _org_hit(it.organization, pinned_orgs)
     ]
