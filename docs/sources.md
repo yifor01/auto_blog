@@ -8,7 +8,7 @@
 
 | Collector | 走向 | Endpoint | 備註 |
 |---|---|---|---|
-| `rss` | 評分 | 35 個 feed（見下） | 收得最多的來源 |
+| `rss` | 評分 | 36 個 feed（見下） | 收得最多的來源 |
 | `arxiv` | 清單 | `arxiv` PyPI 套件（底層 `export.arxiv.org/api/query`） | cs.AI / cs.CL / cs.LG / cs.CV，max 50 |
 | `semantic_scholar` | 清單 | `api.semanticscholar.org/graph/v1/paper/search/bulk` | 6 query、近 3 天、limit 30；無 key 也能用但限流嚴 |
 | `github` | 清單 | `github.com/trending/{lang}?since=daily`（HTML） | python / typescript / rust |
@@ -20,7 +20,7 @@
 | `chatpaper` | 清單 | `chatpaper.com/api/v1/articles/list` | 回應為加密 binary，`parse_response()` 解密；2026-05-26～08-10 靜默斷線 78 天，已於 2026-08-11 修復 |
 | `reddit` | 評分 | `old.reddit.com/r/{sub}/top/.json` | **GitHub Actions 上 403**（datacenter IP 被擋），只在本機有資料 |
 
-## RSS feeds（35）
+## RSS feeds（36）
 
 | 名稱 | URL |
 |---|---|
@@ -49,7 +49,7 @@
 | Dwarkesh | `https://www.dwarkesh.com/feed` |
 | Max Woolf | `https://minimaxir.com/index.xml` |
 | 量子位 | `https://www.qbitai.com/feed` |
-| Recode China AI | `https://recodechinaai.substack.com/feed` |
+| Recode China AI | `https://www.recodechinaai.com/feed` |
 | Mistral AI | `https://mistral.ai/rss.xml` |
 | Google DeepMind | `https://deepmind.google/blog/rss.xml` |
 | Microsoft Research | `https://www.microsoft.com/en-us/research/feed/` |
@@ -59,8 +59,9 @@
 | IBM Research | `https://research.ibm.com/rss` |
 | Stability AI | `https://stability.ai/news-updates?format=rss` |
 | Ars Technica AI | `https://arstechnica.com/ai/feed/` |
+| Don't Worry About the Vase | `https://thezvi.wordpress.com/feed/` |
 
-最後九條為 2026-08-11 新增。`organization` 推斷：Mistral AI → `Mistral`、
+最後十條為 2026-08-11 新增。`organization` 推斷：Mistral AI → `Mistral`、
 Google DeepMind → `Google DeepMind`（兩者命中 `pinned_organizations`，免評分置頂）、
 Microsoft Research → `Microsoft`、Amazon Science → `Amazon`、Together AI →
 `Together AI`、Databricks → `Databricks`、IBM Research → `IBM`、Stability AI →
@@ -78,10 +79,16 @@ feed name 命中 `_NAME_TO_ORG`——名稱改了就推不出 organization、不
 Import AI 用原始發布站 `jack-clark.net`，不是 substack 鏡像：後者在 Cloudflare
 挑戰後面，會對 Python client 的 TLS 指紋回 403（換 UA / 開 HTTP2 都無效）。
 
-**未修的既有問題**：`Recode China AI`（`recodechinaai.substack.com/feed`）
-2026-08-11 實測 8/8 回 HTTP 403 Cloudflare 挑戰頁，`data/raw` 近 40 天 0 筆——
-與 Import AI substack 鏡像同一個坑，等於已靜默斷線。同站的 Interconnects
-（`interconnects.ai`，自訂網域）不受影響，可見是 substack 逐站的 Cloudflare 設定。
+Recode China AI 原本設 `recodechinaai.substack.com/feed`，2026-08-11 查出**靜默
+斷線 120 天 0 筆**：substack 主網域回 403 + `cf-mitigated: challenge`，且 `/feed`
+`/api/v1/archive` `/archive` 等**整個網域全擋**，不是單一路徑問題。修法是改用作者
+的自訂網域 `www.recodechinaai.com/feed`（實測 5/5 回 200、無 `cf-mitigated`、20
+篇、最新 2026-08-10）——`*.substack.com` 吃挑戰、自訂網域不吃，Interconnects
+（`interconnects.ai`）一直沒事就是同一個原因。
+
+**這條規律可直接套用**：往後遇到 substack 來源 403，先找作者有沒有自訂網域
+（`curl -sL -w '%{url_effective}'` 打 substack feed，轉址目標就是答案），
+不要急著換 UA——`cf-mitigated: challenge` 代表擋的是 TLS 指紋，換 UA 必然白費。
 
 ## 個人 blog（10）
 
@@ -153,7 +160,7 @@ Import AI 用原始發布站 `jack-clark.net`，不是 substack 鏡像：後者�
 | ByteDance Seed | 前端只有埋點請求（`mcs.zijieapi.com`），HTML 也不含資料 |
 | `qwenlm.github.io/blog/index.xml` | RSS 仍回 44 items 但**已停更**，最新 2025-09-23。API 有 8 篇它沒有 |
 | ChinAI（`chinai.substack.com/feed`） | 回 200 但 0 item，與 Import AI 同一個 Cloudflare 坑 |
-| Don't Worry About the Vase（`thezvi.substack.com/feed`） | 內容本身很好（幾乎每日更新），但用**本專案的 HTTP client** 實測 11/11 回 HTTP 403 + Cloudflare `Just a moment...` 挑戰頁，與 Import AI / ChinAI 同一個 TLS 指紋坑。survey 階段用 curl 測會過，故一度被列為候選——**探測工具必須用 pipeline 自己的 client** |
+| `thezvi.substack.com/feed`（**已改走鏡像，見上表**） | 本專案 HTTP client 實測 11/11 回 403 + Cloudflare 挑戰頁；survey 階段用 curl 測會過，故一度誤列為可用——**探測工具必須用 pipeline 自己的 client**。此人無自訂網域，改用 WordPress 鏡像 `thezvi.wordpress.com/feed/`（5/5 回 200，內容與時間戳同步）收錄 |
 | 騰訊混元 / Moonshot 舊網域 / StepFun / InternLM / OpenBMB / BAAI / 機器之心 | `rss.xml` 皆 404，或回 HTML 而非 feed |
 | xAI Blog (`x.ai/blog`) | 真 Cloudflare bot-challenge，`--http1.1` + 桌面 UA 仍 403。`pinned_organizations` 已有 `xAI` 佔位但無可用端點 |
 | Perplexity AI Hub Blog | 整站含首頁一律 403，真 Cloudflare 擋 |
