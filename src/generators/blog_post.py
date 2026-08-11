@@ -13,6 +13,7 @@ from src.logger import get_logger
 from src.utils import (
     POSTS_DIR,
     PROMPTS_DIR,
+    claude_code_generate,
     llm_chat,
     load_config,
     slugify,
@@ -216,6 +217,11 @@ TL;DR：RCT 顯示用 AI 輔助學習新函式庫，知識測驗分數比手動�
 """
 
 
+def _byline(item: ScoredItem) -> str:
+    author_str = ", ".join(item.item.authors[:5])
+    return " — ".join(p for p in (item.item.organization, author_str) if p) or "（素材未提供）"
+
+
 def generate_blog_post(item: ScoredItem) -> GeneratedContent:
     """為單一高分 item 生成 Facebook 部落格貼文。"""
     config = load_config()
@@ -228,8 +234,7 @@ def generate_blog_post(item: ScoredItem) -> GeneratedContent:
         or llm_cfg.get("model")
     )
 
-    author_str = ", ".join(item.item.authors[:5])
-    byline = " — ".join(p for p in (item.item.organization, author_str) if p) or "（素材未提供）"
+    byline = _byline(item)
 
     user_msg = f"""請根據以下資訊，撰寫一篇繁體中文技術部落格文章。這是目前可獲得的全部資訊（通常不是全文），請嚴格基於這些內容撰寫，不要臆測或捏造未提及的細節：
 
@@ -273,6 +278,127 @@ def generate_blog_post(item: ScoredItem) -> GeneratedContent:
         model_used=model,
         content_type="blog_post",
     )
+
+
+# ──────────────────────────────────────────────────────────
+# 批次生成（Claude Code CLI，單一 session 寫多篇）
+# ──────────────────────────────────────────────────────────
+
+BATCH_END_MARKER = "===END==="
+
+# 分隔行必須獨佔一行。用 ^...$ + MULTILINE 而非寬鬆比對：文章正文可能引用
+# 「===POST」這種字串，只有獨佔一行的才算分隔。
+_POST_MARKER_RE = re.compile(r"^===POST (\d+)===[ \t]*$", re.MULTILINE)
+
+BATCH_CONTRACT = f"""
+
+# ══ 批次輸出契約（本次為批次模式，務必嚴格遵守）══
+
+你這次會一次收到「多篇」素材，每篇以 `### 素材 N` 標示。請為**每一篇**各產出一篇完整文章，
+逐篇套用上面全部的撰寫規範（型別判斷、結構、emoji、繁中在地化、完稿前自我檢查，一項都不能少）。
+
+輸出格式（唯一合法格式，不得偏離）：
+
+===POST 1===
+（第 1 篇完整文章，第一個字元就是 📌）
+===POST 2===
+（第 2 篇完整文章）
+...
+{BATCH_END_MARKER}
+
+硬性規則：
+- 分隔行 `===POST N===` 必須獨佔一行，前後不得有任何字元，N 對應素材編號。
+- 分隔行之間只放文章本文，不要寫「以下是第 N 篇」之類的過場說明。
+- 全部文章寫完後，最後一行輸出 `{BATCH_END_MARKER}`。
+- 每篇都要寫，不得因為素材相似就合併、略過或寫「同上」。
+- 不要在第一個 `===POST 1===` 之前輸出任何字元。
+"""
+
+
+def build_batch_prompt(items: list[ScoredItem]) -> str:
+    """把多篇素材組成單一 prompt。
+
+    `claude -p` 沒有 system / user 訊息之分，整份從 stdin 進去，因此規範與素材
+    串在一起送。
+    """
+    blocks = []
+    for n, it in enumerate(items, 1):
+        blocks.append(
+            f"### 素材 {n}\n"
+            f"**標題**: {it.item.title}\n"
+            f"**來源**: {it.item.source_name}\n"
+            f"**機構/作者**: {_byline(it)}\n"
+            f"**連結**: {it.item.url}\n"
+            f"**摘要/內容**:\n{it.item.abstract}\n\n"
+            f"**內部選題角度（僅供你決定切入點，內容不一定正確，禁止當事實引用）**: {it.llm_reason}"
+        )
+    materials = "\n\n---\n\n".join(blocks)
+    return (
+        f"{BLOG_SYSTEM_PROMPT}{BATCH_CONTRACT}\n\n"
+        f"# ══ 素材 ══\n\n"
+        f"請根據以下 {len(items)} 篇素材，各撰寫一篇繁體中文技術部落格文章。\n\n"
+        f"{materials}\n\n請依批次輸出契約，逐篇輸出。"
+    )
+
+
+def parse_batch_output(output: str, expected: int) -> dict[int, str]:
+    """把批次輸出切成 {素材編號: 文章}。缺漏不是例外，只是該 key 不存在。
+
+    超出範圍的編號直接丟掉——模型偶爾會多生一篇不存在的素材，放行會讓
+    zip 對齊錯位，把 A 的文章寫成 B 的檔名。
+    """
+    if not output:
+        return {}
+    parts = _POST_MARKER_RE.split(output)
+    # split 後：[前導雜訊, idx1, body1, idx2, body2, ...]。前導雜訊直接丟。
+    found: dict[int, str] = {}
+    for i in range(1, len(parts) - 1, 2):
+        idx = int(parts[i])
+        if not 1 <= idx <= expected:
+            continue
+        body = parts[i + 1].replace(BATCH_END_MARKER, "").strip()
+        if body:
+            found[idx] = body
+    return found
+
+
+def generate_posts_batch(
+    items: list[ScoredItem], model: str, timeout: float
+) -> list[GeneratedContent | None]:
+    """一次 CLI session 生成整批，回傳與 items **等長且同順序**的結果。
+
+    拿不到的位置是 None（缺漏、空內容、推理外洩），由 caller 決定逐篇補救。
+    這裡不自己 fallback：批次層只負責「批次拿到什麼」，補救策略屬於上層。
+    """
+    prompt = build_batch_prompt(items)
+    output = claude_code_generate(prompt, model=model, timeout=timeout)
+    bodies = parse_batch_output(output, expected=len(items))
+
+    results: list[GeneratedContent | None] = []
+    for n, it in enumerate(items, 1):
+        body = bodies.get(n)
+        if not body:
+            results.append(None)
+            continue
+        # 逐篇套用與逐篇路徑相同的兩道防線：能剝的剝，剝不掉的退回 None。
+        body = strip_reasoning_preamble(body)
+        if looks_like_reasoning_leak(body):
+            _logger.warning(
+                "批次生成推理外洩，退回逐篇",
+                extra={"title": it.item.title[:80], "model": model},
+            )
+            results.append(None)
+            continue
+        results.append(
+            GeneratedContent(
+                source_item=it,
+                content=body,
+                prompt_used=f"[BATCH {n}/{len(items)}]\n\n{prompt}",
+                model_used=f"claude-code/{model}",
+                content_type="blog_post",
+            )
+        )
+    return results
 
 
 def save_blog_post(gen: GeneratedContent, target_date: date | None = None, pinned: bool = False) -> str:
@@ -321,8 +447,101 @@ def save_blog_post(gen: GeneratedContent, target_date: date | None = None, pinne
     return str(post_path)
 
 
+def _abstract_too_short(item: ScoredItem) -> int | None:
+    """摘要不足以生成時回傳其長度，足夠則回 None。"""
+    n = len(item.item.abstract.strip())
+    return n if n < ABSTRACT_MIN_LEN_FOR_GENERATION else None
+
+
 def generate_and_save_posts(items: list[ScoredItem], target_date: date | None = None, pinned: bool = False) -> list[str]:
-    """批量生成並儲存 blog posts。新 top-K 全部生成（覆寫同名舊文），不在 top-K 的舊文保留不動。"""
+    """批量生成並儲存 blog posts。新 top-K 全部生成（覆寫同名舊文），不在 top-K 的舊文保留不動。
+
+    兩條路徑同一個入口，由 config `llm.batch_generation.enabled` 決定：
+    關閉（預設）走既有的逐篇 OpenRouter，開啟走 Claude Code CLI 批次。
+    切換只需改那個 bool，兩邊回傳同樣的檔案路徑清單。
+    """
+    batch_cfg = (load_config().get("llm", {}) or {}).get("batch_generation") or {}
+    if batch_cfg.get("enabled"):
+        return _generate_and_save_batched(items, target_date, pinned, batch_cfg)
+    return _generate_and_save_sequential(items, target_date, pinned)
+
+
+def _generate_and_save_batched(
+    items: list[ScoredItem],
+    target_date: date | None,
+    pinned: bool,
+    batch_cfg: dict,
+) -> list[str]:
+    """Claude Code CLI 批次路徑：分批送出，缺漏的篇目逐篇補救。
+
+    補救刻意做在「篇」的粒度而不是「批」：整批重試會把已經寫好的幾篇也重生成，
+    既燒額度又可能讓原本好的那幾篇變差。
+    """
+    model = batch_cfg.get("model", "sonnet")
+    timeout = batch_cfg.get("timeout_seconds", 900)
+    size = max(1, int(batch_cfg.get("batch_size", 4)))
+
+    eligible: list[ScoredItem] = []
+    for i, item in enumerate(items):
+        short = _abstract_too_short(item)
+        if short is not None:
+            _logger.warning(
+                f"({i+1}/{len(items)}) [{item.item.source.value}] "
+                f"{item.item.title[:50]} → 跳過 (摘要過短 {short} 字)",
+                extra={"title": item.item.title[:80], "source": item.item.source.value, "abstract_len": short},
+            )
+            continue
+        eligible.append(item)
+
+    batches = [eligible[i : i + size] for i in range(0, len(eligible), size)]
+    _logger.info(
+        f"Blog post generation started ({len(eligible)} 篇 / {len(batches)} 批, 批次模式)",
+        extra={"count": len(eligible), "batches": len(batches), "model": model},
+    )
+
+    paths: list[str] = []
+    done = 0
+    for bi, batch in enumerate(batches, 1):
+        gens = generate_posts_batch(batch, model=model, timeout=timeout)
+        for item, gen in zip(batch, gens):
+            done += 1
+            if gen is None:
+                # 批次沒給或給了爛的 → 退回逐篇 OpenRouter。這是本設計的安全網：
+                # CLI 沒裝 / OAuth 過期 / 額度用盡都會走到這裡，pipeline 不會空手而歸。
+                try:
+                    gen = generate_blog_post(item)
+                except Exception as e:
+                    _logger.error(
+                        f"({done}/{len(eligible)}) [{item.item.source.value}] "
+                        f"{item.item.title[:50]} → 逐篇補救失敗: {str(e)[:80]}",
+                        extra={"title": item.item.title[:80], "error": str(e)},
+                    )
+                    continue
+            try:
+                path = save_blog_post(gen, target_date, pinned=pinned)
+            except Exception as e:
+                _logger.error(
+                    f"({done}/{len(eligible)}) [{item.item.source.value}] "
+                    f"{item.item.title[:50]} → Blog 儲存失敗: {str(e)[:80]}",
+                    extra={"title": item.item.title[:80], "error": str(e)},
+                )
+                continue
+            paths.append(path)
+            _logger.info(
+                f"({done}/{len(eligible)}) [批 {bi}/{len(batches)}] [{item.item.source.value}] "
+                f"{item.item.title[:50]} → Blog 已儲存",
+                extra={
+                    "title": item.item.title[:80],
+                    "source": item.item.source.value,
+                    "model": gen.model_used,
+                    "output_file": path.rsplit("/", 1)[-1],
+                },
+            )
+    return paths
+
+
+def _generate_and_save_sequential(items: list[ScoredItem], target_date: date | None = None, pinned: bool = False) -> list[str]:
+    """逐篇 OpenRouter 路徑（原本的實作，行為未變）。"""
     import time
 
     config = load_config()

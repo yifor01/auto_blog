@@ -36,6 +36,15 @@ jobs:
       - name: Install dependencies
         run: pip install -e . -c constraints.txt
 
+      # 無條件安裝（約 20-30s）：批次生成的開關在 config.yaml，workflow 讀不到它。
+      # 裝了但 llm.batch_generation.enabled=false 時只是沒被叫到，不影響 pipeline。
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
       - name: Run pipeline
         timeout-minutes: 100  # timeout 設在 step 層級：超時只砍此步（job 記 failure），Commit results 與 notify-failure 照跑
         env:
@@ -43,6 +52,8 @@ jobs:
           OPENROUTER_API_KEY_2: ${{ secrets.OPENROUTER_API_KEY_2 }}
           OPENROUTER_API_KEY_3: ${{ secrets.OPENROUTER_API_KEY_3 }}
           AGNES_API_KEY: ${{ secrets.AGNES_API_KEY }}
+          # 批次生成用；未設定時 claude CLI 起不來，generate 會逐篇退回 OpenRouter。
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           NEWSAPI_KEY: ${{ secrets.NEWSAPI_KEY }}
           SEMANTIC_SCHOLAR_API_KEY: ${{ secrets.SEMANTIC_SCHOLAR_API_KEY }}
         run: |
