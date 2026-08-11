@@ -60,6 +60,15 @@ _DOMAIN_TO_ORG: dict[str, str] = {
     # （deepseek.ai 是掛在 Vercel 的第三方彙整站，不是官方，刻意不列。）
     "api-docs.deepseek.com": "DeepSeek",
     "kimi.com": "Moonshot AI",
+    # 2026-08-11 新增 RSS 來源。Amazon 已在 config `top_institutions` 裡，
+    # 其餘四家刻意不加進去 —— 它們的 organization 只用於顯示與追溯，
+    # 不給 rules.py 的 +20 機構加分；IBM 尤其如此（feed 有 40-45% 是
+    # 量子／密碼學內容，加分等於放大雜訊）。
+    "amazon.science": "Amazon",
+    "together.ai": "Together AI",
+    "databricks.com": "Databricks",
+    "research.ibm.com": "IBM",
+    "stability.ai": "Stability AI",
 }
 
 
