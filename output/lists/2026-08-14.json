@@ -1,0 +1,721 @@
+{
+  "date": "2026-08-14",
+  "github": [
+    {
+      "title": "NousResearch/hermes-agent",
+      "slug": "nousresearch-hermes-agent",
+      "url": "https://github.com/NousResearch/hermes-agent",
+      "abstract": "Hermes Agent ☤ Hermes Agent | Hermes Desktop The self-improving AI agent built by Nous Research . It's the only agent with a built-in learning loop — it creates skills from experience, improves them during use, nudges itself to persist knowledge, searches its own past conversations, and builds a deepening model of who you are across sessions. Run it on a $5 VPS, a GPU cluster, or serverless infrastructure that costs nearly nothing when idle. It's not tied to your laptop — talk to it from Telegram while it works on a cloud VM. Use any model you want — Nous Portal , OpenRouter, OpenAI, your own endpoint, and many others . Switch with hermes model — no code changes, no lock-in. A real terminal interface Full TUI with multiline editing, slash-command autocomplete, conversation history, interrupt-and-redirect, and streaming tool output. Lives where you do Telegram, Discord, Slack, WhatsApp, Signal, and CLI — all from a single gateway process. Voice memo transcription, cross-platform conversation continuity. A closed learning loop Agent-curated memory with periodic nudges. Autonomous skill creation after complex tasks. Skills self-improve during use. FTS5 session search with LLM summarization for cross-session recall. Honcho dialectic user modeling. Compatible with the agentskills.io open standard. Scheduled automations Built-in cron scheduler with delivery to any platform. Daily reports, nightly backups, weekly audits — all in natural language, running unattended. Delegates and parallelizes Spawn isolated subagents for parallel workstreams. Write Python scripts that call tools via RPC, collapsing multi-step pipelines into zero-context-cost turns. Runs anywhere, not just your laptop Seven terminal backends — local, Docker, SSH, Singularity, Modal, Daytona, and Vercel Sandbox. Daytona and Modal offer serverless persistence — your agent's environment hibernates when idle and wakes on demand, costing nearly nothing between sessions. Run it on a $5 VPS or a GPU cluster. Research-ready Batch trajectory generation, trajectory compression for training the next generation of tool-calling models. Quick Install Linux, macOS, WSL2, Termux curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash Windows (native, PowerShell) Heads up: Native Windows runs Hermes without WSL — CLI, gateway, TUI, and tools all work natively. If you'd rather use WSL2, the Linux/macOS one-liner above works there too. Found a bug? Please file issues . Run this in PowerShell: iex (irm https: // hermes-agent.nousresearch.com / install.ps1) The installer handles everything: uv, Python 3.11, Node.js, ripgrep, ffmpeg, and a portable Git Bash (MinGit, unpacked to %LOCALAPPDATA%\\hermes\\git — no admin required, completely isolated from any system Git install). Hermes uses this bundled Git Bash to run shell commands. If you already have Git installed, the installer detects it and uses that instead. Otherwise a ~45MB MinGit download is all you need — it won't touch or interfere with any system Git. Android / Termux: The tested manual path is documented in the Termux guide . On Termux, Hermes installs a curated .[termux] extra because the full .[all] extra currently pulls Android-incompatible voice dependencies. Windows: Native Windows is fully supported — the PowerShell one-liner above installs everything. If you'd rather use WSL2, the Linux command works there too. Native Windows install lives under %LOCALAPPDATA%\\hermes ; WSL2 installs under ~/.hermes as on Linux. After installation: source ~ /.bashrc # reload shell (or: source ~/.zshrc) hermes # start chatting! Troubleshooting Windows Defender or antivirus flags uv.exe as malware If your antivirus (Bitdefender, Windows Defender, etc.) quarantines uv.exe from the Hermes bin folder ( %LOCALAPPDATA%\\hermes\\bin\\uv.exe ), this is a false positive . The file is Astral's uv — the Rust Python package manager Hermes bundles to manage its Python environment. ML-based antivirus engines commonly flag unsigned Rust binaries that download and install packages. To verify your copy is authentic: # Install GitHub CLI if needed winget install -- id GitHub.cli # Login to GitHub gh auth login # Run verification $uv = \" $ env: LOCALAPPDATA \\hermes\\bin\\uv.exe \" $ver = ( & $uv -- version).Split( ' ' )[ 1 ]\n[ Net.ServicePointManager ]::SecurityProtocol = [ Net.SecurityProtocolType ]::Tls12 $zip = \" $ env: TEMP \\uv.zip \" Invoke-WebRequest \" https://github.com/astral-sh/uv/releases/download/ $ver /uv-x86_64-pc-windows-msvc.zip \" - OutFile $zip - UseBasicParsing\ngh attestation verify $zip -- repo astral - sh / uv Expand-Archive $zip \" $ env: TEMP \\uv_x \" - Force\n( Get-FileHash \" $ env: TEMP \\uv_x\\uv.exe \" ).Hash -eq ( Get-FileHash $uv ).Hash If attestation says \"Verification succeeded\" and the last line prints True , you're good. To whitelist Hermes: Windows Defender: Run PowerShell as Admin → Add-MpPreference -ExclusionPath \"$env:LOCALAPPDATA\\hermes\\bin\" Bitdefender: Add an exception in the Bitdefender console (Protection > Antivirus > Settings > Manage Exceptions) Whitelist the folder , not the file hash — Hermes updates uv and the hash changes every version For more context, see the upstream Astral reports: astral-sh/uv#13553 , astral-sh/uv#15011 , astral-sh/uv#10079 . Getting Started hermes # Interactive CLI — start a conversation hermes model # Choose your LLM provider and model hermes tools # Configure which tools are enabled hermes config set # Set individual config values hermes config get # Print individual config values hermes gateway # Start the messaging gateway (Telegram, Discord, etc.) hermes setup # Run the full setup wizard (configures everything at once) hermes claw migrate # Migrate from OpenClaw (if coming from OpenClaw) hermes update # Update to the latest version hermes doctor # Diagnose any issues 📖 Full documentation → Skip the API-key collection — Nous Portal Hermes works with whatever provider you want — that's not changing. But if you'd rather not collect five separate API keys for the model, web search, image generation, TTS, and a cloud browser, Nous Portal covers all of them under one subscription: 300+ models — pick any of them with /model <name> Tool Gateway — web search (Firecrawl), image generation (FAL), text-to-speech (OpenAI), cloud browser (Browser Use), all routed through your sub. No extra accounts. One command from a fresh install: hermes setup --portal That logs you in via OAuth, sets Nous as your provider, and turns on the Tool Gateway. Check what's wired up any time with hermes portal info . Full details on the Tool Gateway docs page . You can still bring your own keys per-tool whenever you want — the gateway is per-backend, not all-or-nothing. CLI vs Messaging Quick Reference Hermes has two entry points: start the terminal UI with hermes , or run the gateway and talk to it from Telegram, Discord, Slack, WhatsApp, Signal, or Email. Once you're in a conversation, many slash commands are shared across both interfaces. Action CLI Messaging platforms Start chatting hermes Run hermes gateway setup + hermes gateway start , then send the bot a message Start fresh conversation /new or /reset /new or /reset Change model /model [provider:model] /model [provider:model] Set a personality /personality [name] /personality [name] Retry or undo the last turn /retry , /undo /retry , /undo Compress context / check usage /compress , /usage , /insights [--days N] /compress , /usage , /insights [days] Browse skills /skills or /<skill-name> /<skill-name> Interrupt current work Ctrl+C or send a new message /stop or send a new message Platform-specific status /platforms /status , /sethome For the full command lists, see the CLI guide and the Messaging Gateway guide . Documentation All documentation lives at hermes-agent.nousresearch.",
+      "stars_today": 593,
+      "language": "Python"
+    },
+    {
+      "title": "NVIDIA-NeMo/Switchyard",
+      "slug": "nvidia-nemo-switchyard",
+      "url": "https://github.com/NVIDIA-NeMo/Switchyard",
+      "abstract": "Switchyard Switchyard is a Rust proxy and library for LLM traffic. It routes requests\nacross providers, translates between OpenAI and Anthropic APIs, records\noperational metrics, and provides typed, composable routing algorithms. Why Switchyard? Point a coding agent such as Claude Code or Codex at an\nopen-source model. Switchyard translates between the OpenAI Chat, Anthropic\nMessages, and OpenAI Responses formats, so the agent keeps speaking its native\nAPI while the request is served by vLLM, NVIDIA NIM, Ollama, or any\nOpenAI-compatible endpoint. The same proxy can spread traffic across several\nmodels for A/B benchmarking, apply signal-driven stage routing, or run a custom\nalgorithm you write yourself. Features Protocol Translation : convert between OpenAI Chat, Anthropic Messages, and OpenAI Responses formats Multi-Backend Routing : random routing, LLM-as-classifier routing, signal-driven stage-router, or your own algorithm Operational Metrics : Prometheus metrics cover requests, errors, latency, tokens, and routing overhead Maturity Switchyard is pre-alpha software that is evolving rapidly. The API and algorithms are expected to change significantly before we reach v1.0. Warning Experimental software. Not for production use. Quick Start Choose the launcher path to run Claude Code, Codex CLI, or OpenClaw through\nSwitchyard. Choose the server path to run Switchyard as a standalone proxy.\nChoose the library path to embed routing in your own Rust application. Launcher Path Install uv if it is\nnot already available, then install the published Switchyard tool: curl -LsSf https://astral.sh/uv/install.sh | sh source \" $HOME /.local/bin/env \" uv tool install --python 3.10 \" nemo-switchyard[cli] \" The coding agent you launch must also be installed and on your PATH . This does\nnot install the standalone switchyard-server binary; use the Server Path for\nthat. Set an OpenRouter key and launch against the packaged deployment: export OPENROUTER_API_KEY= \" your-openrouter-key \" # pragma: allowlist secret switchyard launch claude --model switchyard\nswitchyard launch codex --model switchyard\nswitchyard launch openclaw --model switchyard To use your own native TOML deployment, pass its route ID and configuration: switchyard launch claude --model my-route --config routes.toml Server Path Use this path to install and run the standalone Rust proxy. Install Rust with Cargo , then install the\npublished binary: cargo install --locked switchyard-server\nswitchyard-server --help Cargo builds the release binary and installs it into ~/.cargo/bin by default. Create routes.toml using the Getting Started guide , then validate it\nand start the server: export OPENROUTER_API_KEY= \" your-openrouter-key \" # pragma: allowlist secret switchyard-server --config routes.toml --dry-run\nswitchyard-server --config routes.toml --host 127.0.0.1 --port 4000 Verify the proxy in another terminal: curl http://localhost:4000/health For a complete configuration and a test request, follow Getting Started . Library Path switchyard-libsy embeds the routing algorithms in your own Rust application.\nIt never calls a model itself: an algorithm decides which target to use and\nhands every model call back to you, so it drops into an existing proxy, gateway,\nor agent runtime without owning an HTTP stack. Pair it with switchyard-llm-client when you want the calls made for you. [ dependencies ] switchyard-libsy = { git = \" https://github.com/NVIDIA-NeMo/Switchyard.git \" } switchyard-protocol = { git = \" https://github.com/NVIDIA-NeMo/Switchyard.git \" } See Getting Started for setup and the\nalgorithm list, or the switchyard-libsy crate docs. Routing Strategies Strategy Use it when Route type LLM Classifier Request content should decide whether a turn needs the weak or strong tier. llm_classifier Stage Router Signals already in the conversation, such as tool results and errors, should route most turns without an extra model call. stage_router Escalation Router Every turn runs on the weak tier first, and a judge reads that answer to decide whether to send the same request to the strong tier. llm_classifier with mode = \"escalation\" Random You need a fixed traffic split for A/B tests, baselines, or cost experiments. random A passthrough route registers one target under one model ID with no routing\ndecision. See the Routing Overview for\nthe common route shape and self-hosted targets. Architecture flowchart LR\n    clients[\"Clients\"]\n    switchyard[\"Switchyard<br/>routing · translation · fallback\"]\n    backends[\"Model backends\"]\n\n    clients -->|\"OpenAI / Anthropic API\"| switchyard\n    switchyard -->|\"provider-native format\"| backends Loading Clients keep their native OpenAI or Anthropic API format. Switchyard picks a\nconfigured backend, forwards the request in that backend's own format, and\ntranslates the response back into the shape the client expects. The server\naccepts OpenAI Chat Completions, OpenAI Responses, and Anthropic Messages. Each\nconfigured LLM client selects one upstream format. Documentation Getting Started : complete launcher and standalone server walkthroughs Core Concepts : LLM clients, targets, routes, model IDs, and routing algorithms Routing Overview : choose and configure a routing algorithm switchyard-server : server configuration, routing algorithms, and metrics switchyard-libsy : embed routing algorithms in a Rust application switchyard-protocol : provider-neutral request, response, and streaming types switchyard-translation : request, response, and stream translation Community Issues : GitHub Issues Code of Conduct : Code of Conduct License Apache 2.0 License . Copyright NVIDIA Corporation.",
+      "stars_today": 408,
+      "language": "Rust"
+    },
+    {
+      "title": "koala73/worldmonitor",
+      "slug": "koala73-worldmonitor",
+      "url": "https://github.com/koala73/worldmonitor",
+      "abstract": "World Monitor 簡體中文 | 日本語 Real-time global intelligence dashboard — AI-powered news aggregation, geopolitical monitoring, and infrastructure tracking in a unified situational awareness interface. Documentation · Releases · Contributing What It Does 500+ curated news feeds across 15 categories, AI-synthesized into briefs Dual map engine — 3D globe (globe.gl) and WebGL flat map (deck.gl) with 56 map layer types Panel inventory — 109 concrete panel implementations across six specialized variants Cross-stream correlation — military, economic, disaster, and escalation signal convergence Country Instability Index (CII) — server-authoritative CII v8 stress scoring for 31 Tier-1 countries Finance radar — 29 stock exchanges, commodities, crypto, and 7-signal market composite Local AI — run everything with Ollama, no API keys required 6 site variants from a single codebase (world, tech, finance, commodity, happy, energy) Native desktop app (Tauri 2) for macOS, Windows, and Linux 28 languages with native-language feeds and RTL support For the full feature list, architecture, data sources, and algorithms, see the documentation . Support Status All site variants and desktop binaries are built from a single codebase and ship from the same release process. The table below clarifies maintenance status so you know which surfaces are safe to depend on. Surface Status Notes worldmonitor.app , tech. , finance. , commodity. , happy. , energy. Stable Public deployments built from this repo, actively maintained Desktop binaries (Windows / macOS Apple Silicon / macOS Intel / Linux AppImage) Stable One Tauri binary for every variant — install World Monitor and switch to tech, finance, commodity, energy, or happy in-app. There is deliberately no per-variant download Issues filed against any of the above are triaged from the same backlog — see the issues board for currently-open work. Quick Start git clone https://github.com/koala73/worldmonitor.git cd worldmonitor\nnpm install\nnpm run dev Open localhost:3000 (override the port with DEV_PORT in .env.local ). The app runs with no environment variables. Feature-specific data sources may require credentials. See .env.example for the full list. For variant-specific development: npm run dev:tech # tech.worldmonitor.app npm run dev:finance # finance.worldmonitor.app npm run dev:commodity # commodity.worldmonitor.app npm run dev:happy # happy.worldmonitor.app npm run dev:energy # energy.worldmonitor.app See the self-hosting guide for deployment options (Vercel, Docker, static). Tech Stack Category Technologies Frontend Vanilla TypeScript, Vite, globe.gl + Three.js, deck.gl + MapLibre GL Desktop Tauri 2 (Rust) with Node.js sidecar AI/ML Ollama / Groq / OpenRouter, Transformers.js (browser-side) API Contracts Protocol Buffers (298 protos, 36 services), sebuf HTTP annotations Deployment Vercel Edge Functions (60+), Railway relay, Tauri, PWA Caching Redis (Upstash), 3-tier cache, CDN, service worker Full stack details in the architecture docs . Programmatic Access World Monitor is built for agents and scripts as well as browsers: MCP server — https://worldmonitor.app/mcp (Streamable HTTP). Public tools/list ; tools/call authenticates with a X-WorldMonitor-Key header or OAuth. REST API — base https://api.worldmonitor.app , described by the OpenAPI spec . CLI — the official worldmonitor npm package (source in cli/ ): npx worldmonitor tools # run ad-hoc — list every MCP tool (no key needed) npm install -g worldmonitor # or install the `worldmonitor` (alias `wm`) command worldmonitor risk IR --api-key wm_xxx SDKs — official zero-dependency client libraries mirroring the CLI: Python worldmonitor-sdk (source in sdk/python/ ), Ruby worldmonitor ( sdk/ruby/ ), Go github.com/koala73/worldmonitor/sdk/go ( sdk/go/ ). Guide: worldmonitor.app/docs/sdks . Agent discovery files: llms.txt · agent-skills manifest · api-catalog . Get an API key at worldmonitor.app/pro . Flight Data Flight data provided graciously by Wingbits , the most advanced ADS-B flight data solution. Data Sources WorldMonitor aggregates 536+ observed upstream hosts across geopolitics, finance, energy, climate, aviation, cyber, military, infrastructure, and news intelligence — surfaced through 500+ curated feeds and tracked by a freshness monitor covering 35 source groups. See the full data sources catalog for providers, feed tiers, license posture, and collection methods. Contributing Contributions welcome! See CONTRIBUTING.md for guidelines. npm run typecheck # Type checking npm run build:full # Production build License AGPL-3.0-only for the source code. Commercial use is permitted under the AGPL when you comply with its copyleft and source-availability terms. Use Case Allowed? Personal / research / educational Yes, under AGPL-3.0-only Self-hosted instance Yes, under AGPL-3.0-only Fork and modify Yes, share source under AGPL-3.0-only when required Commercial use / SaaS Yes, under AGPL-3.0-only when you comply with AGPL obligations Private-source proprietary use or official branding rights Separate commercial or trademark permission needed See LICENSE for the full code license and docs/license.mdx for a plain-language summary. Commercial licensing is available as an alternative option for teams that need non-AGPL terms. Copyright (C) 2024-2026 Elie Habib. All rights reserved. Author Elie Habib — GitHub Contributors Security Acknowledgments We thank the following researchers for responsibly disclosing security issues: Cody Richard — Disclosed three security findings covering IPC command exposure, renderer-to-sidecar trust boundary analysis, and fetch patch credential injection architecture (2026) See our Security Policy for responsible disclosure guidelines. worldmonitor.app · docs.worldmonitor.app · finance.worldmonitor.app · commodity.worldmonitor.app Star History",
+      "stars_today": 377,
+      "language": "TypeScript"
+    },
+    {
+      "title": "megadose/holehe",
+      "slug": "megadose-holehe",
+      "url": "https://github.com/megadose/holehe",
+      "abstract": "Holehe OSINT - Email to Registered Accounts 👋 Hi there! For any professional inquiries or collaborations, please reach out to me at: megadose@protonmail.com 📧 Preferably, use your professional email for correspondence. Let's keep it short and sweet, and all in English! Holehe Online Version Summary Efficiently finding registered accounts from emails. Holehe checks if an email is attached to an account on sites like twitter, instagram, imgur and more than 120 others. Retrieves information using the forgotten password function. Does not alert the target email. Runs on Python 3 . 🛠️ Installation With PyPI pip3 install holehe With Github git clone https://github.com/megadose/holehe.git cd holehe/\npython3 setup.py install With Docker docker build . -t my-holehe-image\ndocker run my-holehe-image holehe test@gmail.com Quick Start Holehe can be run from the CLI and rapidly embedded within existing python applications. 📚 CLI Example holehe test@gmail.com 📈 Python Example import trio import httpx from holehe . modules . social_media . snapchat import snapchat async def main (): email = \"test@gmail.com\" out = [] client = httpx . AsyncClient () await snapchat ( email , client , out ) print ( out ) await client . aclose () trio . run ( main ) Module Output For each module, data is returned in a standard dictionary with the following json-equivalent format : { \"name\" : \" example \" , \"rateLimit\" : false , \"exists\" : true , \"emailrecovery\" : \" ex****e@gmail.com \" , \"phoneNumber\" : \" 0*******78 \" , \"others\" : null } rateLitmit : Lets you know if you've been rate-limited. exists : If an account exists for the email on that service. emailrecovery : Sometimes partially obfuscated recovery emails are returned. phoneNumber : Sometimes partially obfuscated recovery phone numbers are returned. others : Any extra info. Rate limit? Change your IP. Maltego Transform : Holehe Maltego Thank you to : navlys Chris socialscan UhOh365 soxoj mxrch (and for the logo) novitae Donations For BTC Donations : 1FHDM49QfZX6pJmhjLE5tB2K6CaTLMZpXZ 📝 License GNU General Public License v3.0 Built for educational purposes only. Modules Name Domain Method Frequent Rate Limit aboutme about.me register ✘ adobe adobe.com password recovery ✘ amazon amazon.com login ✘ amocrm amocrm.com register ✘ anydo any.do login ✔ archive archive.org register ✘ armurerieauxerre armurerie-auxerre.com register ✘ atlassian atlassian.com register ✘ axonaut axonaut.com register ✘ babeshows babeshows.co.uk register ✘ badeggsonline badeggsonline.com register ✘ biosmods bios-mods.com register ✘ biotechnologyforums biotechnologyforums.com register ✘ bitmoji bitmoji.com login ✘ blablacar blablacar.com register ✔ blackworldforum blackworldforum.com register ✔ blip blip.fm register ✔ blitzortung forum.blitzortung.org register ✘ bluegrassrivals bluegrassrivals.com register ✘ bodybuilding bodybuilding.com register ✘ buymeacoffee buymeacoffee.com register ✔ cambridgemt discussion.cambridge-mt.com register ✘ caringbridge caringbridge.org register ✘ chinaphonearena chinaphonearena.com register ✘ clashfarmer clashfarmer.com register ✔ codecademy codecademy.com register ✔ codeigniter forum.codeigniter.com register ✘ codepen codepen.io register ✘ coroflot coroflot.com register ✘ cpaelites cpaelites.com register ✘ cpahero cpahero.com register ✘ cracked_to cracked.to register ✔ crevado crevado.com register ✔ deliveroo deliveroo.com register ✔ demonforums demonforums.net register ✔ devrant devrant.com register ✘ diigo diigo.com register ✘ discord discord.com register ✘ docker docker.com register ✘ dominosfr dominos.fr register ✔ ebay ebay.com login ✔ ello ello.co register ✘ envato envato.com register ✘ eventbrite eventbrite.com login ✘ evernote evernote.com login ✘ fanpop fanpop.com register ✘ firefox firefox.com register ✘ flickr flickr.com login ✘ freelancer freelancer.com register ✘ freiberg drachenhort.user.stunet.tu-freiberg.de register ✘ garmin garmin.com register ✔ github github.com register ✘ google google.com register ✔ gravatar gravatar.com other ✘ hubspot hubspot.com login ✘ imgur imgur.com register ✔ insightly insightly.com login ✘ instagram instagram.com register ✔ issuu issuu.com register ✘ koditv forum.kodi.tv register ✘ komoot komoot.com register ✔ laposte laposte.fr register ✘ lastfm last.fm register ✘ lastpass lastpass.com register ✘ mail_ru mail.ru password recovery ✘ mybb community.mybb.com register ✘ myspace myspace.com register ✘ nattyornot nattyornotforum.nattyornot.com register ✘ naturabuy naturabuy.fr register ✘ ndemiccreations forum.ndemiccreations.com register ✘ nextpvr forums.nextpvr.com register ✘ nike nike.com register ✘ nimble nimble.com register ✘ nocrm nocrm.io register ✘ nutshell nutshell.com register ✘ odnoklassniki ok.ru password recovery ✘ office365 office365.com other ✔ onlinesequencer onlinesequencer.net register ✘ parler parler.com login ✘ patreon patreon.com login ✔ pinterest pinterest.com register ✘ pipedrive pipedrive.com register ✘ plurk plurk.com register ✘ pornhub pornhub.com register ✘ protonmail protonmail.ch other ✘ quora quora.com register ✘ rambler rambler.ru register ✘ redtube redtube.com register ✘ replit replit.com register ✔ rocketreach rocketreach.co register ✘ samsung samsung.com register ✘ seoclerks seoclerks.com register ✘ sevencups 7cups.com register ✔ smule smule.com register ✔ snapchat snapchat.com login ✘ soundcloud soundcloud.com register ✘ sporcle sporcle.com register ✘ spotify spotify.com register ✔ strava strava.com register ✘ taringa taringa.net register ✔ teamleader teamleader.com register ✘ teamtreehouse teamtreehouse.com register ✘ tellonym tellonym.me register ✘ thecardboard thecardboard.org register ✘ therianguide forums.therian-guide.com register ✘ thevapingforum thevapingforum.com register ✘ tumblr tumblr.com register ✘ tunefind tunefind.com register ✔ twitter twitter.com register ✘ venmo venmo.com register ✔ vivino vivino.com register ✘ voxmedia voxmedia.com register ✘ vrbo vrbo.com register ✘ vsco vsco.co register ✘ wattpad wattpad.com register ✔ wordpress wordpress login ✘ xing xing.com register ✘ xnxx xnxx.com register ✔ xvideos xvideos.com register ✘ yahoo yahoo.com login ✔ zoho zoho.com login ✔",
+      "stars_today": 195,
+      "language": "Python"
+    },
+    {
+      "title": "apify/apify-mcp-server",
+      "slug": "apify-apify-mcp-server",
+      "url": "https://github.com/apify/apify-mcp-server",
+      "abstract": "mcp.apify.com The Apify Model Context Protocol (MCP) server at mcp.apify.com enables your AI agents to extract data from social media, search engines, maps, e-commerce sites, and any other website using thousands of ready-made scrapers, crawlers, and automation tools from Apify Store . It supports OAuth, allowing you to connect from clients like Claude.ai or Visual Studio Code using just the URL. 🚀 Use the hosted Apify MCP Server! For the best experience, connect your AI assistant to our hosted server at https://mcp.apify.com . The hosted server supports the latest features - including output schema inference for structured Actor results - that are not available when running locally via stdio. ⚠️ Legacy SSE transport removed. The https://mcp.apify.com/sse endpoint has been removed in favor of Streamable HTTP. Migrate your client to https://mcp.apify.com — drop the /sse suffix from your configuration. 💰 The server also supports agentic payments : buy a token from AGI to run any Actor, or pay per-request via direct x402 (Pay Per Event Actors only) or Skyfire . Apify MCP Server is compatible with Claude Code, Claude.ai, Cursor, VS Code and any client that adheres to the Model Context Protocol.\nCheck out the MCP clients section for more details or visit the MCP configuration page . Table of Contents 🌐 Introducing Apify MCP Server 🚀 Quickstart 🤖 MCP clients 🪄 Try Apify MCP instantly 💰 Agentic payments How agentic payments work 🪙 AGI (recommended) 💸 Direct x402 🔥 Skyfire 🛠️ Tools, resources, and prompts 📊 Telemetry 💬 Usage examples 🐛 Troubleshooting ⚙️ Development 🔒 Privacy policy 🤝 Contributing 📚 Learn more 🌐 Introducing Apify MCP Server The Apify MCP Server allows an AI assistant to use any Apify Actor as a tool to perform a specific task.\nFor example, it can: Use Facebook Posts Scraper to extract data from Facebook posts from multiple pages/profiles. Use Google Maps Email Extractor to extract contact details from Google Maps. Use Google Search Results Scraper to scrape Google Search Engine Results Pages (SERPs). Use Instagram Scraper to scrape Instagram posts, profiles, places, photos, and comments. Use RAG Web Browser to search the web, scrape the top N URLs, and return their content. Video tutorial: Integrate 8,000+ Apify Actors and Agents with Claude 🚀 Quickstart You can use the Apify MCP Server in two ways: HTTPS Endpoint (mcp.apify.com) : Connect from your MCP client via OAuth or by including the Authorization: Bearer <APIFY_TOKEN> header in your requests. This is the recommended method for most use cases. Because it supports OAuth, you can connect from clients like Claude.ai or Visual Studio Code using just the URL: https://mcp.apify.com . https://mcp.apify.com streamable transport Standard Input/Output (stdio) : Ideal for local integrations and command-line tools like the Claude for Desktop client. Set the MCP client server command to npx @apify/actors-mcp-server and the APIFY_TOKEN environment variable to your Apify API token. See npx @apify/actors-mcp-server --help for more options. You can find detailed instructions for setting up the MCP server in the Apify documentation . 🤖 MCP clients Apify MCP Server is compatible with any MCP client that adheres to the Model Context Protocol , but the level of support for dynamic tool discovery and other features may vary between clients. To interact with the Apify MCP Server, you can use clients such as Claude Desktop , Visual Studio Code , or Apify Tester MCP Client . Visit mcp.apify.com to configure the server for your preferred client. Tested clients Claude Desktop Claude.ai (web) ChatGPT VS Code (Genie) Cursor OpenCode Kiro Apify Tester MCP Client — designed for testing Apify MCP servers 🪄 Try Apify MCP instantly Want to try Apify MCP without any setup? Check out Apify Tester MCP Client This interactive, chat-like interface provides an easy way to explore the capabilities of Apify MCP without any local setup.\nSign in with your Apify account and start experimenting with web scraping, data extraction, and automation tools! Or use the MCP bundle file (formerly known as Anthropic Desktop extension file, or DXT) for one-click installation: Apify MCP Server MCPB file 💰 Agentic payments You can pay for Actor runs without an Apify API token using AGI , direct x402 , or Skyfire . AGI ( agi.apify.com ) mints a prepaid Apify API token in exchange for an x402 or MPP payment. Use the token like a normal API token against mcp.apify.com and api.apify.com — works for any Actor, not just Pay Per Event ones. Recommended for new integrations; see AGI (recommended) below. Direct x402 pays with USDC on Base per request and does not require a separate platform account. It is fully supported by mcpc ( brew install apify/tap/mcpc or npm install -g @apify/mcpc ). We use mcpc because it is one of the few MCP clients that supports the latest features and the x402 protocol natively. Skyfire pays with PAY tokens and requires a Skyfire account with a funded wallet. It does not require a special MCP client; the entire payment flow is handled directly through the MCP tool call parameters. ℹ️ Scope: Both direct x402 and Skyfire are limited to Pay Per Event Actors, don't support Standby Actors, and settle per run instead of minting a token. How agentic payments work Actor run costs vary, so both payment methods use a prepaid balance model. The payment flow happens in four steps: Discovery : The agent discovers Actors with search-actors or fetch-actor-details . Those calls are free. Prepayment : Before running a paid Actor tool, the agent funds a prepaid balance. Direct x402 : mcpc automatically signs a $1.00 USDC transaction. Skyfire : The agent creates a PAY token (minimum $5.00) using Skyfire's create-pay-token tool. Execution : The agent calls the Actor tool. Direct x402 : Handled automatically by mcpc using the prepaid balance. Skyfire : The agent explicitly passes the PAY token in the skyfire-pay-id input property. Resolution : The tool returns the Actor results. Unused funds stay available for later runs. Direct x402 : After 60 minutes of inactivity, the server refunds any unused balance to the wallet on Base . Skyfire : Skyfire returns unused funds when the token expires. 🪙 AGI (recommended) AGI (Apify Agent General Interface) is the recommended way for autonomous agents to pay for Apify usage without an account. Pay once via x402 or MPP, receive a prepaid, spend-capped Apify API token, and use it directly against mcp.apify.com and api.apify.com ( Authorization: Bearer <token> ) — for any Actor. Full protocol, supported payment methods, and current terms (minimum amount, token lifetime, refund policy) are documented at agi.apify.com/AGENTS.md — treat it as the single source of truth. 💸 Direct x402 The x402 protocol enables direct, machine-to-machine payments. Your MCP client can use it to pay for Actor runs with USDC on the Base blockchain , completely bypassing the need for an Apify API token. Prerequisites A wallet with USDC on Base mainnet. Setup Create or import a wallet: # Create a new wallet mcpc x402 init # Import an existing wallet mcpc x402 import < private-key > # Show the wallet address and a funding QR code, so you can fund it with USDC on Base (https://base.org) mcpc x402 Connect to the server with x402 enabled: mcpc connect \" mcp.apify.com?payment=x402 \" @apify --x402 You can now call a paid tool: mcpc @apify tools-call call-actor actor:= \" apify/rag-web-browser \" input:= ' {\"query\": \"latest AI news\"} ' 🔥 Skyfire Skyfire provides managed payment infrastructure for AI agents. Instead of authenticating with an Apify API token, your agent passes a Skyfire payment token to cover the cost of each tool call using PAY tokens. Prerequisites A Skyfire account with a funded wallet. An MCP client that supports multiple servers, such as Claude Desktop, OpenCode, or VS Code. Setup Configure the Skyfire MCP server and the Apify MCP Server in your client.",
+      "stars_today": 136,
+      "language": "TypeScript"
+    },
+    {
+      "title": "KeygraphHQ/shannon",
+      "slug": "keygraphhq-shannon",
+      "url": "https://github.com/KeygraphHQ/shannon",
+      "abstract": "Note Shannon 2.0 is officially here Shannon - AI Pentester by Keygraph Shannon is an autonomous, AI pentester for web applications and APIs. It analyzes your source code, identifies attack paths, and executes real exploits to prove vulnerabilities before they reach production. This repository is Shannon Open Source: the full agent, run locally from your command line. Tip AI agents and LLMs: start with llms.txt for a concise map of this repository, or use llms-full.txt for the README and docs combined into one file. Table of Contents What is Shannon? Shannon in Action Quick Start Key Capabilities Editions Architecture Documentation Safety, Scope, and Limitations License About Keygraph Community and Support What is Shannon? Shannon is an autonomous AI pentester developed by Keygraph . It performs security testing of web applications and their underlying APIs by combining source-code analysis with live exploitation. Shannon analyzes your web application's source code to identify potential attack vectors, then uses browser automation and command-line tools to execute real exploits against the running application and its APIs. Only vulnerabilities with a working proof-of-concept are included in the final report. Shannon is the agent. This repository is Shannon Open Source, the standalone pentester you run yourself. The same Shannon also powers the Keygraph platform , Keygraph's commercial pentesting product. See Editions for how the two compare. Why Shannon Exists Thanks to tools like Claude Code and Cursor, your team ships code non-stop. But your penetration test? That happens once a year. This creates a massive security gap. For the other 364 days, you could be unknowingly shipping vulnerabilities to production. Shannon closes that gap by providing on-demand, automated penetration testing that can run against every build or release. Shannon in Action Sample penetration test reports from intentionally vulnerable applications, produced by Shannon Open Source: Target Summary Report OWASP Juice Shop 20+ vulnerabilities, including authentication bypass, SQL injection, IDOR, and SSRF. View report c{api}tal API Approximately 15 critical and high-severity API findings, including command injection, auth bypass, and mass assignment. View report OWASP crAPI 15+ critical and high-severity findings across JWT, injection, SSRF, and API authorization paths. View report Quick Start Prerequisites Docker : required for the worker container. Node.js 18+ : required for the recommended npx workflow. AI provider credentials : Anthropic, OpenAI, xAI, or AWS Bedrock - or any other provider . Claude models are recommended. For suggested model IDs per provider, plus gateways and custom base URLs, see AI providers . Cyber safeguards cleared with your provider : Anthropic and OpenAI apply real-time safeguards to cyber-security workloads, which can interrupt a scan mid-run. Complete their guidance for legitimate security testers before your first run - see AI providers . Run Shannon Warning Shannon actively executes exploits. Run it only against applications and environments you own or have explicit written authorization to test. Do not run Shannon against production systems. # Configure credentials with the interactive wizard. npx @keygraph/shannon setup # Run a pentest against a source-available target. npx @keygraph/shannon start -u https://your-app.com -r /path/to/your-repo Shannon pulls the worker image from Docker Hub, starts the required local infrastructure, mounts the target repository read-only inside an ephemeral worker container, and writes results to a local workspace. For source builds, authenticated scans, provider-specific setup, and platform notes, see Documentation . Tip Prefer to use a subscription instead of API credits? OpenAI Codex: The latest version of Shannon supports ChatGPT Plus and Pro subscriptions. Follow the OpenAI Codex subscription setup guide to get started. Claude Code: The latest version of Shannon does not support Claude Code subscriptions. Follow the Claude Code subscription setup guide to use version 1.9.0 , which is the final release built on the Claude Agent SDK. Key Capabilities Proof-by-exploitation reports : Shannon reports validated findings with reproducible proof-of-concept steps instead of speculative warnings. White-box attack planning : Shannon uses source-code analysis to guide dynamic testing and focus on realistic attack paths. Autonomous execution : Shannon launches reconnaissance, vulnerability analysis, exploitation, and report generation from a single command. Authenticated testing : configuration files can describe login flows, test credentials, TOTP, email-based login flows, focus areas, and rules of engagement. OWASP-focused coverage : Shannon targets exploitable Injection, XSS, SSRF, Broken Authentication, and Broken Authorization issues. Resumable workspaces : Shannon can resume interrupted runs without re-running completed agents. Editions Shannon ships in two ways: Shannon Open Source , the pentester you run yourself, and the Keygraph platform , the commercial pentesting product that runs Shannon continuously and closes the full AppSec lifecycle around it. Shannon Open Source (this repository) is the standalone pentester: a CLI agent for white-box, proof-by-exploitation testing of web applications and APIs you own or are authorized to test. It reads your source, plans attacks, executes real exploits, and reports only what it can prove. It runs on demand and is complete in that lane. You point it at a target, it pentests, it reports. The Keygraph platform is the enterprise-ready, continuous pentesting product powered by Shannon. In the Keygraph platform, an enhanced build of Shannon runs continuously in a hardened, orchestrated environment fed by Keygraph's full code-analysis stack. Around that engine, the platform closes the entire vulnerability lifecycle, from analysis to a verified fix: Analyze : Code Property Graph SAST, SCA with reachability, secrets, IaC, and container scanning. First-class detection in their own right, and context that sharpens Shannon's attacks. Prove : autonomous black-box and source-aware white-box pentests turn candidate findings into proven, exploited vulnerabilities rather than speculative alerts. Manage : one canonical record per vulnerability per repository, deduplicated across every source, with ownership, status, SLA tracking, dashboards, and bidirectional Jira sync. Remediate and verify : patches written automatically and re-tested against the patched code before delivery, landing in your existing review workflow rather than auto-applied. Deploy : self-hosted and air-gapped environments, strict bring-your-own-key model access, and customer-controlled LLM gateway patterns, so source, results, and model traffic stay inside your perimeter. Shannon is the proof engine at the center of the Keygraph platform. Shannon Open Source gives you that engine to run yourself. The Keygraph platform surrounds Shannon with continuous analysis, finding management, remediation, verification, and enterprise deployment. AppSec lifecycle stage Shannon Open Source Keygraph platform Analyze Basic LLM pass-through of source to plan attacks Actual code-base parsing, plus Code Property Graph, SAST, SCA with reachability, secrets, IaC, and containers Pentest and prove White-box only, proof by exploitation Enhanced white-box, plus black-box and grey-box modes, run continuously Manage findings Local Markdown report Canonical findings system: deduplication across sources, ownership, SLA, dashboards, Jira sync, and professional pentest-grade PDF reports Remediate and verify Fix manually from the report, then re-run the full scan to verify Automated remediation: opens a PR with the fix, verified by point re-test without re-running the full scan Deploy and operate Local CLI and Docker worker Self-hosted, air-gapped, BYOK, continuous, enterprise integrations License and support AGPL-3.",
+      "stars_today": 70,
+      "language": "TypeScript"
+    },
+    {
+      "title": "ChromeDevTools/chrome-devtools-mcp",
+      "slug": "chromedevtools-chrome-devtools-mcp",
+      "url": "https://github.com/ChromeDevTools/chrome-devtools-mcp",
+      "abstract": "Chrome DevTools for agents Chrome DevTools for agents ( chrome-devtools-mcp ) lets your coding agent (such as Antigravity, Claude, Cursor or Copilot)\ncontrol and inspect a live Chrome browser. It acts as a Model-Context-Protocol\n(MCP) server, giving your AI coding assistant access to the full power of\nChrome DevTools for reliable automation, in-depth debugging, and performance analysis.\nA CLI is also provided for use without MCP. Tool reference | Changelog | Contributing | Troubleshooting | Design Principles Key features Get performance insights : Uses Chrome\nDevTools to record\ntraces and extract actionable performance insights. Advanced browser debugging : Analyze network requests, take screenshots and\ncheck browser console messages (with source-mapped stack traces). Reliable automation . Uses puppeteer to automate actions in\nChrome and automatically wait for action results. Disclaimers chrome-devtools-mcp exposes content of the browser instance to the MCP clients\nallowing them to inspect, debug, and modify any data in the browser or DevTools.\nAvoid sharing sensitive or personal information that you don't want to share with\nMCP clients. chrome-devtools-mcp officially supports Google Chrome and Chrome for Testing only.\nOther Chromium-based browsers may work, but this is not guaranteed, and you may encounter unexpected behavior. Use at your own discretion.\nWe are committed to providing fixes and support for the latest version of Extended Stable Chrome . Performance tools may send trace URLs to the Google CrUX API to fetch real-user\nexperience data. This helps provide a holistic performance picture by\npresenting field data alongside lab data. This data is collected by the Chrome\nUser Experience Report (CrUX) . To disable\nthis, run with the --no-performance-crux flag. Usage statistics Google collects usage statistics (such as tool invocation success rates, latency, and environment information) to improve the reliability and performance of Chrome DevTools MCP. Data collection is enabled by default . You can opt-out by passing the --no-usage-statistics flag when starting the server: \"args\" : [ \" -y \" , \" chrome-devtools-mcp@latest \" , \" --no-usage-statistics \" ] Google handles this data in accordance with the Google Privacy Policy . Google's collection of usage statistics for Chrome DevTools MCP is independent from the Chrome browser's usage statistics. Opting out of Chrome metrics does not automatically opt you out of this tool, and vice-versa. Collection is disabled if CHROME_DEVTOOLS_MCP_NO_USAGE_STATISTICS or CI env variables are set. Update checks By default, the server periodically checks the npm registry for updates and logs a notification when a newer version is available.\nYou can disable these update checks by setting the CHROME_DEVTOOLS_MCP_NO_UPDATE_CHECKS environment variable. Requirements Node.js LTS version. Chrome current stable version or newer. npm Getting started Add the following config to your MCP client: { \"mcpServers\" : { \"chrome-devtools\" : { \"command\" : \" npx \" , \"args\" : [ \" -y \" , \" chrome-devtools-mcp@latest \" ]\n    }\n  }\n} Note Using chrome-devtools-mcp@latest ensures that your MCP client will always use the latest version of the Chrome DevTools MCP server. If you are interested in doing only basic browser tasks, use the --slim mode: { \"mcpServers\" : { \"chrome-devtools\" : { \"command\" : \" npx \" , \"args\" : [ \" -y \" , \" chrome-devtools-mcp@latest \" , \" --slim \" , \" --headless \" ]\n    }\n  }\n} See Slim tool reference . MCP Client configuration Amp Follow https://ampcode.com/manual#mcp and use the config provided above. You can also install the Chrome DevTools MCP server using the CLI: amp mcp add chrome-devtools -- npx chrome-devtools-mcp@latest Antigravity To use the Chrome DevTools MCP server follow the instructions from Antigravity's docs to install a custom MCP server. Add the following config to the MCP servers config: { \" mcpServers \" : { \" chrome-devtools \" : { \" command \" : \" npx \" , \" args \" : [ \" -y \" , \" chrome-devtools-mcp@latest \" , \" --browser-url=http://127.0.0.1:9222 \" ]\n    }\n  }\n} This will make the Chrome DevTools MCP server automatically connect to the browser that Antigravity is using. If you are not using port 9222, make sure to adjust accordingly. Chrome DevTools MCP will not start the browser instance automatically using this approach because the Chrome DevTools MCP server connects to Antigravity's built-in browser. If the browser is not already running, you have to start it first by clicking the Chrome icon at the top right corner. Bob Follow the IBM Bob MCP guide and add the Chrome DevTools MCP server to your Bob MCP configuration. Use the global config ( ~/.bob/mcp.json ) to apply it across all workspaces, or a project config ( .bob/mcp.json ) to scope it to one project: { \"mcpServers\" : { \"chrome-devtools\" : { \"command\" : \" npx \" , \"args\" : [ \" -y \" , \" chrome-devtools-mcp@latest \" ]\n    }\n  }\n} You can edit these files from Bob panel → Settings → MCP → Edit Global MCP (or Edit Project MCP ). Bob hot-reloads on save. Once the server appears in the MCP tab, switch to the 🌎 Browser Dev mode to get guided browser debugging directly in Bob. Claude Code Install via CLI (MCP only) Use the Claude Code CLI to add the Chrome DevTools MCP server ( guide ): claude mcp add chrome-devtools --scope user npx chrome-devtools-mcp@latest Install as a Plugin (MCP + Skills) [!NOTE]\nIf you already had Chrome DevTools MCP installed previously for Claude Code, make sure to remove it first from your installation and configuration files. To install Chrome DevTools MCP with skills, add the marketplace registry in Claude Code: /plugin marketplace add ChromeDevTools/chrome-devtools-mcp Then, install the plugin: /plugin install chrome-devtools-mcp@chrome-devtools-plugins Restart Claude Code to have the MCP server and skills load (check with /skills ). [!TIP]\nIf the plugin installation fails with a Failed to clone repository error (e.g., HTTPS connectivity issues behind a corporate firewall), see the troubleshooting guide for workarounds, or use the CLI installation method above instead. Cline Follow https://docs.cline.bot/mcp/configuring-mcp-servers and use the config provided above. Codex Follow the configure MCP guide using the standard config from above. You can also install the Chrome DevTools MCP server using the Codex CLI: codex mcp add chrome-devtools -- npx chrome-devtools-mcp@latest On Windows 11 Configure the Chrome install location and increase the startup timeout by updating .codex/config.toml and adding the following env and startup_timeout_ms parameters: [mcp_servers.chrome-devtools]\ncommand = \"cmd\"\nargs = [\n    \"/c\",\n    \"npx\",\n    \"-y\",\n    \"chrome-devtools-mcp@latest\",\n]\nenv = { SystemRoot=\"C:\\\\Windows\", PROGRAMFILES=\"C:\\\\Program Files\" }\nstartup_timeout_ms = 20_000 Command Code Use the Command Code CLI to add the Chrome DevTools MCP server ( MCP guide ): cmd mcp add chrome-devtools --scope user npx chrome-devtools-mcp@latest Copilot CLI Start Copilot CLI: copilot Start the dialog to add a new MCP server by running: /mcp add Configure the following fields and press CTRL+S to save the configuration: Server name: chrome-devtools Server Type: [1] Local Command: npx -y chrome-devtools-mcp@latest Copilot / VS Code Install as a Plugin (Recommended) The easiest way to get up and running is to install chrome-devtools-mcp as an agent plugin.\nThis bundles the MCP server and all skills together, so your agent gets both the tools\nand the expert guidance it needs to use them effectively. Open the Command Palette ( Cmd+Shift+P on macOS or Ctrl+Shift+P on Windows/Linux). Search for and run the Chat: Install Plugin From Source command. Paste in our repository name: ChromeDevTools/chrome-devtools-mcp . That's it! Your agent is now supercharged with Chrome DevTools capabilities.",
+      "stars_today": 69,
+      "language": "TypeScript"
+    },
+    {
+      "title": "fastapi/full-stack-fastapi-template",
+      "slug": "fastapi-full-stack-fastapi-template",
+      "url": "https://github.com/fastapi/full-stack-fastapi-template",
+      "abstract": "Full Stack FastAPI Template Technology Stack and Features ⚡ FastAPI for the Python backend API. 🧰 SQLModel for the Python SQL database interactions (ORM). 🔍 Pydantic , used by FastAPI, for the data validation and settings management. 💾 PostgreSQL as the SQL database. 🚀 React for the frontend. 🧩 Built into the backend application and served by FastAPI on the same domain as the API. 💃 Using TypeScript, hooks, Vite , and other parts of a modern frontend stack. 🎨 Tailwind CSS and shadcn/ui for the frontend components. 🤖 An automatically generated frontend client. 🧪 Playwright for end-to-end testing. 🦇 Dark mode support. ☁️ FastAPI Cloud for deployment. 🐋 Docker Compose for local services and self-hosted deployment. 📞 Traefik as a reverse proxy with automatic HTTPS. 🔒 Secure password hashing by default. 🔑 JWT (JSON Web Token) authentication. 📫 Email-based password recovery. 📬 Mailcatcher for local email testing during development. ✅ Tests with Pytest . 🏭 CI (continuous integration) and CD (continuous deployment) based on GitHub Actions. Dashboard Login Dashboard - Admin Dashboard - Items Dashboard - Dark Mode Interactive API Documentation How to Use It Click the Use this template button at the top of this page to create a new repository. Backend Development Backend docs: backend/README.md . Frontend Development Frontend docs: frontend/README.md . Deployment FastAPI Cloud deployment: deployment.md . Self-hosted deployment with Docker Compose: deployment-docker-compose.md . Development General development docs: development.md . This includes the local FastAPI and Vite workflow, Docker Compose services, .env configuration, and more. Release Notes Check the file release-notes.md . License The Full Stack FastAPI Template is licensed under the terms of the MIT license.",
+      "stars_today": 51,
+      "language": "TypeScript"
+    },
+    {
+      "title": "soxoj/maigret",
+      "slug": "soxoj-maigret",
+      "url": "https://github.com/soxoj/maigret",
+      "abstract": "Maigret English · 簡體中文 Maigret collects a dossier on a person by username only , checking for accounts on a huge number of sites and gathering all the available information from web pages. No API keys required. AI profiling (demo) . Sponsors IPcook provides reliable residential proxies for online research, username discovery, and public data collection workflows. High success rates • 99.99% uptime • Response time under 0.5s • Monthly & Pay-as-you-go • Non-expiring traffic • Up to 10 free sub-accounts for team collaboration • Residential proxies from $0.3–$3.2/GB. Special Offer : FREE 100MB trial available. Use code WELCOME20 for 20% off. RapidProxy provides high-performance residential proxies for Twitter scraping, Selenium automation, and web data extraction. 90M+ IPs • Smart rotation • Anti-block • Non-expiring traffic. Special Offer : Try it free — Plans from $0.65/GB. Use code RAPID10 for 10% off. Contents In one minute Main features Demo Installation Usage Contributing Commercial Use About In one minute Ensure you have Python 3.10 or higher. pip install maigret\nmaigret YOUR_USERNAME No install? Try the community Telegram bot or a Cloud Shell . Want a web UI? See how to launch it . See also: Quick start . Main features Supports 3,000+ sites ( see full list ). A default run checks the 500 highest-ranked sites by traffic; pass -a to scan everything, or --tags to narrow by category/country. Embeddable in Python projects — import maigret and run searches programmatically (see library usage ). Extracts all available information about the account owner from profile pages and site APIs, including links to other accounts. Performs recursive search using discovered usernames and other IDs. Allows filtering by tags (site categories, countries). Detects and partially bypasses blocks, censorship, and CAPTCHA. Fetches an auto-updated site database from GitHub each run (once per 24 hours), and falls back to the built-in database if offline. Works with Tor and I2P websites; able to check domains. Ships with a web interface for browsing results as a graph and downloading reports in every format from a single page. Optional AI analysis mode ( --ai ) that turns raw findings into a short investigation summary using an OpenAI-compatible API. For the complete feature list, see the features documentation . Used by Professional OSINT and social-media analysis tools built on Maigret: Demo Video Reports PDF report , HTML report Full console output Installation Already ran the In one minute steps? You're set. Below are alternative methods. Don't want to install anything? Use the community Telegram bot . Windows Download maigret_standalone.exe from Releases . You can launch it two ways: Double-click it — Maigret will ask for a username, run a default search, and wait at the end so the report links stay visible. Run it from a terminal — open Command Prompt (press Win+R , type cmd , hit Enter) or PowerShell to pass extra options: cd %USERPROFILE% \\Downloads\nmaigret_standalone.exe USERNAME\nmaigret_standalone.exe USERNAME --html       :: also save an HTML report\nmaigret_standalone.exe --help                :: list all options Video guide: https://youtu.be/qIgwTZOmMmM . Cloud Shells Run Maigret in the browser via cloud shells or Jupyter notebooks: Local installation (pip) # install from pypi pip3 install maigret # usage maigret username From source # or clone and install manually git clone https://github.com/soxoj/maigret && cd maigret # build and install pip3 install . # usage maigret username Docker Two image variants are published: soxoj/maigret:latest — CLI mode (default) soxoj/maigret:web — auto-launches the web interface # official image (CLI) docker pull soxoj/maigret # CLI usage docker run -v /mydir:/app/reports soxoj/maigret:latest username --html # Web UI (open http://localhost:5000) docker run -p 5000:5000 soxoj/maigret:web # Web UI on a custom port docker run -e PORT=8080 -p 8080:8080 soxoj/maigret:web # manual build docker build -t maigret . # CLI image (default target) docker build --target web -t maigret-web . # Web UI image Troubleshooting Build errors? See the troubleshooting guide . PDF reports ( --pdf ) are an optional extra — install with pip install 'maigret[pdf]' . They need system-level graphics libraries on Linux/macOS; see the PDF reports section for per-OS install steps. Usage Examples # make HTML, PDF, and XMind reports maigret user --html\nmaigret user --pdf\nmaigret user --xmind # legacy XML with a manifest for XMind 2022+ readers # machine-readable exports maigret user --json ndjson # newline-delimited JSON (also: --json simple) maigret user --csv\nmaigret user --txt\nmaigret user --graph # interactive D3 graph (HTML) maigret user --neo4j # Neo4j Cypher script (graph database) # search on sites marked with tags photo & dating maigret user --tags photo,dating # search on sites marked with tag us maigret user --tags us # highlight sites whose page also mentions specific keywords maigret user --keywords python rust # keyword-matched sites are shown with \"[++]\" in bright green # search for three usernames on all available sites maigret user1 user2 user3 -a # AI-assisted investigation summary (needs OPENAI_API_KEY) maigret user --ai --neo4j writes a *_neo4j.cypher script of the results graph; import it with cypher-shell -u neo4j -p <password> < report_user_neo4j.cypher or paste it into the Neo4j Browser. Re-imports are idempotent. See the Neo4j export docs . Run maigret --help for all options. Docs: CLI options , more examples . Running into 403s or timeouts? See TROUBLESHOOTING.md . Web interface Maigret has a built-in web UI with a results graph and downloadable reports. Don't want to run it yourself? Deploy the published soxoj/maigret:web Docker image as a hosted app in one click: Runs on Render's free tier (spins down after 15 min idle, spins back up on the next request). No login is set up on the instance, so anyone with the URL can use it. Web Interface Screenshots maigret --web 5000 Open http://127.0.0.1:5000 , enter a username, and view results. Python library Maigret can be embedded in your own Python projects. The CLI is a thin wrapper around an async function you can call directly — build custom pipelines, feed results into your own tooling, or run it inside a larger OSINT workflow. See the full library usage guide for a working example, async patterns, and how to filter sites by tag. Useful CLI flags --parse URL — parse a profile page, extract IDs/usernames, and use them to kick off a recursive search. --permute — generate likely username variants from two or more inputs (e.g. john doe → johndoe , j.doe , …) and search for all of them. --self-check [--auto-disable] — verify usernameClaimed / usernameUnclaimed pairs against live sites for maintainers auditing the database. --ai / --ai-model — run the AI analysis over the search results and stream a short investigation summary to the terminal. AI analysis --ai collects the search results, builds an internal Markdown report, and sends it to an OpenAI-compatible chat completion endpoint to produce a short, neutral investigation summary (likely real name, location, occupation, interests, languages, confidence, follow-up leads). Per-site progress is suppressed and the model's output is streamed to stdout. export OPENAI_API_KEY=sk-...\nmaigret user --ai # pick a different model maigret user --ai --ai-model gpt-4o-mini The key can also be set as openai_api_key in settings.json . The endpoint defaults to https://api.openai.com/v1 , but openai_api_base_url in settings.json can point to any OpenAI-compatible API (Azure OpenAI, OpenRouter, a local server, …). See the settings docs for the full list of options. Tor / I2P / proxies Maigret can route checks through a proxy, Tor, or I2P — useful for .onion / .i2p sites and for bypassing WAFs that block datacenter IPs. # any HTTP/SOCKS proxy maigret user --proxy socks5://127.0.0.1:1080 # Tor (default gateway socks5://127.0.0.",
+      "stars_today": 46,
+      "language": "Python"
+    },
+    {
+      "title": "windmill-labs/windmill",
+      "slug": "windmill-labs-windmill",
+      "url": "https://github.com/windmill-labs/windmill",
+      "abstract": "Open-source developer platform for internal code: APIs, background jobs, workflows and UIs. Self-hostable alternative to Retool, Pipedream, Superblocks and a simplified Temporal with autogenerated UIs and custom UIs to trigger workflows and scripts as internal apps. Scripts are turned into sharable UIs automatically, and can be composed together into flows or used into richer apps built with low-code. Supported languages: Python, TypeScript, Go, Bash, SQL, GraphQL, PowerShell, Rust, and more. Try it - Website - Docs - Discord - Hub - Contributor's guide Windmill - Developer platform for APIs, background jobs, workflows and UIs Windmill is fully open-sourced (AGPLv3) and Windmill Labs offers dedicated instances and commercial support and licenses. readme_video.mp4 Windmill - Developer platform for APIs, background jobs, workflows and UIs Main Concepts Show me some actual script code Local Development Stack Fastest Self-Hostable Workflow Engine Security Performance Architecture How to self-host Docker compose Kubernetes (Helm charts) Cloud providers OAuth, SSO & SMTP License Integrations Environment Variables Run a local dev setup Frontend only Backend + Frontend Contributors Copyright Main Concepts Define a minimal and generic script in Python, TypeScript, Go or Bash that solves a specific task. The code can be defined in the provided Web IDE or synchronized with your own GitHub repo (e.g. through VS Code extension): provided Web IDE or synchronized with your own GitHub repo (e.g. through VS Code extension): Your scripts parameters are automatically parsed and generate a frontend . Make it flow ! You can chain your scripts or scripts made by the community shared on WindmillHub . Build complex UIs on top of your scripts and flows. Scripts and flows can be triggered by schedules , webhooks , HTTP routes , Kafka , WebSockets , emails , and more. Build your entire infra on top of Windmill! Show me some actual script code //import any dependency  from npm import * as wmill from \"windmill-client\" ; import * as cowsay from \"cowsay@1.5.0\" ; // fill the type, or use the +Resource type to get a type-safe reference to a resource type Postgresql = { host : string ; port : number ; user : string ; dbname : string ; sslmode : string ; password : string ; } ; export async function main ( a : number , b : \"my\" | \"enum\" , c : Postgresql , d = \"inferred type string from default arg\" , e = { nested : \"object\" } //f: wmill.Base64 ) { const email = process . env [ \"WM_EMAIL\" ] ; // variables are permissioned and by path let variable = await wmill . getVariable ( \"f/company-folder/my_secret\" ) ; const lastTimeRun = await wmill . getState ( ) ; // logs are printed and always inspectable console . log ( cowsay . say ( { text : \"hello \" + email + \" \" + lastTimeRun } ) ) ; await wmill . setState ( Date . now ( ) ) ; // return is serialized as JSON return { foo : d , variable } ; } Local Development Windmill supports multiple ways to develop locally and sync with your instance: Tool Description CLI Sync scripts from local files or GitHub, run scripts/flows from the command line VS Code Extension Edit and test scripts & flows directly from VS Code / Cursor with full IDE support Git Sync Two-way sync between Windmill and your Git repository Claude Code AI-assisted development with Claude for scripts, flows, and apps landingscripts-local.mp4 You can run scripts locally by passing the right environment variables for the wmill client library to fetch resources and variables from your instance. See local development docs . Stack Database : Postgres (compatible with Aurora, Cloud SQL, Neon, Azure PostgreSQL) Backend : Rust - stateless API servers and workers pulling jobs from a Postgres queue Frontend : Svelte 5 Sandboxing : nsjail and PID namespace isolation Runtimes : TypeScript/JavaScript: Bun (default) and Deno Python: python3 with uv for dependency management Go, Bash, PowerShell, PHP, Rust, C#, Java, Ansible Fastest Self-Hostable Workflow Engine We have compared Windmill to other self-hostable workflow engines (Airflow,\nPrefect & Temporal) and Windmill is the most performant solution for both\nbenchmarks: one flow composed of 40 lightweight tasks & one flow composed of 10\nlong-running tasks. All methodology & results on our Benchmarks page. Security Sandboxing : nsjail for filesystem/resource isolation, and PID namespace isolation (enabled by default) to prevent jobs from accessing worker process memory Secrets : One encryption key per workspace for credentials stored in Windmill's K/V store. We recommend encrypting the Postgres database as well. See Security documentation for details. Performance Once a job started, there is no overhead compared to running the same script on\nthe node with its corresponding runner (Deno/Go/Python/Bash). The added latency\nfrom a job being pulled from the queue, started, and then having its result sent\nback to the database is ~50ms. A typical lightweight deno job will take around\n100ms total. Architecture How to self-host For detailed setup options, see Self-Host documentation . Docker compose Deploy Windmill with 3 files ( docker-compose.yml , Caddyfile , .env ): curl https://raw.githubusercontent.com/windmill-labs/windmill/main/docker-compose.yml -o docker-compose.yml\ncurl https://raw.githubusercontent.com/windmill-labs/windmill/main/Caddyfile -o Caddyfile\ncurl https://raw.githubusercontent.com/windmill-labs/windmill/main/.env -o .env\n\ndocker compose up -d Go to http://localhost - default credentials: admin@windmill.dev / changeme Using an external database : Set DATABASE_URL in .env to point to your managed Postgres (AWS RDS, GCP Cloud SQL, Azure, Neon, etc.) and set db replicas to 0. Kubernetes (Helm charts) helm repo add windmill https://windmill-labs.github.io/windmill-helm-charts/\nhelm install windmill-chart windmill/windmill --namespace=windmill --create-namespace See windmill-helm-charts for configuration options. Cloud providers Windmill works on AWS (EKS/ECS), GCP, Azure, Ubicloud, Fly.io, Render.com, Hetzner, Digital Ocean, and others. Rule of thumb: 1 worker per 1vCPU and 1-2 GB RAM. OAuth, SSO & SMTP Configure OAuth and SSO (Google Workspace, Microsoft/Azure, Okta) directly from the superadmin UI. See documentation . License The Community Edition is free to use internally. For commercial redistribution or managed services, contact sales@windmill.dev . See LICENSE and Pricing for details. The \"Community Edition\" of Windmill available in the docker images hosted under ghcr.io/windmill-labs/windmill and the github binary releases contains the files under the AGPLv3 and Apache 2 sources but also includes proprietary and non-public code and features which are not open source and under the following terms: Windmill Labs, Inc. grants a right to use all the features of the \"Community Edition\" for free without restrictions other than the limits and quotas set in the software and a right to distribute the community edition as is but not to sell, resell, serve Windmill as a managed service, modify or wrap under any form without an explicit agreement. The binary compilable from source code in this repository without the \"enterprise\" feature flag is open-source under the LICENSE-AGPLv3 License terms and conditions. To re-expose directly any Windmill parts to your users as a feature of your product, with the exception of iframed public Windmill \"apps\", or to build a feature on top of \"Windmill Community Edition\" that you sell commercially or embed in a distributable product or binary, you must get a commercial license. Contact us at sales@windmill.dev if you have any questions. To do the same from the binary compiled from the source code in this repository without the \"enterprise\" feature flag, you must comply with the AGPLv3 license terms and conditions or get a commercial license from Windmill Labs, Inc. To use Windmill \"Community Edition\" as is internally in your organization, or to use its APIs as is, you do NOT need a commercial license.",
+      "stars_today": 16,
+      "language": "Rust"
+    }
+  ],
+  "papers": {
+    "hf": [
+      {
+        "title": "DreamX-Phi 1.0: Action-Conditioned Video World Model for Robotic Manipulation",
+        "slug": "dreamx-phi-1-0-action-conditioned-video-world-model-for",
+        "url": "https://huggingface.co/papers/2608.13489",
+        "abstract": "DreamX-Phi 1.0 is an action-conditioned video world model for robotic manipulation that uses geometric attention encoding, depth estimation, object masks with a frozen teacher, and distillation to generate faithful future observations.",
+        "upvotes": 60,
+        "arxiv_id": "2608.13489",
+        "authors": []
+      },
+      {
+        "title": "LLMRouter: Unified Infrastructure for Developing, Evaluating, and Deploying LLM Routers",
+        "slug": "llmrouter-unified-infrastructure-for-developing-evaluating",
+        "url": "https://huggingface.co/papers/2608.06867",
+        "abstract": "LLM routing is formalized as a sequential decision process with a unified benchmark and modular infrastructure to compare and improve cost-effective model selection.",
+        "upvotes": 51,
+        "arxiv_id": "2608.06867",
+        "authors": []
+      },
+      {
+        "title": "Intern-S2-Preview: Scientific Agentic Foundation Model",
+        "slug": "intern-s2-preview-scientific-agentic-foundation-model",
+        "url": "https://huggingface.co/papers/2608.13505",
+        "abstract": "Intern-S2-Preview is a scientific agentic foundation model series that integrates multimodal pre-training, multi-task reinforcement learning, and memory-augmented extensions to support long-horizon scientific reasoning and forecasting.",
+        "upvotes": 34,
+        "arxiv_id": "2608.13505",
+        "authors": []
+      },
+      {
+        "title": "DarwinX: Evolving Agent Harnesses Through Natural Selection",
+        "slug": "darwinx-evolving-agent-harnesses-through-natural-selection",
+        "url": "https://huggingface.co/papers/2608.07545",
+        "abstract": "DarwinX evolves agent harnesses via population selection with frozen models, improving verified performance across benchmarks without benchmark-specific patches.",
+        "upvotes": 31,
+        "arxiv_id": "2608.07545",
+        "authors": []
+      },
+      {
+        "title": "AutoDesign: Meta-Harness Optimization for Long-Horizon Agentic Design",
+        "slug": "autodesign-meta-harness-optimization-for-long-horizon",
+        "url": "https://huggingface.co/papers/2608.13560",
+        "abstract": "AutoDesign uses a meta-harness optimizer to recursively improve a code agent for structured media generation, achieving state-of-the-art results on paper-to-poster synthesis.",
+        "upvotes": 26,
+        "arxiv_id": "2608.13560",
+        "authors": []
+      },
+      {
+        "title": "Spatial Memory Agent: Experience-Grounded Procedure Memory for Spatial Intelligence",
+        "slug": "spatial-memory-agent-experience-grounded-procedure-memory",
+        "url": "https://huggingface.co/papers/2608.12743",
+        "abstract": "A frozen vision-language model improves spatial reasoning by self-evolving through verified experience, reflection, and reusable memory retrieval without parameter updates or external tools.",
+        "upvotes": 24,
+        "arxiv_id": "2608.12743",
+        "authors": []
+      },
+      {
+        "title": "Alaya-EVOKE: From Linear-Scaling Supervision to Endless World",
+        "slug": "alaya-evoke-from-linear-scaling-supervision-to-endless-world",
+        "url": "https://huggingface.co/papers/2608.13546",
+        "abstract": "Evoke is an interactive world model that uses external persistent memory and a redesigned long-horizon teacher to enable responsive, open-ended video generation with bounded context and low latency.",
+        "upvotes": 23,
+        "arxiv_id": "2608.13546",
+        "authors": []
+      },
+      {
+        "title": "PlayWorld: Benchmarking World Models with Agent Players over Long-Horizon Objectives",
+        "slug": "playworld-benchmarking-world-models-with-agent-players-over",
+        "url": "https://huggingface.co/papers/2608.13552",
+        "abstract": "PlayWorld benchmarks interactive video world models by using multi-modal agents to pursue long-horizon objectives, evaluating geometry consistency, interaction fidelity, and state evolution.",
+        "upvotes": 21,
+        "arxiv_id": "2608.13552",
+        "authors": []
+      },
+      {
+        "title": "Massive Activations in Hybrid Linear Attention Large Language Models: Pre-Attention Spikes and Inter-Spike Plateaus",
+        "slug": "massive-activations-in-hybrid-linear-attention-large",
+        "url": "https://huggingface.co/papers/2608.12149",
+        "abstract": "Massive activations in hybrid linear-attention LLMs exhibit pre-attention spikes and inter-spike plateaus governed by cancellation timing, with morphology recovering at full-attention limits.",
+        "upvotes": 11,
+        "arxiv_id": "2608.12149",
+        "authors": []
+      },
+      {
+        "title": "UniSwap: Streaming Audio-Visual Identity Swapping for Talking Videos",
+        "slug": "uniswap-streaming-audio-visual-identity-swapping-for-talking",
+        "url": "https://huggingface.co/papers/2608.11752",
+        "abstract": "UniSwap enables synchronized appearance and voice replacement in talking videos through a unified streaming audio-visual diffusion transformer with specialized training and inference adaptations.",
+        "upvotes": 8,
+        "arxiv_id": "2608.11752",
+        "authors": []
+      }
+    ],
+    "others": [
+      {
+        "title": "V-RAE: Rethinking Video Latent Spaces for Generation",
+        "slug": "v-rae-rethinking-video-latent-spaces-for-generation",
+        "url": "http://arxiv.org/abs/2608.13556v1",
+        "abstract": "Latent video generation relies on autoencoders to define a compact space in which generative models operate. Although video autoencoder architectures have evolved substantially, their latent spaces are still optimized primarily for pixel-level reconstruction and provide limited high-level semantic organization. A reconstruction-optimal latent space, however, need not be well suited to generative modeling. We propose V-RAE, a video representation autoencoder that builds compact generative latents on top of frozen vision foundation model representations. A lightweight temporal pooling module removes temporal redundancy while preserving semantic structure, and a video decoder reconstructs continuous motion from the compressed features. We evaluate V-RAE with four representative frozen encoders on video reconstruction, semantic probing, and class-conditional generation. V-RAE achieves 2.13 rFVD on K600, outperforming all evaluated large-scale pretrained video VAEs. Its latents retain substantially more semantic information than conventional video tokenizer latents. Under matched generation settings, our best variant achieves gFVD scores of 117.86 and 19.16 on UCF101 and K600, respectively, while converging up to 6x faster}. We further show that reconstruction quality alone is insufficient to characterize generative utility and introduce tFVD, a temporal-coherence diagnostic that correlates more reliably with downstream generation quality. Beyond video generation, V-RAE also improves future video prediction on Cityscapes over the Wan 2.2 VAE latent space under matched prediction settings. Taken together, the experiments show that frozen semantic representations can support video reconstruction, generation, and predictive modeling. The project page: https://v-rae.github.io/.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-08-13",
+        "authors": [
+          "Minghui Guo",
+          "Shengqiong Wu",
+          "Hao Fei"
+        ]
+      },
+      {
+        "title": "HumanTracker: Towards Comprehensive and Human-Aligned Motion Tracking Benchmark",
+        "slug": "humantracker-towards-comprehensive-and-human-aligned-motion",
+        "url": "http://arxiv.org/abs/2608.13555v1",
+        "abstract": "Humanoid motion tracking is central to teleoperation and whole-body imitation, yet evaluation often disagrees with what people perceive in videos. Kinematic errors average per-frame pose differences but miss the physical artifacts that matter most, particularly unstable support and incorrect contacts such as foot skating and mistimed touch-downs. Meanwhile, widely used test suites are small and lack the diversity needed to stress contact-rich, long-horizon behaviors. We introduce HumanTracker to make humanoid tracking evaluation both perceptually aligned and scalable. The HumanTracker benchmark contains approximately 153 hours of optical motion trajectories from multiple professional performers, organized into four motion families with text labels for fine-grained diagnosis. We further propose HumanScore, a preference-aligned metric trained on 12K motion pairs containing 24K motions. Across representative state-of-the-art trackers, HumanScore better predicts human preferences and reveals contact and stability failures that kinematic metrics often miss.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-08-13",
+        "authors": [
+          "Dairu Liu",
+          "Zekun Qi",
+          "Jiayu Zeng",
+          "Ruixi Yu",
+          "Yu Guan",
+          "Yintianrun Zhang",
+          "Xuchuan Chen",
+          "Sikai Liang",
+          "Zekai Li",
+          "Chenghuai Lin",
+          "Xinqiang Yu",
+          "Wenyao Zhang",
+          "He Wang",
+          "Li Yi"
+        ]
+      },
+      {
+        "title": "Defensive Boosting for Online Probabilistic Forecasting",
+        "slug": "defensive-boosting-for-online-probabilistic-forecasting",
+        "url": "http://arxiv.org/abs/2608.13554v1",
+        "abstract": "We study online probabilistic forecasting of binary outcomes chosen by an adaptive adversary. Given an online learning algorithm for a weak hypothesis class $H$, we would like to efficiently obtain two incomparable guarantees that existing online boosting techniques provide separately. Online gradient boosting competes in Brier score with the best predictor induced by the span of $H$ on every sequence, but promises nothing when the span does not contain an accurate predictor. Online weak-to-strong boosting drives classification error to zero under a weak-learning condition, but promises little when that condition fails.\n  We give a simple defensive forecasting algorithm, the Defensive Booster, that obtains both guarantees. On every adaptive sequence, its Brier score is competitive with the best prediction induced by the span of $H$ at the same rate as online gradient boosting; simultaneously, whenever the realized transcript satisfies the smooth weak-learning condition, its Brier score and randomized classification error satisfy the same rate guarantee as online classification boosting. This is achieved by operationalizing the \"dual view\" of boosting: When the algorithm's randomized classification error is persistently high, its mistake weights form a smooth reweighting on which every weak hypothesis has low edge, yielding an ex-post hard-core certificate that the weak-learning condition fails. We also develop a strongly adaptive variant, which satisfies both guarantees on every time interval. The Defensive Booster is very efficient: it accesses just one weak-class learner, whereas the prior online boosting methods we compare against maintain large weak-learner ensembles. Experiments on synthetic and real data streams demonstrate its strong predictive performance (sometimes substantially improving over all prior baselines) coupled with orders-of-magnitude faster runtime.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-08-13",
+        "authors": [
+          "Georgy Noarov",
+          "Aaron Roth"
+        ]
+      },
+      {
+        "title": "Exponential Convex Calibration Dimension for the Multi-Label Jaccard Measure",
+        "slug": "exponential-convex-calibration-dimension-for-the-multi-label",
+        "url": "http://arxiv.org/abs/2608.13549v1",
+        "abstract": "The per-instance Jaccard score, or intersection over union (IoU), is standard in multi-label classification and binary segmentation. With $s$ labels, its loss matrix has $2^s$ outcomes and reports. Under the convention $\\mathrm{Jac}(\\varnothing,\\varnothing)=1$, we prove that the Jaccard score, shifted-loss, and ordinary loss matrices are nonsingular and that the loss columns have affine dimension $2^s-1$. The proof combines a finite MinHash Gram representation with Boolean Möbius inversion. For exact calibration, we prove $2^{s-1} \\leq \\mathrm{CCdim}(L^{\\mathrm{Jac}}) \\leq 2^s-1$. The lower bound uses a factorially weighted distribution with $2^{s-1}+1$ supported outcomes and Bayes-optimal reports. Consequently, every exactly calibrated convex surrogate requires exponentially many prediction coordinates. We also give two polynomial-dimensional approximation guarantees with explicit regret transfers. A new $F_1$-to-Jaccard transfer turns an existing $(s^2+1)$-dimensional $F_1$ surrogate into a polynomial-time rule with asymptotic Jaccard regret at most $3-2\\sqrt{2}$. For any $α>0$ and $0<ρ<1$, a MinHash square-loss surrogate attains Jaccard-regret floor $α$ uniformly over arbitrary conditional label distributions. With probability at least $1-ρ$, the direct construction has dimension $O((s^2+s\\log(1/ρ))/α^2)$, while a signed variant has dimension $O((s+\\log(1/ρ))/α^2)$. Thus zero-regret calibration requires exponential dimension, whereas every fixed additive regret tolerance admits polynomial prediction dimension.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-08-13",
+        "authors": [
+          "Mingyuan Zhang"
+        ]
+      },
+      {
+        "title": "QuoteBench: How Matched Scores Can Hide Command-Path Failures",
+        "slug": "quotebench-how-matched-scores-can-hide-command-path-failures",
+        "url": "http://arxiv.org/abs/2608.13547v1",
+        "abstract": "LLM coding agents issue Bash commands through interfaces that may serialize, wrap, and reparse model output. Matched execution scores alone cannot distinguish command-generation errors from failures introduced after generation. QuoteBench measures this boundary with exact final-state validation on 56 one-shot tasks from 14 incident-derived families, crossing the generation contract with the execution transport around one deliberately unescaped added parser. Escaping at the interpolation point reproduces each replayed reply's raw-path outcome, so any recovery under a disclosed boundary must come from the model changing its generation. Across eight same-window configurations, replaying the same reply through the added parser lowers success by 55.4 to 73.2 percentage points; disclosure recovers 30.4 to 60.7 points for six configurations, and zero or slightly negative for the other two. Raw generation is nearly saturated at the frontier; boundary adaptation is what still separates models. GPT-5.6-sol's matched gap of -3.6 points hides -64.3 points of damage and +60.7 points of compensation. The deployment configuration reorders models: one reversal among 26 comparable pairs is unambiguous and four more sit on single-task margins. Evaluations of command-issuing agents should report the model configuration, generation contract, execution path, operating point, and final-state validator rather than treat a matched score as an intrinsic model property.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-08-13",
+        "authors": [
+          "Shangao Li",
+          "Yao Zhang",
+          "Volker Tresp",
+          "Yuanyuan Yang"
+        ]
+      },
+      {
+        "title": "LittleLearner: Language Models Under Pedagogically Controlled Knowledge Exposure",
+        "slug": "littlelearner-language-models-under-pedagogically-controlled",
+        "url": "http://arxiv.org/abs/2608.13545v1",
+        "abstract": "Modern language models are trained on heterogeneous web-scale text corpora. Consequently, studying knowledge and skill acquisition is difficult, as prior exposure to related content is hard to characterize. To address this challenge, we introduce LITTLECURRICULUM, a curated 88B-token pretraining corpus tailored to U.S. elementary school material, explicitly excluding concepts, facts, and vocabulary taught above Grade 5. Training a 5B-parameter LLM from scratch on LITTLECURRICULUM yields LITTLELEARNER, a model with sufficient language competence for open-ended evaluation, yet with clear knowledge and capability boundaries mapped to interpretable curriculum guidelines. We release LITTLECURRICULUM and LITTLELEARNER as a developmentally restricted sandbox to study how models acquire, represent, and use data under a well-defined training scope. We illustrate the sandbox's utility in a first suite of experiments on injecting new knowledge through post-training and in-context learning. These methods let LITTLELEARNER better utilize existing knowledge, but do not raise out-of-scope capabilities. Our findings underscore the value of this controlled environment for future investigations.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-08-13",
+        "authors": [
+          "Fanfei Li",
+          "Jana Zeller",
+          "Manuel Prada-Corral",
+          "Thaddäus Wiedemer",
+          "Prasanna Mayilvahanan",
+          "Ryan Cotterell",
+          "Wieland Brendel"
+        ]
+      },
+      {
+        "title": "SCULPT: Subtractive Composition for 3D Part Generation",
+        "slug": "sculpt-subtractive-composition-for-3d-part-generation",
+        "url": "http://arxiv.org/abs/2608.13541v1",
+        "abstract": "Part-aware 3D generation aims to create digital assets that are coherent as complete objects while exposing structural parts for editing, material assignment, animation, and reuse. Existing methods impose this structure outside the native generation loop: segmentation-based methods partition an already generated shape, while additive methods synthesize parts from predefined layouts, boxes, or tokens and then reconcile them into a whole. The former preserves the generated geometry but fixes the object before part boundaries are determined; the latter exposes part cardinality but often leaves shared boundaries vulnerable to gaps, interpenetrations, and material discontinuities. In this paper, we propose SCULPT, a framework that addresses these challenges through subtractive composition. Given a complete object represented in a structured 3D latent space, SCULPT iteratively applies a joint split predictor to generate one extracted part together with the remaining object. The predictor performs a coupled denoising process conditioned on both the image and the current 3D state, so the extracted part and updated remainder are generated together rather than reconciled after generation. The joint split predictor processes both outputs on the union of their native sparse 3D supports, allowing neighboring supports to overlap rather than imposing a disjoint voxel partition. The rollout ends when the remainder support becomes empty or reaches a fixed safety cap, allowing the number of generated parts to adapt to each object within that bound. Extensive experiments demonstrate state-of-the-art geometry on PartObjaverse while preserving strong complete-object reconstruction after part assembly. Results on four dataset images, one text-to-image-generated input, and one real-world photograph further show fine-grained textured part decomposition beyond the benchmark.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-08-13",
+        "authors": [
+          "Sikuang Li",
+          "Chen Yang",
+          "Jiemin Fang",
+          "Jiazhong Cen",
+          "Yuhe Wei",
+          "Jichen Pang",
+          "Wei Shen",
+          "Qi Tian"
+        ]
+      },
+      {
+        "title": "SAEVerbalizer: Generating Explanations for Sparse Autoencoder Features via Representation Verbalization",
+        "slug": "saeverbalizer-generating-explanations-for-sparse-autoencoder",
+        "url": "http://arxiv.org/abs/2608.13538v1",
+        "abstract": "Sparse autoencoders (SAEs) are proposed to extract numerous features from large language model (LLM) representations, yet explaining these features still relies primarily on external observation. This reliance leads to superficial explanations inferred from observed model behavior and computational inefficiency from collecting such behavioral evidence at scale. We introduce SAEVerbalizer, a framework that injects SAE decoder directions into an LLM's representations and fine-tunes the LLM's downstream layers to generate natural-language explanations of the injected features. Once trained, the resulting verbalizer explains SAE features directly from decoder directions, addressing both limitations. Our experiments show that the learned verbalization capability generalizes to unseen features, transfers across separately trained SAE dictionaries, and, with a lightweight adapter, extends to SAE features from different LLMs. Intervention experiments show that injecting multiple directions yields an explanation combining their meanings, while reversing individual directions produces corresponding meaning shifts.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-08-13",
+        "authors": [
+          "Weihan Meng",
+          "Hongzhu Guo",
+          "Yi Jing",
+          "Dewen Liu",
+          "Zijun Yao",
+          "Xiaozhi Wang",
+          "Lei Hou",
+          "Juanzi Li"
+        ]
+      },
+      {
+        "title": "DARTree: Speculative Diffusion Decoding with Autoregressive Draft Trees",
+        "slug": "dartree-speculative-diffusion-decoding-with-autoregressive",
+        "url": "http://arxiv.org/abs/2608.13524v1",
+        "abstract": "Speculative decoding losslessly accelerates autoregressive language models by verifying multiple draft tokens in parallel. Diffusion-based drafters further reduce proposal latency by predicting an entire token block in parallel, but their position-wise distributions are marginal rather than conditioned on tokens selected along each draft path. Existing recurrent correction incorporates causal information along a single draft chain, whereas diffusion-based tree construction broadens candidate coverage without carrying this correction along individual branches. We introduce DARTree, a training-free speculative decoding method that extends a pretrained AR correction head from chains to trees. DARTree first constructs a fixed-width candidate tree by expanding and scoring all nodes at each depth in a single batch, and then only applies best-first pruning to select the verification tree, decoupling AR-head inference from sequential heap operations. Across seven math, code, and chat benchmarks, DARTree achieves the highest average acceptance length and speedup in all four model--temperature configurations, accepting up to 12.97 tokens per verification round, 98.6\\% more than DFlash and 27.9\\% more than Domino in the same setting, and reaching up to 9.73$\\times$ lossless speedup over locally measured autoregressive decoding.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-08-13",
+        "authors": [
+          "Tianyi Li",
+          "Yaxin Luo",
+          "Xinyi Shang",
+          "Zhiqiang Shen"
+        ]
+      },
+      {
+        "title": "Vero: Can AI Agents Build Formally Verified Software Repositories?",
+        "slug": "vero-can-ai-agents-build-formally-verified-software",
+        "url": "http://arxiv.org/abs/2608.13522v1",
+        "abstract": "AI agents are increasingly used for programming, but do not provide any guarantee on the correctness of generated code. Verified code generation, in which an agent produces both an implementation and a machine-checked proof of its specification, offers a stronger path toward trustworthy AI-generated software. Existing benchmarks in this direction either focus on individual functions or only evaluate proof generation with provided implementations. It is still an open question whether agents can make coherent implementation and proof choices across real multi-module codebases. To bridge this gap, we introduce Vero, the first benchmark to evaluate joint implementation and proof synthesis at the repository level. Vero contains 43 multi-module instances sourced from real-world repositories spanning Python, Dafny, Verus, and Coq, and covering diverse domains from cryptographic protocols to distributed systems. Each instance consists of a multi-module Lean 4 repository with predetermined API interfaces, manually curated formal specifications, and reference implementations, supporting both proof-only and code-and-proof evaluation modes. To improve benchmark reliability, Vero also includes an audit mechanism where agents are allowed to formally prove unsatisfiability of provided specification or incorrectness of reference code, which surfaces and corrects latent code and specification errors during curation. We evaluate frontier coding-agent configurations with Lean toolchain access. The strongest agent fully solves only 27 of 43 instances and closes no specifications on the hardest repositories. Vero provides a concrete testbed for measuring progress toward repository-scale verified software synthesis, where current agents still fall short. We release the benchmark, curation pipeline, and evaluation harness at https://github.com/sunblaze-ucb/vero.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-08-13",
+        "authors": [
+          "Zhe Ye",
+          "Hantao Lou",
+          "Yuechun Sun",
+          "Peiyang Song",
+          "Zhengxu Yan",
+          "Timothe Kasriel",
+          "Qingyang Zhang",
+          "Kaiyu Yang",
+          "Soonho Kong",
+          "Jingxuan He",
+          "Dawn Song"
+        ]
+      },
+      {
+        "title": "Exponential quantum advantage for learning signals with a single qubit",
+        "slug": "exponential-quantum-advantage-for-learning-signals-with-a",
+        "url": "http://arxiv.org/abs/2608.13521v1",
+        "abstract": "Quantum technology has the potential to transform scientific discovery, but quantum advantages often require processing capabilities well beyond the reach of experimental platforms. We show that coupling a single controllable qubit to an otherwise conventional sensor can exponentially reduce the number of measurements required to learn classical signals. These rigorous quantum advantages apply to fundamental sensing tasks, including learning Fourier coefficients, extracting temporal correlations from time-varying signals, and estimating transformations of physical observables. Using a superconducting cavity--qubit architecture, we experimentally demonstrate $10^7$-fold reductions in the number of measurements required for Fourier-amplitude and time-varying signal learning. Our $\\textit{quantum feature sensing}$ algorithms further enable orders-of-magnitude improvements in simulations of weak-signal dark matter detection and wireless communication applications. These quantum advantages are derived from Quantum Phase-Space Inference (Q$Ψ$), a unifying theory of quantum-enhanced experiments that simultaneously converts a set of experimental objectives and constraints into tight lower bounds and optimal quantum-enhanced learning algorithms while producing a certificate of quantum advantage. Q$Ψ$ extends beyond the regimes captured by quantum Fisher information and provides a framework for systematically identifying rigorous quantum advantages in practical experimental tasks. Together, our results establish that near-term quantum technology can exponentially enhance our ability to learn from classical signals.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-08-13",
+        "authors": [
+          "Ishaan Kannan",
+          "Sridhar Prabhu",
+          "Saeed A. Khan",
+          "Mandar M. Sohoni",
+          "Xingrui Song",
+          "Saswata Roy",
+          "Alen Senanian",
+          "Valla Fatemi",
+          "Peter L. McMahon",
+          "Jordan Cotler"
+        ]
+      },
+      {
+        "title": "The data geometry of masking diffusion: Certified-optimal schedules via unmasking growth complexity",
+        "slug": "the-data-geometry-of-masking-diffusion-certified-optimal",
+        "url": "http://arxiv.org/abs/2608.13520v1",
+        "abstract": "We study masking diffusion for discrete sampling and introduce a path-resolved measure of data geometry called the \\emph{unmasking growth complexity} ({\\textsf{UGC}\\xspace}). Its local increments directly control Kullback--Leibler (KL) discretization error, yielding a unified analysis of Bernoulli-subset and fixed-cardinality unmasking schemes. In log-reveal-odds coordinates, this structure yields optimized single-block and multi-block schedules, and quantifies the gains from adapting computational effort to data geometry. Crucially, we show how {\\textsf{UGC}\\xspace} increments can be estimated from samples via KL increments along coupled reveal trajectories. This leads to \\emph{certified-optimal} samplers that achieve a prescribed KL error with high probability and iteration complexity within a constant factor of the corresponding oracle procedure. Collapsing the \\ugc path yields the aggregate {\\textsf{UGC}\\xspace} mass, which connects to classical multivariate dependence measures and complexity measures from previous analyses of discrete diffusion. In the fine-partition limit, the squared integral of the square-root {\\textsf{UGC}\\xspace} density determines the sharp leading-order optimal Euler discretization error. Examples exhibit substantial dimension-dependent gains over coarse schedules, including $\\widetildeΩ(\\sqrt{d})$ improvements achievable with a constant number of adaptively placed blocks.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-08-13",
+        "authors": [
+          "Martin J. Wainwright"
+        ]
+      },
+      {
+        "title": "Intervention-Aware Clinical World Model for Post-Op Outcome Forecasting in Cardiology",
+        "slug": "intervention-aware-clinical-world-model-for-post-op-outcome",
+        "url": "http://arxiv.org/abs/2608.13518v1",
+        "abstract": "Many clinical prediction models treat post-intervention outcomes as a one-step mapping from baseline measurements to a future endpoint. However, recovery after a procedure often unfolds as an irregular trajectory: clinical observations, medication changes, repeat interventions, and physiological measurements are recorded asynchronously and can change risk assessment over time. We propose an intervention-aware clinical world model that represents each patient with a structured latent state and evolves it through time-ordered post-intervention events. The model first encodes baseline imaging into a 3D spatial latent state. It then updates this state using procedural context, static covariates, elapsed time, and peri-event physiological embeddings. Follow-up imaging provides training-only supervision through a latent forecasting objective. We apply the framework to atrial fibrillation ablation. During the 90-day recovery window, irregular post-procedure records provide clinically meaningful evidence for long-term recurrence risk. In repeated internal cross-validation on DECAAF-II, our model achieves AUROC 0.756 and AUPRC 0.777 for recurrence prediction. It also achieves a scar-extent MAE of 2.971 percentage points without requiring follow-up MRI intensities at inference. The learned state supports recurrence-risk queries at different horizons and retrospective input editing of blanking-period records.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-08-13",
+        "authors": [
+          "Yunsung Chung",
+          "Yingshuo Liu",
+          "Abboud F. Hassan",
+          "Han Feng",
+          "Mary M. Maleckar",
+          "Nassir Marrouche",
+          "Jihun Hamm"
+        ]
+      },
+      {
+        "title": "DFM Mimir v1: An Open HRM Delivering Frontier Performance at 1B Parameters Using Only Permissible Post-Training Data",
+        "slug": "dfm-mimir-v1-an-open-hrm-delivering-frontier-performance-at",
+        "url": "http://arxiv.org/abs/2608.13517v1",
+        "abstract": "Current large language model development relies on massive, often non-permissible datasets, creating a high barrier for researchers committed to open-source and ethically sourced data. We introduce Mimir v1, a 1-billion-parameter language model based on the Hierarchical Reasoning Model (HRM) architecture, that is trained from scratch and delivers highly competitive performance for English and sets a new state of the art for Danish using only permissible post-training data. Trained on a mixture of 161 datasets, Mimir v1 outperforms the original HRM-Text 1B and competes with larger frontier models like Qwen 3.5 4B and Gemma 4 E2B, tested across 20 benchmarks for English, Math & Code and Danish. The model is available on the Hugging Face Hub: https://huggingface.co/danish-foundation-models/DFM-Mimir",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-08-13",
+        "authors": [
+          "Peter Schneider-Kamp",
+          "Jacob Nielsen",
+          "Gianluca Barmina",
+          "Kenneth Enevoldsen",
+          "Lukas Galke Poech"
+        ]
+      },
+      {
+        "title": "Bagging Robustly Learns VC Classes with Linear Sample Complexity",
+        "slug": "bagging-robustly-learns-vc-classes-with-linear-sample",
+        "url": "http://arxiv.org/abs/2608.13514v1",
+        "abstract": "We revisit the problem of learning predictors robust to adversarial examples at test-time. We prove that VC classes are adversarially robustly learnable with sample complexity linear in the VC dimension $d$, providing an exponential improvement over the previous upper bound of Montasser, Hanneke, and Srebro (2019). Remarkably, this result is achieved with a simple improper algorithm that combines the classic heuristic bagging (bootstrap aggregation) of Breiman (1996) with robust empirical risk minimization (RERM). Our algorithm computes RERMs on $O(d^\\star)$ independent bootstrap samples and outputs their majority vote, where $d^\\star$ denotes the dual VC dimension. We complement this result with a lower bound showing that this is unavoidable: in general, any learner in this oracle model requires $Ω(d^\\star)$ calls to an RERM oracle, even when given arbitrarily many training examples.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-08-13",
+        "authors": [
+          "Omar Montasser"
+        ]
+      },
+      {
+        "title": "Measuring Task-Agnostic Training Data Influence Across Language Model Pretraining",
+        "slug": "measuring-task-agnostic-training-data-influence-across",
+        "url": "http://arxiv.org/abs/2608.13515v1",
+        "abstract": "Measuring training data influence consistently across language model pretraining is challenging. It is difficult to select downstream tasks or validation sets representative of a model's general capabilities, and reliance on task performance at intermediate checkpoints complicates comparisons across training. We propose a measure of training data influence that does not require selecting a downstream task or validation set as the attribution target. Specifically, we define an example's influence by how much its gradient update reduces the squared distance to the final parameters of a given pretraining run, and estimate this quantity from intermediate checkpoints without retraining. Applying the method to 18 configurations from the Pythia and PolyPythia suites, we find systematic temporal changes in influential data. Early in training, literature-related data are more strongly aligned with the trajectory toward the final parameters, whereas STEM data become more strongly aligned in later stages. This qualitative crossover is broadly consistent across model configurations. Our results provide a tractable trajectory-level view of how influential data change throughout pretraining, complementing influence analyses defined with respect to specific downstream tasks or validation sets.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-08-13",
+        "authors": [
+          "Yuto Nishida",
+          "Hirokazu Kiyomaru",
+          "Yusuke Oda",
+          "Takashi Kodama",
+          "Chaoran Liu",
+          "Daisuke Kawahara",
+          "Yusuke Miyao",
+          "Max Müller-Eberstein",
+          "Masaru Isonuma"
+        ]
+      },
+      {
+        "title": "TabSOM: A tabular-to-image encoding method based on self-organizing maps",
+        "slug": "tabsom-a-tabular-to-image-encoding-method-based-on-self",
+        "url": "http://arxiv.org/abs/2608.13513v1",
+        "abstract": "Tabular-to-image methods have emerged as novel approaches to leverage the high predictive performance of convolutional neural networks and vision transformers. They convert tabular data into image representations, mapping each feature at a fixed pixel location derived from a dimensionality-reduction method (e.g., t-SNE, UMAP, PCA). However, they encode only the marginal value of each feature and discard information about feature relationships. We propose TabSOM, a tabular-to-image encoding built on the Self-Organizing Map (SOM), which provides: (i) a spatial layout in which every input feature occupies a fixed canvas position derived from its component plane via collision-free Hungarian assignment; and (ii) a graph that captures pairwise feature relationships derived from the SOM component planes. The resulting image stacks two multi-scale node channels: one encodes feature values at fixed scales, while the other encodes pairwise feature interactions as spatial connections between related features. Two SOM-derived interpretability approaches are introduced: a prototype-inspired partial dependence plot and a class--separation importance score. Benchmarked against twelve existing tabular-to-image methods across public binary-classification datasets, TabSOM ranks first or second on every dataset and achieves the lowest variance of any method evaluated. Interpretability obtained with TabSOM was validated against Random Forest, XGBoost, and SHAP, the class-separation score shows reasonable agreement with established baselines on the top-ranked features while capturing complementary structural information from input data. These results demonstrate that TabSOM provides an effective and interpretable approach for applying deep learning architectures to tabular data, bridging the performance--interpretability gap in this domain.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-08-13",
+        "authors": [
+          "David Chushig-Muzo",
+          "María Ángeles Rodríguez de Cara",
+          "Eva Milara",
+          "Francisco J. Lara-Abelenda",
+          "Luis Zhinin-Vera",
+          "Diego H. Peluffo-Ordóñez"
+        ]
+      },
+      {
+        "title": "On the Structural Limits of Machine Learning Decision Systems: An Information-Theoretic, Interaction-Based, and Stochastic-Dynamical Perspective",
+        "slug": "on-the-structural-limits-of-machine-learning-decision",
+        "url": "http://arxiv.org/abs/2608.13510v1",
+        "abstract": "Machine learning procedures are commonly evaluated in terms of predictive accuracy and computational efficiency. However, their achievable performance is fundamentally constrained by structural properties of the underlying data-generating process, which are formalized in terms of informational bounds. In this work we examine intrinsic limits of data-driven decision systems from an information-theoretic and interaction-based perspective. We analyze minimal achievable error in classification through Fano-type bounds and precision limits in parametric estimation via the Cramér-Rao inequality, emphasizing that such limits depend on the underlying model rather than on algorithmic sophistication alone. We further discuss how implicit assumptions, such as independence, ergodicity, and distributional stability, affect the validity of inferential procedures. Building on interaction-based modeling principles, we review typical frameworks such as Markov Random Fields and potential based representations for encoding dependence mechanisms. We also describe decision systems, including LLM-integrated agent architectures, as feedback-driven stochastic processes where state-dependent dynamics may induce emergent macroscopic behavior. This perspective highlights the importance of having adequate models for the data as a prerequi- site for expanding predictive capability, and situates algorithmic learning within the informational limits imposed by the models.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-08-13",
+        "authors": [
+          "Nestor R. Barraza",
+          "Gabriel Pena"
+        ]
+      },
+      {
+        "title": "Equivariant learning of a transferable three-dimensional classical density functional",
+        "slug": "equivariant-learning-of-a-transferable-three-dimensional",
+        "url": "http://arxiv.org/abs/2608.13506v1",
+        "abstract": "Liquids exhibit collective behavior that depends sensitively on thermodynamic conditions, interfaces and confinement, yet predicting each new state commonly requires a separate atomistic simulation. Classical density functional theory offers a reusable variational description, but its central excess free-energy functional is generally unknown, and learned approximations have largely remained restricted to planar or lower-dimensional settings. Here we show that this functional can be learned directly from fully three-dimensional equilibrium density fields while preserving spatial symmetry and variational consistency, without free-energy or chemical-potential labels. A single learned functional transfers across temperatures, system sizes and statistical ensembles, and recovers structure factors, the equation of state, liquid--vapor coexistence and interfacial broadening, none of which are used as training targets. Applied to complex three-dimensional geometries, it predicts the non-monotonic force associated with formation and rupture of a solvent-depleted bridge between colloids and adsorption in an interconnected gyroid pore. These results demonstrate that equilibrium density data can be converted into a transferable thermodynamic generator connecting microscopic liquid structure to response, phase behavior and collective phenomena.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-08-13",
+        "authors": [
+          "Bingqing Cheng"
+        ]
+      },
+      {
+        "title": "Sparse Orthogonal Regression Technique: A Spectral Framework for Equation Discovery, Approximation, and Integration",
+        "slug": "sparse-orthogonal-regression-technique-a-spectral-framework",
+        "url": "http://arxiv.org/abs/2608.13504v1",
+        "abstract": "We develop the Sparse Orthogonal Regression Technique (SORT), a sparse spectral framework for learning orthonormal-basis expansions from noisy and irregularly sampled data. SORT estimates expansion coefficients directly from observations using L1-regularized regression, avoiding explicit quadrature or analytic inner-product evaluation. The central application is data-driven discovery of ordinary differential equations: vector fields are represented in chosen orthogonal bases and learned as sparse coefficient expansions. This provides a complementary route to symbolic regression, grammar-based discovery, and SINDy-style sparse identification by first recovering a compact spectral representation, which can later guide searches for simpler analytic forms. Across the dynamical-system experiments, SORT matches or improves upon library-based sparse-regression baselines when the basis is well adapted to the problem, and shows more stable degradation under sparse sampling, noisy derivative estimates, and representation mismatch. Specific examples illustrate why this representation is useful: if a finite library misses the problem-specific nonlinearity, the resulting model can fail. SORT is not immune to mismatch, but it shifts the problem away from brittle selection among generic terms to basis design adapted to the problem domain. The experiments also show that dominant low-order coefficients persist as model order increases, supporting order-consistent model growth. Beyond equation discovery, the same learned expansion supports nonlinear approximation and estimation of complex, high-dimensional integrals by coefficient readout. Overall, SORT provides a reusable intermediate representation for system identification, approximation, and integration, while making basis design an explicit part of the scientific modeling problem.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-08-13",
+        "authors": [
+          "Sabin Roman",
+          "Ljupco Todorovski",
+          "Saso Dzeroski"
+        ]
+      },
+      {
+        "title": "GS$^{2}$CI: Robust Gaussian Splatting For Snapshot Compressive Imaging via Large Vision Model Priors",
+        "slug": "gs-2-ci-robust-gaussian-splatting-for-snapshot-compressive",
+        "url": "http://arxiv.org/abs/2608.13502v1",
+        "abstract": "Snapshot Compressive Imaging (SCI) offers an efficient solution for high-speed video acquisition and, under exposure-time camera--scene relative motion, multi-view scene capture by compressing temporal or spatial information into a single 2D measurement. While recent studies have explored SCI for 3D scene reconstruction, existing methods struggle with significant challenges due to information loss, limited viewpoint diversity, and the computational burden of jointly optimizing 3D representations and camera poses. In this work, we propose a novel framework that reconstructs high-quality 3D scenes from a single SCI measurement by leveraging 3D Gaussian Splatting (3DGS) and the powerful priors of large-scale vision foundation models (VFMs). Our primary reconstruction combines measurement-derived 3D VFM initialization with SCI-aware Gaussian optimization. After coarse-stage convergence, an auxiliary 2D VFM provides pseudo-view supervision at synthesized viewpoints for local appearance refinement. To further address the instability caused by ambiguous SCI supervision during 3DGS optimization, we introduce Opacity-Guided Splitting and Growth Regulation (OSGR), an SCI-specific densification strategy that augments split candidates using local opacity statistics, discourages loss-compensating opacity inflation through mean-opacity regulation, and bounds representation growth with explicit candidate-ratio and Gaussian-count constraints. Extensive experiments across multiple benchmarks demonstrate that our method achieves the strongest overall performance, combining leading reconstruction quality and robustness to viewpoint variation with competitive computational efficiency.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-08-13",
+        "authors": [
+          "Yanming Yang",
+          "Chenxi Song",
+          "Ping Wang",
+          "Xin Yuan",
+          "Chi Zhang"
+        ]
+      },
+      {
+        "title": "TraVEL: Trajectory-Guided Video Embedding Learning for Driving-Video Retrieval",
+        "slug": "travel-trajectory-guided-video-embedding-learning-for",
+        "url": "http://arxiv.org/abs/2608.13495v1",
+        "abstract": "Efficiently retrieving relevant clips from large-scale driving logs is essential for data curation, model development, and safety analysis. Structured and rule-based retrieval systems can explicitly target driving events, but typically require expert-defined rules, auxiliary data, and multi-stage perception pipelines. Multimodal embedding models offer a simpler and more efficient alternative by representing each video with a single searchable vector. However, general-purpose models often rely on shortcuts from static scene context and struggle to distinguish motion-centric events, such as turning left versus right or accelerating versus decelerating. In this work, we study how to adapt a general-purpose multimodal embedding model to driving-video retrieval. We first fine-tune Qwen3-VL-Embedding on paired clips and reasoning traces from nuReasoning using an InfoNCE objective. While this stage substantially improves overall retrieval, caption supervision alone remains insufficient for fine-grained motion understanding. We therefore introduce TraVEL (Trajectory-Guided Video Embedding Learning), a motion-aware fine-tuning framework that uses ego-trajectory similarity as a reward within Group Relative Policy Optimization. Trajectories serve only as privileged training supervision; retrieval still operates on single-vector video embeddings without ego poses, expert rules, or auxiliary perception outputs. We further construct a driving-video retrieval benchmark from nuReasoning. Experiments show that TraVEL improves motion-centric retrieval across model scales: relative to SFT, it raises longitudinal and lateral mAP by 9.8 and 4.7 points at 2B, with corresponding gains of 7.2 and 1.5 points at 8B. TraVEL thus combines physically grounded supervision with efficient embedding-based search.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-08-13",
+        "authors": [
+          "Yi-Chung Chen",
+          "Philip Jacobson",
+          "Tom Lampo",
+          "Yiren Lu",
+          "Jin Yao",
+          "David I. Inouye",
+          "Jing Gao",
+          "Danhua Guo",
+          "Burhan Yaman"
+        ]
+      },
+      {
+        "title": "AlayaWorld: Interactive Long-Horizon World Modeling - Full Technical Report (v1.1)",
+        "slug": "alayaworld-interactive-long-horizon-world-modeling-full",
+        "url": "http://arxiv.org/abs/2608.13492v1",
+        "abstract": "This report presents an improved version of AlayaWorld. While the backbone architecture, chunk-wise autoregressive generation scheme, and training data remain unchanged from the previous release, we substantially revise how conditioning signals are represented and integrated into the model. The new design is guided by a simple principle: conditioning signals should match the generated content as closely as possible in both latent representation and temporal structure. To this end, we make two major changes. First, we replace the previous depth-warping-based spatial memory with a streaming 3D point-cache renderer. Second, we redesign the conditioning pipeline so that visual conditions are encoded in the same causal-VAE latent space, with temporal statistics consistent with those of the generated video. Concretely, the new version introduces six modifications: (1) replacing static-frame image conditioning with motion-aware latent conditioning; (2) causally encoding re-rendered spatial memory as a continuous sequence; (3) aligning the temporal-memory window in pixel space; (4) adopting hard memory dropout that removes memory tokens rather than zeroing them; (5) unifying the VAE encoding and decoding protocol across training and inference; and (6) removing the camera AdaLN branch, such that viewpoint control is provided entirely through the re-rendered spatial condition.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-08-13",
+        "authors": [
+          "AlayaWorld Team",
+          "Kaipeng Zhang",
+          "Chuanhao Li",
+          "Yifan Zhan",
+          "Yongtao Ge",
+          "Yuanyang Yin",
+          "Jiaming Tan",
+          "Kang He",
+          "Liaoyuan Fan",
+          "Mingliang Zhai",
+          "Ruicong Liu",
+          "Xiaojie Xu",
+          "Xuangeng Chu",
+          "Zhen Li",
+          "Zhengyuan Lin",
+          "Zhixiang Wang",
+          "Zian Meng",
+          "Zihui Gao"
+        ]
+      },
+      {
+        "title": "Toward a Gricean Retreat: Probing LLMs for Knowledge Boundaries and Referent Specificity",
+        "slug": "toward-a-gricean-retreat-probing-llms-for-knowledge",
+        "url": "http://arxiv.org/abs/2608.13484v1",
+        "abstract": "When asked about entities outside their knowledge boundary, LLMs routinely fabricate plausible-sounding details rather than backing off to safer, more general claims. We frame this failure through a Gricean lens: a cooperative speaker who is uncertain about a referent retreats up the specificity hierarchy, trading informativeness for truthfulness. We ask whether LLMs have the ingredients to perform this retreat. Using a T-REx-based benchmark that varies entity familiarity and referent specificity, we probe models to answer two questions: (i) do their activations encode whether a referent falls inside the knowledge boundary, and (ii) do they anticipate the specificity of the referent they are about to generate? We find that the answer to both is yes, but the two signals are not reconciled in generation. Models overwhelmingly prefer specific referents even when the entity is unknown to them, and do so even when offered correct generic alternatives. The substrate for a Gricean retreat is present, but the policy that would act on it is not. We position our findings as a first step toward Gricean alignment, training or steering objectives that couple knowledge-boundary awareness to referent-specificity during generation.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-08-13",
+        "authors": [
+          "Dananjay Srinivas",
+          "Saksham Khatwani",
+          "Maria Pacheco"
+        ]
+      },
+      {
+        "title": "Synthetic Persona Pretraining: Alignment from Token Zero",
+        "slug": "synthetic-persona-pretraining-alignment-from-token-zero",
+        "url": "http://arxiv.org/abs/2608.13482v1",
+        "abstract": "As language-model-based AI is increasingly deployed in autonomous settings, aligning its goals and values with those of humans becomes critical. Today, alignment, and the assistant identity itself, are typically introduced only after pretraining, once behavioral priors are already established. This can make values a thin overlay, rather than deeply rooted, and facilitate subsequent misalignment. Pursuing a different paradigm, we introduce Synthetic Persona Pretraining (SPP), which installs the desired assistant persona from token zero in pretraining. First, we annotate pretraining documents with value-aligned first-person reflections derived from a normative value constitution. Second, we pretrain via the standard cross-entropy loss on standard pretraining documents as well as their reflections, which installs the desired persona among a multitude of other personas. Finally, we post-train on user-assistant dialogue data, which binds this desired persona to the assistant identity, a process we call persona binding. By pretraining models up to 3B parameters on 500B tokens, we show that SPP improves constitution following and jailbreak robustness, and reduces the misalignment rate in out-of-distribution moral dilemmas, while preserving capabilities. Early intervention matters: compared with alignment from token zero, introducing SPP only at the end of pretraining yields weaker constitution adherence, does not shift value priorities, and leads to less aligned choices in dilemmas. This advantage depends on persona binding and, importantly, increases with pretraining budget. Overall, our results show that shaping values early is critical for alignment and establish pretraining-time persona interventions as an effective approach to do so.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-08-13",
+        "authors": [
+          "Julian Minder",
+          "Viktor Moskvoretskii",
+          "Raghav Singhal",
+          "Difan Jiao",
+          "Andy Arditi",
+          "Shaobo Cui",
+          "Yiderigun Borjigin",
+          "Kartik Bali",
+          "Stefan Krsteski",
+          "Harsh Raj",
+          "Huu Nguyen",
+          "Jannik Brinkmann",
+          "Ashton Anderson",
+          "Roland Aydin",
+          "Robert West"
+        ]
+      },
+      {
+        "title": "MapRoute++: Surrogate-Guided Semantic Routing for Visual Concept Unlearning",
+        "slug": "maproute-surrogate-guided-semantic-routing-for-visual",
+        "url": "http://arxiv.org/abs/2608.13478v1",
+        "abstract": "We present our submission to Task 3 of the Gen$μ$ 2.0 Challenge on visual concept unlearning. Building on MapRoute, we introduce task-specific training objectives, richer concept representations, and semantic routing for concept-specific mapper selection. Our approach improves robust concept removal while preserving unrelated and semantically adjacent concepts. On the official benchmark, evaluated using the Erasing-Retention-Robustness (ERR) metric on Stable Diffusion v1.4, our method outperforms the state-of-the-art baseline by 12.1\\% on average across the five concept categories, achieving substantial gains.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-08-13",
+        "authors": [
+          "Ashok Urlana",
+          "L. D. M. S. Sai Teja",
+          "Vivek Hruday Kavuri",
+          "Ponnurangam Kumaraguru"
+        ]
+      },
+      {
+        "title": "MARC v1: An Open-Source Multi-Agent Framework for Clinical AI Reasoning and Coordination",
+        "slug": "marc-v1-an-open-source-multi-agent-framework-for-clinical-ai",
+        "url": "http://arxiv.org/abs/2608.13476v1",
+        "abstract": "We present Multi-Agent Reasoning and Coordination (MARC), an open-source framework that replaces monolithic LLM prompting with deterministic multi-agent orchestration for clinical reasoning. MARC coordinates role-specialized agents for extraction, reasoning, answer generation, and evaluation, with explicit context passing and traceable intermediate outputs, enabling stage-wise failure attribution. We additionally introduce a Decomposer module that generates task-specific agent prompts from a plain-language description, eliminating manual prompt engineering. The framework supports both API-based and local CPU-compatible deployments and is entirely configurable via YAML, without code modifications. MARC is designed to be model-agnostic, interpretable, and accessible to clinical domain experts without programming expertise. The full framework is available at https://github.com/Penn-RAIL/MARC-v1.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-08-13",
+        "authors": [
+          "Saisha Shetty",
+          "Satvik Tripathi",
+          "Austin Lin",
+          "Colin Zhao",
+          "Theodore Kim",
+          "Don Enwerem",
+          "Jacinta Arnold",
+          "Shahriar Faghani",
+          "Tessa S Cook"
+        ]
+      },
+      {
+        "title": "AaLLM: An End-to-End Analog Circuit Design Framework from Topology Generation to Sizing Using Large Language Models",
+        "slug": "aallm-an-end-to-end-analog-circuit-design-framework-from",
+        "url": "http://arxiv.org/abs/2608.13472v1",
+        "abstract": "Analog circuit design is a time-consuming, iterative process in a nonlinear and high-dimensional design space that relies heavily on expert intuition. Among recent developments, LLMs have introduced a promising approach by bringing natural language reasoning to circuit design tasks. The majority of conventional LLM-based approaches provide fragmented solutions that focus either only on sizing or topology generation. These methods require adding specific technical knowledge manually, which is inefficient and prone to hallucinations during circuit sizing. Moreover, the inherent trade-off in meeting different specs makes current approaches iterative and tedious. Another shortcoming is the inability to create innovative topologies, which may lead to sub-optimal designs due to reliance on conventional topologies. In this paper, we present AaLLM, an open-source end-to-end multi-agent LLM workflow that takes user specs as input and outputs the appropriate netlist, encompassing both topology generation and circuit sizing. AaLLM automates the creation of a relevant knowledge base from research papers and textbooks to combat tedious manual data collection. A RAG model is implemented to emulate circuit design expertise using this knowledge base. Moreover, AaLLM uses a novel tri-agent feedback system comprising a Designer that determines circuit component values, a Critic that scrutinizes these values, and an Evaluator that minimizes circuit sizing iterations by arbitrating between the other two agents. AaLLM-generated novel topologies achieve a figure of merit (FoM) comparable to that of known topologies, and up to 3x higher for certain circuits. Testing on several circuit topologies, our results show a 3x - 4.5x decrease in the number of SPICE calls at inference when compared to SOTA multi-agent LLM pipelines. The results also show a 40x decrease in wall-clock time compared to existing approaches.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-08-13",
+        "authors": [
+          "Mohammed Ayman Habib",
+          "Rylan Hart",
+          "Morteza Fayazi"
+        ]
+      },
+      {
+        "title": "Active-Trace Complexity Bounds for Moreau--Yosida Unadjusted Langevin Sampling",
+        "slug": "active-trace-complexity-bounds-for-moreau-yosida-unadjusted",
+        "url": "http://arxiv.org/abs/2608.13467v1",
+        "abstract": "We study the Moreau--Yosida unadjusted Langevin algorithm (MYULA) for the nonsmooth composite target \\[ π(dx)\\propto \\exp\\{-f(x)-g(x)\\}\\,dx, \\qquad x\\in\\mathbb R^d, \\] where \\(f\\) is \\(m\\)-strongly convex with \\(L_f\\)-Lipschitz gradient and \\(g\\) is convex and \\(G\\)-Lipschitz. Let \\(g_λ\\) be the Moreau envelope of \\(g\\), \\(π_λ\\) the corresponding smoothed target, and \\(a_λ=\\operatorname{tr}H_λ\\), where \\(H_λ\\) is the a.e./weak Hessian of \\(g_λ\\). We show that the leading MYULA discretization error is controlled by the reference active trace \\(B_{\\mathrm{ref}}\\), the average of \\(a_λ\\) along the heat substep of one MYULA update started from \\(π_λ\\), rather than by the global curvature bound \\(d/λ\\). If \\(M_λ\\) is an a.e. upper bound for \\(a_λ\\), then, up to logarithmic factors, \\[ N \\lesssim \\frac{1}{m} \\left[ L_f + \\frac{ τ_f+G^2+B_{\\mathrm{ref}} }{ \\varepsilon_{\\mathrm{alg}}^2 } + \\frac{M_λ}{\\varepsilon_{\\mathrm{alg}}} \\right], \\qquad τ_f:= \\sup_x\\operatorname{tr}\\nabla^2 f(x), \\] iterations suffice to ensure \\(\\sqrt m\\,W_2(μ_N,π_λ)\\leq\\varepsilon_{\\mathrm{alg}}\\), where \\(μ_N\\) is the law of the \\(N\\)-th iterate and \\(W_2\\) is the quadratic Wasserstein distance. We also prove the Moreau-bias bound \\[ \\sqrt m\\,W_2(π_λ,π) \\leq \\frac{G^2λ}{4}. \\] Thus, choosing \\(λ\\asymp\\varepsilon/G^2\\) gives an end-to-end guarantee for \\(π\\). The universal estimate \\(B_{\\mathrm{ref}}\\leq d/λ\\) yields \\(\\widetilde O(\\varepsilon^{-3})\\) accuracy dependence. For the structured piecewise-linear, lasso-type, group, and total-variation penalties considered here, curvature--tube estimates make \\(B_{\\mathrm{ref}}\\) independent of \\(λ\\), yielding \\(\\widetilde O(\\varepsilon^{-2})\\) for the same classical MYULA kernel.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-08-13",
+        "authors": [
+          "Yuchen Xin",
+          "Zhihua Zhang"
+        ]
+      },
+      {
+        "title": "Concept Drift Detection and Adaptive Retraining of Malware Classification Models",
+        "slug": "concept-drift-detection-and-adaptive-retraining-of-malware",
+        "url": "http://arxiv.org/abs/2608.13465v1",
+        "abstract": "Concept drift refers to changes over time in the statistical properties of data, as compared to the data that was used to train a learning model. Machine learning models for malware detection or classification are particularly susceptible to performance degradation caused by concept drift, as attackers constantly modify existing malware. In this chapter, we analyze two machine learning-based approaches to automated concept drift detection-a novel approach based on One-Class Support Vector Machines (OCSVM) and a previously-studied technique based on Minibatch K-Means (MK-Means). For comparison we also consider Maximum Mean Discrepancy (MMD), a statistical technique for detecting changes in multidimensional data. We conduct an extensive series of experiments comparing the effectiveness of four learning models, namely, Multilayer Perceptron, Random Forest, Support Vector Machines, and eXtreme Gradient Boosting. For each of these models, we consider three distinct scenarios: A static scenario where no model retraining occurs, a periodic scenario where models are constantly retrained irrespective of concept drift, and a drift-aware scenario where models are only retrained when concept drift is detected. Under the drift-aware scenario, we analyze the tradeoff between accuracy and training efficiency using Pareto Front analysis. We find that all three concept drift detection techniques achieve classification accuracy comparable to periodic retraining, while offering substantially greater efficiency in terms of the number of models that must be retrained. In addition, drift-aware retraining based on our OCSVM technique generally outperforms the MK-Means and MMD approaches. Overall, these results provide strong evidence that we can accurately detect concept drift in malware classification models.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-08-13",
+        "authors": [
+          "Christofer Washington Berruz Chungata",
+          "Martin Jurecek",
+          "Katerina Potika",
+          "William B. Andreopoulos",
+          "Mark Stamp"
+        ]
+      }
+    ]
+  }
+}
