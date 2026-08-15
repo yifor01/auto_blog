@@ -1,0 +1,614 @@
+{
+  "date": "2026-08-15",
+  "github": [
+    {
+      "title": "vercel-labs/deepsec",
+      "slug": "vercel-labs-deepsec",
+      "url": "https://github.com/vercel-labs/deepsec",
+      "abstract": "deepsec deepsec is an agent-powered vulnerability scanner that you can run in your own infrastructure, optimized to perform on-demand review of all code in existing\nlarge-scale repos. deepsec is designed to surface hard-to-find issues that have been lurking in applications for a long time. It is configured to use the best models at maximum thinking levels (tunable via --thinking-level , see models ), meaning scans can cost thousands or even tens-of-thousands of dollars for large codebases. Our customers have found the cost worth it for how quickly they were able to patch vulnerabilities that would have otherwise gone unfixed. For large codebases, work fans out across worker machines in parallel.\nIf a run is interrupted or errors out partway through, just re-run the same\ncommand — deepsec picks up where it left off, skipping files it already\nanalyzed and only investigating the rest. Get started From the root of the repository you want to scan: npx deepsec init The command guides you through everything. It asks you to pick an AI model\n(with benchmark scores and prices to compare) and how to pay for model\nusage — your own OpenAI/Anthropic API key, or Vercel AI Gateway — and then\nworks unattended: it studies your codebase, scans it, and runs the AI\nreview. The only thing it adds to your repository is a .deepsec/ folder\nwhere all of its state and findings live. If the run is interrupted for any reason — Ctrl-C, lost connection, a\nspending limit — run npx deepsec init again and it continues where it\nleft off. To cap what a run may spend or how long it may take: npx deepsec init --max-cost-usd 100 --max-duration 2h When the scan finishes, get a readable report: cd .deepsec\npnpm deepsec export --format md-dir --out ./findings For later scans, work from inside .deepsec/ : pnpm deepsec scan # fast pattern scan, free pnpm deepsec process # AI review of new candidates pnpm deepsec revalidate # optional, cuts false-positive rate pnpm deepsec export --format md-dir --out ./findings The getting started guide covers all of this in more detail, including using your own OpenAI or\nAnthropic API key and running from CI or a coding agent. Docs After initialization, agents can read the exact documentation matching the\ninstalled CLI at .deepsec/node_modules/deepsec/SKILL.md and .deepsec/node_modules/deepsec/dist/docs/ . Setup errors expose these as\nabsolute machine-readable paths. Getting started — set up and run your first scan Reviewing changes — process --diff and CI gating Supported technology — built-in coverage Generated and hand-authored matchers Configuration Plugins Models Project link and credentials Architecture Data layout FAQ Samples Contributing AI provider By default, deepsec routes model calls through Vercel AI Gateway, which\ngives access to every major model without provider-specific keys. You can\ninstead bring your own key — OpenAI, Anthropic, or a custom HTTPS\nprovider — by passing --model-auth direct with --ai-provider and --ai-api-key-env to init ; no Vercel account is needed in that mode.\nDeepsec only ever stores the name of the environment variable holding\nyour key, never the key itself. See project link and credentials for the full reference. If a process or revalidate run halts because the upstream credential\nran out of quota or credits, deepsec stops gracefully and tells you\nwhere to top up. Re-run the same command afterward and it picks up\nwhere it left off. Distributed execution (optional) Large monorepos can fan work across Vercel Sandbox microVMs: pnpm deepsec sandbox process --project-id my-app --sandboxes 10 --concurrency 4 Setup already verified the Vercel connection, so this needs no extra\nonboarding. The local working tree is tarballed and uploaded; .git is\nexcluded. Model credentials remain host-side and are injected only at the\nselected egress host. Security model of deepsec itself Treat deepsec like a coding agent with full shell access on the enviroment that it is\nrunning on. It is designed to run on trusted inputs (your source code) but you may still\nbe concerned about prompt injection due to external dependencies or vendored code. Running on a sandbox (see above) does limit the potential exposure substantially: The API keys for the coding agents are injected outside of the sandbox and hence cannot be exfiltrated For the worker sandboxes, network egress from the sandbox is limited to coding agent hosts (Egress is allowed during the bootstrap process, but this does not run the coding agent) Workflow reference Command What it does scan Find candidate sites with regex matchers (fast, no AI) process AI investigation; emits findings + recommendation process --diff PR-mode: scan + investigate only files changed in a diff triage Lightweight P0/P1/P2 classification (cheaper model) revalidate Re-check existing findings; checks git history for fixes enrich Add git committer info + (with a plugin) ownership data report Markdown + JSON summary for one project export Per-finding JSON or directory of markdown files metrics Cross-project counts: severities, vulns by type, TPs status Snapshot of the project mirror sandbox <cmd> Run any of the above on Vercel Sandbox microVMs License Apache 2.0. See LICENSE and NOTICE .",
+      "stars_today": 579,
+      "language": "TypeScript"
+    },
+    {
+      "title": "anomalyco/opencode",
+      "slug": "anomalyco-opencode",
+      "url": "https://github.com/anomalyco/opencode",
+      "abstract": "The open source AI coding agent. English | 簡體中文 | 繁體中文 | 한국어 | Deutsch | Español | Français | Italiano | Dansk | 日本語 | Polski | Русский | Bosanski | العربية | Norsk | Português (Brasil) | ไทย | Türkçe | Українська | বাংলা | Ελληνικά | Tiếng Việt Installation # YOLO curl -fsSL https://opencode.ai/install | bash # Package managers npm i -g opencode-ai@latest # or bun/pnpm/yarn scoop install opencode # Windows choco install opencode # Windows brew install anomalyco/tap/opencode # macOS and Linux (recommended, always up to date) brew install opencode # macOS and Linux (official brew formula, updated less) sudo pacman -S opencode # Arch Linux (Stable) paru -S opencode-bin # Arch Linux (Latest from AUR) mise use -g opencode # Any OS nix run nixpkgs#opencode # or github:anomalyco/opencode for latest dev branch Tip Remove versions older than 0.1.x before installing. Desktop App (BETA) OpenCode is also available as a desktop application. Download directly from the releases page or opencode.ai/download . Platform Download macOS (Apple Silicon) opencode-desktop-mac-arm64.dmg macOS (Intel) opencode-desktop-mac-x64.dmg Windows opencode-desktop-windows-x64.exe Linux .deb , .rpm , or .AppImage # macOS (Homebrew) brew install --cask opencode-desktop # Windows (Scoop) scoop bucket add extras ; scoop install extras/opencode-desktop Installation Directory The install script respects the following priority order for the installation path: $OPENCODE_INSTALL_DIR - Custom installation directory $XDG_BIN_DIR - XDG Base Directory Specification compliant path $HOME/bin - Standard user binary directory (if it exists or can be created) $HOME/.opencode/bin - Default fallback # Examples OPENCODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://opencode.ai/install | bash\nXDG_BIN_DIR= $HOME /.local/bin curl -fsSL https://opencode.ai/install | bash Agents OpenCode includes two built-in agents you can switch between with the Tab key. build - Default, full-access agent for development work plan - Read-only agent for analysis and code exploration Denies file edits by default Asks permission before running bash commands Ideal for exploring unfamiliar codebases or planning changes Also included is a general subagent for complex searches and multistep tasks.\nThis is used internally and can be invoked using @general in messages. Learn more about agents . Documentation For more info on how to configure OpenCode, head over to our docs . Contributing If you're interested in contributing to OpenCode, please read our contributing docs before submitting a pull request. Building on OpenCode If you are working on a project that's related to OpenCode and is using \"opencode\" as part of its name, for example \"opencode-dashboard\" or \"opencode-mobile\", please add a note to your README to clarify that it is not built by the OpenCode team and is not affiliated with us in any way. Join our community Discord | X.com",
+      "stars_today": 496,
+      "language": "TypeScript"
+    },
+    {
+      "title": "harry0703/MoneyPrinterTurbo",
+      "slug": "harry0703-moneyprinterturbo",
+      "url": "https://github.com/harry0703/MoneyPrinterTurbo",
+      "abstract": "MoneyPrinterTurbo 💸 一站式 AI 短影片生成工具 只需提供影片 主題 或 關鍵詞 ，即可自動生成影片指令碼、匹配素材、生成字幕和背景音樂，併合成高畫質短影片。 簡體中文 | English | 版本釋出 | 問題反饋 介面預覽 🖥️ WebUI API 特別感謝 ❤️ 感謝 Kimi 贊助本專案！ Kimi K3 是 Moonshot AI 迄今能力最強的模型，也是全球首個開源 3T 級模型，擁有原生視覺能力與 100 萬 Token 上下文，在知識工作、推理和長週期任務中展現前沿效能。在 MoneyPrinterTurbo 中，K3 能直接驅動影片創作，不僅撰寫影片文案，還會提煉素材搜尋關鍵詞、決定成片畫面；對內容理解越準確，匹配到的素材就越貼題。 MoneyPrinterTurbo 使用者專屬優惠：新使用者通過專屬連結註冊，首次成功充值可獲充值金額 10% 的 API 額度，最高贈送 ¥1000。活動截至 2026 年 9 月 30 日。前往 Kimi 開放平臺（ 中文站 ｜ Global ）體驗 API。 火山引擎 感謝位元組火山引擎贊助本專案！ 【專屬活動優惠】 19元Tokens包！享位元組自研豆包模型+滿血版開源 SOTA模型，覆蓋文本、VLM、影像生成，全模態一站配齊：Seed-2.1、Seedream-5.0、GLM-5.2、DeepSeek、Qwen等。不止程式設計，更能解決 Agent 複雜長程任務 --> 註冊即領2500萬Tokens，立即前往 CCSub 感謝 CCSub 贊助本專案！CCSub 是穩定、實惠的 AI API 中轉平臺，是 Claude Code 官方訂閱的超強平替。一個 API Key 即可呼叫 Claude Opus 4.8、Sonnet 4.6、Haiku 4.5、GPT-5、Gemini 等模型，價格約為官方直連的 1/3，全球直連無需梯子。相容 Claude Code、Codex、Cursor、Cline、Continue、Windsurf 等所有主流 AI 程式設計工具。前往 www.ccsub.net 註冊即送 $5 體驗額度。 0029 雲橋 感謝 0029.org 雲橋 贊助本專案！0029.org 雲橋是一個集成了 Claude Code、Codex 以及 Gemini 最新模型的一站式中轉平臺，為你提供穩定、高效且高性價比的 AI 中轉服務。本站提供靈活的包月套餐/按量計費計劃，國內直連，無需魔法，極速響應。支援個人和企業接入，價格最低為官方 0.12 折。 立即訪問 。 二狗 API 感謝 二狗 API 贊助本專案！接入二狗，穩如老狗。二狗 API 中轉站，全站 0.1x~0.2x 超低倍率，提供 Claude / GPT / Gemini 等多個國內外 100% 純血大模型介面。頂級 IPLC 線路 + 住宅雙 ISP 冗餘，確保全國範圍穩定低延遲訪問。歡迎各位開發者、工作室 註冊使用 。 錄咖 AI 由於該專案的 部署 和 使用 ，對於一些小白使用者來說，還是 有一定的門檻 ，在此特別感謝 錄咖（AI智慧 多媒體服務平臺） 網站基於該專案，提供的免費 AI影片生成器 服務，可以不用部署，直接線上使用，非常方便。 佐糖 感謝 佐糖 對該專案的支援和贊助，使得該專案能夠持續的更新和維護。佐糖專注於 影像處理領域 ，提供豐富的 影像處理工具 ，將複雜操作極致簡化，真正實現讓影像處理更簡單。 作者的另一個開源專案：MangoDisk ⭐ 適用於 macOS 和 Windows 的安全優先開源磁碟清理與空間分析工具 查詢大檔案和重複檔案，清理快取與應用殘留，安全釋放磁碟空間。 檢視 GitHub 開源專案 功能特性 🎯 提供 AI Agent 、 WebUI 、 API 和 CLI 四種使用方式，程式碼按控制器、服務和模型等職責分層 支援 AI 自動生成影片指令碼 ，也可以使用自定義指令碼 支援多種 高畫質影片 尺寸 豎屏 9:16， 1080x1920 橫屏 16:9， 1920x1080 支援 批次影片生成 ，可以一次生成多個影片，然後選擇一個最滿意的 支援 影片片段時長 設定，方便調節素材切換頻率 支援 多語言影片指令碼 生成 支援 Edge TTS 、 Azure Speech 、 SiliconFlow 、 Google Gemini 、 小米 MiMo 、 ElevenLabs 和 Chatterbox 語音合成，可即時試聽 支援 字幕生成 ，可調整字型、位置、顏色、大小、描邊和背景樣式 支援 背景音樂 ，可隨機選擇或使用指定音樂，並調整音量 支援使用自己的 本地素材 ，也可從 Pexels 、 Pixabay 和 Coverr 獲取可免費使用的高畫質素材 支援 Kimi / Moonshot AI 、 OpenAI 、 Google Gemini 、 DeepSeek 、 阿里雲通義千問 、 Microsoft Azure OpenAI 、 火山引擎方舟 、 xAI Grok 、 MiniMax 、 小米 MiMo 等主流模型服務，併兼容 Cloudflare AI Gateway 、 魔搭 ModelScope 、 AIHubMix 、 AIML API 、 EvoLink 、 Ollama 、 OneAPI 、 LiteLLM 、 Groq 、 Pollinations AI 等統一閘道器、聚合平臺和本地執行環境 支援一鍵 跨平臺釋出 ，生成完成後可自動上傳至 TikTok 、 Instagram 和 YouTube Shorts 作品展示 🎬 以下示例均由 MoneyPrinterTurbo 實際生成。 豎屏 9:16 城市醒來的時刻 中文 · 14 秒 清潔能源的未來 中文 · 24 秒 為什麼我們仍要探索太空 中文 · 27 秒 一粒種子的旅程 中文 · 44 秒 The Future of Everyday Robotics English · 21 sec Small Habits, Lasting Change English · 19 sec Making Space for Creative Work English · 20 sec The Science Inside Coffee English · 23 sec 橫屏 16:9 深海里的微光 中文 · 23 秒 閱讀如何塑造我們 中文 · 23 秒 一杯手衝咖啡的細節 中文 · 23 秒 春天適合出發 中文 · 14 秒 Why Ocean Conservation Matters English · 25 sec Designing More Sustainable Cities English · 27 sec What Mountains Teach Us English · 18 sec A Brief History of Human Flight English · 59 sec 配置要求 📦 建議系統：Windows 10、macOS 11.0 或更高版本，以及主流 Linux 發行版 本地部署需要 Python 3.11 或更高版本，推薦使用 Python 3.11 GPU 不是必需項，但如果你希望本地轉錄、更快的影片處理或更順暢的批次生成體驗，建議使用帶視訊記憶體的獨立顯示卡 專案 最低配置 推薦配置 理想配置 CPU 4 核 6 到 8 核 8 核及以上 RAM 4 GB 8 GB 16 GB 及以上 GPU 非必須 4 GB 視訊記憶體及以上 8 GB 視訊記憶體及以上 如果你主要依賴雲端 LLM、雲端 TTS 和線上素材源，CPU 與記憶體比 GPU 更重要 如果你啟用 faster-whisper 、批次生成或更重的本地處理鏈路，GPU 會明顯提升速度 快速開始 🚀 推薦使用方式 不想手動安裝和配置：直接使用 AI Agent 生成影片 Windows 使用者：優先使用一鍵啟動包，適合快速體驗 macOS / Linux 使用者：優先使用 uv 進行本地部署 想要隔離執行環境：優先使用 Docker 部署 使用 AI Agent 生成影片 如果你的 AI Agent 支援讀取 Skill 文件並操作本地終端，可以直接傳送下面這段話。Agent 會自動完成安裝、配置和影片生成；只有缺少必要的 API Key 時才會向你詢問，完成後會返回生成的影片檔案路徑。目前支援 macOS 和 Windows。 使用這個 Skill：https://raw.githubusercontent.com/harry0703/MoneyPrinterTurbo/main/docs/skill/SKILL.md\n幫我生成一個主題為“人工智慧如何改變普通人的日常生活”的影片。 在 Google Colab 中執行 免去本地環境配置，點選直接在 Google Colab 中快速體驗 MoneyPrinterTurbo Windows 一鍵啟動包 下載一鍵啟動包，解壓直接使用（路徑不要有 中文 、 特殊字元 、 空格 ） GitHub Releases： https://github.com/harry0703/MoneyPrinterTurbo/releases/latest 下載後，建議先 雙擊執行 update.bat 更新到 最新程式碼 ，然後雙擊 start.bat 啟動 啟動後，會自動開啟瀏覽器（如果開啟是空白，建議換成 Chrome 或者 Edge 開啟） 安裝部署 📥 前提條件 本地部署需要 Python 3.11 或更高版本 Windows 使用者建議避免使用包含中文、特殊字元或空格的專案路徑 ① 克隆程式碼 git clone https://github.com/harry0703/MoneyPrinterTurbo.git ② 配置專案（可選） 首次啟動時，專案會根據 config.example.toml 自動建立 config.toml 。大模型 Provider、素材來源和相關 API Key 可以直接在 WebUI 的基礎設定中配置。 Docker 部署 🐳 ① 啟動 Docker 如果未安裝 Docker，請先安裝 https://www.docker.com/products/docker-desktop/ Windows 使用者可以參考微軟的文件： https://learn.microsoft.com/zh-cn/windows/wsl/install https://learn.microsoft.com/zh-cn/windows/wsl/tutorials/wsl-containers cd MoneyPrinterTurbo\ndocker compose -f docker-compose.release.yml up 預設推薦使用 docker-compose.release.yml ，它會直接拉取 GitHub Container Registry 上的預構建映象： ghcr.io/harry0703/moneyprinterturbo:latest 。\n如果你需要本地重新構建映象，可以繼續使用 docker compose up 。\n首次啟動前，請將 config.example.toml 複製為 config.toml ，供容器掛載使用。 ② 訪問 WebUI 開啟瀏覽器，訪問 http://127.0.0.1:8501 ③ 訪問 API 文件 開啟瀏覽器，訪問 http://127.0.0.1:8080/docs 或者 http://127.0.0.1:8080/redoc 手動部署 📦 影片教程 完整的使用演示： https://v.douyin.com/iFhnwsKY/ 如何在 Windows 上部署： https://v.douyin.com/iFyjoW3M ① 建立虛擬環境 推薦使用 uv 管理 Python 環境和依賴。專案支援 Python 3.11 或更高版本，以下示例使用 Python 3.11。 git clone https://github.com/harry0703/MoneyPrinterTurbo.git cd MoneyPrinterTurbo\nuv python install 3.11\nuv sync --frozen 如果你暫時不使用 uv ，也可以繼續使用 venv + pip python3.11 -m venv .venv source .venv/bin/activate\npip install -r requirements.txt 說明： pyproject.toml 是主依賴定義檔案 uv.lock 是鎖檔案，建議預設執行 uv sync --frozen requirements.txt 僅保留給舊的 pip 安裝方式相容使用 ② 啟動 WebUI 🌐 注意需要到 MoneyPrinterTurbo 專案 根目錄 下執行以下命令 Windows .\\ webui.bat 在 CMD 中也可以執行 webui.bat 。 webui.bat 會優先使用專案 .venv 或一鍵包內建 Python；如果沒有找到專案 Python，但已安裝 uv ，會自動切換為 uv run streamlit 。\n如需允許區域網內其他裝置訪問 WebUI，可以先執行 set MPT_WEBUI_HOST=0.0.0.0 ，再執行 webui.bat 。 macOS 或 Linux sh webui.sh 指令碼會自動使用專案虛擬環境或 uv ，並選擇可用的本地埠。如需允許區域網內其他裝置訪問，可以執行： MPT_WEBUI_HOST=0.0.0.0 sh webui.sh 啟動後，會自動開啟瀏覽器（如果開啟是空白，建議換成 Chrome 或者 Edge 開啟） ③ 啟動 API 服務 🚀 uv run python main.py 如果你已經手動激活了虛擬環境，也可以直接執行： python main.py ④ 純命令列方式（無瀏覽器）⌨️ 如果你無法使用瀏覽器或埠轉發，可以直接在命令列生成影片。最簡單的完整影片生成命令如下： uv run python cli.py --video-subject \" 人工智慧如何改變日常生活 \" 如需檢視完整命令、參數說明和使用方法，可以執行： uv run python cli.py --help 語音合成 🗣 預設使用免費的 Edge TTS ，在 WebUI 中顯示為 Azure TTS V1 。專案同時支援 Azure TTS V2 、 SiliconFlow TTS 、 Google Gemini TTS 、 小米 MiMo TTS 、 ElevenLabs TTS 、自託管 Chatterbox TTS ，以及無配音模式。 可直接在 WebUI 中選擇 Provider 和音色，並按照介面提示填寫所需憑據。Edge TTS 不需要 API Key； Azure TTS V2 及其他雲端服務需要對應平臺的憑據。Edge TTS 音色可檢視： 音色列表 。 字幕生成 📜 當前支援兩種字幕生成方式： edge ：使用 TTS 時間戳生成字幕，速度快，不需要 GPU，預設使用該模式。 whisper ：使用本地 faster-whisper 轉寫音訊，適用於需要更準確字幕時間軸的場景。首次使用時需要下載模型。 在 config.toml 中修改 subtitle_provider 即可切換模式。Whisper 預設使用約 3 GB 的 large-v3 ；如需更小、更快的模型，可以使用約 1.6 GB 的 large-v3-turbo ： [ app ] subtitle_provider = \" whisper \" [ whisper ] model_size = \" large-v3-turbo \" 首次使用 Whisper 時，程式會自動從 Hugging Face 下載模型。如果當前網路無法自動下載，可以從 Hugging Face 手動下載 whisper-large-v3 。 下載並解壓後，將整個目錄放到 .\\MoneyPrinterTurbo\\models ，最終路徑應為 .\\MoneyPrinterTurbo\\models\\whisper-large-v3 ： MoneyPrinterTurbo\n  ├─models\n  │   └─whisper-large-v3\n  │          config.json\n  │          model.bin\n  │          preprocessor_config.json\n  │          tokenizer.json\n  │          vocabulary.json 背景音樂 🎵 用於影片的背景音樂，位於專案的 resource/songs 目錄下。 當前專案裡面放了一些預設的音樂，來自於 YouTube 影片，如有侵權，請刪除。 字幕字型 🅰 用於影片字幕的渲染，位於專案的 resource/fonts 目錄下，你也可以放進去自己的字型。 常見問題 🤔 如何釋出到 TikTok、Instagram 或 YouTube Shorts？ 註冊 Upload-Post 賬號並獲取 API Key，然後在 config.toml 的 [app] 下新增以下配置： [ app ] upload_post_enabled = true upload_post_api_key = \" your-api-key \" upload_post_username = \" your-username \" upload_post_platforms = [ \" tiktok \" , \" instagram \" , \" youtube \" ] upload_post_auto_upload = true upload_post_youtube_privacy_status = \" public \" 儲存配置並重啟專案。影片生成完成後，程式會自動釋出到已配置的平臺。YouTube 可見性可設定為 public 、 unlisted 或 private 。 RuntimeError: No ffmpeg exe could be found 通常情況下，ffmpeg 會被自動下載，並且會被自動檢測到。\n但是如果你的環境有問題，無法自動下載，可能會遇到如下錯誤： RuntimeError: No ffmpeg exe could be found.\nInstall ffmpeg on your system, or set the IMAGEIO_FFMPEG_EXE environment variable. 此時你可以從 https://www.gyan.dev/ffmpeg/builds/ 下載ffmpeg，解壓後，設定 ffmpeg_path 為你的實際安裝路徑即可。",
+      "stars_today": 470,
+      "language": "Python"
+    },
+    {
+      "title": "pacifio/atlas",
+      "slug": "pacifio-atlas",
+      "url": "https://github.com/pacifio/atlas",
+      "abstract": "Download · Discord · Docs · Contributing · Issues · Roadmap Atlas Atlas is open source source control for coding agents. Run multiple agents like Claude Code and Codex in parallel, track what each agent changes across your codebase, and query their sessions, decisions, and history from one place. Atlas gives your agents shared memory and context, so you can switch between agents without agents forgetting. Run agents in parallel. Multiple sessions across tabs, each streaming independently. Switching tabs never freezes or drops a run in flight. One memory, three agents. A decision Claude Code made shows up in Codex's next prompt. Plans, file changes, failures, and architecture notes are shared automatically, matched on-device against what you're asking about. Your notes are agent context. Markdown in .atlas/knowledge/ , plus the CLAUDE.md and AGENTS.md you already wrote, feed every agent in the project. @ anything into a prompt. Files, folders, symbols, branches, commits, notes, papers, and past sessions resolve locally before the prompt is sent. Local by default. Code, notes, and sessions stay on your machine. Sign in and create an organisation when you want to sync across a team. Join the Discord · #general chat · #dev build questions · #feature-requests ideas · #bugs report breakage Start with CONTRIBUTING.md to send a change, or open an issue for anything you hit. Table of contents Why Atlas How it works Checkpoints Features Download Build from source Contributing Roadmap Local by default Links Why Atlas Agents now write a large share of the code and keep none of the reasoning behind it. Atlas records both, and makes them queryable: what changed, by whose agent, at what point in time. Agents start from zero every session. Atlas keeps a persistent on-device memory of decisions, plans, and changes, and pushes the relevant parts into every turn. Switching agents loses the thread. The first message of a new session carries a curated fact pack and the tail of your last one, even when that session ran on a different agent. You can't review what you can't see. Every session is stored and searchable, next to a real commit graph and file-level diffs of what actually landed. Context lives in ten places. The knowledge base, CLAUDE.md , AGENTS.md , Claude Code's memory files, and Codex's history fold into one index every agent reads from. Nothing is locked in. Notes are markdown, canvases are JSON, sessions are JSONL, and the editor is a file on disk. Close Atlas and pick up in vim. The one exception is the checkpoint record — which agent session produced which commit — which is SQLite in the project's gitignored .atlas/ , because it is queried, not read. Built for agents from the ground up. The agent runtime, shared memory, and session history are the foundation the rest of the app is built on. How it works Atlas runs Claude Code and Codex as they are, and enriches what they see. Both run as external subprocesses over ACP . The Atlas agent runs in-process on Cersei , our Rust agent framework. All three go through the same send path, so everything below applies whichever one you pick. Before your message reaches the agent, Atlas assembles context around it: Injected Where it comes from When @ mentions Resolved locally in Rust before the prompt is sent. Notes, skills, papers, and past sessions are inlined; files and folders resolve to a path Every turn Shared agent memory Active plan, decisions, file changes, failures, and architecture notes, written by any agent Every turn Semantic matches Your message is embedded on-device and matched against the project's memory index Every turn Session handoff A curated fact pack plus the tail of your last session in this project, including one from a different agent First message What you already wrote Knowledge notes, CLAUDE.md , AGENTS.md , Claude Code's memory files, and Codex's history, folded into one index Continuously One path, no per-agent special-casing. Run your existing Claude Code or Codex subscription through Atlas and the session gets more context, with no change to how you work. Claude Code's memory is visible to Codex, and the reverse. Neither agent can read the other's history on its own. Folders resolve to a pointer, not a paste. @ -ing a 5000-line file sends a path the agent reads on demand, so one mention doesn't occupy the context window for the rest of the session. Embedding runs on your machine. Retrieval never leaves the device. Checkpoints Atlas records every agent session locally in .atlas/sessions.db , with secrets scrubbed before anything touches disk. When you commit — from any tool, even with Atlas closed — the commit is linked back to the session that produced it as a Checkpoint, and links survive rebases and amends. Local mode works fully offline with no account. Features Agents Capability Description Multi-agent sessions Claude Code, Codex, and Atlas's native agent, selectable per session and running in parallel across tabs. Sessions are independent of tabs, so switching never drops a run in flight Shared agent memory On-device semantic index (local embeddings, HNSW search) that every agent reads from and writes to @ mentions Local resolution of files, folders, symbols, branches, commits, notes, skills, papers, and past sessions Skills SKILL.md files scoped globally or per project, enabled per agent by symlinking into that agent's own skills directory Packs Install a GitHub repo of skills, subagents, commands, hooks, rules, and scripts, discovered through the skills.sh index Model chat Talk to a model directly in its own tab, with no agent loop around it Organisations Sign in, create an organisation, and sync across devices and teammates Agent history Capability Description Session capture Every session recorded to .atlas/sessions.db : prompts, messages, tool calls, the files each one touched, and the patches it applied Checkpoints Each session linked to the commits it produced. Commits are observed rather than intercepted, so one made from a terminal, from another editor, or while Atlas was closed still finds its session Survives history rewrites Links re-point through amend and rebase by patch-id reconciliation. When a squash makes the link genuinely ambiguous, it orphans instead of guessing Transcript import Backfills your existing Claude Code history, so the record starts before you installed Atlas Secrets scrubbed on write Redaction runs before anything is persisted, so the local store is never itself a disclosure risk Capture health One signal per workspace, OK, Degraded, or Stopped, each with a reason and the next step Mission control Dashboard for agent activity: usage over time, consumption breakdown, timelines, and a filterable log table Works with no account and no network. The workspace Capability Description Editor CodeMirror editing surface, with per-project editor state restored across restarts Git Real commit graph with lane assignment, stage/unstage/commit, branch operations, and file-level diffs Terminal Block terminal where each command carries its own output, exit code, and duration, plus a full interactive surface for vim , htop , and friends Knowledge base Plain markdown notes in .atlas/knowledge/ , versioned next to the code, with backlinks, a link graph, and export to HTML or a standalone server binary Research Search arXiv and Semantic Scholar, pull papers in, read them in-app, and @ -mention them into a prompt Browser Native WebKit webview in a tab, with real logins, cookies, and a reader mode Spaces Spatial board for notes and their connections, persisted as JSON in the project Split view Up to three resizable columns, each with its own tabs Activity log Every significant event in the project, filterable, with rows you can pin across restarts Download Grab the latest .dmg from tryatlas.cc or the releases page . macOS is the supported platform. Build from source Linux and Windows build from the same Tauri codebase but are untested.",
+      "stars_today": 311,
+      "language": "TypeScript"
+    },
+    {
+      "title": "can1357/oh-my-pi",
+      "slug": "can1357-oh-my-pi",
+      "url": "https://github.com/can1357/oh-my-pi",
+      "abstract": "A coding agent with the IDE wired in. omp.sh Fork of Pi by @mariozechner The most capable agent surface that ships. Continuously tuned by real-world use — complete out of the box, open all the way down. 60+ providers · 31 built-in tools · 14 lsp ops · 28 dap ops · ~80k lines of Rust core. Note Pull requests are temporarily open to everyone as a trial. We previously\nrequired a vouch before accepting PRs; that requirement is lifted for now\nwhile we evaluate how open contributions go. Depending on the results, the\nvouch system may return. Install macOS · Linux curl -fsSL https://omp.sh/install | sh Alpine / musl: the prebuilt musl binary links libstdc++ / libgcc dynamically, which stock Alpine does not ship. Install them first: apk add libstdc++ libgcc . Homebrew brew install can1357/tap/omp Bun (recommended) bun install -g @oh-my-pi/pi-coding-agent Nix # Run without installing nix run github:can1357/oh-my-pi # Or install into the active profile nix profile install github:can1357/oh-my-pi Flake consumers can use packages.<system>.omp , overlays.default , nixosModules.default , or homeManagerModules.default . A Home Manager configuration can install OMP and own its settings declaratively: { inputs . omp . url = \"github:can1357/oh-my-pi\" ; # In your Home Manager module: imports = [ inputs . omp . homeManagerModules . default ] ; programs . omp = { enable = true ; settings . startup . quiet = true ; } ; } Windows (PowerShell) irm https: // omp.sh / install.ps1 | iex Pinned versions (mise) mise use -g github:can1357/oh-my-pi macOS · Linux · Windows · bun ≥ 1.3.14 Shell completions omp generates its own completion scripts for bash , zsh , and fish from the live command/flag metadata, so they never drift from the actual CLI. Subcommands, flags, and enum values complete statically; model names ( --model , --smol , --slow , --plan ) resolve against the bundled model catalog and --resume against your on-disk sessions. # zsh — add to ~/.zshrc (or write the output into a file on your $fpath) eval \" $( omp completions zsh ) \" # bash — add to ~/.bashrc eval \" $( omp completions bash ) \" # fish omp completions fish > ~ /.config/fish/completions/omp.fish Every tool, benchmaxxed . Edits that land on the first attempt. Reads that summarize files instead of dumping their content. Searches that return instantly. Pick any model — omp will get it right. model metric what Grok Code Fast 1 6.7% → 68.3% Tenfold lift the moment the edit format stops eating the model alive. Gemini 3 Flash +5 pp Over str_replace — beats Google's own best attempt at the format. Grok 4 Fast −61% tokens Output collapses once the retry loop on bad diffs disappears. MiniMax 2.1× Pass rate more than doubles. Same weights, same prompt. read : summarized snippets · ideal defaults · selector hit rate grep : fastest in the west lsp : everything your IDE knows, the agent knows prompts : adjusted relentlessly for each model Read the full post ↗ The Pi you love , with batteries included . Originally built on Mario Zechner 's wonderful Pi , omp adds everything you're missing. 01 · Code execution w/ tool-calling Most harnesses give the agent a Python sandbox and call it done. Ours runs persistent Python and a Bun worker, and either kernel can call back into the agent's own tools — read, search, task — over a loopback bridge. The agent loads a CSV with tool.read from inside Python, charts it from JavaScript, and never leaves the cell. 02 · LSP wired into every write Ask for a rename and you get a rename. The call goes through workspace/willRenameFiles, so re-exports, barrel files, and aliased imports update before the file moves. Everything your IDE knows, the agent knows. Read the LSP config docs 03 · Drives a real debugger A C binary segfaults: the agent attaches lldb, steps to the bad pointer, reads the frame. A Go service hangs: it attaches dlv and walks the goroutines. A Python process is wedged: debugpy, pause, inspect, evaluate. Most agents are still sprinkling print statements. Watch the capture ↗ 04 · Time-traveling stream rules Your rules sit dormant until the model goes off-script. A regex match aborts the stream mid-token, injects the rule as a system reminder, and retries from the same point. You get course-correction without paying context tax on every turn. Injections survive compaction, so the fix sticks. Watch the capture ↗ 05 · First-class subagents Split a job across workers and get typed results back. task fans out into isolated worktrees, each worker runs its own tool surface, and the final yield is a schema-validated object the parent reads directly. No prose to parse, no merge conflicts between siblings, no orphaned edits. Watch the capture ↗ Watch the fan-out while it runs: Alt+A opens Agent Hub , where the roster shows current activity and usage for every subagent. Open one to read its live transcript, type a steering message, revive a parked worker, or kill a stuck one without aborting the parent session. 06 · A second model, watching every turn. Pair a reviewer model to the 'advisor' role and it reads every turn the main agent takes, injecting notes inline — a quiet aside, a concern, or a hard blocker. It runs on its own context and its own model, so it catches what the doer rushed past. The main agent sees the note and course-corrects, or tells you why it won't. Watch the capture ↗ 07 · Hand someone the link, they're in. /collab puts your live session on a relay and hands back a link — and a QR. A teammate joins from another terminal with omp join, or just opens it in a browser. Share read-write to pair on the same agent, or /collab view for a read-only link anyone can watch but no one can steer. Frames are sealed client-side; the relay never sees your keys. Watch the capture ↗ 08 · Read a pdf on arxiv, why not? web_search chains twenty-three ranked providers and hands whatever URLs it finds straight to read. Arxiv PDFs, GitHub pages, Stack Overflow threads come back as structured markdown with anchors intact — the same tool surface you use on local files. Cite, follow, quote, never lose where you came from. Watch the capture ↗ 09 · Unapologetically native. Even on Windows. Other agents shell out to rg, grep, find, and bash. On many machines those binaries don't exist, and on the ones where they do, every call costs a fork-exec round-trip. omp links the real implementations into the process. ripgrep, glob, find: in-process. brush is the bash — with sessions that survive across calls, and 58 command-line utilities (ls, sed, sort, xargs, even jq) ported into the builtins crate and run in-process, zero fork/exec. The same omp binary runs on macOS, Linux, and Windows — no WSL bridge. 10 · Code review with priorities and a verdict Get a clear verdict on whether the change ships, with every issue ranked P0 through P3 and scored for confidence. /review spawns dedicated reviewer subagents that sweep branches, single commits, or uncommitted work in parallel. You tackle what blocks release first; nothing important hides in a wall of prose. 11 · Hashline: edit by content hash Perfect edits, fewer tokens. The model points at anchors instead of retyping the lines it wants to change, so whitespace battles and string-not-found loops just stop happening. Edit a stale file and the anchors diverge — we reject the patch before it corrupts anything. Grok 4 Fast spends 61% fewer output tokens on the same work. 12 · GitHub is just another filesystem Other harnesses bolt on gh_issue_view, gh_pr_view, gh_search — each with its own parameters the agent has to learn and you have to debug. We skipped that. read already handles paths; PRs are paths. One interface to teach the model, one surface to keep correct. 13 · Memory the agent curates The agent remembers your codebase between sessions. It writes facts mid-run with retain, captures reusable lessons with learn, pulls them back with recall, and compresses each session into a mental model that loads on the first turn of the next one.",
+      "stars_today": 291,
+      "language": "TypeScript"
+    },
+    {
+      "title": "upscayl/upscayl",
+      "slug": "upscayl-upscayl",
+      "url": "https://github.com/upscayl/upscayl",
+      "abstract": "v2.15 is out! 🥳 Download Now ⬇️ Special thanks to our sponsors: Warp, the intelligent terminal for developers Use images as AI context in your terminal! Requestly - Free & Open-Source alternative to Postman All-in-one platform to Test, Mock and Intercept APIs. 🆙 Upscayl Free and Open Source AI Image Upscaler Upscayl lets you enlarge and enhance low-resolution images using advanced AI algorithms.\nEnlarge images without losing quality. It's almost like magic! 🎩🪄 https://upscayl.org Demo.Showcase.mp4 Contents 👨‍💻 Installation 🐧 Linux 🍎 macOS 🐌 Windows 👨‍🏫 Documentation - Tutorials and Guides ⚖️ Demo Results (Before and After) 🤫 Roadmap 🛠 Developing Upscayl 🤓 FAQ 🎁 Donate and support the project ❤ Credits 👨‍💻 Installation Important You'll need a Vulkan compatible GPU (Graphics Card) to upscale images. Many iGPUs (integrated graphics) do not work but, no harm in trying :) 🐧 Linux Upscayl should be available on the software listings of most Linux operating systems. Your distro's Store app might also support the Flatpak or Snap version. 💼 Portable Method Go to releases section or our official website . Download the upscayl-x.x.x-linux.AppImage file. Right Click AppImage -> Go to Permissions tab -> Check 'allow file to execute' and then double click the file to run Upscayl. You can also choose to install using other formats like RPM (Fedora), DEB (Debian/Ubuntu based), and ZIP (Any x86 Linux OS). 🍎 macOS (MacOS 12 and later) Link Go to releases section or our official website . Download the upscayl-x.x.x-mac.dmg file. Double click dmg, drag Upscayl icon into Applications folder. Open Finder, click 'Applications' tab in the left sidebar. Find Upscayl and right click on it. Select 'Open'. In the window that appears, press 'Open' yet again. 🍺 Homebrew brew install --cask upscayl 🐌 Windows (Windows 10 and later) Go to releases section or our official website . Download the upscayl-x.x.x-win.exe file. Double click exe file to launch. If you get a SmartScreen warning - click 'More Info' and then 'Run Anyway' OR press 'YES' on the unverified publisher dialog. Follow the installation steps. Profit! 👨‍🏫 Documentation - Tutorials and Guides Check out our Documentation here . Try out even more new models! Convert your own models Compatibility List Troubleshooting ⚖️ Results Check out Upscayl before/after comparisons here . 🤫 Roadmap You can track all the progress here: https://github.com/orgs/upscayl/projects/1 Fix bugs Make the whole world use FOSS (WIP 🚧) 🛠 Development I recommend using Volta: https://volta.sh for installing Node.js.\nDownload and install volta, then do: volta install node . 🏃 Running Note If you are not willing to install git , you can skip the first line, download the source zip and extract it to upscayl instead and carry on with the rest of the instructions. git clone https://github.com/upscayl/upscayl cd upscayl # INSTALL DEPENDENCIES npm install # RUN THE DEVELOPMENT SERVER LOCALLY # # YOUR LOGS WILL NOW APPEAR IN THE TERMINAL npm run start 🏗️ Building # INSTALL DEPENDENCIES npm install # PACKAGE THE APP npm run dist # PUBLISH THE APP, MAKE SURE TO ADD GH_TOKEN= IN SHELL # ONLY DO THIS IF YOU'RE A MAINTAINER npm run publish-app 🤓 FAQ How does Upscayl work? Upscayl uses AI models to enhance your images by guessing what the details could be. It uses Real-ESRGAN and Vulkan architecture to achieve this. Our backend is fully open-source under the AGPLv3 license. I don't see a drastic change in my upscaled image. Why is that? Upscayl can enhance low resolution images and images that are pixelated but it cannot de-blur or do focus adjustment on your image. If your image is out-of-focus or totally blurred, Upscayl is not the right tool for it. Please use images that are similar to the examples we've given here. Is there a CLI available? The CLI tool is called upscayl-ncnn . Do I need a GPU for this to work? Yes, unfortunately. NCNN Vulkan requires a Vulkan-compatible GPU. Upscayl won't work with most iGPUs or CPUs. But hey, no harm in trying ;) @Wyrdgirn has contributed a workaround for Windows and Linux in #390 ! Nobody knows how to manipulate the macOS and Haiku frameworks... I stopped the magic Batch Upscayl and my images haven't been processed, compressed, or are in the wrong scale! When a model doesn't support an action, Upscayl will finish upscayling all the images first before post-processing them. What this means is that you should simply wait for the process to finish. How can I contribute? You can report issues, fix code and add features by submitting PRs, or donate! 😊 What's the GPU ID for? It is for selecting which GPU to use. The specific procedure is detailed in the Wiki . Note that for Windows systems, if Upscayl is not set to performance mode, the system may override this setting. Where do I find more models? More models can be taken from here: https://github.com/upscayl/custom-models 🎁 Donate ❤ Credits Real-ESRGAN for their wonderful research work. Real-ESRGAN: Copyright (c) 2021, Xintao Wang @JanDeDinoMan, @xanderfrangos, @Fdawgs, @keturn for their code contributions @aaronliu0130 for providing community support :) Helaman for their HFA2k model (included as \"High Fidelity\") Foolhardy for their Remacri model . Kim2091 for their Ultrasharp and Ultramix Balanced model . @NicKoehler for their amazing logo :) Copyright © 2023 - Upscayl By Nayam Amarshe and TGS963 Made with 🖱 & ⌨",
+      "stars_today": 117,
+      "language": "TypeScript"
+    },
+    {
+      "title": "OpenHands/OpenHands",
+      "slug": "openhands-openhands",
+      "url": "https://github.com/OpenHands/OpenHands",
+      "abstract": "Agent Canvas The self-hosted developer control center for coding agents and automations. Run OpenHands, Claude Code, Codex, Gemini, or any ACP-compatible agent across local, remote, and cloud backends. Quickstart | Docs | Self-Hosting | ACP Agents | Automations | Slack OpenHands Agent Canvas turns your coding agents into a self-hosted, always-on engineering team. It's a developer control center for starting conversations and automating everyday tasks — like generating reports that publish to Slack or automatically decomposing GitHub issues into tasks. It runs locally on your machine by default, but can connect to multiple “agent backends”, e.g. running agents in Docker containers, on VMs, or within your company infrastructure. You can optionally choose to run agents on OpenHands Cloud or OpenHands Enterprise infrastructure. Agent Canvas runs the open source OpenHands agent out-of-the-box, but can use any third-party agent like Claude Code and Codex. Self-host your way Run agents locally, in Docker, on VMs, or anywhere you can run an agent server backend Switch between different backends Switch between local, remote, and cloud agents without losing focus Create automations Create automations and workflows that integrate with Slack, GitHub, Linear, and more. Run on a schedule or in response to webhook events Integrate with the tools you use Connect your automations with third-party services like Slack, GitHub, Notion, and more to automate workflows Bring your own model Use with any LLM Use with any agent Use with OpenHands, Claude Code, Codex, Gemini, or any agent with Agent-Client Protocol (ACP). If you have questions or feedback, please open a GitHub issue or join the #proj-agent-canvas channel in Slack . Quickstart You can install OpenHands to run agents on any machine: on your laptop, on a dedicated computer like a Mac Mini,\nor on a server in the cloud. The most powerful way to run OpenHands is on a server in the cloud. This allows your agents to continue running\neven when your laptop is shut, and makes it easier to trigger your agents through third-party services\nlike Slack, GitHub, and Datadog. See SELF_HOSTING.md for details, especially with respect to security hardening. Notably, you can run the backend in multiple different environments , and switch between\nthem from the same Agent Canvas frontend. E.g. you can share an Agent Server with your team for agents doing\ncode review and dependency updates, then have your personal agents running on your laptop. Option 1: Without a Sandbox Warning This runs the agent-server directly on the machine you're installing on — the agent will have full access to your filesystem! Prerequisites : Node.js 22.12.x or later, uv npm install -g @openhands/agent-canvas\nagent-canvas The agent-canvas command starts the full local stack by default. You can also split it when you want to run pieces separately: agent-canvas --frontend-only # static frontend + ingress only agent-canvas --backend-only # agent server + automation backend + ingress only Option 2: With a Docker Sandbox Prerequisites : Docker: Docker Desktop on macOS/Windows, or Docker Engine/Docker Desktop on Linux. A host directory for PROJECTS_PATH containing the project folders you want the agent to access. Create it before starting the container. macOS / Linux: export PROJECTS_PATH= \" $HOME /projects \" # directory containing your project folders mkdir -p \" $PROJECTS_PATH \" \" $HOME /.openhands \" docker run -it --rm \\\n  -p 8000:8000 \\\n  -v \" $HOME /.openhands:/home/openhands/.openhands \" \\\n  -v \" ${PROJECTS_PATH} :/projects \" \\\n  ghcr.io/openhands/agent-canvas:1.13.0 # x-release-please-version Windows (PowerShell / Windows Terminal): See README.windows.md for the equivalent commands. The agent will be able to access any project under PROJECTS_PATH . Option 3: From Source Warning This runs the agent-server directly on the machine you're installing on — the agent will have full access to your filesystem! Prerequisites : Node.js 22.12.x or later, npm , uv (for running the agent server via uvx ) git clone https://github.com/OpenHands/OpenHands.git cd OpenHands\nnpm install\nnpm run dev Access the UI at http://localhost:8000 for the npm/source launchers, or http://localhost:8000/canvas for the Docker image. You can add additional backends directly from the UI. Architecture Agent Canvas is powered by the OpenHands Agent Server , a REST API for running multiple agents on a single machine. Each Agent Server runs on a single host/port; the Agent Canvas can connect to multiple Agent Servers and easily flip between them. You can run an Agent Server anywhere: Directly on your laptop (be careful!) On a dedicated machine like a Mac Mini On a virtual machine in the cloud Inside OpenHands Cloud (our commercial offering) The Agent Server is often paired with an Automation Server , which lets you set up agents that run on a schedule or in response to events. More documentation Documentation index Architecture overview Development guide Self-hosting guide",
+      "stars_today": 112,
+      "language": "TypeScript"
+    },
+    {
+      "title": "K-Dense-AI/scientific-agent-skills",
+      "slug": "k-dense-ai-scientific-agent-skills",
+      "url": "https://github.com/K-Dense-AI/scientific-agent-skills",
+      "abstract": "Scientific Agent Skills 🔔 Claude Scientific Skills is now Scientific Agent Skills. Same skills, broader compatibility — now works with any AI agent that supports the open Agent Skills standard, not just Claude. New: K-Dense BYOK — A free, open-source AI co-scientist that runs on your desktop, powered by Scientific Agent Skills. Bring your own API keys, pick from 40+ models, and get a full research workspace with web search, file handling, 100+ scientific databases, and access to all 161 skills in this repo. Your data stays on your computer, and you can optionally scale to cloud compute via Modal for heavy workloads. Get started here. Stay up to date: Follow K-Dense on X , LinkedIn , and YouTube for new skills, release announcements, walkthroughs, research workflow demos, and examples you can use with your own AI agent. A comprehensive collection of 161 ready-to-use scientific and research skills (covering cancer genomics, individual-level 1000 Genomes queries, hosted regulatory-sequence prediction, live pathogen-variant surveillance, analytical method validation, PK/PD modelling and dose selection, full-text biomedical and regulatory literature retrieval, drug-target binding, bounded biomedical knowledge graph search, molecular dynamics, RNA velocity, geospatial science, time series forecasting, scientific ML resource discovery via Hugging Science, 78+ scientific databases, and more) for any AI agent that supports the open Agent Skills standard, created by K-Dense . The repository is also a portable Agent Plugins package ( plugin.json + skills/ ), so plugin-capable clients can load the whole collection as one plugin. Works with Cursor, Claude Code, Codex, Google Antigravity, and more . Transform your AI agent into a research assistant capable of executing complex multi-step scientific workflows across biology, chemistry, medicine, and beyond. ⭐ Help make AI for science easier to discover: If Scientific Agent Skills saves you time, teaches your agent a workflow, or helps your lab move faster, please star this repository . A star is a public signal that these open, reusable research skills are worth maintaining: it helps scientists, engineers, and open-source contributors find the project, shows which agent-skill standards are gaining real adoption, and gives us a clear reason to keep expanding the collection for the community. These skills enable your AI agent to seamlessly work with specialized scientific libraries, databases, and tools across multiple scientific domains. While the agent can use any Python package or API on its own, these explicitly defined skills provide curated documentation and examples that make it significantly stronger and more reliable for the workflows below: 🧬 Bioinformatics & Genomics - Sequence analysis, single-cell RNA-seq, gene regulatory networks, variant annotation, phylogenetic analysis 🧪 Cheminformatics & Drug Discovery - Molecular property prediction, virtual screening, ADMET analysis, molecular docking, lead optimization 🔬 Proteomics & Mass Spectrometry - LC-MS/MS processing, peptide identification, spectral matching, protein quantification 🏥 Clinical Research & Evidence Workflows - Clinical trials, pharmacogenomics, variant evidence review, pharmacokinetic/pharmacodynamic modelling and dose-regimen evaluation, aggregate decision-support evaluation, source-bound draft report structures, and formatting of clinician-authored treatment decisions 🧠 Healthcare AI & Biosignal Research - EHR and model research, physiological signal analysis, and retrospective validation—not patient-specific diagnosis, treatment, alarms, or deployment decisions 🖼️ Medical Imaging & Digital Pathology - Privacy-aware DICOM processing and research-only whole-slide image analysis, computational pathology, and radiology data workflows 🤖 Machine Learning & AI - Deep learning, reinforcement learning, time series analysis, model interpretability, Bayesian methods 🔮 Materials Science & Chemistry - Crystal structure analysis, phase diagrams, metabolic modeling, computational chemistry 🌌 Physics & Astronomy - Astronomical data analysis, coordinate transformations, cosmological calculations, symbolic mathematics, physics computations ⚙️ Engineering & Simulation - Discrete-event simulation, multi-objective optimization, metabolic engineering, systems modeling, process optimization 📊 Data Analysis & Visualization - Statistical analysis, network analysis, time series, publication-quality figures, large-scale data processing, EDA 🌍 Geospatial Science & Remote Sensing - Satellite imagery processing, GIS analysis, spatial statistics, terrain analysis, machine learning for Earth observation 🧪 Laboratory Automation - Liquid handling protocols, lab equipment control, workflow automation, LIMS integration 📚 Scientific Communication - Evidence-traceable writing, confidential authorized peer review, literature synthesis, document processing, macro-free PPTX posters, slides, schematics, and citation management 🔬 Multi-omics & Systems Biology - Multi-modal data integration, pathway analysis, network biology, systems-level insights 🧬 Protein Engineering & Design - Protein language models, structure prediction, sequence design, function annotation 🧰 Agent Platforms & Infrastructure - Build on Pi with SDK, RPC, extensions, custom providers/models, packages, TUI components, and session tooling 🎓 Research Methodology - Evidence-bounded candidate hypotheses, scientific brainstorming, critical thinking, grant writing, and qualitative low-stakes evaluation of scholarly works ⚖️ Regulatory & Standards - Draft evidence-preparation artifacts for ISO management-system and laboratory standards, plus analytical method validation, verification, and transfer under ICH/USP/CLSI frameworks—prepared for qualified review, never a certification, accreditation, or method-release decision Transform your AI coding agent into an 'AI Scientist' on your desktop! 🎬 New to Scientific Agent Skills? Watch our Getting Started with Scientific Agent Skills video for a quick walkthrough. 📦 What's Included This repository provides 162 scientific and research skills organized into the following categories: 100+ Scientific & Financial Databases - A unified database-lookup skill provides deterministic, provenance-rich access to 78 public databases (PubChem, ChEMBL, UniProt, COSMIC, ClinicalTrials.gov, FRED, USPTO, and more), plus dedicated skills for DepMap, Imaging Data Commons, PrimeKG, NCATS ARAX, U.S. Treasury Fiscal Data, Hugging Science, OneKGPd, and Genomic Intelligence. Multi-database packages like BioServices (~40 bioinformatics services), BioPython (39 NCBI sub-databases via Entrez), and gget (20+ genomics databases) add further coverage 70+ Optimized Python Package Skills - Explicitly defined, version-aware workflows for RDKit, Scanpy, PyTorch Lightning, scikit-learn, PyTDC, PathML, pydicom, NeuroKit2, PufferLib, QuTiP, GeoPandas, pymatgen, BioPython, Qiskit, Molecular Dynamics (OpenMM/MDAnalysis), and others. The agent can still use any Python package; these skills provide stronger, safer guidance for the packages listed 9 Scientific Integration Skills - Explicitly defined skills for Benchling, DNAnexus, LatchBio, OMERO, Protocols.io, Open Notebook, Ginkgo Cloud Lab, LabArchives, and Opentrons.",
+      "stars_today": 93,
+      "language": "Python"
+    },
+    {
+      "title": "jlcodes99/cockpit-tools",
+      "slug": "jlcodes99-cockpit-tools",
+      "url": "https://github.com/jlcodes99/cockpit-tools",
+      "abstract": "Cockpit Tools English · Portuguese (BR) · 簡體中文 一款 通用的 AI IDE 賬號管理工具 ，目前支援 Antigravity IDE 、 Codex 、 GitHub Copilot 、 Windsurf 、 Kiro 、 Cursor 、 Grok CLI 、 CodeBuddy 、 CodeBuddy CN 、 Qoder 、 Trae 、 TRAE SOLO 、 Trae CN 、 TRAE SOLO CN 、 Zed 和 ZCode ，並支援多賬號多例項並行執行。 本工具旨在幫助使用者高效管理多個 AI IDE 賬號，支援一鍵切換、配額監控、自動喚醒與應用多開並行執行，助您充分利用不同賬號的資源。 功能 ：一鍵切號 · 多賬號管理 · 應用多開 · 配額監控 · 喚醒任務 · 外掛聯動 · GitHub Copilot 管理 · Windsurf 管理 · Kiro 管理 · Cursor 管理 · Grok CLI 管理 · CodeBuddy 管理 · CodeBuddy CN 管理 · Qoder 管理 · Trae 套件管理 · Zed 管理 · ZCode 管理 語言 ：支援 18 種語言 🇺🇸 English · 🇨🇳 簡體中文 · 繁體中文 · 🇯🇵 日本語 · 🇩🇪 Deutsch · 🇪🇸 Español · 🇫🇷 Français · 🇮🇹 Italiano · 🇰🇷 한국어 · 🇧🇷 Português · 🇷🇺 Русский · 🇹🇷 Türkçe · 🇵🇱 Polski · 🇨🇿 Čeština · 🇸🇦 العربية · 🇻🇳 Tiếng Việt · 🇮🇩 Bahasa Indonesia 官方支援平臺 ：macOS、Windows、Linux。 贊助商 APIKEY.FUN 是一家專業的企業級 AI 中轉站，致力於為企業和個人開發者提供穩定、高效、低成本的 AI 模型 API 接入服務。平臺支援 Claude、OpenAI、Gemini 等主流熱門模型，價格低至官方原價的 7%。通過本專案 專屬連結 註冊，還可享受最高 充值永久 95 折 專屬優惠。 RoxyBrowser（Roxy瀏覽器） 是面向多賬號運營與 AI 自動化場景的指紋瀏覽器，支援獨立瀏覽器指紋環境、Cookie / 儲存隔離、Roxy 原生住宅 IP、團隊協作與 API / MCP 自動化能力，適合需要管理 AI 賬號矩陣、降低賬號關聯風險、提升長期使用穩定性的使用者。通過 Cockpit 邀請連結 註冊或購買，可享受 10% 粉絲折扣。 功能概覽 1. 儀表盤 (Dashboard) 全新的視覺化儀表盤，為您提供一站式的狀態概覽： 十六平臺支援 ：同時展示 Antigravity IDE、Codex、GitHub Copilot、Windsurf、Kiro、Cursor、Grok CLI、CodeBuddy、CodeBuddy CN、Qoder、Trae、TRAE SOLO、Trae CN、TRAE SOLO CN、Zed 與 ZCode 的賬號狀態 配額監控 ：即時檢視各模型剩餘配額、重置時間 快捷操作 ：一鍵重新整理、一鍵喚醒 視覺化進度 ：直觀的進度條展示配額消耗情況 2. Antigravity IDE 賬號管理 一鍵切號 ：一鍵切換當前使用的賬號，無需手動登入登出 多種匯入 ：支援 OAuth 授權、Refresh Token、外掛同步 喚醒任務 ：定時喚醒 AI 模型，提前觸發配額重置週期 (喚醒任務) 2.1 Antigravity IDE 應用多開 支援同一平臺多賬號多例項並行執行。比如同時開啟兩個 Antigravity IDE，分別綁定不同賬號，分別處理不同專案，互不影響。 獨立賬號 ：每個例項綁定不同賬號並獨立執行 並行專案 ：多例項同時處理不同任務/專案 參數隔離 ：支援自定義例項目錄與啟動參數 3. Codex 賬號管理 專屬支援 ：專為 Codex 最佳化的賬號管理體驗 配額展示 ：清晰展示 Hourly 和 Weekly 配額狀態 計劃識別 ：自動識別賬號 Plan 型別 (Basic, Plus, Team 等) API 服務 ：本地 Codex API 服務由內建 CLIProxyAPI sidecar 驅動，Cockpit Tools 負責賬號同步、配置投影、狀態與用量統計；Base URL、API Key 與使用者操作方式保持不變。 3.1 Codex 應用多開 Codex 同樣支援多賬號多例項並行執行。比如同時開啟兩個 Codex，分別綁定不同賬號，分別處理不同專案，互不影響。 獨立賬號 ：每個例項綁定不同賬號並獨立執行 並行專案 ：多例項同時處理不同任務/專案 參數隔離 ：支援自定義例項目錄與啟動參數 4. GitHub Copilot 賬號管理 賬號匯入 ：支援 OAuth 授權、Token/JSON 匯入 配額檢視 ：展示 Inline Suggestions / Chat messages 使用情況與重置時間 訂閱識別 ：自動識別 Free / Individual / Pro / Business / Enterprise 等計劃型別 批次管理 ：支援標籤與批次操作 4.1 GitHub Copilot 應用多開 基於 VS Code 的 Copilot 多例項管理，支援獨立配置與生命週期控制。 獨立配置 ：每個例項擁有獨立的使用者目錄 快速啟停 ：一鍵啟動/停止/強制關閉例項 視窗管理 ：支援開啟例項視窗與批次關閉 5. Windsurf 賬號管理 賬號匯入 ：支援 OAuth 授權、Token/JSON 匯入與本地匯入 配額檢視 ：展示 Plan、User Prompt credits、Add-on prompt credits 與週期資訊 批次管理 ：支援標籤與批次操作 切號注入 ：支援切號後注入並啟動 Windsurf 5.1 Windsurf 應用多開 支援 Windsurf 多例項管理，支援獨立配置與生命週期控制。 獨立配置 ：每個例項擁有獨立的使用者目錄 快速啟停 ：一鍵啟動/停止/強制關閉例項 視窗管理 ：支援開啟例項視窗與批次關閉 6. Kiro 賬號管理 賬號匯入 ：支援 OAuth 授權、Token/JSON 匯入與本地匯入 配額檢視 ：展示 Plan、User Prompt credits、Add-on prompt credits 與週期資訊 批次管理 ：支援標籤與批次操作 切號注入 ：支援切號後注入並啟動 Kiro 6.1 Kiro 應用多開 支援 Kiro 多例項管理，支援獨立配置與生命週期控制。 獨立配置 ：每個例項擁有獨立的使用者目錄 快速啟停 ：一鍵啟動/停止/強制關閉例項 視窗管理 ：支援開啟例項視窗與批次關閉 7. Cursor 賬號管理 賬號匯入 ：支援 OAuth 授權、Token/JSON 匯入與本地匯入 配額檢視 ：展示 Total Usage、Auto + Composer、API Usage、On-Demand 與週期資訊 批次管理 ：支援標籤與批次操作 切號注入 ：支援切號後注入並啟動 Cursor 7.1 Cursor 應用多開 支援 Cursor 多例項管理，支援獨立配置與生命週期控制。 獨立配置 ：每個例項擁有獨立的使用者目錄 快速啟停 ：一鍵啟動/停止/強制關閉例項 視窗管理 ：支援開啟例項視窗與批次關閉 8. Grok CLI 賬號管理 OAuth 授權 ：支援 xAI 官方 OIDC device flow，在瀏覽器完成驗證後自動儲存賬號 API Key 與第三方介面 ：支援官方 xAI API Key，也支援配置 OpenAI 相容的第三方 Base URL 與模型 ID；配置寫入賬號專屬 config.toml ，金鑰只在啟動對應 CLI 程序時通過環境變數注入 匯入與脫敏匯出 ：可從預設 ~/.grok/auth.json 或指定 JSON 匯入官方憑據；賬號頁匯出及通用賬號備份均不含 access token/refresh token，不能用於恢復登入，遷移時需單獨匯入官方 auth.json 真實切號 ：將選中賬號按 Grok CLI 官方 registry 格式寫回預設 ~/.grok/auth.json ，並保留檔案中其他 registry scope 配額與套餐 ：查詢官方 billing/user/subscriptions 介面，展示週期、用量、產品配額和套餐原始值，並記錄 Grok Code 訪問能力 Token 維護 ：支援 access token 自動重新整理、refresh token rotation 與配額預警 8.1 Grok CLI 多例項 Grok CLI 預設例項通常直接沿用官方 ~/.grok 目錄，啟動時不設定 GROK_HOME ；受管例項使用獨立目錄。API Key 賬號（含第三方介面）為避免被官方 OAuth session 搶佔憑據優先順序，也始終通過賬號專屬 GROK_HOME 啟動。 賬號綁定 ：預設例項可跟隨當前賬號，每個受管例項可綁定不同賬號 執行隔離 ：受管例項的 auth.json 、 config.toml 、工作目錄與啟動參數互相獨立 終端啟停 ：支援生成或執行終端啟動命令、停止例項與批次關閉 目錄保護 ：非預設例項目錄僅允許位於預設受管根目錄；刪除時移入回收站，歷史配置中的外部目錄只解除登記且不會被寫入或刪除 9. CodeBuddy 賬號管理 賬號匯入 ：支援 OAuth 授權、Token/JSON 匯入 配額檢視 ：支援配額查詢、週期資訊與加量包展示 批次管理 ：支援標籤與批次操作 切號注入 ：支援切號後注入並啟動 CodeBuddy 8.1 CodeBuddy 應用多開 支援 CodeBuddy 多例項管理，支援獨立配置與生命週期控制。 獨立配置 ：每個例項擁有獨立的使用者目錄 快速啟停 ：一鍵啟動/停止/強制關閉例項 視窗管理 ：支援開啟例項視窗與批次關閉 10. CodeBuddy CN 賬號管理 賬號匯入 ：支援 OAuth 授權、Token/JSON 匯入與本機客戶端匯入 配額檢視 ：展示套餐與用量狀態，並支援跳轉官方網頁檢視配額詳情 批次管理 ：支援標籤與批次操作 切號注入 ：支援切號後按客戶端本地認證儲存規則注入並啟動 CodeBuddy CN 9.1 CodeBuddy CN 應用多開 支援 CodeBuddy CN 多例項管理，支援獨立配置與生命週期控制。 獨立配置 ：每個例項擁有獨立的使用者目錄 快速啟停 ：一鍵啟動/停止/強制關閉例項 視窗管理 ：支援開啟例項視窗與批次關閉 11. Qoder 賬號管理 賬號匯入 ：支援本機匯入與 JSON 匯入 配額檢視 ：展示 Credits 使用、剩餘額度與套餐原始值 批次管理 ：支援標籤、篩選、匯出與批次刪除/重新整理 切號注入 ：支援切號後注入並啟動 Qoder 10.1 Qoder 應用多開 支援 Qoder 多例項管理，支援獨立配置與生命週期控制。 獨立配置 ：每個例項擁有獨立的使用者目錄 快速啟停 ：一鍵啟動/停止/強制關閉例項 視窗管理 ：支援開啟例項視窗與批次關閉 12. Trae 賬號管理 賬號匯入 ：支援本機匯入與 JSON 匯入 配額檢視 ：展示套餐原始值、美元消耗/總額度與重置時間 批次管理 ：支援標籤、篩選、匯出與批次刪除/重新整理 Trae 套件 ：支援 Trae、TRAE SOLO、Trae CN、TRAE SOLO CN 預設客戶端的本機匯入與切號注入，預設歸入 Trae 分組 切號注入 ：支援切號後按各客戶端真實落盤規則寫回並啟動目標客戶端 11.1 Trae 應用多開 支援原 Trae 客戶端多例項管理，支援獨立配置與生命週期控制。 獨立配置 ：每個例項擁有獨立的使用者目錄 快速啟停 ：一鍵啟動/停止/強制關閉例項 視窗管理 ：支援開啟例項視窗與批次關閉 13. Zed 賬號管理 賬號匯入 ：支援官方 OAuth 授權、JSON 匯入與本機當前登入狀態匯入 配額檢視 ：展示訂閱狀態、Edit Predictions、Token Spend、Spend Limit 與賬期結束時間 批次管理 ：支援標籤、篩選、匯出與批次刪除/重新整理 切號注入 ：支援切號後按 Zed 客戶端真實落盤規則應用賬號，並可按需重啟官方客戶端 14. ZCode 賬號管理 官方登入 ：關閉 ZCode 後，可在 Cockpit 內建授權視窗完成 Z.ai 或 BigModel OAuth；視窗直接攔截 zcode:// 官方回撥並儲存賬號 匯入匯出 ：支援讀取本機 ~/.zcode/v2/credentials.json 加密憑據、JSON 匯入匯出與賬號備份 配額檢視 ：查詢訂閱套餐與按模型拆分的額度，並保留套餐原始值 批次管理 ：支援標籤、搜尋、套餐篩選、匯出與批次刪除/重新整理 真實切號 ：按 ZCode 官方憑據格式加密並回寫預設客戶端登入資料 13.1 ZCode 應用多開 支援 ZCode 多例項管理，每個受管例項使用獨立的 Electron 使用者資料、會話資料和 ZCode 資料目錄。 賬號綁定 ：每個例項可綁定不同賬號，也可跟隨當前賬號 獨立執行 ：例項憑據和業務資料互相隔離 生命週期管理 ：支援啟動、停止、聚焦與批次關閉例項 15. 通用設定 個性化設定 ：主題切換、語言設定、自動重新整理間隔 平臺配置 ：統一管理 Grok CLI / CodeBuddy CN / Qoder / Trae 套件 / Zed / ZCode 等平臺配置與配額預警 安全性與隱私（簡明版） 下面是最關心的幾個問題，儘量用直白語言說明： 這是本地桌面工具 ：不需要單獨註冊平臺賬號，也不依賴專案自建雲端來存你的賬號列表。 資料主要儲存在本機 ： ~/.antigravity_cockpit ：Antigravity IDE 賬號、配置、WebSocket 狀態等 ~/.codex ：Codex 官方當前登入 auth.json ~/.grok ：Grok CLI 官方預設例項與當前登入 auth.json ~/.zcode/v2 ：ZCode 官方當前登入加密憑據與配額快取 系統本地應用資料目錄下 com.antigravity.cockpit-tools ：Codex / GitHub Copilot / Windsurf / Kiro / Cursor / Grok CLI / CodeBuddy / CodeBuddy CN / Qoder / Trae 套件 / Zed / ZCode 多賬號資料等；Grok CLI 的賬號詳情、受管 profile 與例項配置也儲存在此 Grok CLI 憑據不加密 ：access token/refresh token 以明文 JSON 儲存在本機，主要依賴作業系統賬號隔離與本地檔案許可權保護；Unix 系統上憑據目錄設為 0700 、憑據檔案設為 0600 。脫敏匯出不包含 token，不能作為登入備份 WebSocket 預設僅本機訪問 ：監聽 127.0.0.1 ，預設埠 19528 ，可在設定中關閉或改埠。 什麼時候會聯網 ：OAuth 登入、Token 重新整理、配額查詢、版本更新檢查等官方介面請求。 macOS 隱私許可權彈窗說明 ：在 Cockpit Tools 中啟動 Codex/agent 後，如果 agent 執行的 shell 命令訪問桌面、文稿、下載、照片等受保護目錄，macOS 可能會把許可權請求顯示為“Cockpit Tools 想要訪問……”。這是因為這些命令是 Cockpit Tools 啟動的子程序，系統會把許可權歸因到宿主應用；這不等同於 Cockpit Tools 主程式主動掃描這些目錄。是否允許取決於你是否信任當前 agent 任務和它將要執行的命令；不確定時可以選擇拒絕，或先把專案放在普通工作目錄中執行。 實用安全建議 ： 不使用外掛聯動時，可關閉 WebSocket 服務。 不要把使用者目錄直接打包分享；備份前注意脫敏 token 檔案。 在公共或共用電腦上，使用後刪除賬號並退出應用。 設定項說明（小白版） 如果你只想“能用、穩定、不折騰”，優先按“推薦值”設定即可。 通用設定 設定項 這是做什麼的（通俗） 推薦值 什麼時候改 顯示語言 改介面文字語言 你最熟悉的語言 只在看不懂時改 應用主題 改亮色/暗色外觀 跟隨系統 長時間夜間使用可改深色 視窗關閉行為 點關閉按鈕後的動作 每次詢問 想後臺常駐選“最小化到托盤” Antigravity IDE 自動重新整理配額 後臺定時更新 Antigravity IDE 配額 5~10 分鐘 賬號多、想更即時可改 2 分鐘 Codex 自動重新整理配額 後臺定時更新 Codex 配額 5~10 分鐘 同上 GitHub Copilot 自動重新整理配額 後臺定時更新 GitHub Copilot 配額 5~10 分鐘 同上 Windsurf 自動重新整理配額 後臺定時更新 Windsurf 配額 5~10 分鐘 同上 Kiro 自動重新整理配額 後臺定時更新 Kiro 配額 5~10 分鐘 同上 Cursor 自動重新整理配額 後臺定時更新 Cursor 配額 5~10 分鐘 同上 Grok CLI 自動重新整理配額 後臺定時重新整理 token 並更新配額 5~10 分鐘 同上 CodeBuddy 自動重新整理配額 後臺定時更新 CodeBuddy 配額 5~10 分鐘 同上 CodeBuddy CN 自動重新整理配額 後臺定時更新 CodeBuddy CN 配額 5~10 分鐘 同上 Qoder 自動重新整理配額 後臺定時更新 Qoder 配額 5~10 分鐘 同上 Trae 自動重新整理配額 後臺定時更新 Trae 套件賬號配額 5~10 分鐘 同上 Zed 自動重新整理配額 後臺定時更新 Zed 配額 5~10 分鐘 同上 資料目錄 存賬號與配置檔案的位置 預設即可 僅用於排查、備份 Antigravity IDE/Codex/VS Code/Windsurf/Kiro/Cursor/Grok CLI/CodeBuddy/CodeBuddy CN/Qoder/Trae/Zed/OpenCode 啟動路徑 指定應用執行檔位置 留空（自動檢測） 自動檢測失敗、或你裝在自定義路徑時 切換 Codex 時自動重啟 OpenCode 切換 Codex 後自動同步 OpenCode 賬號資訊 使用 OpenCode 就開啟；不用就關閉 頻繁切號且需要 OpenCode 同步時開啟 補充說明： 自動重新整理間隔越小，請求越頻繁；若你更關注穩定，間隔可適當拉大。 當啟用“配額重置喚醒”相關任務時，部分重新整理間隔會有最小值限制（介面會提示）。 網路服務設定 設定項 這是做什麼的（通俗） 推薦值 風險/注意點 WebSocket 服務 給本機外掛/客戶端即時通訊用 不用外掛聯動就關閉 開啟後仍是本機 127.0.0.",
+      "stars_today": 76,
+      "language": "Rust"
+    },
+    {
+      "title": "volcengine/OpenViking",
+      "slug": "volcengine-openviking",
+      "url": "https://github.com/volcengine/OpenViking",
+      "abstract": "OpenViking: The Context Database for AI Agents English / 中文 / 日本語 Website · Live Demo · GitHub · Issues · Docs 👋 Join our Community 📱 Lark Group · WeChat · Discord · X What is OpenViking OpenViking is an open-source context database for AI agents. It stores memories, resources, and skills as one virtual filesystem under the viking:// protocol, so an agent browses its own context with ls , tree , and find instead of querying a black-box vector store. Content is processed into three tiers — L0 abstract, L1 overview, L2 details — and loaded on demand. Every retrieval leaves a trajectory you can watch and debug. Full introduction: Getting started . The OpenViking Studio playground — a live demo you can open in the browser, no installation required. Why OpenViking One filesystem for all context. Memories, resources, and skills each get a viking:// URI. Agents locate and manipulate context deterministically, like a developer working with files. → Viking URI · Context types Tiered loading cuts token spend. Every entry is processed into L0 (abstract), L1 (overview), and L2 (details) on write, then loaded only as deep as the task requires. → Context layers Directory recursive retrieval. Vector search first locates the highest-scoring directory, then drills down layer by layer, so results arrive with their surrounding context intact. → Retrieval Observable retrieval. Each query preserves its directory-browsing trajectory. When a result looks wrong, you can see exactly which path produced it. → Retrieval Sessions become memory. After a session commits, OpenViking asynchronously extracts user preferences and agent experience into long-term memory. → Session How the pieces fit together: Architecture . The thinking behind the design: The Database Paradigm for Context Engineering . viking://\n├── resources/              # Resources: project docs, repos, web pages, etc.\n│   └── my_project/\n│       ├── docs/\n│       │   ├── api/\n│       │   └── tutorials/\n│       └── src/\n└── user/\n    └── {user_id}/\n        ├── memories/\n        │   └── preferences/\n        │       ├── writing_style\n        │       └── coding_habits\n        ├── resources/\n        │   └── private_project/\n        ├── skills/\n        │   ├── search_code\n        │   └── analyze_data\n        └── peers/\n            └── web-visitor-alice/ The three loading tiers: L0 (Abstract) : a one-sentence summary for quick relevance checks. L1 (Overview) : core information and usage scenarios for planning. L2 (Details) : the full original data, read only when needed. Each directory carries its own L0/L1 layers, so relevance can be judged before any full file is read: viking://resources/my_project/\n├── .abstract               # L0: ~100 tokens - quick relevance check\n├── .overview               # L1: ~2k tokens - structure and key points\n└── docs/\n    ├── .abstract\n    ├── .overview\n    └── api/\n        ├── auth.md         # L2: full content, loaded on demand\n        └── endpoints.md Proof it works OpenViking 0.3.22 has been evaluated on long-conversation user memory (LoCoMo) and multi-turn agent tasks (tau2-bench). Full results and setup details, including knowledge-base QA, are in the benchmark report ; reproduction scripts live in ./benchmark . User memory (LoCoMo) : with OpenViking, all three agent integrations land at 80–83% accuracy — up from 24–57% on their native memory — while input tokens drop by 34.3–91.0% and query latency by 58.45–66.10%. Agent experience (tau2-bench) : experience memory lifts task success by +6.87pp (retail) and +11.87pp (airline) over the same LLM without memory. Quick start 💡 Want to see it in action first? Try OpenViking Studio — a live hosted instance with a context playground, semantic search, and a multi-agent hub. No installation required. Requires Python 3.10 or higher. pip install openviking --upgrade\nopenviking-server init # interactive wizard: providers, models, ov.conf openviking-server doctor # validate setup openviking-server # start (background: nohup openviking-server > openviking.log 2>&1 &) init walks you through provider setup and writes ~/.openviking/ov.conf . It supports Volcengine, OpenAI, Codex OAuth, Kimi, GLM, and local Ollama — for Ollama it can detect and install the runtime and pull models suited to your hardware. doctor checks the config file, Python version, provider connectivity, and disk space without a running server. Manual ov.conf templates, per-provider examples, environment variables, and Windows setup: Configuration guide · Quick start docs . The install already includes the ov client CLI. With the server running: ov status\nov add-resource https://github.com/volcengine/OpenViking # --wait ov ls viking://resources/\nov tree viking://resources/volcengine -L 2 # wait some time for semantic processing if not --wait ov find \" what is openviking \" ov grep \" openviking \" --uri viking://resources/volcengine/OpenViking/docs/en Next steps: Client configuration ( ov config ), standalone CLI installs (npm / cargo), and advanced usage such as index rebuilding: CLI setup Docker and production deployment: Deployment guide Use it with your agent Integrations inject OpenViking recall into your agent's context and auto-commit session memory: Claude Code Codex OpenClaw Hermes Cursor Trae OpenCode pi Agent Plugins 1.0 MCP clients LangChain / LangGraph Setup instructions for each agent: Agent integrations overview . OpenViking Helper (Beta) OpenViking Helper is a desktop console, currently in beta for macOS and Windows x64: Visual local agent setup : detects OpenViking CLI, Claude Code, Codex, Cursor, Trae, and OpenCode, then configures supported plugin, MCP, Hook, and CLI integrations. Session trace inspection : parses Claude Code, Codex, and Trae sessions to show OpenViking recall, prompt injection, MCP calls, capture, and commit events. Local memory and skill management : views local memory / rule files and SKILL.md skills, then syncs them to OpenViking. Download: macOS Apple Silicon (arm64) macOS Intel (x64) Windows (x64) VikingBot VikingBot is an AI agent framework built on top of OpenViking: pip install \" openviking[bot] \" openviking-server --with-bot\nov chat # in another terminal The official Docker image bundles VikingBot and starts it by default alongside the server and console UI. Details: VikingBot guide . Deploy in production For production, run OpenViking as a standalone HTTP service — see Server deployment and the Deployment guide . Commercial editions The open-source edition is not crippled. OpenViking in this repo is fully open source under AGPLv3: no feature gates, no account required, no activation key. Follow Deploy in production above and run it in production yourself — and that will stay true. The two editions below answer \"who operates it and where it runs\", not \"can I use it\". ☁️ Managed SaaS Officially hosted on Volcano Engine . Nothing to set up, nothing to operate. Personal — for individual developers. Free trial for up to 50 files, and scales far beyond local hardware with VikingDB. Enterprise — multi-user context management, team collaboration and permissions, enterprise SLA and support. Existing open-source users can move over with the migration tool. → Volcano Engine product page · Documentation Global hosting for regions outside China is coming to BytePlus . 🏢 Self-Managed Runs inside your own environment . Data never leaves it. Online — deployed into your own cloud account / VPC, BYOC supported, with outbound access for updates and licensing. Offline — fully air-gapped environments with no internet access, for regulated industries. Adds distributed deployment and official support on top of the open-source edition, activated by license key. → Talk to us about self-managed deployment Just want to run the open-source edition? Go ahead — you don't need to contact anyone. Head to Quick start .",
+      "stars_today": 64,
+      "language": "Python"
+    }
+  ],
+  "papers": {
+    "hf": [],
+    "others": [
+      {
+        "title": "Flexible Physical Camouflage Generation Based on a Differential Approach",
+        "slug": "flexible-physical-camouflage-generation-based-on-a",
+        "url": "https://www.semanticscholar.org/paper/fe9cd8cbf9a7b49a79eeca4dcefa2e2b1c68da51",
+        "abstract": "Achieving physical-world attacks on object detectors often relies on adversarial camouflage, which applies textures to target surfaces. However, existing methods typically simulate environmental variations through postrendering image transformations, which do not fully account for the 3-D object’s geometry and its interaction with lighting. To address this, we propose the flexible physical-camouflage attack (FPA), a framework that integrates a differentiable 3-D renderer with comprehensive, multiparameter environmental randomization, such as lighting, material, and viewpoint, directly into the optimization loop. This ensures that the generated textures are robust to real-world variations. For texture generation, FPA leverages a denoising diffusion probabilistic model whose generative prior helps produce structurally coherent and visually realistic patterns. These are jointly optimized with a set of task-oriented loss functions, including adversarial, smoothness, nonprintability, and concealment constraints within the unified framework. Through systematic ablation and extensive physical experiments on a 1:24 scale model, we demonstrate that FPA achieves a high attack success rate (ASR) and strong transferability to black-box detectors. Crucially, our analysis reveals a controllable tradeoff between adversarial effectiveness and visual stealth, validated by perceptual metrics and human evaluation. Our findings highlight the importance of integrated physical modeling and systematic evaluation for advancing physically realizable adversarial camouflage.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 1,
+        "published_date": "2026-08-15",
+        "authors": [
+          "Yang Li",
+          "Haonan Li",
+          "Wenyi Tan",
+          "Ting Wang",
+          "Quanbiao Pan"
+        ]
+      },
+      {
+        "title": "A Comprehensive Review on Generative and Parametric Approaches in Cloud – Based CAD/CAM Platforms for 3D Printing Applications",
+        "slug": "a-comprehensive-review-on-generative-and-parametric",
+        "url": "https://www.semanticscholar.org/paper/e8141162fa09887fa57c79f717f1cbac00ae1404",
+        "abstract": ": The integration of parametric and generative design approaches into cloud-based computer-aided design (CAD) and computer-aided manufacturing (CAM) platforms is transforming contemporary product development, especially in 3D printing applications. Parametric design prioritizes constraint-driven, feature-based modelling that embodies designer intent, facilitating editable, reusable, and changeable CAD models. Advanced datasets like WHUCAD, which include attributes such as fillets, chamfers, grooves, and shells, enhance deep learning and replication of human-computer interaction for 3D form development. Prominent parametric cloud systems, like Onshape, Autodesk Fusion 360, Siemens NX, and PTC Creo+, utilize server-side kernels and APIs to provide real-time collaboration and feature mapping. In contrast, generative design utilizes artificial intelligence and algorithmic methods - such as topology optimization, implicit modelling, and large language model (LLM)-assisted script generation - to independently investigate extensive design spaces and enhance products for performance, weight, and manufacturability. Innovative pipelines like ZOO text-to-CAD and GPT-enhanced FreeCAD scripting exemplify this approach. Parametric processes thrive in customization and precise assembly control, whereas generative approaches facilitate structural optimization and innovation from exploration, especially when combined with additive manufacturing. Future hybrid design methodologies seek to integrate parametric accuracy with generative creativity; however, obstacles persist in geometric fidelity, computing requirements and manufacturability verification. This study provides a thorough examination of parametric and generative design processes for 3D printing applications, evaluating their techniques, industrial uses, benefits, problems and future potential.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-15",
+        "authors": [
+          "Tanmay Bhadale",
+          "Yash Deshpande",
+          "Jueli Patil",
+          "Ć. IvanGRGI",
+          "V. Tiwary"
+        ]
+      },
+      {
+        "title": "GZTrust: Topology-Aware Trust Management for IoT Networks Under Zero Trust Principles",
+        "slug": "gztrust-topology-aware-trust-management-for-iot-networks",
+        "url": "https://www.semanticscholar.org/paper/d8fdc17ec462b24a8a179772bf8c0e19d588af69",
+        "abstract": "Due to the large-scale, dynamic topology and multihop communication characteristics of Internet of Things (IoT) systems, trust management has become a critical requirement for secure and reliable network operation. However, existing trust management schemes generally rely on endpoint-centric observations or centralized evidence aggregation, making them poorly suited to realistic IoT deployments with partial observability. In particular, performance degradations caused by compromised intermediate nodes or unstable links are often misattributed to benign devices, leading to distorted trust evaluation and inefficient trust-based control. To address these challenges, this study proposes a topology-aware trust management framework (GZTrust) for multihop IoT networks designed in accordance with zero trust principles. The GZTrust framework introduces a structured separation among trust evidence generation, trust reasoning, and trust-driven control. In the data plane, a TrustTrace mechanism is employed to incrementally collect hop-level trust evidence along forwarding paths with verifiable integrity and privacy-preserving pseudonyms. In the trust plane, dynamically selected policy enforcement points (PEPs) aggregate localized evidence in a topology-aware manner to avoid flat centralized processing. To accurately evaluate trust, this study designs an attribution-aware trust computation model that decomposes hop-level anomalies into node-centric and link-centric responsibility components. Extensive simulation results demonstrate that GZTrust consistently outperforms state-of-the-art trust management schemes, improving the F1-score by approximately 6%–13% across varying malicious node ratios (5%–50%). These results indicate that GZTrust provides a practical and scalable trust management framework for dynamic multihop IoT environments, with a lightweight overhead profile that is well aligned with resource-constrained deployment settings.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-15",
+        "authors": [
+          "Xingwu Wang",
+          "Dongqi Han",
+          "Jie Yuan",
+          "Xinghai Wei",
+          "Keji Miao"
+        ]
+      },
+      {
+        "title": "A Method Based on Large Language Model and Interpretable Convolutional Attention-Gated Network for Internet of Things Wind Power Prediction",
+        "slug": "a-method-based-on-large-language-model-and-interpretable",
+        "url": "https://www.semanticscholar.org/paper/c7cc5dcf5e0aec759f4234fe8d864d4aa0cf4301",
+        "abstract": "Accurate wind power forecasting can significantly reduce grid dispatch costs and improve system performance. Consequently, this study proposes a bimodal-driven method based on large language model and interpretable convolutional attention-gated (BD-LLICAG) network for wind power forecast. The BD-LLICAG method utilizes the dataset collected from microsensors in the Internet of Things for training and is compared with 53 classic algorithms. The BD-LLCAG has 53.38% and 32.62% less than the average absolute error metrics of a single ICAG network and DeepSeek large language model, respectively, and has 26.75% less average absolute error metrics than the state-of-the-art inception-embedded attention memory fully connected network. Moreover, through comparative analysis of ablation experiment results and the Wilcoxon signed-rank test for BD-LLICAG, the dual-model-driven wind power forecasting model—combining DeepSeek with ICAG achieved optimal prediction performance is demonstrated. Compared to the single ICAG network and DeepSeek model, the mean absolute error (MAE) metrics are reduced by 53.38% and 32.62%, respectively. Finally, the combined application of Shapley values and neural basis expansion analysis for interpretable time series (N-BEATS) in tandem is successfully applied to visualize and analyze the extent to which the input wind power feature variables influence the prediction results of the wind power predicted by BD-LLICAG.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-15",
+        "authors": [
+          "Linfei Yin",
+          "Yufeng Liu"
+        ]
+      },
+      {
+        "title": "DDNet: A Dual-Optimized Diffusion Framework for Camouflaged Object Detection in IoT-Enabled Visual Surveillance",
+        "slug": "ddnet-a-dual-optimized-diffusion-framework-for-camouflaged",
+        "url": "https://www.semanticscholar.org/paper/bb0755b2582dbd97ce20082705d0b9410466dcae",
+        "abstract": "Camouflaged object detection (COD) in the Internet-of-Things visual sensing scenarios remains challenging due to the extreme feature homogeneity between targets and backgrounds. Conventional semantic segmentation approaches suffer from overconfident predictions and information redundancy, leading to degraded boundary delineation under complex camouflage conditions. We propose DDNet, a dual-optimization framework that synergistically integrates discriminative feature extraction with conditional diffusion-based mask generation. The framework comprises two complementary modules: a global feature extraction module (GFEM) that employs multiscale convolutions with channel attention gating to suppress spatial redundancy while preserving semantic context, and a local feature extraction module (LFEM) that leverages bidirectional adaptive pooling and hierarchical dilated convolutions to enhance fine-grained boundary representations. These features condition a denoising diffusion probabilistic model (DDPM), which performs iterative noise injection and progressive refinement to generate high-fidelity segmentation masks through latent space optimization. A signal-to-noise ratio (SNR)-informed schedule is adopted to mitigate mask structure degradation during the diffusion process. Extensive experiments on three benchmark datasets (CAMO, COD10K, and NC4K) demonstrate that DDNet achieves state-of-the-art performance, outperforming 16 existing methods across four evaluation metrics. Furthermore, cross domain evaluations on polyp segmentation confirm the generalization capability of the proposed framework, underscoring its potential for diverse IoT-enabled perception tasks.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-15",
+        "authors": [
+          "Hongliang Zhang",
+          "Chengxuan Ding",
+          "Sanxin Jiang"
+        ]
+      },
+      {
+        "title": "MCPST: A Multiphase Consensus and Spatio–Temporal Learning for Few-Shot Traffic Forecasting via Physical Dynamics",
+        "slug": "mcpst-a-multiphase-consensus-and-spatio-temporal-learning",
+        "url": "https://www.semanticscholar.org/paper/b1ffeb9b635e07b7da7d31d6cb5d5c04493ebcd3",
+        "abstract": "Accurate traffic flow prediction remains a fundamental challenge in intelligent transportation systems, particularly in cross-domain, data-scarce scenarios where limited historical data hinders model training and generalization. The complex spatio–temporal dependencies and nonlinear dynamics of urban mobility networks further complicate few-shot learning across different cities. This article proposes MCPST, a novel multiphase consensus spatio–temporal framework for few-shot traffic forecasting that reconceptualises traffic prediction as a multiphase consensus learning problem. Our framework introduces three core innovations: 1) a multiphase engine that models traffic dynamics through diffusion, synchronization, and spectral embeddings for comprehensive dynamics; 2) characterization, an adaptive consensus mechanism that dynamically fuses phase-specific predictions while enforcing consistency; and 3) a structured meta-learning strategy for rapid adaptation to new cities with minimal data. We establish extensive theoretical guarantees, including representation theorems with bounded approximation errors and generalization bounds for few-shot adaptation. Through experiments on four real-world datasets, MCPST achieves competitive performance against 21 state-of-the-art (SOTA) methods in spatio–temporal graph learning, dynamic graph transfer learning, prompt-based spatio–temporal prediction, and cross-domain few-shot settings. Our framework delivers strong average prediction accuracy while requiring up to 90% less training data, and performs on par with the leading baselines in statistically significant comparisons. The implementation code is available at https://github.com/afofanah/MCPST",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-15",
+        "authors": [
+          "Abdul Joseph Fofanah",
+          "Lian Wen",
+          "David Chen"
+        ]
+      },
+      {
+        "title": "AI-Enabled Digital Twin-Driven Handover and Resource Allocation in Multi-LEO Satellite Networks",
+        "slug": "ai-enabled-digital-twin-driven-handover-and-resource",
+        "url": "https://www.semanticscholar.org/paper/a5c3ea9f8a26ca35e13032abdbdeac07dcb67fec",
+        "abstract": "Low-Earth orbit (LEO) satellite constellations are emerging as a core enabler of sixth-generation (6G) wireless systems, providing the global coverage and high-capacity connectivity. However, dense multibeam LEO deployments introduce severe interbeam and intersatellite interferences, while rapid orbital motion results in frequent handovers and highly dynamic channels that challenge the real-time optimization. To address these issues, this article has proposed a digital twin (DT)-driven multi-LEO network architecture that integrates the ray-tracing-based virtual simulations with intelligent on-orbit control. Within this framework, we develop a DT-driven efficient handover and multiagent twin delayed deep deterministic policy gradient (DEMAT) scheme, which jointly optimizes beam training, handover, power allocation, and beamwidth adaptation to maximize the energy efficiency (EE) while satisfying user throughput requirements. DEMAT leverages bidirectional DT-LEO parameter exchange and federated-learning (FL)-enhanced agents for cooperative and low-latency resource management. Extensive simulations validate its convergence and scalability under diverse network configurations, such as various time frame intervals and user densities. Notably, DEMAT achieves up to a 59.6% EE improvement over the deep deterministic policy gradient (DDPG) baseline and more than 40% of EE compared with the other DT-based benchmarks, demonstrating superior adaptability and coordination for the next-generation nonterrestrial networks (NTNs).",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-15",
+        "authors": [
+          "Yu-Ting Li",
+          "Sz-Han Chen",
+          "Kai-Ten Feng",
+          "Li-Hsiang Shen",
+          "Zhi Ding",
+          "Jen-Ming Wu"
+        ]
+      },
+      {
+        "title": "SAM-MPA: A SAM-Based Motion Perception and Aggregation Framework for Referring Video Segmentation",
+        "slug": "sam-mpa-a-sam-based-motion-perception-and-aggregation",
+        "url": "https://www.semanticscholar.org/paper/7a495c7059d5ca32d500199ee7fcd17624f5f7ca",
+        "abstract": "Referring video object segmentation (RVOS) relies on natural language descriptions to identify and segment target objects in videos and has achieved substantial progress in recent years. However, most prior studies process videos in a frame-by-frame manner, failing to fully exploit temporal information. Recently, the large-scale segmentation model segment anything model (SAM) has attracted considerable attention due to its strong segmentation capability and impressive zero-shot generalization. Nevertheless, SAM still exhibits limitations when handling complex action-oriented descriptions. Motivated by these observations, we propose a novel SAM-based motion-perception aggregation (MPA) framework for RVOS, termed SAM-MPA, which consists of four modules. DETR with improved denoising anchor boxes (DINO)-SAM leverages the powerful segmentation ability of SAM to perform initial video segmentation guided by textual prompts, generating object-level masks. The Kalman filtering motion modeling module injects explicit object motion modeling into DINO-SAM, improving segmentation robustness under occlusion and fast-motion scenarios. The motion-aware aggregation module effectively captures object action cues at multiple temporal scales, thereby enhancing global video understanding. The text–token matching module further enforces semantic consistency between the segmentation results and the referring expressions. Extensive experiments on challenging RVOS benchmarks demonstrate that SAM-MPA provides a competitive and efficient SAM-based solution for motion-centric RVOS, while offering a favorable tradeoff between performance and computational cost compared with conventional non-multimodal large language model (MLLM) baselines. The code is available at https://github.com/GXU-LIPE/SAM-MPA",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-15",
+        "authors": [
+          "Fang Gao",
+          "Lei Shi",
+          "A. Lu",
+          "Qingbao Huang",
+          "Jun Yu"
+        ]
+      },
+      {
+        "title": "RISimg: Wi-Fi Imaging Based on Spatiotemporal Coding of Reconfigurable Intelligent Surfaces",
+        "slug": "risimg-wi-fi-imaging-based-on-spatiotemporal-coding-of",
+        "url": "https://www.semanticscholar.org/paper/770fe27f571520db4480d7c475fbdfc7a1c6b810",
+        "abstract": "Wi-Fi computational imaging has emerged as a promising paradigm for nonintrusive sensing; however, its practical deployment is severely hindered by dense physical multipath clutter, hardware phase quantization errors, and the limited bandwidth of commercial Wi-Fi. Traditional beamforming-based algorithms often completely lose target focus in complex environments, resulting in severe ghosting artifacts. To overcome these fundamental limitations, we propose RISimg, a novel robust Wi-Fi imaging framework empowered by the spatiotemporal coding (STC) of Reconfigurable Intelligent Surface (RIS). We design a differential coding strategy to guarantee a well-conditioned and noise-robust sensing matrix, and propose a multifrequency sparse reconstruction algorithm based on the least absolute shrinkage and selection operator (LASSO). By constructing a large-scale overdetermined system, this physics-driven approach effectively suppresses multipath interference and hardware errors, successfully recovering the basic morphological outlines of complex targets. To further enhance the imaging performance, we propose leveraging a conditional diffusion model (CDM) to refine the imaging results. By utilizing the reconstruction as a structural prior, a carefully designed conditional U-Net progressively refines the image through a generative reverse sampling process, restoring high-fidelity continuous boundaries. Extensive evaluations using a hardware prototype built with commercial Wi-Fi devices and a low-cost metasurface demonstrate that the final cascaded CDM achieves an unprecedented structural similarity index measure (SSIM) of 0.9192 and a spatial correlation coefficient (SCC) of 0.7336, paving a robust new avenue for Wi-Fi imaging.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-15",
+        "authors": [
+          "Ruinan Li",
+          "Miao Li",
+          "Jiakang Su",
+          "Wenjing Yu",
+          "Dixiang Yang",
+          "Zijun Wang",
+          "Xiaolong Zheng",
+          "Qiang Cheng",
+          "Liang Liu",
+          "Huadong Ma"
+        ]
+      },
+      {
+        "title": "VulKnow: Enhancing Vulnerability Detection With Structured Knowledge and Large Language Models",
+        "slug": "vulknow-enhancing-vulnerability-detection-with-structured",
+        "url": "https://www.semanticscholar.org/paper/647947b4a49baf791a94e06c27dfa37ea76a9a6a",
+        "abstract": "The rapid proliferation of Internet of Things (IoT) systems has led to increasingly heterogeneous, resource-constrained, and security-sensitive software deployments. In this context, detecting vulnerabilities in embedded and system-level IoT code has become particularly critical, as even a single exploitable flaw may compromise entire networks or devices. Vulnerability detection in real-world software continues to pose significant challenges due to the intricate nature of program semantics, the diversity of vulnerability patterns, and the limited explainability offered by current machine learning models. Although large language models (LLMs) have exhibited remarkable capabilities in comprehending and reasoning about source code, their effectiveness is frequently compromised by inadequate domain knowledge and instances of hallucinated outputs. To address these limitations, we propose VulKnow, a retrieval-augmented framework for vulnerability detection that harnesses structured vulnerability knowledge alongside multistage prompt-based reasoning. Specifically, VulKnow first constructs a structured knowledge base derived from authoritative sources such as CWE/CVE reports and standard library specifications. Subsequently, it conducts context-aware knowledge retrieval and integrates the retrieved items into an LLM-based initial filtering module. To ensure high-confidence and verifiable results, we design a multistage reasoning pipeline that progressively validates vulnerabilities through semantic prompts and consistency checks. Experiments conducted on multiple real-world datasets (Linux, Qemu, and Big-Vul) demonstrate that VulKnow significantly enhances precision, recall, and explainability compared to existing static analysis tools as well as LLM-only baselines. This positions VulKnow as a reliable solution for practical vulnerability auditing scenarios.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-15",
+        "authors": [
+          "Gui-xin Liao",
+          "Yanli Chen",
+          "Wei Ke",
+          "Hanzhou Wu",
+          "Zhicheng Dong"
+        ]
+      },
+      {
+        "title": "Uncertainty-Risk-Adaptive-Based Offline Context-Aware Reinforcement Learning Framework for Vehicle-Cloud End-to-End Autonomous Driving",
+        "slug": "uncertainty-risk-adaptive-based-offline-context-aware",
+        "url": "https://www.semanticscholar.org/paper/41bcc9647bbbc25c87b01bd0ff153b5869983be2",
+        "abstract": "Offline reinforcement learning plays a prominent role in reducing training costs in autonomous driving. However, owing to uncontrollable training-data distributions and high sensitivity to policy parameters, its generalization performance across scenarios exhibits large gaps. Considering risk–uncertainty adaptation, an offline context-aware reinforcement-learning vehicle-cloud end-to-end model for autonomous driving is proposed. For the original training set collected from the vehicle-end, a diffusion generative experience replay (DGER) mechanism is constructed in the cloud-end to expand the data. A real-time driving-risk potential field assessment module is built for uncertainty mapping and offline reinforcement-learning parameters. Concurrently, a context-aware policy embedded with a semantic attention encoder (SAE) is established, enabling the on-board control unit to switch and adapt across scenarios. Experiments are conducted on the CARLA simulation platform. Relative to baseline algorithms, the proposed method delivers improved stability, safety, efficiency, and fuel efficiency. The capacity for precise control-action regulation under extreme conditions and the scene-parsing ability across different scenarios are also verified.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-15",
+        "authors": [
+          "Zhixun Lan",
+          "Jiankun Peng",
+          "Shen Li",
+          "Di Wu",
+          "Sichen Yu",
+          "Chunye Ma"
+        ]
+      },
+      {
+        "title": "Mapping the generative era: a bibliometric and specialty-focused analysis of large language models in healthcare",
+        "slug": "mapping-the-generative-era-a-bibliometric-and-specialty",
+        "url": "https://www.semanticscholar.org/paper/f782a2568b61ea120259e5a790ec3bcb4ba52b88",
+        "abstract": "Mapping the generative era: a bibliometric and specialty-focused analysis of large language models in healthcare. Visual Computing for Industry, Biomedicine, and Art",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-14",
+        "authors": [
+          "Jianding Peng",
+          "Yao Tuo",
+          "Gang Wang",
+          "Ruiqin Han",
+          "Qing Wang",
+          "Yi Wang",
+          "Zixin Hu",
+          "Xiaofei Hu"
+        ]
+      },
+      {
+        "title": "Lineal: An efficient linear algebra library",
+        "slug": "lineal-an-efficient-linear-algebra-library",
+        "url": "https://www.semanticscholar.org/paper/e410cfbe0876b2bb74ea7b135c4e6a1c93a3fdfe",
+        "abstract": "Lineal: An efficient linear algebra library. GEM - International Journal on Geomathematics",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-14",
+        "authors": [
+          "Kurt Böhm",
+          "Olaf Ippisch"
+        ]
+      },
+      {
+        "title": "Large Language Models Generate Stigmatizing Language During Reasoning Over Real-World Clinical Data",
+        "slug": "large-language-models-generate-stigmatizing-language-during",
+        "url": "https://www.semanticscholar.org/paper/e231f4d9b5e42c0956778e44dad3a1d86acefe5b",
+        "abstract": "Large Language Models Generate Stigmatizing Language During Reasoning Over Real-World Clinical Data. medRxiv",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-14",
+        "authors": [
+          "Y. Yang",
+          "B. Gu",
+          "D. Hathaway",
+          "R. Wyss",
+          "L. Marengo",
+          "J. B. Gibbons",
+          "S. Lyndon",
+          "J. Wu",
+          "Q. Chen",
+          "N. Liu",
+          "P. Wang",
+          "L. Celi",
+          "D. Bates",
+          "J. Lin",
+          "L. Zhou",
+          "J. Yang"
+        ]
+      },
+      {
+        "title": "Recent Advances in Artificial Intelligence-Assisted Facial Fracture Diagnosis",
+        "slug": "recent-advances-in-artificial-intelligence-assisted-facial",
+        "url": "https://www.semanticscholar.org/paper/bd6a05f2e97fa687f640f486ad1cca7115b83981",
+        "abstract": "Recent Advances in Artificial Intelligence-Assisted Facial Fracture Diagnosis. Current Emergency and Hospital Medicine Reports",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-14",
+        "authors": [
+          "Bassem Chamma",
+          "Venkata S. P. Patchigolla",
+          "Timothy Chalom",
+          "S. Kapur",
+          "James H. Paxton"
+        ]
+      },
+      {
+        "title": "Research progress of diffusion model in crowd activity analysis",
+        "slug": "research-progress-of-diffusion-model-in-crowd-activity",
+        "url": "https://www.semanticscholar.org/paper/a5ad54e4994b17465aba0561b03990dd0abfdc45",
+        "abstract": "Research progress of diffusion model in crowd activity analysis. International Journal of Machine Learning and Cybernetics",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-14",
+        "authors": [
+          "Fangxu Wu",
+          "Gang Zhang"
+        ]
+      },
+      {
+        "title": "Pixel super-resolved fluorescence lifetime imaging using deep neural networks",
+        "slug": "pixel-super-resolved-fluorescence-lifetime-imaging-using",
+        "url": "https://www.semanticscholar.org/paper/96b1f10ae94c3a4f648762357d00a9646d727327",
+        "abstract": "Pixel super-resolved fluorescence lifetime imaging using deep neural networks. PhotoniX",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-14",
+        "authors": [
+          "Paloma Casteleiro Costa",
+          "Parnian Ghapandar Kashani",
+          "Xuhui Liu",
+          "Alexander Chen",
+          "A. Portes",
+          "J. Bec",
+          "Laura Marcu",
+          "Aydogan Ozcan"
+        ]
+      },
+      {
+        "title": "Stock price prediction using multi-neighbor graph convolutional networks and chaotic spatio-temporal modeling",
+        "slug": "stock-price-prediction-using-multi-neighbor-graph",
+        "url": "https://www.semanticscholar.org/paper/8ba47f27d931abe1dfc328d1dbaa8e6edf5574ff",
+        "abstract": "Stock price prediction using multi-neighbor graph convolutional networks and chaotic spatio-temporal modeling. Evolutionary Systematics",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-14",
+        "authors": [
+          "Nidhi Sharma",
+          "Manisha Jailia"
+        ]
+      },
+      {
+        "title": "Seeking Help from Chatbots for Suicide Thoughts: Associations with Other Help Seeking Sources and Mental Health Symptoms",
+        "slug": "seeking-help-from-chatbots-for-suicide-thoughts-associations",
+        "url": "https://www.semanticscholar.org/paper/87a7a67f2d6f948bf1f29d4153c3e67d9fa74a9f",
+        "abstract": "Seeking Help from Chatbots for Suicide Thoughts: Associations with Other Help Seeking Sources and Mental Health Symptoms. medRxiv",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-14",
+        "authors": [
+          "R. Heo",
+          "L. McBride",
+          "E. Parrish",
+          "A. Fulginiti",
+          "C. Taylor",
+          "C. Depp"
+        ]
+      },
+      {
+        "title": "CardioGraphFormer based automated cardiomegaly detection from chest radiographs using graph-enhanced deep learning",
+        "slug": "cardiographformer-based-automated-cardiomegaly-detection",
+        "url": "https://www.semanticscholar.org/paper/780df4578aca6c72c999a814b843709fdb49881d",
+        "abstract": "CardioGraphFormer based automated cardiomegaly detection from chest radiographs using graph-enhanced deep learning. Discover Computing",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-14",
+        "authors": [
+          "Zining Guo"
+        ]
+      },
+      {
+        "title": "Grounding Health AI: Architecture and Evaluation of a Domain-Expert Metabolic Health Agent",
+        "slug": "grounding-health-ai-architecture-and-evaluation-of-a-domain",
+        "url": "https://www.semanticscholar.org/paper/4c26753659b4848602550425dc0127742f561d33",
+        "abstract": "Grounding Health AI: Architecture and Evaluation of a Domain-Expert Metabolic Health Agent. medRxiv",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-14",
+        "authors": [
+          "A. Diament",
+          "G. Sapir",
+          "M. Gorodetski",
+          "A. Wolf",
+          "A. Rice",
+          "D. Azouri",
+          "A. Etzion-Fuchs",
+          "D. Gelbard Solodkin",
+          "Y. Talmor-Barkan",
+          "G. Lutsker",
+          "E. Segal",
+          "H. Rossman"
+        ]
+      },
+      {
+        "title": "Dark side of generative AI: a stressor–strain outcome and cognitive load theory explanation on decision fatigue and cognitive overload",
+        "slug": "dark-side-of-generative-ai-a-stressor-strain-outcome-and",
+        "url": "https://www.semanticscholar.org/paper/253ee4d1fbbb16fc8cc3818a42b73cda99381935",
+        "abstract": "To investigate when the use of generative AI (GenAI) in knowledge-intensive work remains sustainable vs when users intend to discontinue, this study models how multilevel stressors generate cognitive strains that drive discontinuance intentions. Drawing on the stress–strain–outcome (SSO) framework, supported by cognitive load theory (CLT), the study explains how task, technology and organizational demands translate into cognitive strain and discontinuance.\n \n \n \n A cross-sectional survey of 460 knowledge workers was analyzed using covariance-based structural equation modeling (CB-SEM). The model incorporates task-level, technology-level and organizational-level stressors; identifies cognitive overload and decision fatigue as parallel strains; and specifies GenAI discontinuance intention as the outcome.\n \n \n \n All stressors positively relate to cognitive overload and decision fatigue except content governance, which showed no significant effect on decision fatigue. Cognitive overload emerged as a significant factor while mapping decision fatigue, and both strains significantly contributed to GenAI Discontinuance Intention.\n \n \n \n To achieve the sustainable use of GenAI, policymakers and facilitators should minimize task complexity, limit time-related pressures and implement measures that lower the risk of hallucination. They should also provide templates and establish standard operating procedures to minimize perceived overload and fatigue.\n \n \n \n Extends the SSO framework for GenAI by integrating hallucination-related and governance stressors and by distinguishing dual cognitive strain pathways (cognitive overload, decision fatigue) leading to discontinuance.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-14",
+        "authors": [
+          "Fahad Asmi",
+          "Alfred Wong",
+          "Intesar Almugren",
+          "Varun Chotia",
+          "Judit Bilinovics-Sipos"
+        ]
+      },
+      {
+        "title": "How prompts manipulate models: measuring cognitive bias vulnerability in commercial LLMs across languages",
+        "slug": "how-prompts-manipulate-models-measuring-cognitive-bias",
+        "url": "https://www.semanticscholar.org/paper/239b8dc7b3e6843d1ba5c89aab87dcce1857f2f9",
+        "abstract": "How prompts manipulate models: measuring cognitive bias vulnerability in commercial LLMs across languages. Innovations in Systems and Software Engineering",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-14",
+        "authors": [
+          "Koushik Deb",
+          "Imon Mukherjee",
+          "Debarshi Kumar Sanyal"
+        ]
+      },
+      {
+        "title": "Optimizing information retrieval tasks with large language model for data enhancement",
+        "slug": "optimizing-information-retrieval-tasks-with-large-language",
+        "url": "https://www.semanticscholar.org/paper/1c36d7e1273960f34f4c99b47a468acb0053b0ec",
+        "abstract": "Optimizing information retrieval tasks with large language model for data enhancement.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-14",
+        "authors": [
+          "C. Vaidya",
+          "Amudhavel Jayavel",
+          "Pradeep Kumar Mishra",
+          "V. Palekar",
+          "G. Tikhe",
+          "Kalpana Bhure"
+        ]
+      },
+      {
+        "title": "Mr3D-VL: A generalist vision language foundation model for Multiparametric 3D Magnetic Resonance Imaging",
+        "slug": "mr3d-vl-a-generalist-vision-language-foundation-model-for",
+        "url": "https://www.semanticscholar.org/paper/fc9b4f12728856d92baa904403cb94363e41d60d",
+        "abstract": "Multi-parametric magnetic resonance imaging (mpMRI) is a cornerstone for brain tumor diagnosis and treatment, yet current AI models face critical limitations: their lack of natural language interaction and interpretability impedes spatial information integration and cross-modal reasoning required clinically. Key challenges arise from significant physical meaning differences across modalities, spatial misalignment due to scan intervals, and the need for complex multi-feature interpretation in tasks like glioma grading. While visual-language models (VLMs) show promise in cross-modal understanding, existing methods focus mainly on 2D image modeling, neglecting direct perception of 3D volumetric space. Although 3D VLMs have been proposed for report generation and feature alignment in 3D CT imaging, mpMRI applications demand collaborative inference across multiple imaging modalities-a requirement unmet by current solutions. To address this, we introduce Mr3D-VL, a dedicated visual-language foundation model for multi-parametric 3D MRI. With 4 billion parameters, it employs an unsupervised pre-trained shared 3D encoder and 4D rotational positional embedding for dual modality-spatial integration. Its cross-modal projection layer uses a multi-resolution feature implantation strategy to enhance feature perception across resolutions. Experimental results show significant improvements over existing 4B/7B/30B domain-specific and general-purpose models in text generation tasks, achieving a BERTScore of 0.856 for report generation, with question-answering accuracy at 0.713 and multiple-choice accuracy at 0.912.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-13",
+        "authors": [
+          "Zhi Qiao",
+          "Xintong Wu",
+          "Yichu He",
+          "Feng Shi"
+        ]
+      },
+      {
+        "title": "A Contract-Grade Verifier for LLM-Generated GPU Kernels, and a Native Blackwell Backward for the Gated-Linear-Recurrence Family",
+        "slug": "a-contract-grade-verifier-for-llm-generated-gpu-kernels-and",
+        "url": "https://www.semanticscholar.org/paper/fb9d79fe819cf53af1fdce97b132d06186b55c01",
+        "abstract": "Systems that generate GPU kernels with language models report high correctness rates. Those rates come from a single loose test: run the kernel on a few random inputs at one fixed shape and accept it if the output is close to a reference. A kernel can pass that test and still be silently wrong. It can return an ordinary number where the true answer is a NaN or an infinity, differ from run to run, break when the shape changes, or accumulate in fp16 where the reference keeps an fp32 total. We build the instrument that checks correctness properly: a contract-grade verifier of twelve adversarial gates, each a property a correct kernel must satisfy, several of them tolerance-free, so no choice of threshold can explain a failure away. Aimed outward, the verifier audits 2,638 machine-generated kernels that a public system's own harness had already accepted as correct. It finds 39.5% broken beyond any tolerance argument and 62.1% carrying at least one violation. The field's standard test accepts 1,487 kernels the verifier rejects, against only 14 the other way. We defend the finding four independent ways: a 7/7 positive control, a threshold-calibration sweep, 98.5% agreement with the reference benchmark's own correctness code, and a stratified hand-audit. Aimed inward, the verifier judges a kernel of our own: the first native Blackwell tcgen05 training backward for the gated-linear-recurrence (GDN) family, including the reverse-state stage the field still runs on a fallback. We establish its correctness independently, against a double-precision oracle, and train five family members through it. The correctness signal behind reported progress in kernel generation is far weaker than the numbers suggest, and a set of tolerance-free contracts would close most of the gap.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-13",
+        "authors": [
+          "Rishita Shah",
+          "Rishav Shrestha"
+        ]
+      },
+      {
+        "title": "Numeracy in Large Language Models: Fundamental Limitations and Paths to Improvement",
+        "slug": "numeracy-in-large-language-models-fundamental-limitations",
+        "url": "https://www.semanticscholar.org/paper/f8830fe86cf9be2917c30d4abbded6039f6f741f",
+        "abstract": "Large language models (LLMs) achieve strong results on mathematical reasoning benchmarks yet remain unreliable on elementary numerical tasks, including magnitude comparison, large-integer arithmetic, fractions, and scientific notation. This survey examines basic numerical understanding as a capability distinct from high-level mathematical reasoning. We propose the Numerical Grounding Framework (NGF), which decomposes numeracy into Representational Grounding (RG), mapping numeral forms to value, magnitude, and equivalent representations, and Procedural Grounding (PG), executing arithmetic operations in accordance with their mathematical definitions. Using NGF, we organize recent diagnostic benchmarks, failure modes, structural explanations, and mitigation strategies. We review evidence concerning tokenization, positional encoding, embedding geometry, and pretraining-data distribution. We also apply NGF in a coordinated evaluation of three frontier model families across Number Cookbook, NumericBench, and GSM-Symbolic, comparing atomic, contextual, and reasoning-assisted numeracy. Architectural interventions such as digit-aware tokenization and Abacus Embeddings can improve models trained from scratch but are generally unavailable to users of pretrained systems, for whom supervised fine-tuning, reasoning scaffolds, and external tools are more practical. We conclude with deployment recommendations and research directions for more reliable numerical behavior in foundation models.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-13",
+        "authors": [
+          "Aoxin Ni"
+        ]
+      },
+      {
+        "title": "Large language models for lumbar spondylolisthesis detection: a multi-center pilot comparative radiographic accuracy study",
+        "slug": "large-language-models-for-lumbar-spondylolisthesis-detection",
+        "url": "https://www.semanticscholar.org/paper/f6ef707ef19c086383ac8c1536265ac7d5117074",
+        "abstract": "Large language models for lumbar spondylolisthesis detection: a multi-center pilot comparative radiographic accuracy study. European Journal of Orthopaedic Surgery & Traumatology",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-13",
+        "authors": [
+          "R. Khan",
+          "Tony Tannoury",
+          "Rohith Ryali",
+          "Matheus Alves",
+          "Brian S. Tao",
+          "Sameh Abolfotouh",
+          "Omar Alnori",
+          "M. El-Sharkawi",
+          "K. Moufarrej",
+          "Margaret Li",
+          "Lila R. Mollick",
+          "N. Elhajj",
+          "Daman P. Dhunna",
+          "Matthew T. Kim",
+          "Neil V. Shah",
+          "C. Tannoury"
+        ]
+      },
+      {
+        "title": "A Generative Framework for the Creation of Multi-Attribute Geographically-Explicit Synthetic Population",
+        "slug": "a-generative-framework-for-the-creation-of-multi-attribute",
+        "url": "https://www.semanticscholar.org/paper/f51850b3c6ee6a714f92d4b5f29b91bf66d85fb8",
+        "abstract": "Generating multi-attribute synthetic populations with realistic joint distributions and geographic variation is a foundational requirement for geo-simulation techniques, such as micro-simulation and agent-based modeling. However, it remains challenging for existing methods to reconstruct region-specific joint distributions from aggregated-level data alone. Thus, we propose a hierarchical diffusion-based generative framework that utilizes a realistic region-specific joint distribution of multiple attributes as the training target to create a synthetic population along with assigning their explicit home and work locations. Applied to 50 U.S. states and Washington, D.C., this framework generates a nationwide geographically-explicit synthetic population consisting of 332,387,543 individuals with five attributes (e.g., age, gender, employment, education, income). Held-out regional experiments show improved reconstruction of joint distributions relative to Iterative Proportional Fitting (IPF) and a one-shot diffusion baseline. At the same time, the location assignment preserves major residential and workplace patterns. As such, the proposed framework provides a scalable generative approach for creating geographically explicit synthetic populations at both regional and national levels. By reconstructing region-specific joint distributions of these five attributes using this framework, the resulting synthetic population could introduce more realistic behaviors into geo-simulations, such as agent-based modeling, enabling further exploration of the emergence of complex urban phenomena through human interactions.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-13",
+        "authors": [
+          "Jinlin Wu",
+          "Siyuan Qiao",
+          "Yi Liu",
+          "Fuzhen Yin",
+          "Na Jiang"
+        ]
+      },
+      {
+        "title": "BavGround: A Benchmark for Regional Cultural Grounding and Dialect Competence in Bavarian",
+        "slug": "bavground-a-benchmark-for-regional-cultural-grounding-and",
+        "url": "https://www.semanticscholar.org/paper/f49dc4c0e3ac4482ac0c96361489358c097be77d",
+        "abstract": "Cultural evaluation of large language models (LLMs) often focuses on high-resource standard languages, leaving regional culture and dialect communities underrepresented. We introduce BavGround, a benchmark for evaluating Bavarian regional cultural grounding and dialect competence across English, German and Bavarian. BavGround contains 206 multiple-choice source questions across eight cultural domains per language, yielding 618 multi-parallel instances, with items covering both broadly accessible cultural knowledge and source-grounded regional knowledge from journalism, historical sources, and specialist literature. We evaluate fifteen 7B-10B open-weight instruction-tuned models and one closed-model reference. Strong multilingual models perform best overall, but performance drops on Bavarian items and source-grounded questions, indicating persistent difficulty with dialectal and localized cultural knowledge. We further show that conclusions depend strongly on evaluation protocol: raw answer-letter scoring, shuffled-letter scoring, option-text likelihood, generated-answer parsing, and semantic matching can produce different absolute scores and rankings, especially for regionally adapted models. Finally, an exploratory analysis of GENBA-10B checkpoints suggests that continued pretraining improves answer-content likelihood unevenly across domains, while dialect competence remains comparatively weak. BavGround supports localized, protocol-aware evaluation of cultural representation in LLMs.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-13",
+        "authors": [
+          "Jophin John",
+          "Michael Hoffmann",
+          "Jan Fillies",
+          "Michael A. Hedderich",
+          "Barbara Plank"
+        ]
+      }
+    ]
+  }
+}
