@@ -1,0 +1,380 @@
+{
+  "date": "2026-08-18",
+  "github": [
+    {
+      "title": "akitaonrails/ai-memory",
+      "slug": "akitaonrails-ai-memory",
+      "url": "https://github.com/akitaonrails/ai-memory",
+      "abstract": "Long-term memory for AI coding agents. Quit Claude Code mid-task,\nstart OpenAI Codex in the same directory, continue without\nre-explaining the architecture, the failed approaches, or the open\nquestions. Support Matrix Area Status Notes Linux Supported Primary Docker/server target and CI platform. Published Docker images support linux/amd64 and linux/arm64 . Native Arch/AUR packages include system and user systemd units. macOS Supported Workspace tests run in CI; tagged releases publish native ai-memory-macos-aarch64.tar.gz and ai-memory-macos-x86_64.tar.gz binaries. The native binary is the recommended path on Apple Silicon. See docs/macos.md . Windows via WSL2 Supported Use the Linux install path inside WSL2 when the agent runs there. Native Windows Experimental Tagged releases publish ai-memory-windows-x86_64.zip with ai-memory.exe ; Docker Desktop wrapper and source builds are also available. Local supported profiles default to host-native hook commands; Claude Code may use its Windows exec form, while other agents use native single command strings matching their hook schema. PowerShell/Git Bash scripts are compatibility fallbacks. See docs/windows.md . Claude Code Supported MCP config + lifecycle hooks; native commands enforce capture exclusions. install-mcp --session-aware optionally enables per-session auto-scope isolation through a local stdio bridge. Optionally captures the assistant's final turn on Stop when installed with --capture-assistant and the server enables capture_assistant (double opt-in, off by default). Codex Supported MCP config + lifecycle hooks; native commands enforce capture exclusions. No automatic true session-end hook, so run ai-memory finalize-session when you need a final summary/handoff. Command Code Supported MCP config ( ~/.commandcode/mcp.json ) + its four stable lifecycle-hook events ( ~/.commandcode/settings.json ); native commands enforce capture exclusions and SessionStart injects handoffs. Stop is only a turn boundary, so use ai-memory finalize-session --agent command-code after the final turn. ai-memory run command-code adds exact v3 native-session resume and visible-event import; experimental unsandboxed Mods remain excluded. Devin CLI Supported MCP config + lifecycle hooks. Hooks use Devin's PostCompaction event, inject handoffs via hookSpecificOutput.additionalContext , and omit subagent events because Devin does not expose them. OpenCode Supported Remote MCP config + generated TypeScript plugin; generated plugin enforces capture exclusions. Cursor Supported MCP config + lifecycle hooks. Gemini CLI Supported MCP config + lifecycle hooks. Oh My Pi / OMP Supported Use --client omp / --agent omp (or oh-my-pi ) for native .omp MCP config + TypeScript extension; generated extension enforces capture exclusions. Pi Supported Generated ~/.pi/agent/extensions/ai-memory.ts extension provides lifecycle capture and an HTTP MCP bridge; generated extension enforces capture exclusions. Crush Managed-only ai-memory run crush resumes its project-local session database and supplies portable context through a temporary supported global-context file; no lifecycle-hook installer is provided. Managed workstreams Opt-in ai-memory run provides transparent cross-harness continuity for Claude Code, Codex, OpenCode, Pi, Crush, Kimi Code, Command Code, both incompatible Kiro CLI engines, OMP, Grok Build CLI, and Antigravity CLI. Direct launches remain unchanged. See docs/managed-workstreams.md . Claude Desktop MCP-only Uses mcp-remote ; no lifecycle hooks. OpenClaw Supported MCP config + native plugin lifecycle hooks; generated plugin enforces capture exclusions. Antigravity CLI Supported MCP config ( serverUrl ) + lifecycle hooks ( agy alias). Only PreInvocation with invocationNum = 0 maps to SessionStart; later model calls cannot consume a next-session handoff. No automatic true session-end hook, so run ai-memory finalize-session --agent antigravity-cli after the final turn when you need a summary, handoff, and opt-in SessionEnd consolidation. ai-memory run antigravity (aliases antigravity-cli , agy ) adds managed workstream resume via --conversation ; conversation text is not decoded, so the ledger for this harness comes from hook capture. Grok Build CLI Supported MCP config ( install-mcp --client grok → $GROK_HOME/config.toml , default ~/.grok/config.toml ) + lifecycle hooks ( install-hooks --agent grok → $GROK_HOME/hooks/ai-memory.json , default ~/.grok/hooks/ai-memory.json , Grok-specific hook bundle). Capture works; no hook handoff injection — Grok ignores SessionStart stdout, so recover handoffs via MCP memory_handoff_accept . ai-memory run grok adds managed workstream resume with the context packet delivered natively through --rules . Skills root: .grok/skills / $GROK_HOME/skills (default ~/.grok/skills ). Swival CLI MCP-only install-mcp --client swival --apply merges a native HTTP entry into the project-root .swival/mcp.json , preserving sibling servers. Lifecycle and managed-workstream support are not claimed because Swival's callback contract does not expose a stable session identifier. Zero Supported install-mcp --client zero (native HTTP + bearer in ~/.config/zero/config.json ) + lifecycle hooks via install-hooks --agent zero --apply (exec-form native commands in ~/.config/zero/hooks.json , JSON payload on stdin, no shell). Capture works incl. specialist (subagent) events; no handoff injection — Zero discards sessionStart stdout, so recover handoffs via MCP memory_handoff_accept . Kimi Code Supported MCP config ( url entry in ~/.kimi-code/mcp.json ) + lifecycle hooks ( [[hooks]] in ~/.kimi-code/config.toml , 10 events including subagent start/stop and PostToolUseFailure for tool-failure capture); both paths honor $KIMI_CODE_HOME . Handoffs inject via UserPromptSubmit stdout (Kimi Code discards SessionStart hook stdout); ai-memory run kimi adds managed workstream resume. Kiro CLI Supported MCP config uses install-mcp --client kiro-cli (alias kiro ) and Kiro's Bedrock-compatible schema flavor. install-hooks --agent kiro-cli merges v2 hooks into existing agent configs; the explicit --agent kiro-cli-v3 target writes the incompatible standalone v3 registration. Both preserve unrelated entries, honor $KIRO_HOME , enforce capture exclusions, and inject pending handoffs at session start. Kiro has no true SessionEnd hook; use ai-memory finalize-session --agent kiro-cli , with --session-id <uuid> for concurrent sessions. ai-memory run kiro manages v2; add --v3 , --mode , or --agent-engine v3 for version-safe v3 resume. VS Code Copilot MCP-only .vscode/mcp.json for Copilot agent mode; no lifecycle hooks (Copilot does not expose them yet). Zed MCP-only Native remote MCP under context_servers in Zed's user settings.json ; no lifecycle hooks or managed-workstream support. Hermes Agent Community Core hook ingestion recognizes agent=hermes and Hermes' documented shell-hook tool_name / tool_input payload for concrete session attribution, tool-family titles, and capture exclusions. A community-maintained ai-memory-hermes-plugin is available, but no first-party installer is shipped; review its compatibility matrix, install/uninstall scripts, and secret handling before using it. Hermes ignores session-start hook stdout, so recover handoffs through MCP. LLM/auth providers Supported Anthropic, OpenAI, OpenAI OAuth/Codex, GitHub Copilot, Gemini, OpenCode Zen/Go, OpenAI-compatible endpoints, and generic OIDC device auth for native hooks. Embedding providers Supported OpenAI, Voyage, Google Gemini, and keyless OpenAI-compatible endpoints such as Ollama, LM Studio, and vLLM. What it is LLM coding agents lose context when a session ends. ai-memory gives them a\nshared, persistent wiki compiled from sanitized lifecycle observations. When a\nsession ends, relevant observations become a coherent summary; the next agent\nreceives a bounded handoff.",
+      "stars_today": 207,
+      "language": "Rust"
+    },
+    {
+      "title": "mukul975/Anthropic-Cybersecurity-Skills",
+      "slug": "mukul975-anthropic-cybersecurity-skills",
+      "url": "https://github.com/mukul975/Anthropic-Cybersecurity-Skills",
+      "abstract": "Anthropic Cybersecurity Skills The largest open-source cybersecurity skills library for AI agents 817 production-grade cybersecurity skills · 29 security domains · 6 framework mappings · 26+ AI platforms Get Started · What's Inside · Frameworks · Platforms · Contributing ⚠️ Community Project — This is an independent, community-created project. Not affiliated with Anthropic PBC. 🔐 Authorized & lawful use only. This library includes offensive and dual-use techniques (e.g. red-team C2, phishing simulation, exploitation) intended for authorized penetration testing, security research, defense, and education . Only use them against systems you own or have explicit written permission to test, and comply with all applicable laws and rules of engagement. You are solely responsible for how you use these skills. See SECURITY.md and CODE_OF_CONDUCT.md . Give any AI agent the security skills of a senior analyst A junior analyst knows which Volatility3 plugin to run on a suspicious memory dump, which Sigma rules catch Kerberoasting, and how to scope a cloud breach across three providers. Your AI agent doesn't — unless you give it these skills. This repo contains 817 structured cybersecurity skills spanning 29 security domains , each following the agentskills.io open standard.  The library maps across six industry frameworks — MITRE ATT&CK, NIST CSF 2.0, MITRE ATLAS, MITRE D3FEND, NIST AI RMF, and the MITRE Fight Fraud Framework (F3) — with each skill mapped to the frameworks relevant to its type (a forensics skill carries ATT&CK + CSF; an AI-security skill adds ATLAS and AI RMF).  Clone it, point your agent at it, and your next security investigation gets expert-level guidance in seconds. Six frameworks, one skill library Each skill maps to the frameworks that fit its subject — ATT&CK and NIST CSF are near-universal, while ATLAS, AI RMF, D3FEND, and F3 apply where they're relevant. Framework coverage across the 817 skills: MITRE ATT&CK 805 · NIST CSF 2.0 804 · MITRE D3FEND 139 · NIST AI RMF 97 · MITRE F3 94 · MITRE ATLAS 93 . Framework Version Framework scope What it maps MITRE ATT&CK v19.1 15 tactics · Enterprise/Mobile/ICS Adversary behaviors and TTPs NIST CSF 2.0 2.0 6 functions · 22 categories · 106 subcategories Organizational security posture MITRE ATLAS 2026.07 101 techniques · 77 sub-techniques AI/ML adversarial threats MITRE D3FEND v1.4.0 270 techniques Defensive countermeasures NIST AI RMF 1.0 4 functions (Govern/Map/Measure/Manage) AI risk management MITRE F3 (Fight Fraud Framework) v1.1 (2026-04-09) 8 tactics · 123 techniques · 94 fraud-relevant skills Cyber-enabled financial fraud TTPs Example — each skill maps only to the frameworks relevant to it (one may hit all six, another just a couple): Skill ATT&CK NIST CSF ATLAS D3FEND AI RMF F3 analyzing-network-traffic-of-malware T1071 DE.CM AML.T0047 D3-NTA MEASURE-2.6 — detecting-business-email-compromise T1566 DE.AE — — — F1005.006 · monetization 🆕 MITRE Fight Fraud Framework (F3) — 94 fraud-relevant skills The MITRE Fight Fraud Framework (F3) was released April 9, 2026 by MITRE's Center for Threat-Informed Defense (CTID), co-developed with JPMorganChase, Citigroup, Lloyds Banking Group, Standard Chartered, CrowdStrike, Verizon Business, FS-ISAC, and others. It is an ATT&CK-compatible TTP catalog for cyber-enabled financial fraud — filling the gap ATT&CK leaves after initial compromise. F3 v1.1 adds two fraud-specific tactics that ATT&CK does not enumerate: Positioning ( FA0001 ) — actions taken after access to collect/manipulate data and prepare the fraud (synthetic-identity seeding, account warming, beneficiary setup, SIM-swap pre-positioning, banking-session hijack). Monetization ( FA0002 ) — converting stolen assets into usable funds (money-mule layering, APP fraud, crypto off-ramping, card cash-out, refund/chargeback abuse). Fraud-specific techniques use F1XXX IDs (e.g. F1005.003 Add Beneficiary, F1025.003 Wire Transfer, F1007 Adversary-in-the-Browser); reused ATT&CK techniques keep their T1XXX IDs. Mappings live in each skill's mitre_f3: frontmatter block — all 123 F3 v1.1 technique IDs were verified against the upstream STIX bundle. See docs/mitre-f3-mapping.md for the schema. MITRE ATT&CK v19.1 — 805/817 skills mapped Every skill carries a mitre_attack frontmatter list validated against MITRE ATT&CK v19.1 (the latest release) using the official mitreattack-python library — 290 distinct techniques and sub-techniques (146 base + 144 sub) across Enterprise, ICS, and Mobile. Zero revoked or deprecated IDs. v19.1's restructured Defense Evasion (now split into Stealth and Defense Impairment ) is reflected below. Tactic ID Skills Reconnaissance TA0043 103 Resource Development TA0042 22 Initial Access TA0001 467 Execution TA0002 350 Persistence TA0003 444 Privilege Escalation TA0004 464 Stealth TA0005 442 Defense Impairment TA0112 92 Credential Access TA0006 202 Discovery TA0007 237 Lateral Movement TA0008 68 Collection TA0009 172 Command and Control TA0011 123 Exfiltration TA0010 82 Impact TA0040 50 Quick start # Option 1: npx (recommended) npx skills add mukul975/Anthropic-Cybersecurity-Skills # Option 2: Git clone git clone https://github.com/mukul975/Anthropic-Cybersecurity-Skills.git cd Anthropic-Cybersecurity-Skills Works immediately with Claude Code, GitHub Copilot, OpenAI Codex CLI, Cursor, Gemini CLI, and any agentskills.io -compatible platform. 🌍 GARS-2026 — Global Agentic AI Readiness Survey I'm running a global academic study measuring how ready security professionals,\ndevelopers, and enterprise teams actually are for agentic AI — MCP servers,\ntool calling, governance, and human-in-the-loop workflows. If you use this repo, your response would be a genuinely valuable data point. 📋 Take the survey (10 min): Survey Link 60 questions · Anonymous · Supervised by SRH Berlin You get 50 Casky Tokens for early access to casky.ai Results published open access under CC-BY 4.0 🚀 Try it on the Playground Experience Casky.ai hands-on — no setup required. → Launch Playground on Casky.ai The playground lets you: Run live cybersecurity skill exercises against real targets See AI agents execute structured skills in real time Explore MITRE ATT&CK mapped workflows interactively Test threat hunting, DFIR, and penetration testing scenarios No installation. No configuration. Just open and start. Why this exists The cybersecurity workforce gap hit 4.8 million unfilled roles globally in 2024 (ISC2). AI agents can help close that gap — but only if they have structured domain knowledge to work from. Today's agents can write code and search the web, but they lack the practitioner playbooks that turn a generic LLM into a capable security analyst. Existing security tool repos give you wordlists, payloads, or exploit code. None of them give an AI agent the structured decision-making workflow a senior analyst follows: when to use each technique, what prerequisites to check, how to execute step-by-step, and how to verify results. That is the gap this project fills. Anthropic Cybersecurity Skills is not a collection of scripts or checklists. It is an AI-native knowledge base built from the ground up for the agentskills.io standard  — YAML frontmatter for sub-second discovery, structured Markdown for step-by-step execution, and reference files for deep technical context.  Every skill encodes real practitioner workflows, not generated summaries.",
+      "stars_today": 198,
+      "language": "Python"
+    },
+    {
+      "title": "microsoft/qlib",
+      "slug": "microsoft-qlib",
+      "url": "https://github.com/microsoft/qlib",
+      "abstract": "📰 What's NEW! 💖 Recent released features Introducing : LLM-Based Autonomous Evolving Agents for Industrial Data-Driven R&D We are excited to announce the release of RD-Agent 📢, a powerful tool that supports automated factor mining and model optimization in quant investment R&D. RD-Agent is now available on GitHub , and we welcome your star🌟! To learn more, please visit the RD-Agent repository . We have prepared several public demo videos for you: Scenario Demo video (English) Demo video (中文) Quant Factor Mining YouTube YouTube Quant Factor Mining from reports YouTube YouTube Quant Model Optimization YouTube YouTube 📃 Paper : R&D-Agent-Quant: A Multi-Agent Framework for Data-Centric Factors and Model Joint Optimization 👾 Code : https://github.com/microsoft/RD-Agent/ @misc { li2025rdagentquant , title = { R\\&D-Agent-Quant: A Multi-Agent Framework for Data-Centric Factors and Model Joint Optimization } , author = { Yuante Li and Xu Yang and Xiao Yang and Minrui Xu and Xisen Wang and Weiqing Liu and Jiang Bian } , year = { 2025 } , eprint = { 2505.15155 } , archivePrefix = { arXiv } , primaryClass = { cs.AI } } Feature Status R&D-Agent-Quant Published Apply R&D-Agent to Qlib for quant trading BPQP for End-to-end learning 📈Coming soon!( Under review ) 🔥LLM-driven Auto Quant Factory🔥 🚀 Released in ♾️RD-Agent on Aug 8, 2024 KRNN and Sandwich models 📈 Released on May 26, 2023 Release Qlib v0.9.0 Released on Dec 9, 2022 RL Learning Framework 🔨 📈 Released on Nov 10, 2022. #1332 , #1322 , #1316 , #1299 , #1263 , #1244 , #1169 , #1125 , #1076 HIST and IGMTF models 📈 Released on Apr 10, 2022 Qlib notebook tutorial 📖 Released on Apr 7, 2022 Ibovespa index data 🍚 Released on Apr 6, 2022 Point-in-Time database 🔨 Released on Mar 10, 2022 Arctic Provider Backend & Orderbook data example 🔨 Released on Jan 17, 2022 Meta-Learning-based framework & DDG-DA 📈  🔨 Released on Jan 10, 2022 Planning-based portfolio optimization 🔨 Released on Dec 28, 2021 Release Qlib v0.8.0 Released on Dec 8, 2021 ADD model 📈 Released on Nov 22, 2021 ADARNN  model 📈 Released on Nov 14, 2021 TCN  model 📈 Released on Nov 4, 2021 Nested Decision Framework 🔨 Released on Oct 1, 2021. Example and Doc Temporal Routing Adaptor (TRA) 📈 Released on July 30, 2021 Transformer & Localformer 📈 Released on July 22, 2021 Release Qlib v0.7.0 Released on July 12, 2021 TCTS Model 📈 Released on July 1, 2021 Online serving and automatic model rolling 🔨 Released on May 17, 2021 DoubleEnsemble Model 📈 Released on Mar 2, 2021 High-frequency data processing example 🔨 Released on Feb 5, 2021 High-frequency trading example 📈 Part of code released on Jan 28, 2021 High-frequency data(1min) 🍚 Released on Jan 27, 2021 Tabnet Model 📈 Released on Jan 22, 2021 Features released before 2021 are not listed here. Qlib is an open-source, AI-oriented quantitative investment platform that aims to realize the potential, empower research, and create value using AI technologies in quantitative investment, from exploring ideas to implementing productions. Qlib supports diverse machine learning modeling paradigms, including supervised learning, market dynamics modeling, and reinforcement learning. An increasing number of SOTA Quant research works/papers in diverse paradigms are being released in Qlib to collaboratively solve key challenges in quantitative investment. For example, 1) using supervised learning to mine the market's complex non-linear patterns from rich and heterogeneous financial data, 2) modeling the dynamic nature of the financial market using adaptive concept drift technology, and 3) using reinforcement learning to model continuous investment decisions and assist investors in optimizing their trading strategies. It contains the full ML pipeline of data processing, model training, back-testing; and covers the entire chain of quantitative investment: alpha seeking, risk modeling, portfolio optimization, and order execution.\nFor more details, please refer to our paper \"Qlib: An AI-oriented Quantitative Investment Platform\" . Frameworks, Tutorial, Data & DevOps Main Challenges & Solutions in Quant Research Plans Framework of Qlib Quick Start Installation Data Preparation Auto Quant Research Workflow Building Customized Quant Research Workflow by Code Quant Dataset Zoo Learning Framework More About Qlib Offline Mode and Online Mode Performance of Qlib Data Server Related Reports Contact Us Contributing Main Challenges & Solutions in Quant Research Forecasting: Finding Valuable Signals/Patterns Quant Model (Paper) Zoo Run a Single Model Run Multiple Models Adapting to Market Dynamics Reinforcement Learning: modeling continuous decisions Plans New features under development(order by estimated release time).\nYour feedbacks about the features are very important. Framework of Qlib The high-level framework of Qlib can be found above(users can find the detailed framework of Qlib's design when getting into nitty gritty).\nThe components are designed as loose-coupled modules, and each component could be used stand-alone. Qlib provides a strong infrastructure to support Quant research. Data is always an important part.\nA strong learning framework is designed to support diverse learning paradigms (e.g. reinforcement learning , supervised learning ) and patterns at different levels(e.g. market dynamic modeling ).\nBy modeling the market, trading strategies will generate trade decisions that will be executed. Multiple trading strategies and executors in different levels or granularities can be nested to be optimized and run together .\nAt last, a comprehensive analysis will be provided and the model can be served online in a low cost. Quick Start This quick start guide tries to demonstrate It's very easy to build a complete Quant research workflow and try your ideas with Qlib . Though with public data and simple models , machine learning technologies work very well in practical Quant investment. Here is a quick demo shows how to install Qlib , and run LightGBM with qrun . But , please make sure you have already prepared the data following the instruction . Installation This table demonstrates the supported Python version of Qlib : install with pip install from source plot Python 3.8 ✔️ ✔️ ✔️ Python 3.9 ✔️ ✔️ ✔️ Python 3.10 ✔️ ✔️ ✔️ Python 3.11 ✔️ ✔️ ✔️ Python 3.12 ✔️ ✔️ ✔️ Note : Conda is suggested for managing your Python environment. In some cases, using Python outside of a conda environment may result in missing header files, causing the installation failure of certain packages. Please pay attention that installing cython in Python 3.6 will raise some error when installing Qlib from source. If users use Python 3.6 on their machines, it is recommended to upgrade Python to version 3.8 or higher, or use conda 's Python to install Qlib from source. Install with pip Users can easily install Qlib by pip according to the following command. pip install pyqlib Note : pip will install the latest stable qlib. However, the main branch of qlib is in active development. If you want to test the latest scripts or functions in the main branch. Please install qlib with the methods below. Install from source Also, users can install the latest dev version Qlib by the source code according to the following steps: Before installing Qlib from source, users need to install some dependencies: pip install numpy\npip install --upgrade cython Clone the repository and install Qlib as follows. git clone https://github.com/microsoft/qlib.git && cd qlib\npip install . # `pip install -e .[dev]` is recommended for development. check details in docs/developer/code_standard_and_dev_guide.rst Tips : If you fail to install Qlib or run the examples in your environment,  comparing your steps and the CI workflow may help you find the problem. Tips for Mac : If you are using Mac with M1, you might encounter issues in building the wheel for LightGBM, which is due to missing dependencies from OpenMP.",
+      "stars_today": 133,
+      "language": "Python"
+    },
+    {
+      "title": "mvanhorn/last30days-skill",
+      "slug": "mvanhorn-last30days-skill",
+      "url": "https://github.com/mvanhorn/last30days-skill",
+      "abstract": "/last30days English | Français | Deutsch | Español | Português (Brasil) | 日本語 | 簡體中文 An AI agent-led search engine scored by upvotes, likes, and real money - not editors. This README tracks the current v3 pipeline. The runtime skill spec lives in skills/last30days/SKILL.md , which is the source of truth for the latest command and setup behavior. Claude Code (recommended — auto-updates via marketplace): /plugin marketplace add mvanhorn/last30days-skill\n/plugin install last30days Codex, Cursor, Copilot, Gemini CLI, or any of 50+ Agent Skills hosts: npx skills add mvanhorn/last30days-skill -g ( -g installs globally for your user, available across all projects. Drop it to scope per-project.) More install options (claude.ai web, OpenClaw, manual) in the Install section below. Zero config. Reddit, HN, Polymarket, and GitHub work immediately. Run it once and the setup wizard unlocks X, YouTube, TikTok, arXiv, Techmeme, and more in 30 seconds. Reddit upvotes. X likes. YouTube transcripts. TikTok engagement. Polymarket odds backed by real money and insider information. That's millions of people voting with their attention and their wallets every day. /last30days searches all of it in parallel, scores it by what real people actually engage with, and an AI agent judge synthesizes it into one brief. Google aggregates editors. /last30days searches people. You can't get this search anywhere else because no single AI has access to all of it. Google search doesn't touch Reddit comments or X posts. ChatGPT has a deal with Reddit but can't search X or TikTok. Gemini has YouTube but not Reddit. Claude has none of them natively. Each platform is a walled garden with its own API, its own tokens, its own auth. But you can bring your own keys and browser sessions, and suddenly an AI agent can search all of them at once, score them against each other, and tell you what actually matters. That's the unlock. Not one better search engine. A dozen disconnected platforms, bridged by an agent. /last30days Peter Steinberger You have a meeting tomorrow. You Google them. You get their LinkedIn from 2023. /last30days gives you what they're actually doing this month: joined OpenAI to work on Codex, fighting Anthropic's ban on third-party agents, shipping 23 PRs at 85% merge rate, building \"LobsterOS\" for cross-device agent control, and r/ClaudeCode hit 569 upvotes debating whether he's a hero or \"insufferable.\" Scattered across X posts, Reddit threads, YouTube transcripts, and GitHub commits. None of it was on Google. Why this exists I built it to keep up in AI. Everything changes every day and the Reddit and X nerds are always on top of it first. I needed better prompts, and the training data was always months behind what the community had already figured out. But it turned into something bigger. Now I run it before a sales call to know the last 30 days truth about a business. Before a meeting to read someone's recent tweets and podcast transcripts. Before a Disney World trip to know which rides are closed and what the community says about Genie+. Before I build anything to know what problems people are actually hitting. If you're meeting with a CEO, have you read all their tweets and YouTube transcripts from the last 30 days? I have. Sources, scored by the people Source What the people tell you Reddit The unfiltered take. Top comments with real upvote counts, free, no API key. The real opinions that Google buries. X / Twitter The hot take, the expert thread, the breaking reaction. First to know, first to argue. YouTube The 45-minute deep dive. Full transcripts searched for the 5 quotable sentences that matter. TikTok The creator reaching 3.6M people with a take you'll never find on Google. Instagram Reels The influencer perspective with spoken-word transcripts. The visual culture signal. Hacker News The developer consensus. 825 points, 899 comments. Where technical people actually argue. Polymarket Not opinions. Odds. Backed by real money. 96% confidence on album sales. 4% on an acquisition. GitHub For people: PR velocity, top repos by stars, release notes. For topics: issues and discussions. Digg Curated story clusters from Digg's AI 1000 leaderboard (~1000 high-signal AI accounts on X), with attributable inline quotes (no X auth required). Auto-enabled when digg-pp-cli is on PATH. arXiv The papers behind the hype. New research in the window, free, no API key. Auto-enabled when arxiv-pp-cli is on PATH (first-run setup installs it). Techmeme The tech-news editorial layer, date-windowed to your 30 days. Free, no API key. Auto-enabled when techmeme-pp-cli is on PATH (first-run setup installs it). LinkedIn The professional signal. Posts and articles, with articles weighted as high signal. StockTwits Trader sentiment. Auto-activates when your topic is a ticker or crypto. Threads The post-Twitter text layer. Conversations from creators and brands. Pinterest Visual discovery. Pins, saves, and comments on products and ideas. Xiaohongshu (RED) Chinese lifestyle, product, and creator signals. Requested explicitly with --search xhs when a logged-in x-mcp browser plugin or xiaohongshu-mcp service is running locally. Bluesky The decentralized social layer. AT Protocol posts from the post-Twitter migration. Perplexity Grounded Sonar synthesis, raw Search API rows, and Deep Research. Web The editorial coverage, the blog comparisons. One signal of many, not the only one. Community contributors keep adding more. Truth Social and other niche sources are in the engine with more on the way. A Reddit thread with 1,500 upvotes is a stronger signal than a blog post nobody read. A TikTok with 3.6M views tells you more about what's culturally relevant than a press release. Polymarket odds backed by $66K in volume are harder to argue with than a pundit's guess. The synthesis ranks by what real people actually engaged with. Social relevancy, not SEO relevancy. What people actually use it for Before a meeting. /last30days Peter Steinberger - joined OpenAI's Codex team, fighting Anthropic's ban on third-party agents, 23 PRs merged at 85% merge rate on GitHub, building LobsterOS for cross-device agent control. r/ClaudeCode: \"Ever since OpenClaw released, it was widely known that if you run it through anything other than the API, you were gonna get banned eventually\" (227 upvotes). That's not on LinkedIn. To read hiring signals. /last30days Listen Labs --hiring-signals - current jobs and careers pages become cited evidence for focus shifts: hiring into enterprise security, customer success, infrastructure, or product expansion. The report says what the hiring appears to signal, not what the roadmap will ship. To find the topic before it peaks. Ask /last30days what's exploding in AI agents? and the skill switches to discovery mode: the engine sweeps Reddit category listings, Hacker News front/best stories, Digg's AI 1000 feed, and X when authenticated; your agent judges the nominations (names, junk filtering, content-worthiness) and writes podcast / X-article angles; then you get 5-10 velocity-ranked topics. Every result includes cross-source numbers, a momentum label, and a ready-to-run /last30days \"<topic>\" follow-up. When something drops. /last30days Kanye West - UK blocked his visa, Wireless Festival canceled, sponsors fled. But BULLY debuted #2 on Billboard. Fantano came back from his \"Yay sabbatical\" to review it (653K views). SoFi Homecoming brought out Lauryn Hill and Travis Scott for 44 songs. Polymarket: \"Will Kanye tweet again?\" 86% Yes. 23 Reddit threads, 17 YouTube videos, 86K upvotes. To compare tools. /last30days OpenClaw vs Hermes vs Paperclip - \"These aren't competitors, they're layers.\" OpenClaw is the executor (351K GitHub stars, live), Hermes is the self-improving brain (31K stars), Paperclip is the org chart (49K stars). Star counts pulled live from the GitHub API, not stale blog posts. Side-by-side table with architecture, memory, security, best-for.",
+      "stars_today": 98,
+      "language": "Python"
+    },
+    {
+      "title": "SlimeBoyOwO/LingChat",
+      "slug": "slimeboyowo-lingchat",
+      "url": "https://github.com/SlimeBoyOwO/LingChat",
+      "abstract": "LingChat - 一個靈動の人工智慧聊天陪伴助手 📥 下載最新版本 · 🐛 報告 Bug · 📖 原始碼使用教程 🖥️ 快速指引 & 社群支援 📌 資源直達 🔗 連結 說明 安裝互助群 QQ群：1055935861 純安裝問題請加此群，目前通過二維碼進入。 專案文件地址 👉 幫助文件-程式碼報錯 對專案有任何疑問可以在這裡檢視文件。 開發者群 QQ群：798012738 對 AI-GALGAME 有開發意向，需要有興趣或能力的人。 核心功能列表 我們致力於提供最沉浸、最自由的 AI 陪伴體驗。 🧠 永久記憶與獨立存檔：每個存檔擁有獨立永久記憶，可自由體驗不同對話風格。 💓 自研情緒識別模型：自動判定 AI 每次對話的情緒，告別機械式回覆。 👀 視覺感受與主動窺屏：自動識別桌面狀態（工作/遊戲/掛機），AI 會主動關心你。 🐱 完全自定義角色：支援匯入自己的 OC 或喜歡的遊戲人物，開啟專屬對話。 🌸 服裝切換與互動：支援切換角色服裝，並加入摸摸角色等趣味互動功能。 ✨ 動態 UI 與沉浸式體驗：表情、動作、氣泡隨 AI 情緒改變，搭配不同背景與音樂聊天。 🎧 真實語音與音效陪伴：支援接入 VITS 語音服務或對話音效，用耳語調動真心。 📜 多角色劇本與羈絆系統：支援匯入劇本進行多角色對話，為角色編寫羈絆劇情並解鎖成就。 🍅 內建效率工具：自帶番茄鍾、日程、待辦清單，AI 會根據狀態貼心提醒。 📸 實機畫面展示 ✨ Galgame 同款氣泡+表情+動作+語音 🐝 支援感知+自定義背景，服裝，時間，劇情等 🐈 隨時切換桌寵模式，主動對話與螢幕感知 🍈 允許自定義任何人物，設計羈絆劇情並遊玩劇本 🚀 快速上手指南 🔧 準備工作 Note API 申請： 在 DeepSeek 官方網站 或其他大模型平臺申請屬於你的 API 金鑰，並確保賬戶內有餘額。 📦 第一步：下載與安裝 根據你的系統選擇合適的版本： 💻 Win10 64位及以上 ：請下載最新版 v0.5 。 💻 32位或老舊機器 ：請前往 Issues #379 下載相容版（如 LingChat v0.4.0-pre Python3.8 win32.7z ）。 在 Releases 頁面下載 LingChat vX.X.X.7z 壓縮包。 安裝或解壓後，雙擊 LingChat.exe 執行。 Warning 解壓後如果發現 LingChat.exe 不見了，通常是被 Windows Defender 誤殺了。請進入 Windows 安全中心 -> 病毒和威脅防護 允許該檔案執行。 ⚙️ 第二步：首次啟動配置 啟動程式後，點選 開始遊戲 。 開啟右上角選單，進入 高階設定 。 點選右上角的 大模型提供商 ，新增自己的大模型資訊： 大模型型別 、 API Key 及 模型資訊 。 滑動到底部儲存配置，重新啟動即可使用！ 🧩 擴展功能配置 🎧 配置 Vits 語音功能（點選展開） 啟動遊戲後，在選單【文字】部分找到語音引擎的下載連結，下載字尾為 .7z 的對應版本。 解壓後，雙擊 ..01 啟動API服務.bat 即可開始使用。 效能提示 ：如果你是核顯或老電腦，單句語音生成可能需要 1 分鐘；擁有 GPU 的裝置可在 1 秒內生成。核顯使用者若遇大量報錯可能無法使用此功能。 自定義角色使用 ：若想給自定義角色使用語音，需在 game_data/characters/<角色名>/settings.yml 中修改 model_name 參數為匯入模型的名稱。 👁️ 配置視覺大模型功能（點選展開） 在通義千問等平臺獲取視覺模型 API 👉 阿里雲視覺模型 API 獲取 (注：阿里雲 API 預設贈送額度，且對於本專案絕對夠用) 在【設定】->【高階設定】->【大模型管理】中，將支援視覺輸入的模型分配為「視覺模型」角色（預設為「跟隨對話模型」，即複用當前對話模型）。 儲存後重啟軟體。 如何觸發 ：在聊天中傳送 “看桌面” 或 “看看我的桌面” 。配置主動對話後，AI 將擁有主動觀察你在幹什麼的能力（ 注意不要在玩黃油時被抓包哦 ^▽^ ）。 🧪 加入最新版測試與開發（點選展開） 我們會隨時將更新推送到 dev 分支 ，並在 Issues 釋出開發日誌。 注：開發版可能不穩定，歡迎隨時提交 Bug 反饋！ 🔗 致謝與開源靈感 本專案的實現離不開這些優秀開源作品的先驅者，送上由衷的致謝 🌼： Zcchat ：本專案的靈感來源，提供了優秀的 Vits 模型和人物素材。（請去給他們點個 Star 吧 ❤） Simple-Vits-API ：實現了簡單易用的 VITS 語音合成 API。 Style-Bert-VITS2 ：實現了 Bert-VITS 的語音合成與訓練，極少數據量也能達到完美效果！ ProgrammingVTuberLogos ：提供了超可愛的標題風格靈感。 Emotion Training ：用於實現 18 種短句情緒識別的人工智慧模型訓練。 🌸 寫在最後 本專案為了快速開發使用了一些 AI 輔助工具，如有不足歡迎在 Issues 中指出！ 感謝一路結識的開發者們，大家都是 香軟可愛 又厲害的大佬們~ 如果你有開發意向，歡迎聯絡我（開發者群號藏在 GitHub 中 ❤）。 這個專案最初是一個超小型學習專案，現在雖然變得龐大並應用了更多的軟體工程架構思想，但依然非常歡迎大家以此作為學習的參考 (qwq)。 ⚠️ 免責宣告與素材版權說明 素材來源： 氣泡與音效素材、初始介面來源於《碧藍檔案》；對話嗶嗶音效來源於《Undertale》， 請勿商用 。 立繪版權： 預設人物立繪由開發者本人繪製，請勿亂用、商用或用於奇怪的地方。 責任宣告： 請對 AI 生成的內容及您的使用行為負責，不要肆意傳播不良資訊。 資料調查： 我們秉持完全自願原則，您可以在 Ling Chat 硬體調查 中檢視匿名調查資料。 💌 特別感謝 感謝這些為 LingChat 貢獻程式碼，一直支援專案走下去的貢獻者們~ ❤️ ⭐️ 喜歡這個專案嗎？請給我們點一個 Star！ 這是我們提升影響力和持續維護的最大動力！ 如果你對開發 AI 感興趣，加入我們開發者群~ ： 798012738 © LingChat 製作團隊",
+      "stars_today": 82,
+      "language": "Rust"
+    },
+    {
+      "title": "Sollimann/bonsai",
+      "slug": "sollimann-bonsai",
+      "url": "https://github.com/Sollimann/bonsai",
+      "abstract": "Bonsai 盆栽 Rust implementation of Behavior Trees Contents Quick intro to Behavior Trees Concepts Examples Development Guide Kanban Board Honorable Mentions Using Bonsai Rust Bonsai is available on crates.io. The recommended way to use it is to add a line into your Cargo.toml such as: [ dependencies ] bonsai-bt = \" * \" Python Bonsai is available on PyPI as bonsai-bt : pip install bonsai-bt See bonsai-py/ for examples. Example of use See Examples folder. What is a Behavior Tree? A Behavior Tree (BT) is a data structure in which we can set the rules of how certain behavior's can occur, and the order in which they would execute. BTs are a very efficient way of creating complex systems that are both modular and reactive. These properties are crucial in many applications, which has led to the spread of BT from computer game programming to many branches of AI and Robotics. How to use a Behavior tree? A Behavior Tree forms a tree structure where each node represents a process. When the process terminates, it signals Success or Failure . This can then be used by the parent node to select the next process. A signal Running is used to tell the process is not done yet. For example, if you have a state A and a state B : Move from state A to state B if A succeeds: Sequence([A, B]) Try A first and then try B if A fails: Select([A, B]) If condition succeedes do A , else do B : If(condition, A, B) If A succeeds, return failure (and vice-versa): Invert(A) Do A , B repeatedly while LoopCondition runs: While(LoopCondition, [A, B]) . Checks condition node between nodes A , B . Do A , B forever: While(WaitForever, [A, B]) Do A , B repeatedly while LoopCondition runs: WhileAll(LoopCondition, [A, B]) . After All nodes A , B are completed successfully, check the condition node. Run A and B in parallell and wait for both to succeed: WhenAll([A, B]) Run A and B in parallell and wait for any to succeed: WhenAny([A, B]) Run A and B in parallell and wait for any to complete regardless of success or failure: Race([A, B]) Run A and B in parallell, but A has to succeed before B : After([A, B]) See the Behavior enum for more information. Calling long-running tasks in behavior tree To make sure that the behavior tree is always responsive, it is important that the actions that are created executes instantly so that they do not block the tree traversal. If you have long-running tasks/functions that can take seconds or minutes to execute - either async or sync - then we can dispatch those jobs into background threads, and get status of the task through a channel. see async drone example in the /examples folder for more details.",
+      "stars_today": 61,
+      "language": "Rust"
+    },
+    {
+      "title": "0x4m4/hexstrike-ai",
+      "slug": "0x4m4-hexstrike-ai",
+      "url": "https://github.com/0x4m4/hexstrike-ai",
+      "abstract": "HexStrike AI MCP Agents v6.0 AI-Powered MCP Cybersecurity Automation Platform Advanced AI-powered penetration testing MCP framework with 150+ security tools and 12+ autonomous AI agents Owned & developed by OTT Cybersecurity LLC 📋 What's New • 🏗️ Architecture • 🚀 Installation • 🛠️ Features • 🤖 AI Agents • 📡 API Reference Follow Our Social Accounts Architecture Overview HexStrike AI MCP v6.0 features a multi-agent architecture with autonomous AI agents, intelligent decision-making, and vulnerability intelligence. %%{init: {\"themeVariables\": {\n  \"primaryColor\": \"#b71c1c\",\n  \"secondaryColor\": \"#ff5252\",\n  \"tertiaryColor\": \"#ff8a80\",\n  \"background\": \"#2d0000\",\n  \"edgeLabelBackground\":\"#b71c1c\",\n  \"fontFamily\": \"monospace\",\n  \"fontSize\": \"16px\",\n  \"fontColor\": \"#fffde7\",\n  \"nodeTextColor\": \"#fffde7\"\n}}}%%\ngraph TD\n    A[AI Agent - Claude/GPT/Copilot] -->|MCP Protocol| B[HexStrike MCP Server v6.0]\n    \n    B --> C[Intelligent Decision Engine]\n    B --> D[12+ Autonomous AI Agents]\n    B --> E[Modern Visual Engine]\n    \n    C --> F[Tool Selection AI]\n    C --> G[Parameter Optimization]\n    C --> H[Attack Chain Discovery]\n    \n    D --> I[BugBounty Agent]\n    D --> J[CTF Solver Agent]\n    D --> K[CVE Intelligence Agent]\n    D --> L[Exploit Generator Agent]\n    \n    E --> M[Real-time Dashboards]\n    E --> N[Progress Visualization]\n    E --> O[Vulnerability Cards]\n    \n    B --> P[150+ Security Tools]\n    P --> Q[Network Tools - 25+]\n    P --> R[Web App Tools - 40+]\n    P --> S[Cloud Tools - 20+]\n    P --> T[Binary Tools - 25+]\n    P --> U[CTF Tools - 20+]\n    P --> V[OSINT Tools - 20+]\n    \n    B --> W[Advanced Process Management]\n    W --> X[Smart Caching]\n    W --> Y[Resource Optimization]\n    W --> Z[Error Recovery]\n    \n    style A fill:#b71c1c,stroke:#ff5252,stroke-width:3px,color:#fffde7\n    style B fill:#ff5252,stroke:#b71c1c,stroke-width:4px,color:#fffde7\n    style C fill:#ff8a80,stroke:#b71c1c,stroke-width:2px,color:#fffde7\n    style D fill:#ff8a80,stroke:#b71c1c,stroke-width:2px,color:#fffde7\n    style E fill:#ff8a80,stroke:#b71c1c,stroke-width:2px,color:#fffde7 Loading How It Works AI Agent Connection - Claude, GPT, or other MCP-compatible agents connect via FastMCP protocol Intelligent Analysis - Decision engine analyzes targets and selects optimal testing strategies Autonomous Execution - AI agents execute comprehensive security assessments Real-time Adaptation - System adapts based on results and discovered vulnerabilities Advanced Reporting - Visual output with vulnerability cards and risk analysis Installation Quick Setup to Run the hexstrike MCPs Server # 1. Clone the repository git clone https://github.com/0x4m4/hexstrike-ai.git cd hexstrike-ai # 2. Create virtual environment python3 -m venv hexstrike-env source hexstrike-env/bin/activate # Linux/Mac # hexstrike-env\\Scripts\\activate   # Windows # 3. Install Python dependencies pip3 install -r requirements.txt Installation and Setting Up Guide for various AI Clients: Installation & Demo Video Watch the full installation and setup walkthrough here: YouTube - HexStrike AI Installation & Demo Supported AI Clients for Running & Integration You can install and run HexStrike AI MCPs with various AI clients, including: 5ire (Latest version v0.14.0 not supported for now) VS Code Copilot Roo Code Cursor Claude Desktop Any MCP-compatible agent Refer to the video above for step-by-step instructions and integration examples for these platforms. Install Security Tools Core Tools (Essential): # Network & Reconnaissance nmap masscan rustscan amass subfinder nuclei fierce dnsenum\nautorecon theharvester responder netexec enum4linux-ng # Web Application Security gobuster feroxbuster dirsearch ffuf dirb httpx katana\nnikto sqlmap wpscan arjun paramspider dalfox wafw00f # Password & Authentication hydra john hashcat medusa patator crackmapexec\nevil-winrm hash-identifier ophcrack # Binary Analysis & Reverse Engineering gdb radare2 binwalk ghidra checksec strings objdump\nvolatility3 foremost steghide exiftool Cloud Security Tools: prowler scout-suite trivy\nkube-hunter kube-bench docker-bench-security Browser Agent Requirements: # Chrome/Chromium for Browser Agent sudo apt install chromium-browser chromium-chromedriver # OR install Google Chrome wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add - echo \" deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main \" | sudo tee /etc/apt/sources.list.d/google-chrome.list\nsudo apt update && sudo apt install google-chrome-stable Start the Server # Start the MCP server python3 hexstrike_server.py # Optional: Start with debug mode python3 hexstrike_server.py --debug # Optional: Custom port configuration python3 hexstrike_server.py --port 8888 Verify Installation # Test server health curl http://localhost:8888/health # Test AI agent capabilities curl -X POST http://localhost:8888/api/intelligence/analyze-target \\\n  -H \" Content-Type: application/json \" \\\n  -d ' {\"target\": \"example.com\", \"analysis_type\": \"comprehensive\"} ' AI Client Integration Setup Claude Desktop Integration or Cursor Edit ~/.config/Claude/claude_desktop_config.json : { \"mcpServers\" : { \"hexstrike-ai\" : { \"command\" : \" python3 \" , \"args\" : [ \" /path/to/hexstrike-ai/hexstrike_mcp.py \" , \" --server \" , \" http://localhost:8888 \" ], \"description\" : \" HexStrike AI v6.0 - Advanced Cybersecurity Automation Platform \" , \"timeout\" : 300 , \"disabled\" : false }\n  }\n} VS Code Copilot Integration Configure VS Code settings in .vscode/settings.json : { \"servers\" : { \"hexstrike\" : { \"type\" : \" stdio \" , \"command\" : \" python3 \" , \"args\" : [ \" /path/to/hexstrike-ai/hexstrike_mcp.py \" , \" --server \" , \" http://localhost:8888 \" ]\n    }\n  }, \"inputs\" : []\n} Features Security Tools Arsenal 150+ Professional Security Tools: 🔍 Network Reconnaissance & Scanning (25+ Tools) Nmap - Advanced port scanning with custom NSE scripts and service detection Rustscan - Ultra-fast port scanner with intelligent rate limiting Masscan - High-speed Internet-scale port scanning with banner grabbing AutoRecon - Comprehensive automated reconnaissance with 35+ parameters Amass - Advanced subdomain enumeration and OSINT gathering Subfinder - Fast passive subdomain discovery with multiple sources Fierce - DNS reconnaissance and zone transfer testing DNSEnum - DNS information gathering and subdomain brute forcing TheHarvester - Email and subdomain harvesting from multiple sources ARP-Scan - Network discovery using ARP requests NBTScan - NetBIOS name scanning and enumeration RPCClient - RPC enumeration and null session testing Enum4linux - SMB enumeration with user, group, and share discovery Enum4linux-ng - Advanced SMB enumeration with enhanced logging SMBMap - SMB share enumeration and exploitation Responder - LLMNR, NBT-NS and MDNS poisoner for credential harvesting NetExec - Network service exploitation framework (formerly CrackMapExec) 🌐 Web Application Security Testing (40+ Tools) Gobuster - Directory, file, and DNS enumeration with intelligent wordlists Dirsearch - Advanced directory and file discovery with enhanced logging Feroxbuster - Recursive content discovery with intelligent filtering FFuf - Fast web fuzzer with advanced filtering and parameter discovery Dirb - Comprehensive web content scanner with recursive scanning HTTPx - Fast HTTP probing and technology detection Katana - Next-generation crawling and spidering with JavaScript support Hakrawler - Fast web endpoint discovery and crawling Gau - Get All URLs from multiple sources (Wayback, Common Crawl, etc.",
+      "stars_today": 56,
+      "language": "Python"
+    },
+    {
+      "title": "QwenLM/qwen-code",
+      "slug": "qwenlm-qwen-code",
+      "url": "https://github.com/QwenLM/qwen-code",
+      "abstract": "The open-source AI coding agent that lives in your terminal. 中文 | Deutsch | français | 日本語 | Русский | Português (Brasil) | 한국어 Why Qwen Code? Agentic out of the box — Auto-Memory, Auto-Skills, SubAgents, Agent Teams, and MCP. Dynamic workflows, zero setup. Open-source, inside and out — The framework and the Qwen models are open-source. They evolve together. No vendor lock-in. Multi-protocol — Supports OpenAI, Anthropic, Gemini, and Qwen APIs. Any third-party provider or local model (Ollama / vLLM). Switch at runtime. Beyond the terminal — IDE plugins, Desktop app, daemon mode, SDKs, and IM bots (Telegram / DingTalk / WeChat / Feishu). Tip Qwen Code is actively iterating on itself — using its own agent and models to file issues, submit PRs, review code, and run tests. Powered by the community, driven by AI. Installation Linux / macOS: curl -fsSL https://qwen-code-assets.oss-cn-hangzhou.aliyuncs.com/installation/install-qwen-standalone.sh | bash Windows: irm https: // qwen-code-assets.oss-cn-hangzhou.aliyuncs.com / installation / install-qwen - standalone.ps1 | iex Restart your terminal after installation to ensure environment variables take effect. NPM / Homebrew NPM (requires Node.js 22+ ): npm install -g @qwen-code/qwen-code@latest Homebrew (macOS / Linux): brew install qwen-code Quick Start qwen # Launch interactive terminal UI # Inside the session: /auth # Configure your provider and API key See the Authentication Guide and Settings Reference for detailed setup. How to Use Qwen Code Mode Command Use Case Interactive qwen Terminal UI with rich rendering, @file references, slash commands Headless qwen -p \"...\" Scripts, CI/CD, batch processing — no UI IDE — VS Code , Zed , JetBrains Desktop — Qwen Code Desktop — GUI for macOS, Windows, Linux Daemon qwen serve Shared agent session over HTTP+SSE (ACP). Multiple clients, one agent. (experimental) Docs SDK — TypeScript , Python , Java IM Bot qwen channel Connect to Telegram, DingTalk, WeChat, or Feishu SDK example (Python) import asyncio from qwen_code_sdk import is_sdk_result_message , query async def main () -> None : result = query ( \"Summarize the repository layout.\" ,\n        { \"cwd\" : \"/path/to/project\" , \"path_to_qwen_executable\" : \"qwen\" ,\n        },\n    ) async for message in result : if is_sdk_result_message ( message ): print ( message [ \"result\" ]) asyncio . run ( main ()) Capabilities If you know Claude Code, you already know Qwen Code — and then some. We've put significant effort into bringing Qwen Code to feature parity with Claude Code , improving both breadth and reliability across the board. Feature Qwen Code Claude Code SubAgents, Agent Teams, Dynamic Workflows ✓ ✓ Auto-Memory, Auto-Skills, Hooks ✓ ✓ Built-in Skills (/review, /batch, /loop, /bugfix…) ✓ ✓ MCP, Plan Mode, LSP Integration ✓ ✓ Auto Mode, Sandbox, Git Worktrees ✓ ✓ Computer Use (desktop automation) ✓ ✓ IDE Plugins (VS Code / JetBrains / Zed) ✓ ✓ SDK ✓ ✓ Headless Mode, Session Management ✓ ✓ Open-source — model and framework ✓ — Multi-protocol (OpenAI / Anthropic / Gemini / Qwen + any provider) ✓ — Agent Arena (multi-model head-to-head on same task) ✓ — Daemon Mode — qwen serve (multi-client shared agent) ✓ — IM Channels (Telegram / DingTalk / WeChat / Feishu) ✓ — Ecosystem Qwen Code Desktop — Official desktop app for macOS, Windows, and Linux AionUi — A modern GUI for command-line AI tools including Qwen Code Gemini CLI Desktop — A cross-platform desktop/web/mobile UI for Qwen Code 🦞 Qwen Code Claw — Let other agents (Claude, Codex, etc.) delegate coding tasks to Qwen Code via ACP. Paste this prompt into your agent: Use Qwen Code as a coding agent. First, fetch and read this skill reference:\nhttps://raw.githubusercontent.com/QwenLM/qwen-code/refs/heads/main/.qwen/skills/qwen-code-claw/SKILL.md\nThen follow the instructions inside to install, authenticate, and use Qwen Code via acpx for all coding tasks. Aliyun Model Studio CLI — Official CLI for Aliyun's AI platform ( bailian-cli ). Extends Qwen Code with image/video generation, knowledge retrieval, app orchestration, and model deployment Contributing Contributions are welcome! See CONTRIBUTING.md for guidelines. Acknowledgments This project was originally based on Google Gemini CLI v0.8.2. We gratefully acknowledge the Gemini CLI team's excellent work. Starting from Qwen Code v0.1, we stopped syncing with upstream and began independent development as a multi-protocol, multi-platform agent framework with deep integrations for Qwen models and beyond.",
+      "stars_today": 49,
+      "language": "TypeScript"
+    },
+    {
+      "title": "Blaizzy/mlx-audio",
+      "slug": "blaizzy-mlx-audio",
+      "url": "https://github.com/Blaizzy/mlx-audio",
+      "abstract": "MLX-Audio The best audio processing library built on Apple's MLX framework, providing fast and efficient text-to-speech (TTS), speech-to-text (STT), speech-to-speech (STS), music generation, and more on Apple Silicon. Table of Contents Features Installation Quick Start Supported Models Model Examples Web Interface & API Server Quantization Swift Requirements License Citation Acknowledgements Features Fast inference optimized for Apple Silicon (M series chips) Multiple model architectures for TTS, STT, STS, and music generation Multilingual support across models Voice customization and cloning capabilities Adjustable speech speed control Interactive web interface with 3D audio visualization OpenAI-compatible REST API Quantization support (3-bit, 4-bit, 6-bit, 8-bit, and more) for optimized performance Swift package for iOS/macOS integration Installation Using pip pip install mlx-audio Using uv to install only the command line tools Latest release from pypi: uv tool install --force mlx-audio --prerelease=allow Latest code from github: uv tool install --force git+https://github.com/Blaizzy/mlx-audio.git --prerelease=allow For development or web interface: git clone https://github.com/Blaizzy/mlx-audio.git cd mlx-audio\npip install -e \" .[dev, server] \" Quick Start Command Line # Basic TTS generation mlx_audio.tts.generate --model mlx-community/Qwen3-TTS-12Hz-1.7B-Base-8bit --text ' Hello, world! ' --voice Chelsie # With a different voice and language hint mlx_audio.tts.generate --model mlx-community/Qwen3-TTS-12Hz-1.7B-Base-8bit --text ' Welcome to MLX-Audio! ' --voice Ethan --lang_code English # Play audio immediately mlx_audio.tts.generate --model mlx-community/Qwen3-TTS-12Hz-1.7B-Base-8bit --text ' Hello! ' --voice Chelsie --play # Save to a specific directory mlx_audio.tts.generate --model mlx-community/Qwen3-TTS-12Hz-1.7B-Base-8bit --text ' Hello! ' --voice Chelsie --output_path ./my_audio # Stream audio during generation mlx_audio.tts.generate --model mlx-community/Qwen3-TTS-12Hz-1.7B-Base-8bit --text ' Hello! ' --voice Chelsie --stream # Stream audio during generation and save it to disk mlx_audio.tts.generate --model mlx-community/Qwen3-TTS-12Hz-1.7B-Base-8bit --text ' Hello! ' --voice Chelsie --stream --save # Join multiple generated segments into one file mlx_audio.tts.generate --model mlx-community/Qwen3-TTS-12Hz-1.7B-Base-8bit --text $' Hello! \\n How are you? ' --voice Chelsie --join_audio By default, when generation yields multiple segments, mlx-audio saves numbered files such as audio_000.wav and audio_001.wav . Use --join_audio to save one combined file instead. When using --stream , add --save to write the streamed audio to disk. Python API from mlx_audio . tts . utils import load_model # Load model model = load_model ( \"mlx-community/Qwen3-TTS-12Hz-1.7B-Base-8bit\" ) # Generate speech for result in model . generate ( \"Hello from MLX-Audio!\" , voice = \"Chelsie\" , lang_code = \"English\" ,\n): print ( f\"Generated { result . audio . shape [ 0 ] } samples\" ) # result.audio contains the waveform as mx.array Supported Models Text-to-Speech (TTS) Model Description Languages Repo Kokoro Fast, high-quality multilingual TTS EN, JA, ZH, FR, ES, IT, PT, HI bf16 , 8bit , 6bit , 4bit KittenTTS Compact KittenTTS 0.8 models for edge-friendly TTS EN nano , micro , mini , collection Qwen3-TTS Alibaba's multilingual TTS with voice design ZH, EN, JA, KO, + more mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16 Higgs Audio v3 4B conversational TTS with voice cloning and inline control tokens 100 languages bosonai/higgs-audio-v3-tts-4b OmniVoice Zero-shot multilingual TTS with voice cloning, batch generation, and nonverbal tags 646+ languages mlx-community/OmniVoice-bf16 CSM / MisoTTS Sesame-style conversational speech models with voice cloning EN mlx-community/csm-1b , MisoTTS bf16 , MisoTTS 8bit Dia Dialogue-focused TTS EN mlx-community/Dia-1.6B-fp16 OuteTTS Efficient TTS model EN mlx-community/OuteTTS-1.0-0.6B-fp16 Spark SparkTTS model EN, ZH mlx-community/Spark-TTS-0.5B-bf16 Chatterbox Expressive multilingual TTS (v2/v3) 23 languages v3 , v2 Soprano High-quality TTS EN mlx-community/Soprano-1.1-80M-bf16 Ming Omni TTS (BailingMM) Multimodal generation with voice cloning, style control, and speech/music/event generation EN, ZH mlx-community/Ming-omni-tts-16.8B-A3B-bf16 Ming Omni TTS (Dense) Lightweight dense Ming Omni variant for voice cloning and style control EN, ZH mlx-community/Ming-omni-tts-0.5B-bf16 KugelAudio SOTA 7B AR+Diffusion TTS for European languages EN, DE, FR, ES, IT, PT, NL, PL, RU, UK, + 14 more kugelaudio/kugelaudio-0-open Voxtral TTS Mistral's 4B multilingual TTS (20 voices, 9 languages) EN, FR, ES, DE, IT, PT, NL, AR, HI mlx-community/Voxtral-4B-TTS-2603-mlx-bf16 LongCat-AudioDiT SOTA diffusion TTS in waveform latent space with voice cloning ZH, EN mlx-community/LongCat-AudioDiT-1B-bf16 MeloTTS Lightweight VITS2-based TTS with streaming EN (more coming) mlx-community/MeloTTS-English-MLX MOSS-TTS 8B delay-pattern and local-transformer multilingual TTS with voice cloning 31 languages OpenMOSS-Team/MOSS-TTS-v1.5 , OpenMOSS-Team/MOSS-TTS , OpenMOSS-Team/MOSS-TTS-Local-Transformer-v1.5 , OpenMOSS-Team/MOSS-TTS-Local-Transformer MOSS-TTS-Nano Tiny multilingual voice-cloning TTS 20 languages mlx-community/MOSS-TTS-Nano-100M Higgs Audio v2 3B Llama-backed TTS with real-time voice cloning EN, ZH, KO, DE, ES bf16 (upstream) , q8 , q6 Speech-to-Text (STT) Model Description Languages Repo Whisper OpenAI's robust STT model 99+ languages mlx-community/whisper-large-v3-turbo-asr-fp16 Distil-Whisper Distilled fast Whisper variants EN distil-whisper/distil-large-v3 Qwen3-ASR Alibaba's multilingual ASR ZH, EN, JA, KO, + more mlx-community/Qwen3-ASR-1.7B-8bit Mega-ASR Routed Qwen3-ASR with automatic clean/base vs degraded/LoRA switching EN (fixtures), multilingual Qwen3-ASR backbone README Qwen3-ForcedAligner Word-level audio alignment ZH, EN, JA, KO, + more mlx-community/Qwen3-ForcedAligner-0.6B-8bit MOSS-Transcribe-Diarize Timestamped transcription with speaker labels Multiple major languages https://huggingface.co/OpenMOSS-Team/MOSS-Transcribe-Diarize Parakeet NVIDIA's accurate STT EN (v2), 25 EU languages (v3) mlx-community/parakeet-tdt-0.6b-v3 Nemotron 3.5 ASR (streaming) NVIDIA's cache-aware streaming FastConformer-RNNT with language-ID prompting 40 language-locales mlx-community/nemotron-3.5-asr-streaming-0.6b · README Voxtral Mistral's speech model Multiple mlx-community/Voxtral-Mini-3B-2507-bf16 Voxtral Realtime Mistral's 4B streaming STT Multiple 4bit , fp16 VibeVoice-ASR Microsoft's 9B ASR with diarization & timestamps Multiple mlx-community/VibeVoice-ASR-bf16 Canary NVIDIA's multilingual ASR with translation 25 EU + RU, UK README Moonshine Useful Sensors' lightweight ASR EN README MMS Meta's massively multilingual ASR with adapters 1000+ README Granite Speech IBM's ASR + speech translation EN, FR, DE, ES, PT, JA README Qwen2-Audio Alibaba's multimodal audio understanding (ASR, captioning, emotion, translation) Multiple mlx-community/Qwen2-Audio-7B-Instruct-4bit MOSS-Music OpenMOSS music understanding and lyrics ASR EN, ZH README Voice Activity Detection / Speaker Diarization (VAD) Model Description Languages Repo Silero VAD Lightweight speech/non-speech detection with streaming state Language-agnostic mlx-community/silero-vad Sortformer v1 NVIDIA's end-to-end speaker diarization (up to 4 speakers) Language-agnostic mlx-community/diar_sortformer_4spk-v1-fp32 Sortformer v2.1 NVIDIA's streaming speaker diarization with AOSC compression Language-agnostic mlx-community/diar_streaming_sortformer_4spk-v2.1-fp32 See the model READMEs for API details, streaming examples, and conversion steps. Speech-to-Speech (STS) Model Description Use Case Repo SAM-Audio Text-guided source separation Extract specific sounds mlx-community/sam-audio-large Liquid2.5-Audio * Speech-to-Speech, Text-to-Speech and Speech-to-Text Speech interactions mlx-community/LFM2.",
+      "stars_today": 12,
+      "language": "Python"
+    }
+  ],
+  "papers": {
+    "hf": [
+      {
+        "title": "VibeWorlding: Can Multimodal Agents Construct 3D Open Worlds End-to-End?",
+        "slug": "vibeworlding-can-multimodal-agents-construct-3d-open-worlds",
+        "url": "https://huggingface.co/papers/2608.15265",
+        "abstract": "A unified framework benchmarks and trains multimodal agents that infer intent, plan 3D scenes, invoke tools, and reflect on feedback, revealing that reinforcement learning improves open-source models beyond closed-source frontiers.",
+        "upvotes": 34,
+        "arxiv_id": "2608.15265",
+        "authors": []
+      },
+      {
+        "title": "HarnessEval-W: Agentifying the Evaluation of Visual Worlds",
+        "slug": "harnesseval-w-agentifying-the-evaluation-of-visual-worlds",
+        "url": "https://huggingface.co/papers/2608.16859",
+        "abstract": "HarnessEval-W uses hierarchical sub-agents to decompose world-model evaluations into verifiable reasoning chains that justify scores with transparent evidence.",
+        "upvotes": 30,
+        "arxiv_id": "2608.16859",
+        "authors": []
+      },
+      {
+        "title": "ClawGym II: Exploring Black-Box RL on Agent Harness",
+        "slug": "clawgym-ii-exploring-black-box-rl-on-agent-harness",
+        "url": "https://huggingface.co/papers/2608.16798",
+        "abstract": "A unified black-box reinforcement learning framework enables stable, scalable optimization of general agents through complex harnesses via sandbox execution, trajectory reconstruction, and mix-harness training.",
+        "upvotes": 28,
+        "arxiv_id": "2608.16798",
+        "authors": []
+      },
+      {
+        "title": "UI-Mate: Advancing Open-Weight Foundation GUI Agents with In-Context Demonstrations",
+        "slug": "ui-mate-advancing-open-weight-foundation-gui-agents-with-in",
+        "url": "https://huggingface.co/papers/2608.15930",
+        "abstract": "UI-Mate is a foundation GUI agent that uses environment-grounded training and in-context demonstration learning to improve reliability on long-horizon office tasks, achieving state-of-the-art results on computer-use benchmarks.",
+        "upvotes": 21,
+        "arxiv_id": "2608.15930",
+        "authors": []
+      },
+      {
+        "title": "Agentic Transaction: Towards ACID-Compliant Agent Systems",
+        "slug": "agentic-transaction-towards-acid-compliant-agent-systems",
+        "url": "https://huggingface.co/papers/2608.13900",
+        "abstract": "An ACID-compliant framework for agentic transactions introduces semantic guarantees to ensure reliable, isolated, and durable execution of long-horizon LLM agent workflows.",
+        "upvotes": 18,
+        "arxiv_id": "2608.13900",
+        "authors": []
+      },
+      {
+        "title": "GenRouter: Unified Workflow Routing for Agentic Image Generation",
+        "slug": "genrouter-unified-workflow-routing-for-agentic-image",
+        "url": "https://huggingface.co/papers/2608.16721",
+        "abstract": "GenRouter is a unified routing framework that adaptively directs prompts to optimal agentic image-generation workflows, cutting costs and latency while improving visual alignment and enabling continuous self-evolution.",
+        "upvotes": 15,
+        "arxiv_id": "2608.16721",
+        "authors": []
+      },
+      {
+        "title": "Understanding Cognition-Induced Risks in Agentic AI Systems",
+        "slug": "understanding-cognition-induced-risks-in-agentic-ai-systems",
+        "url": "https://huggingface.co/papers/2608.15304",
+        "abstract": "Agentic systems built on large language models pose escalating risks to human agency and autonomy across physical, social, and self-referential cognitive levels, requiring targeted mitigation strategies.",
+        "upvotes": 12,
+        "arxiv_id": "2608.15304",
+        "authors": []
+      },
+      {
+        "title": "MegaParts: Scaling Part-Aware 3D Object Generation to 300 Parts via Token-Efficient Autoregressive Modeling",
+        "slug": "megaparts-scaling-part-aware-3d-object-generation-to-300",
+        "url": "https://huggingface.co/papers/2608.14783",
+        "abstract": "MegaParts scales part-aware 3D generation via token-efficient vector-quantized part tokens and structured autoregressive sequence modeling with long-context training.",
+        "upvotes": 12,
+        "arxiv_id": "2608.14783",
+        "authors": []
+      },
+      {
+        "title": "An Empirical Study of Training Pixel-Space Text-to-Image Diffusion Models",
+        "slug": "an-empirical-study-of-training-pixel-space-text-to-image",
+        "url": "https://huggingface.co/papers/2608.16887",
+        "abstract": "Researchers propose a latent-to-pixel training strategy that accelerates convergence and improves inference speed for large-scale pixel-space diffusion models.",
+        "upvotes": 11,
+        "arxiv_id": "2608.16887",
+        "authors": []
+      },
+      {
+        "title": "R^3-Bench: LLMs Struggle with Resource-Rational Reasoning under Shared Budgets",
+        "slug": "r-3-bench-llms-struggle-with-resource-rational-reasoning",
+        "url": "https://huggingface.co/papers/2608.16033",
+        "abstract": "R³-Bench reveals that shared computation budgets cause reasoning agents to underperform relative to their single-problem capabilities across math, coding, and abstract reasoning tasks.",
+        "upvotes": 11,
+        "arxiv_id": "2608.16033",
+        "authors": []
+      }
+    ],
+    "others": [
+      {
+        "title": "Researching mediated texts from offline to AI: continuities and disruptions",
+        "slug": "researching-mediated-texts-from-offline-to-ai-continuities",
+        "url": "https://www.semanticscholar.org/paper/17a4e4c5ca39e3649aa29662fc8588d8763499d6",
+        "abstract": "Researching mediated texts from offline to AI: continuities and disruptions.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-18",
+        "authors": [
+          "Helen Kelly-Holmes"
+        ]
+      },
+      {
+        "title": "When less data is better: Exploratory privacy-by-design in AI-based human resource analytics based on synthetic data",
+        "slug": "when-less-data-is-better-exploratory-privacy-by-design-in-ai",
+        "url": "https://www.semanticscholar.org/paper/e8fc9c338727ac352bfb1fc5285edc30c5cb0c6b",
+        "abstract": "When less data is better: Exploratory privacy-by-design in AI-based human resource analytics based on synthetic data. Journal of King Saud University: Computer and Information Sciences",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-17",
+        "authors": [
+          "Cristina Iancu",
+          "S. Oprea",
+          "A. Bâra",
+          "Denisa-Maria Iordache"
+        ]
+      },
+      {
+        "title": "Humanistic Buddhist intelligence and generative AI ethics: a comparative text-image study of Buddhist-oriented and commercial AI responses",
+        "slug": "humanistic-buddhist-intelligence-and-generative-ai-ethics-a",
+        "url": "https://www.semanticscholar.org/paper/e2dc66321324478d94cf03ca1b0c5e4684e65048",
+        "abstract": "Humanistic Buddhist intelligence and generative AI ethics: a comparative text-image study of Buddhist-oriented and commercial AI responses. AI and Ethics",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-17",
+        "authors": [
+          "Qihao Kang"
+        ]
+      },
+      {
+        "title": "Chatbots reduce health-related conspiracy beliefs not because of but despite being perceived as AI",
+        "slug": "chatbots-reduce-health-related-conspiracy-beliefs-not",
+        "url": "https://www.semanticscholar.org/paper/e1159d9e93052b96d42d38114bce4fadbe473693",
+        "abstract": "Chatbots reduce health-related conspiracy beliefs not because of but despite being perceived as AI. Scientific Reports",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-17",
+        "authors": [
+          "P. Ballot",
+          "Yana van de Sande",
+          "Hanna Schraffenberger",
+          "P. Schmid"
+        ]
+      },
+      {
+        "title": "Autonomous post-typhoon structural inspection and damage assessment: an agentic AI and aerial robotics-enabled model",
+        "slug": "autonomous-post-typhoon-structural-inspection-and-damage",
+        "url": "https://www.semanticscholar.org/paper/b17c64b359a7fded3d5bbfdac1f3961bc67c28ec",
+        "abstract": "Autonomous post-typhoon structural inspection and damage assessment: an agentic AI and aerial robotics-enabled model. AI in Civil Engineering",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-17",
+        "authors": [
+          "Liupengfei Wu",
+          "L. Geng",
+          "Jin Xue",
+          "Yangyang Qian",
+          "Zhengzhe Liu",
+          "I. Wuni"
+        ]
+      },
+      {
+        "title": "REFINE: Closing the Loop Between Large Language Models and Symbolic Rules in Clinical NLP",
+        "slug": "refine-closing-the-loop-between-large-language-models-and",
+        "url": "https://www.semanticscholar.org/paper/b09e3de47417fa39298ab3d63092b301f658d1bd",
+        "abstract": "REFINE: Closing the Loop Between Large Language Models and Symbolic Rules in Clinical NLP. medRxiv",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-17",
+        "authors": [
+          "N. Wang",
+          "A. Kakadiaris",
+          "C. Li",
+          "R. Wang",
+          "J. Ahn",
+          "Y. Wang",
+          "S. Fu"
+        ]
+      },
+      {
+        "title": "Are AI language models scientific models of language?",
+        "slug": "are-ai-language-models-scientific-models-of-language",
+        "url": "https://www.semanticscholar.org/paper/a077d18a7d07cc51e73747aa05e50e2114b888ee",
+        "abstract": "Are AI language models scientific models of language?. European Journal for Philosophy of Science",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-17",
+        "authors": [
+          "James Ladyman",
+          "R. Nefdt"
+        ]
+      },
+      {
+        "title": "RL–LLMfuzzer: reinforcement learning–guided dual–model differential fuzzing for compiler testing",
+        "slug": "rl-llmfuzzer-reinforcement-learning-guided-dual-model",
+        "url": "https://www.semanticscholar.org/paper/8869f8476f767c934350877b686c4be06b82360a",
+        "abstract": "RL–LLMfuzzer: reinforcement learning–guided dual–model differential fuzzing for compiler testing. Journal of King Saud University: Computer and Information Sciences",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-17",
+        "authors": [
+          "Donghui Li",
+          "Yingying Li",
+          "Bo Zhao",
+          "Jinlong Xu",
+          "Jinyang Yao",
+          "Nan Wang",
+          "Lili Liu"
+        ]
+      },
+      {
+        "title": "Performance of an Ambient Generative AI Documentation Tool in a Linguistically Diverse Clinical Setting",
+        "slug": "performance-of-an-ambient-generative-ai-documentation-tool",
+        "url": "https://www.semanticscholar.org/paper/875db894625c29420ba4de34a56f149042660009",
+        "abstract": "Performance of an Ambient Generative AI Documentation Tool in a Linguistically Diverse Clinical Setting. medRxiv",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-17",
+        "authors": [
+          "R. Aldis",
+          "S. Wang",
+          "M. Sage",
+          "M. Metzmaker",
+          "H. Galvin"
+        ]
+      },
+      {
+        "title": "Artificial intelligence and the \"natural person\" criterion in patent inventorship",
+        "slug": "artificial-intelligence-and-the-natural-person-criterion-in",
+        "url": "https://www.semanticscholar.org/paper/7fba8460602ca243e881c3e0b588d790c075199c",
+        "abstract": "Artificial intelligence and the \"natural person\" criterion in patent inventorship. AI and Ethics",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-17",
+        "authors": [
+          "Alya A. Arabi",
+          "Joshua Goldberg",
+          "A. Al-Marzouqi"
+        ]
+      },
+      {
+        "title": "KGEMD: knowledge-guided enhanced multimodal detection for fake news",
+        "slug": "kgemd-knowledge-guided-enhanced-multimodal-detection-for",
+        "url": "https://www.semanticscholar.org/paper/6552893402b35f644b9da4d7a58965640d595820",
+        "abstract": "KGEMD: knowledge-guided enhanced multimodal detection for fake news. Multimedia Systems",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-17",
+        "authors": [
+          "Ziheng Wang",
+          "Junfang Song",
+          "Shuyu Wang",
+          "Sinuo Fan",
+          "Xin Zhang"
+        ]
+      },
+      {
+        "title": "Meaning without risk: Nietzsche, artificial intelligence, and the algorithmic displacement of valuation",
+        "slug": "meaning-without-risk-nietzsche-artificial-intelligence-and",
+        "url": "https://www.semanticscholar.org/paper/5720e4ab1ed5ee51202250dcc8c4edaf99b345f2",
+        "abstract": "Meaning without risk: Nietzsche, artificial intelligence, and the algorithmic displacement of valuation. AI and Ethics",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-17",
+        "authors": [
+          "B. Hamamra"
+        ]
+      },
+      {
+        "title": "From Output Errors to Workflow Harm: A Practitioner-Audit Method for LLM-Mediated Research",
+        "slug": "from-output-errors-to-workflow-harm-a-practitioner-audit",
+        "url": "https://www.semanticscholar.org/paper/3ef28ada346973fe7bd15a6d1d6ffd9bf2a18a9f",
+        "abstract": "From Output Errors to Workflow Harm: A Practitioner-Audit Method for LLM-Mediated Research. medRxiv",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-17",
+        "authors": [
+          "D. Austria",
+          "B. McCollister",
+          "J. E. Lindsey",
+          "M. Arowolo",
+          "M. Okon"
+        ]
+      }
+    ]
+  }
+}
