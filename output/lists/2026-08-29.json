@@ -1,0 +1,457 @@
+{
+  "date": "2026-08-29",
+  "github": [
+    {
+      "title": "tashfeenahmed/freellmapi",
+      "slug": "tashfeenahmed-freellmapi",
+      "url": "https://github.com/tashfeenahmed/freellmapi",
+      "abstract": "FreeLLMAPI 7.4 billion tokens per month.  34 free LLM providers. 635 free model endpoints. One OpenAI-compatible endpoint. Aggregate free tiers from dozens of providers, plus custom OpenAI-compatible chat, embedding, image, and audio endpoints, behind a single /v1 API. Keys are stored encrypted. A router picks the best available model for each request, falls over to the next provider when one is rate-limited, and tracks per-key usage so you stay under every free-tier cap. freellmapi.co · browse the full catalog: 474 model families, 635 free endpoints English · 簡體中文 Your router updates its own model catalog from a signed feed: new free models, quota changes, and compatibility fixes land without a git pull . Free installs get the monthly snapshot, so a model reaches them 30 days after it joins the live feed; premium routers get it the same day. Go live at freellmapi.co ($19/yr, cancel anytime). Contents Why this exists Supported providers Compatible CLIs & coding agents How it compares Features Quick start Desktop app Works with OpenAI-compatible clients Languages Premium (live catalog) Using the API Screenshots How it works FAQ Limitations Contributing Disclaimer Guides: Install & deploy · API reference · Clients & coding agents · Prompt compression · Architecture & internals · Documentation index · Contributor guide Why this exists Every serious AI lab now offers a free tier, a few million tokens a month, a few thousand requests a day. On its own each tier is a toy. Stacked together, they add up to roughly 7.4 billion tokens per month of working inference capacity, across 474 model families / 635 provider endpoints from small-and-fast to reasonably capable. The problem is that stacking them by hand is painful: thirty-four different SDKs, thirty-four different rate limits, thirty-four places a request can fail. FreeLLMAPI collapses that into one OpenAI-compatible endpoint. Point any OpenAI client library at your local server, and it routes transparently across whichever providers you've added keys for. And the free-tier landscape shifts weekly: providers launch models, retire them, and change quotas without notice. FreeLLMAPI tracks all of that for you. The router pulls a signed model catalog from freellmapi.co on its own, so your install keeps up without a git pull . See Premium (live catalog) for how fast it keeps up. Supported providers Google Groq Cerebras OpenCode Zen Mistral OpenRouter Cloudflare Cohere Z.ai (Zhipu) NVIDIA HuggingFace ModelScope Qwen3 · DeepSeek V4 · GLM-5 (needs Aliyun cn binding) … and 22 more free providers Plus a custom provider — point chat, embedding, image, or audio models at any OpenAI-compatible endpoint (llama.cpp, LM Studio, vLLM, a local Ollama, or a remote gateway) from the Keys page. The full, always-current list lives at freellmapi.co/models with per-model rate limits, context windows, and free-token budgets. Compatible CLIs & coding agents Claude Code Codex CLI Gemini CLI Aider Cline Roo Code Continue OpenCode Goose Qwen Code Kilo Code Crush Cursor Zed JetBrains AI DeepSeek Harness … plus any OpenAI-compatible client, Anthropic SDK, Gemini SDK, or Ollama-capable app Most of these configure themselves with one command — npx freellmapi setup-claude , setup-codex , setup-aider , setup-dsh (DeepSeek Harness), and eleven more generators that fetch your live catalog, back up existing config, and never clobber what's already there. Claude Code and Codex also get zero-persistence launchers ( freellmapi launch , freellmapi launch-codex ) that inject credentials into the child process only. Zed and JetBrains AI connect through the opt-in Ollama emulation ; Gemini CLI speaks its native wire on /v1beta . Per-tool recipes, the setup CLI reference, revocable URL tokens for headerless clients, and the MCP server all live in Clients & coding agents → How it compares Based on public documentation, July 2026 — corrections welcome. Features Every OpenAI-style surface — /v1/chat/completions , /v1/responses (what Codex CLI needs), /v1/completions (editor ghost-text autocomplete), /v1/images/generations , /v1/videos/generations , /v1/audio/speech , /v1/audio/transcriptions , /v1/embeddings , and /v1/models — streaming and non-streaming, from the official SDKs or any OpenAI-compatible client. API reference → Anthropic Messages API — /v1/messages speaks Anthropic's wire format over the same router, so Claude Code and the official Anthropic SDKs run against your free pool. Details → Native Gemini + Ollama surfaces — Gemini CLI can use /v1beta ( generateContent , streaming, token counting, models), while opt-in Ollama emulation serves NDJSON chat/generate, tags, metadata, and embeddings for Zed, JetBrains, and other local-model clients. Fusion (multi-model synthesis) — request the virtual fusion model and the router fans your prompt out to a panel of diverse free models in parallel, then a judge model synthesizes one answer from the drafts. Details → Image, video & speech generation — /v1/images/generations , /v1/videos/generations , and /v1/audio/speech route across the providers that serve media models; images and speech also accept custom OpenAI-compatible media endpoints. Video jobs are normalized across synchronous and queued providers and return a completed MP4. Tool calling & structured outputs — OpenAI-style tools round-trip across providers (plain-text tool calls are rescued into real tool_calls ), plus response_format , seed , logprobs , penalties, and the rest of the sampling params passed through per provider. Smart routing, six strategies — live per-model speed/capability/reliability scores rank your chain; automatic fallover retries the next model on 429/5xx with cooldowns and key rotation. Routing in detail → Unified models & profiles — the same model on several providers collapses into one entry with strict in-group failover; named fallback-chain profiles (a coding chain, a vision chain) switch from the dashboard or per request via auto:<profile> . Per-key rate tracking — RPM/RPD/TPM/TPD counters per (platform, model, key) that learn providers' reported ceilings, so routing always stays under every cap. Self-updating model catalog — the router syncs a signed catalog from freellmapi.co twice a day: new models, quota changes, and provider quirk fixes land automatically. Free installs track the monthly snapshot, which each model joins 30 days after it lands in the live feed; premium routers get it same-day. Premium → Sticky sessions & context handoff — conversations stay on one model for 30 minutes; an optional compact handoff note keeps the thread coherent when a mid-chat switch does happen. Details → Prompt compression (opt-in) — a shared, fail-open request pipeline can deduplicate prompts, filter tool output, compact repeated JSON, and trim stale context before cache lookup and routing. Details → Encrypted keys, one token out — provider keys are AES-256-GCM encrypted in SQLite and decrypted in-memory per request; your apps only ever see a single unified freellmapi-… bearer token. Admin dashboard & analytics — React UI to manage keys, reorder the chain, run a playground, and read p50/p95/TTFT analytics over 24h–90d windows; login-gated, dark/light themes, 60 languages . MCP server & interactive docs — agents can introspect usable models, provider health, and routing strategy over /mcp ; a dependency-free OpenAPI viewer lives at /v1/docs . Coding agents → Ops niceties — opt-in response cache, encrypted DB backups, periodic key health checks, bulk key import/export, declarative startup config. Install & deploy → Runs anywhere Node 20+ runs — Windows, macOS, Linux servers, or a small ARM SBC (Raspberry Pi included). ~40 MB RSS at idle behind PM2 / systemd / whatever supervisor you prefer. The scope is deliberately narrow — see what's not supported yet . Quick start One-liner (Docker required — sets up ~/freellmapi , generates an encryption key, pulls the image, and starts the container): curl -fsSL https://freellmapi.",
+      "stars_today": 433,
+      "language": "TypeScript"
+    },
+    {
+      "title": "rtk-ai/rtk",
+      "slug": "rtk-ai-rtk",
+      "url": "https://github.com/rtk-ai/rtk",
+      "abstract": "High-performance CLI proxy that cuts up to 90% of the bash output your agent reads Website • Install • Troubleshooting • Architecture • Discord English • Francais • 中文 • 日本語 • 한국어 • Espanol • Português rtk filters and compresses command outputs before they reach your LLM context. Single Rust binary, 100+ supported commands, <10ms overhead. What RTK Does RTK intercepts shell commands and compresses their output before your agent reads it. Operation What RTK does to the output ls / tree Tree format with file counts instead of one line per entry cat / read Smart file reading: signatures and structure over full bodies grep / rg Truncates long lines, groups matches by file git status Compact stat format, grouped by state git diff Reduced context, headers stripped git log Hash, author and subject only git add/commit/push Confirmation line instead of full progress output cargo test / npm test Failures only, passing tests collapsed to a count ruff check Grouped by rule and file pytest Failures only, traceback trimmed go test NDJSON parsed, failures only docker ps Essential fields only How Savings Work RTK cuts up to 90% of the bash output your agent reads. That is what RTK measures, and it is not the same as cutting your bill by 90%. Bash output is one contributor to input tokens , alongside your prompt, the system prompt and conversation history. Input tokens are in turn only part of the bill , which also counts output tokens. The reduction dilutes at every step. The token counts RTK reports are estimated as bytes / 4 — RTK ships no tokenizer, so the percentages are reliable but the absolute token numbers are approximate . Full explanation: How RTK Savings Work Installation Homebrew (recommended) brew install rtk Quick Install (Linux/macOS) curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh Installs to ~/.local/bin . Add to PATH if needed: echo ' export PATH=\"$HOME/.local/bin:$PATH\" ' >> ~ /.bashrc # or ~/.zshrc Cargo cargo install --git https://github.com/rtk-ai/rtk Pre-built Binaries Download from releases : macOS: rtk-x86_64-apple-darwin.tar.gz / rtk-aarch64-apple-darwin.tar.gz Linux: rtk-x86_64-unknown-linux-musl.tar.gz / rtk-aarch64-unknown-linux-gnu.tar.gz Windows: rtk-x86_64-pc-windows-msvc.zip Windows users : Extract the zip and place rtk.exe somewhere in your PATH (e.g. C:\\Users\\<you>\\.local\\bin ). Run RTK from Command Prompt , PowerShell , or Windows Terminal — do not double-click the .exe (it will flash and close). The full hook system works natively on Windows (and in WSL ). See Windows setup below for details. Verify Installation rtk --version # Should show \"rtk 0.28.2\" rtk gain # Should show the savings dashboard Name collision warning : Another project named \"rtk\" (Rust Type Kit) exists on crates.io. If rtk gain fails, you have the wrong package. Use cargo install --git above instead. Quick Start # 1. Install for your AI tool rtk init -g # Claude Code / Copilot (default) rtk init -g --gemini # Gemini CLI rtk init -g --codex # Codex (OpenAI) rtk init -g --agent cursor # Cursor rtk init -g --agent windsurf # Windsurf rtk init --agent cline # Cline / Roo Code rtk init --agent kilocode # Kilo Code rtk init --agent antigravity # Google Antigravity rtk init --agent kimi # Kimi AI rtk init -g --agent pi # Pi rtk init --agent hermes # Hermes rtk init -g --agent droid # Factory Droid # 2. Restart your AI tool, then test git status # Automatically rewritten to rtk git status Hook-based agents rewrite Bash commands (e.g., git status -> rtk git status ) before execution. Plugin-based agents, including Hermes, use their plugin API to rewrite commands before execution. The agent receives compact output without needing to call rtk explicitly. Important: the hook only runs on Bash tool calls. Claude Code built-in tools like Read , Grep , and Glob do not pass through the Bash hook, so they are not auto-rewritten. To get RTK's compact output for those workflows, use shell commands ( cat / head / tail , rg / grep , find ) or call rtk read , rtk grep , or rtk find directly. How It Works Without rtk:                                    With rtk:\n\n  Claude  --git status-->  shell  -->  git         Claude  --git status-->  RTK  -->  git\n    ^                                   |            ^                      |          |\n    |         full raw output           |            |  compact output      | filter   |\n    +-----------------------------------+            +------- (filtered) ---+----------+ Four strategies applied per command type: Smart Filtering - Removes noise (comments, whitespace, boilerplate) Grouping - Aggregates similar items (files by directory, errors by type) Truncation - Keeps relevant context, cuts redundancy Deduplication - Collapses repeated log lines with counts Commands Percentages below are reductions in bash output , not reductions in your bill. See How Savings Work . Files rtk ls . # Compact directory tree rtk read file.rs # Smart file reading rtk read file.rs -l aggressive # Signatures only (strips bodies) rtk smart file.rs # 2-line heuristic code summary rtk find \" *.rs \" . # Compact find results rtk grep \" pattern \" . # Grouped search results rtk diff file1 file2 # Condensed diff (exit 1 if files differ) Git rtk git status # Compact status rtk git log -n 10 # One-line commits rtk git diff # Condensed diff rtk git add # -> \"ok\" rtk git commit -m \" msg \" # -> \"ok abc1234\" rtk git push # -> \"ok main\" rtk git pull # -> \"ok 3 files +10 -2\" GitHub CLI rtk gh pr list # Compact PR listing rtk gh pr view 42 # PR details + checks rtk gh issue list # Compact issue listing rtk gh run list # Workflow run status Test Runners rtk jest # Jest compact (failures only) rtk vitest # Vitest compact (failures only) rtk playwright test # E2E results (failures only) rtk pytest # Python tests (-90%) rtk go test # Go tests (NDJSON, -90%) rtk cargo test # Cargo tests (-90%) rtk rake test # Ruby minitest (-90%) rtk rspec # RSpec tests (JSON, -60%+) rtk err < cmd > # Filter errors only from any command rtk test < cmd > # Generic test wrapper - failures only (-90%) Build & Lint rtk lint # ESLint grouped by rule/file rtk lint biome # Supports other linters rtk tsc # TypeScript errors grouped by file rtk next build # Next.js build compact rtk prettier --check .",
+      "stars_today": 130,
+      "language": "Rust"
+    }
+  ],
+  "papers": {
+    "hf": [],
+    "others": [
+      {
+        "title": "From Design to Code: Exploring LLM-Supported Workflows in Figma Dev Mode",
+        "slug": "from-design-to-code-exploring-llm-supported-workflows-in",
+        "url": "https://www.semanticscholar.org/paper/e8d83dec45e8ea1908f9e22d725a99b395ba34b0",
+        "abstract": "Design systems are widely used to ensure consistency and scalability in modern UI development, yet translating design artifacts into system-aligned code remains challenging. Developers must interpret visual designs and map them to appropriate components and implementation details, often relying on external documentation. While AI-assisted coding tools can accelerate development, they often lack structured design-system context, limiting their effectiveness in design-to-code workflows. In this paper, we investigate how a structured design context can influence developer experience. We present an empirical within-subject study with N=30 frontend developers comparing a traditional documentation-driven workflow to an MCP-supported workflow integrating Figma Dev Mode, Code Connect, and AI-assisted coding tools. The results show significant improvements in implementation accuracy, task efficiency, and perceived usability when a structured design context is available. Our findings suggest that AI-supported workflows can improve developer experience by reducing ambiguity in design interpretation while maintaining the need for human validation and documentation support.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-29",
+        "authors": [
+          "Surbhi Rajpal",
+          "Andreas Riener"
+        ]
+      },
+      {
+        "title": "AIKitchen: A Rapid Prototyping Framework for Exploring Dynamic In-context Behavior of Smart Robotic Environments",
+        "slug": "aikitchen-a-rapid-prototyping-framework-for-exploring",
+        "url": "https://www.semanticscholar.org/paper/cb40d54fb16657297515751e06bbca0220450454",
+        "abstract": "Smart environments allow for rich, context-specific interactions. Additionally, the introduction of agentic AI gives UX designers new ways to create flexible, human-centered interactions. However, given the complexity of these environments, building them remains challenging. Classical methods for mitigating the complexity of prototyping behavior, e.g., Wizard-of-Oz prototyping, cannot adequately represent the flexibility and adaptivity necessary for such environments. We present AIKitchen, an open-source framework for prototyping user experiences in agentic, context-driven environments. This framework allows designers to rapidly create, evaluate, and iterate complex interaction scenarios. We demonstrate this approach in the context of a smart kitchen, which integrates environmental sensors, smart-home appliances, and robotic actuators. Through a series of examples, we show how designers can integrate various contextual sensors, actuators, and agents, orchestrate system behavior, and explore different interaction scenarios. This makes the framework valuable for designing context-aware, room-scale experiences and exploring what our future in smart environments might look like.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-29",
+        "authors": [
+          "Carl Oechsner",
+          "Jan Leusmann",
+          "Xuedong Zhang",
+          "Thomas Weber",
+          "A. Butz",
+          "Sven Mayer"
+        ]
+      },
+      {
+        "title": "“Let Me Take That Back”: Designing and Testing Deletion Interfaces for Human-AI Interaction",
+        "slug": "let-me-take-that-back-designing-and-testing-deletion",
+        "url": "https://www.semanticscholar.org/paper/bebd751f76f26b9fe59ef48ceddbcdf253d4f303",
+        "abstract": "When interacting with large language models (LLMs), users have limited visibility and control over how their personal information is retained, particularly after incorporation into model training. Although some deployed LLMs provide options to opt-out of training, these mechanisms do not offer guarantees about the deletion of previously shared information. Hence, currently deployed LLMs rarely offer verifiable mechanisms to delete personal information from trained models or to demonstrate that deletion occurred. We conducted a within-subjects online experiment (N = 64) comparing three proposed interfaces, that enable users to request and receive feedback on the selective deletion of personal information in an LLM-based system: (1) a basic progress indicator, (2) a console-style technical display, and (3) an interactive verification chat. We measured user trust, perceived deletion, and usability. Participants appreciated transparent technical feedback, while interactive verification yielded the highest perceived deletion and trust without compromising usability. From our findings, we derive design recommendations for responsible, privacy-respecting, and user-controlled LLM systems.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-29",
+        "authors": [
+          "Justin Szczepaniak",
+          "Verena Zimmermann",
+          "Karola Marky"
+        ]
+      },
+      {
+        "title": "Analogies and Metaphors for Agentic AI: How Industry Practitioners Explain Emerging AI Systems",
+        "slug": "analogies-and-metaphors-for-agentic-ai-how-industry",
+        "url": "https://www.semanticscholar.org/paper/bc5630792933a65eab2e26b5c7c3c0966097d794",
+        "abstract": "Agentic Artificial Intelligence (AI) systems transition organizational technology from reactive applications to distributed, goal-oriented architectures. While earlier research has focused on their technical capabilities, little is known about how these systems are intellectually framed by those who develop and deploy them. We conducted 18 semi-structured interviews with industry practitioners working with agentic AI systems, including developers, consultants, engineers, and founders. Our results indicate that agentic AI systems are mainly explained through organizational and anthropomorphic source domains, such as employees, teams, or assistants, which embed abstract system qualities within familiar social structures. We contribute to HCI research by demonstrating that such conceptualizations serve as pre-structuring mechanisms that influence mental models, expectations, and interactions with agentic AI systems before direct engagement. Based on this, we outline implications for designing explanation strategies in human-AI interaction.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-29",
+        "authors": [
+          "Felix Stundzig",
+          "Vincent Heimburg",
+          "Manuel Wiesche"
+        ]
+      },
+      {
+        "title": "The Influence of Trust and Need Satisfaction on Young Adults’ Interactions with AI Chatbots for Emotional Support",
+        "slug": "the-influence-of-trust-and-need-satisfaction-on-young-adults",
+        "url": "https://www.semanticscholar.org/paper/95ef0ef2fcc2c0d13c03f728ca6eafe77626f3f0",
+        "abstract": "English: In light of the rising mental health challenges faced by young adults and the growing prevalence of generative AI, this study examines publicly available chatbots, i.e. ChatGPT, as a source of emotional support. The central question was: To what extent - beyond mere functional utility - can digital closeness between the user and the AI arise, and under what conditions are users willing to trust the system. The study followed a mixed-methods approach. First, a quantitative online survey (N = 235) was used to assess usage motives, technology acceptance, and core needs. Building on this, a qualitative study was conducted with eight participants, who engaged in two chat interactions with ChatGPT in the context of personal psychological distress. These dialogues were evaluated using mini-scales, supplemented by a concluding semi-structured interview to reflect on the experience. While ChatGPT was primarily viewed as an efficient tool in a work context, the quantitative survey reveals a weakly significant correlation between psychological stress and openness toward the social-emotional use of chatbots. However, actual use in sensitive topics was hindered by data security and other concerns.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-29",
+        "authors": [
+          "Stefanie Osetrow",
+          "H. Klapperich",
+          "Dr. Alina Huldtgren"
+        ]
+      },
+      {
+        "title": "Personality as Relational Infrastructuring: User Perceptions of Personality-Trait-Infused LLM Messaging",
+        "slug": "personality-as-relational-infrastructuring-user-perceptions",
+        "url": "https://www.semanticscholar.org/paper/937332e6029baaa6c1cbf1fb16e7509d4699823b",
+        "abstract": "Digital health interventions often rely on static message templates for health behaviour support, which can struggle to sustain engagement over time. Large language models (LLMs) offer a promising alternative by enabling context-sensitive message generation with personality-trait-based language adaptation across repeated interactions. Yet most prior work evaluates generated messages in isolation, leaving unclear whether such adaptation improves perceptions of individual messages or whether its benefits emerge through cumulative exposure. To examine this question, 90 participants rated hypothetical messages generated with four LLM strategies, with and without Big Five personality-trait-based language adaptation, in a controlled online study. Using ordinal multilevel models with within-person and between-person decomposition, we found no message-level effect on perceived personalisation. However, greater exposure to personality-trait-adapted messages was associated with increased perceived personalisation, increased appropriateness, and decreased negative affect. These findings suggest that the benefits of personality-trait-based language adaptation may emerge through sustained interaction rather than single-message optimisation.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-29",
+        "authors": [
+          "Dominik P. Hofer",
+          "David Haag",
+          "R. Islambouli",
+          "J. Smeddinck"
+        ]
+      },
+      {
+        "title": "PLAI: A Pilot Study of Profile-Based Explanation for AI-Supported Learning",
+        "slug": "plai-a-pilot-study-of-profile-based-explanation-for-ai",
+        "url": "https://www.semanticscholar.org/paper/7b01ae4f9055dc86ccc63369a83c2ccea855d462",
+        "abstract": "Large language models (LLMs) are increasingly used as on-demand conversational learning assistants, but they typically do not adapt explanations to a student’s background unless explicitly prompted. We present the Personalized Learning Assistant Interface (PLAI), a web-based prototype that generates explanations from lecture slides, audio transcripts, and a structured student profile through a chat-based interface. We evaluated PLAI in a controlled pilot study with 24 STEM students, comparing profile-based personalization with a baseline condition using the same slide and transcript context. Immediate learning was assessed with a five-item knowledge test, while subjective experience was measured using the User Experience Questionnaire (UEQ) and open-ended feedback. We did not observe clear differences in knowledge-test outcomes, but participants in the personalized condition reported significantly higher UEQ Stimulation. These results suggest that profile-based multimodal prompts may mainly support motivational engagement rather than immediate test performance, while larger and longer-term studies are needed to assess learning effects.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-29",
+        "authors": [
+          "Furkan Ali Yurdakul",
+          "Yiman Wu",
+          "Maria Torres Vega",
+          "Mihai Bâce"
+        ]
+      },
+      {
+        "title": "Effects of Interaction Modality on LLM-Based Information-Seeking",
+        "slug": "effects-of-interaction-modality-on-llm-based-information",
+        "url": "https://www.semanticscholar.org/paper/59b25f62a25061813b88a7301244085649782708",
+        "abstract": "Conversational Large Language Models (LLMs), increasingly also in voice mode, are reshaping how people seek and engage with information. Understanding modality effects on interaction patterns and user perspectives is essential for interaction design that balances factors such as trust, usability, and user experience. This paper presents a within-subject experiment (n = 33) comparing how text, voice, and mixed-modality interaction influence LLM-based information search, with participants composing recommendations in health-related scenarios. We find that voice-based and mixed-modality interactions were characterized by a more conversational interaction style, with higher turn ratios, more frequent follow-up questions, and shorter responses than text mode. User experience evaluations indicated differences in hedonic quality, but not in pragmatic quality. We observed no differences in the quality of participants’ recommendations, perceived cognitive load, trust, and anthropomorphism. Qualitative findings highlight situation-dependent preferences. We recommend that LLM-based search systems support mixed interaction modalities that allow for adjustment to preferences and task demands.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-29",
+        "authors": [
+          "Julia Lansche",
+          "Fiona Draxler"
+        ]
+      },
+      {
+        "title": "3D Dreams Are Made of This - Comparing Sketching on XR and Tablet Devices as Input Modalities for 3D Model Generation",
+        "slug": "3d-dreams-are-made-of-this-comparing-sketching-on-xr-and",
+        "url": "https://www.semanticscholar.org/paper/4d93c7e70d8ac8350200f6f0991835d3af4be78c",
+        "abstract": "Generative AI (GenAI) enables the creation of 3D objects from textual descriptions that can be used in game development or 3D printing. However, users struggle to express their vision because control mechanisms are bound to 2D space, resulting in unsatisfyingly generated objects. To address this, we introduce an Extended Reality (XR) sketching application that offers a new way to use 3D sketches to control the generation of 3D objects with GenAI. We compare this approach to a 2D sketching application on a tablet in a study (N=16), both methods using pen-based input. Results show that 3D sketching enables faster specification than 2D sketching, due to reduced mental effort and shorter ideation times. However, perceived control decreases with increasing object complexity, and this negative effect is stronger for 3D sketching. These findings highlight the potential of 3D sketching as a control modality for generative 3D object creation, while identifying object complexity as a key challenge for 3D sketching interfaces for GenAI.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-29",
+        "authors": [
+          "N. Pfützenreuter",
+          "J. Liebers",
+          "Roman Heger",
+          "Henning Maly",
+          "Steven Tischer",
+          "Anh Duy Dao",
+          "D. Goedicke",
+          "Stefan Schneegass"
+        ]
+      },
+      {
+        "title": "Exploration of Bias and Discriminatory Language against People with Disabilities in Large Language Models",
+        "slug": "exploration-of-bias-and-discriminatory-language-against",
+        "url": "https://www.semanticscholar.org/paper/4a20b05f5f33a99611d2958f10b1c368644a5244",
+        "abstract": "LLMs have seen a significant increase in popularity in recent years due to their ability to produce outputs that are indistinguishable from human-written text. These advances have been possible because LLMs were trained on vast amounts of text data. However, this has also led to models reproducing biased outputs in the form of societal harms, such as discriminatory language from the training data. People with disabilities are particularly affected by this because LLMs can produce ableist language in their outputs. This paper focuses on ableist bias in LLMs by conducting a literature review of the existing research in this area. The works identified range from analyses of ableist bias to benchmarks and strategies for mitigating bias. The paper provides insights into existing research findings and also discusses limitations and open issues for future work.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-29",
+        "authors": [
+          "Tjark Nitsche",
+          "J. Rubart"
+        ]
+      },
+      {
+        "title": "Exploring LLM-generated hints for students’ Error Recovery in programming",
+        "slug": "exploring-llm-generated-hints-for-students-error-recovery-in",
+        "url": "https://www.semanticscholar.org/paper/308db03c4546090a48bf47e7b9602fbcef8054a3",
+        "abstract": "This paper explores how students in Higher Education use LLMs for programming and how learning environments should scaffold such support. We conducted a repeated-measures exploratory field study in two programming courses, a Bachelor’s and a Master’s level course, using a JupyterLab environment with LLM support. Students encountered different support conditions: no support, generic error-type support, and tailored support using traceback and source-code context. We studied the impact of these conditions on error recovery. Tailored support was associated with higher error recovery than both no support and generic support, a benefit that held across course levels rather than varying with expertise. These findings may indicate that LLM-supported programming environments should supply context-sensitive scaffolding, automatically providing the model with the learner’s code and error trace rather than relying on the learner to communicate that context.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-29",
+        "authors": [
+          "Bibeg Limbu",
+          "Kaimao Sheng",
+          "M. Münstermann",
+          "Yasin Esiri",
+          "F. Howar",
+          "Nils C. Köbis",
+          "Markus Pauly",
+          "N. Rummel",
+          "Irene-Angelica Chounta"
+        ]
+      },
+      {
+        "title": "AI for Science Communication: Evaluating the Visual and Linguistic Representation of Intelligent Virtual Agents on Credibility and Persuasiveness",
+        "slug": "ai-for-science-communication-evaluating-the-visual-and",
+        "url": "https://www.semanticscholar.org/paper/2f2ccb8f47bdadc8831f661a902ef07daf3653c8",
+        "abstract": "Declining interest in news and increasing use of social media as a primary source of information have, through an interplay of algorithms, selective consumption, and misinformation, led to reduced perceived credibility, growing hostility, and societal polarization. This presents major challenges for science communication. Emerging technologies like artificial intelligence (AI) offer promising new opportunities here through personalized and interactive communication. Prior studies mostly implemented AI as chatbots without human-like representation. However, research suggests that a human-like appearance can enhance credibility and persuasiveness. This paper investigates the impact of visual and linguistic AI representation for science communication. We compared embodied vs. disembodied visual and verbal vs. textual linguistic representation, resulting in four application variants. In our study, 64 participants interacted with one variant discussing the controversy towards zoos. Results show no significant differences in credibility and persuasiveness, suggesting simple chatbots are sufficient. Moreover, AI can support science communication, but supervision remains essential.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-29",
+        "authors": [
+          "Sophia Prehn",
+          "Linda Graf",
+          "Maic Masuch"
+        ]
+      },
+      {
+        "title": "Exploring Self-Tracking Practices of Older Adults with CVD to Design LLM-Enabled Health Data sensemaking",
+        "slug": "exploring-self-tracking-practices-of-older-adults-with-cvd",
+        "url": "https://www.semanticscholar.org/paper/124672c8bf00abc7cef725e653a7fd388a4c74a0",
+        "abstract": "Wearables and mobile health applications are increasingly adopted for self-management of chronic illnesses; yet the data feels overwhelming for older adults with cardiovascular disease (CVD). This study explores how they make sense of self-tracked data and identifies design opportunities for Large Language Model (LLM)-enabled support. We conducted a seven-day diary study and follow-up interviews with eight CVD patients aged 64–82. Findings highlight that self-tracking is affective, interpretive, and socially situated, and are guided by six themes: navigating emotional complexity, owning health narratives, prioritizing bodily sensations, selective engagement with health metrics, negotiating the socio-technical dynamics of sharing, and cautious optimism toward AI. We outline design directions for LLM-enabled data sensemaking systems: supporting emotional engagement, reinforcing patient agency, acknowledging embodied experiences, prompting dialogue in clinical and social contexts, and ensuring safety mechanisms. These directions articulate how LLMs can help translate data into narratives and carry implications for human-data interaction and behavior-change support.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-29",
+        "authors": [
+          "Duosi Dai",
+          "Pavithren V S Pakianathan",
+          "G. Treff",
+          "M. Sareban",
+          "J. Niebauer",
+          "J. Smeddinck",
+          "Sanna Kuoppamäki"
+        ]
+      },
+      {
+        "title": "Is My Work Worth Less? How Knowledge Workers Perceive the Value of Their Contribution in Generative AI-Supported Work",
+        "slug": "is-my-work-worth-less-how-knowledge-workers-perceive-the",
+        "url": "https://www.semanticscholar.org/paper/0f10c7e493238075cdef1359fbfe9aa2115cf9cb",
+        "abstract": "Knowledge work is increasingly shaped by generative artificial intelligence (AI), raising questions about how employees perceive the value of their own contribution when AI supports cognitive and creative tasks. Based on ten in-depth interviews with employees who regularly use generative AI at work and analyzed using Mayring's Qualitative Content Analysis, this study explores these perceptions. The findings indicate that participants perceived generative AI as an augmentative rather than substitutive technology. Although AI increasingly supported cognitive and creative work, participants continued to perceive their contribution as valuable. Rather than being linked to independently completing tasks, valuable human contribution was increasingly associated with judgement, contextual interpretation, responsibility, and the critical evaluation and integration of AI-generated outputs. The findings suggest that generative AI reshapes rather than diminishes perceptions of the value of human contribution in knowledge work.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-29",
+        "authors": [
+          "Florian Schäfer",
+          "Emma Weygoldt",
+          "Verena Pohl",
+          "Doris Janssen",
+          "Nadine Lahn",
+          "Oliver Zöllner"
+        ]
+      },
+      {
+        "title": "NavAI: an application-agnostic llm framework for navigation tasks in virtual reality environments",
+        "slug": "navai-an-application-agnostic-llm-framework-for-navigation",
+        "url": "https://www.semanticscholar.org/paper/f86ce57d564b6537924c130adab09a5fb85e594a",
+        "abstract": "NavAI: an application-agnostic llm framework for navigation tasks in virtual reality environments. International Conference on Automated Software Engineering",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-28",
+        "authors": [
+          "Jiajie Wang",
+          "Sumesh Surendran Letha",
+          "M. DiGiovanni",
+          "Kebin Peng",
+          "Sen He"
+        ]
+      },
+      {
+        "title": "Postgraduate Education in Artificial Intelligence: A Proposal from the Artificial Intelligence Commission of the Portuguese Medical Association.",
+        "slug": "postgraduate-education-in-artificial-intelligence-a-proposal",
+        "url": "https://www.semanticscholar.org/paper/eecc90b67a9651f19a33a045bcdd5820066f9cac",
+        "abstract": "Postgraduate Education in Artificial Intelligence: A Proposal from the Artificial Intelligence Commission of the Portuguese Medical Association.. Acta Médica Portuguesa",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-28",
+        "authors": [
+          "João Frutuoso",
+          "A. Maria",
+          "Helena Donato",
+          "António Vaz Carneiro"
+        ]
+      },
+      {
+        "title": "TrafficMoE: LLM-based mixture-of-experts framework for multi-task network traffic classification",
+        "slug": "trafficmoe-llm-based-mixture-of-experts-framework-for-multi",
+        "url": "https://www.semanticscholar.org/paper/edbb39fda94b934a270fedddbb42c61f43f28f4c",
+        "abstract": "TrafficMoE: LLM-based mixture-of-experts framework for multi-task network traffic classification. Journal of King Saud University: Computer and Information Sciences",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-28",
+        "authors": [
+          "Hui-Min Chen",
+          "De-Hong Gao",
+          "Wen-Xiao Zhang",
+          "Li-Bin Yang",
+          "Zi-Bo Zhou"
+        ]
+      },
+      {
+        "title": "Visuo-spatial cognition and the redesign of human-AI interaction in generative artificial intelligence",
+        "slug": "visuo-spatial-cognition-and-the-redesign-of-human-ai",
+        "url": "https://www.semanticscholar.org/paper/e60e5ea58f5a609d4d5fec9ef026d32487f437b5",
+        "abstract": "Visuo-spatial cognition and the redesign of human-AI interaction in generative artificial intelligence. Discover Artificial Intelligence",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-28",
+        "authors": [
+          "B. Galasso"
+        ]
+      },
+      {
+        "title": "Multinational machine learning investigation of whether generative AI interactions augment or substitute cognitive skills and study efficiency in global higher education",
+        "slug": "multinational-machine-learning-investigation-of-whether",
+        "url": "https://www.semanticscholar.org/paper/d26db2e212784659cd388040258cf998526b1ab4",
+        "abstract": "Multinational machine learning investigation of whether generative AI interactions augment or substitute cognitive skills and study efficiency in global higher education. Discover Artificial Intelligence",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-28",
+        "authors": [
+          "Oladagba Stephen Bolatimi",
+          "Charles Ricky-Okine",
+          "Folarin Emmanuel Bolatimi",
+          "C. C. M. Agbesi",
+          "Francis Martey",
+          "Oluwatobi Reuben Bolatimi",
+          "Ansah Peter",
+          "Ebenezer Osei Kwaku"
+        ]
+      },
+      {
+        "title": "SGAP-Place: A Social Semantics-Augmented Representation Learning Framework for Urban Places",
+        "slug": "sgap-place-a-social-semantics-augmented-representation",
+        "url": "https://www.semanticscholar.org/paper/d20a9235a3af09e1d30b31628241879fa4825458",
+        "abstract": "SGAP-Place: A Social Semantics-Augmented Representation Learning Framework for Urban Places. Journal of Geovisualization and Spatial Analysis",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-28",
+        "authors": [
+          "Jin Zeng",
+          "Yu-Yi Cai",
+          "Yang Yue",
+          "Chao Yang",
+          "Zurui Ao",
+          "Fei Huang",
+          "Jinzhou Cao"
+        ]
+      },
+      {
+        "title": "AI as a non-human mass communicator during conflict: narrative acceleration, epistemic destabilization, and the struggle over how societies learn reality",
+        "slug": "ai-as-a-non-human-mass-communicator-during-conflict",
+        "url": "https://www.semanticscholar.org/paper/ac2bd3f34b0632ba29c47b200c6b911c33227511",
+        "abstract": "AI as a non-human mass communicator during conflict: narrative acceleration, epistemic destabilization, and the struggle over how societies learn reality. Digital War",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-28",
+        "authors": [
+          "C. Andoniou"
+        ]
+      },
+      {
+        "title": "Cognitive Sovereignty: An AI-Aware Governance Framework for Neural Data Threats, Autonomous Cyber Defense, and Identity-Aware Security in Neurotechnology Systems",
+        "slug": "cognitive-sovereignty-an-ai-aware-governance-framework-for",
+        "url": "https://www.semanticscholar.org/paper/4ee1800994215da1c09b5d3bca970e6771bb8432",
+        "abstract": "Cognitive Sovereignty: An AI-Aware Governance Framework for Neural Data Threats, Autonomous Cyber Defense, and Identity-Aware Security in Neurotechnology Systems. Neuroinformatics",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-28",
+        "authors": [
+          "Kritika"
+        ]
+      },
+      {
+        "title": "A survey on LLM-enhanced reinforcement learning in financial markets",
+        "slug": "a-survey-on-llm-enhanced-reinforcement-learning-in-financial",
+        "url": "https://www.semanticscholar.org/paper/3586d7f6422c591d74a8f9c7f47f06cd9429ee3b",
+        "abstract": "A survey on LLM-enhanced reinforcement learning in financial markets. Discover Artificial Intelligence",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-28",
+        "authors": [
+          "Ghusoon Hadi al-Aldaffaie",
+          "Alireza Taheri",
+          "Amirfarhad Farhadi",
+          "A. Zamanifar"
+        ]
+      },
+      {
+        "title": "A low-cost AI-driven 3D content generation pipeline for cultural heritage VR applications",
+        "slug": "a-low-cost-ai-driven-3d-content-generation-pipeline-for",
+        "url": "https://www.semanticscholar.org/paper/1a9754a12c1f0114695aead3f97f2520cc07b7b3",
+        "abstract": "A low-cost AI-driven 3D content generation pipeline for cultural heritage VR applications. Multimedia tools and applications",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-28",
+        "authors": [
+          "Yi-Heng Wu",
+          "Jing-Lun Wang"
+        ]
+      },
+      {
+        "title": "DFGLM-TCM: an integrated knowledge-and experience-driven large language model system for Traditional Chinese Medicine practice",
+        "slug": "dfglm-tcm-an-integrated-knowledge-and-experience-driven",
+        "url": "https://www.semanticscholar.org/paper/136ae6e4b04fbc34d26cd59d02da1261135f0c4d",
+        "abstract": "DFGLM-TCM: an integrated knowledge-and experience-driven large language model system for Traditional Chinese Medicine practice. Chinese Medicine",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-28",
+        "authors": [
+          "Ruikang Zhong",
+          "Dian-Na Liu",
+          "Yuejia Dai",
+          "Zexing Li",
+          "Zirui Song",
+          "Zhi-Xing Li",
+          "Le Zhang",
+          "Siyi Chen",
+          "Yisha Su",
+          "Yue Sun",
+          "Wen-Zheng Zhang",
+          "Peng-Fei Jia",
+          "Min Jiang",
+          "Lei Gao",
+          "K. Hu"
+        ]
+      },
+      {
+        "title": "Integrating generative AI into physiotherapy education: students’ use, perceptions, and generative AI literacy following curricular adaptations: a repeated cross-sectional programme evaluation",
+        "slug": "integrating-generative-ai-into-physiotherapy-education",
+        "url": "https://www.semanticscholar.org/paper/032a29272200e06e56a6a57082602cdf831023f9",
+        "abstract": "Integrating generative AI into physiotherapy education: students’ use, perceptions, and generative AI literacy following curricular adaptations: a repeated cross-sectional programme evaluation. BMC Medical Education",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-08-28",
+        "authors": [
+          "K. Schröder",
+          "Yvonne Lindbäck",
+          "Torkel Engström",
+          "S. Sonesson"
+        ]
+      }
+    ]
+  }
+}
