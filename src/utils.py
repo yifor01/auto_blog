@@ -896,10 +896,18 @@ def claude_code_generate(
     `--allowed-tools ""` 不是效能考量而是安全邊界：素材來自 RSS / HN / Reddit，
     是攻擊者可控的輸入，而 pipeline 在 Actions 上跑時 job 有 contents:write。
     無工具面時最壞情況只是文章內容被誘導，不會變成任意檔案寫入。
+
+    `--safe-mode` 關掉使用者的全部客製（CLAUDE.md、hooks、skills、output styles、
+    custom commands），auth 不受影響。**沒有它，本機跑出來的東西是廢的**：2026-09-01
+    實測，使用者 `~/.claude` 的 SessionStart hook 會把「收工前記得跑 /wrap-up」注入這個
+    headless session，模型就照全域 output style 回一句「評分已完成並輸出」，契約完全不理，
+    8/8 缺漏。Actions 上因為 runner 沒有 `~/.claude` 才一直沒爆——也就是說這個 bug 只在
+    本機（含 `cli web` 啟動時自動觸發的 pipeline）發作，且對批次生成一視同仁。
     """
     argv = [
         "claude", "-p",
         "--model", model,
+        "--safe-mode",
         "--allowed-tools", "",
         "--strict-mcp-config", "--mcp-config", '{"mcpServers":{}}',
         "--output-format", "json",

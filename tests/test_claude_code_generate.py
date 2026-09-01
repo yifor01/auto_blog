@@ -39,6 +39,14 @@ class TestSuccess:
         assert "--allowed-tools" in argv and argv[argv.index("--allowed-tools") + 1] == ""
         assert "--strict-mcp-config" in argv
 
+    def test_safe_mode_isolates_user_config(self):
+        """沒有 --safe-mode 時，使用者 ~/.claude 的 hooks / CLAUDE.md / output style 會
+        劫持這個 headless session，模型改照全域風格回一句話，批次契約整批落空。
+        Actions runner 沒有 ~/.claude 所以測不到，只在本機發作。"""
+        with patch("subprocess.run", return_value=_completed(_payload("ok"))) as m:
+            claude_code_generate("prompt")
+        assert "--safe-mode" in m.call_args.args[0]
+
     def test_model_and_timeout_passed(self):
         with patch("subprocess.run", return_value=_completed(_payload("ok"))) as m:
             claude_code_generate("prompt", model="opus", timeout=123)
