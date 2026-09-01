@@ -2,14 +2,20 @@ llm:
   api_url: https://openrouter.ai/api/v1
   max_tokens: 8192
   request_delay_seconds: 8.0
-  # 評分 chain（需穩定輸出 JSON，越快越好）— 由上而下降級
-  # 2026-07-14 更新：gpt-oss-120b:free 已下架、gemma-4-31b 被 Google AI Studio 池限流。
+  # 評分 chain — **2026-09-01 起降為 fallback**：評分主力改走 Claude Code CLI 批次
+  # （見下方 batch_scoring）。這條只在批次缺漏 / CLI 不可用時逐筆補救。
   # 選 model 硬規則：同一條 chain 的 fallback 必須掛在不同上游 provider（共用上游的 fallback 不是 fallback）。
   # :free 變體的上游 provider 只能從 429 body 的 provider_name 實測得知（models API 查不到）。
+  #
+  # 2026-09-01 用真實評分 prompt 實打全部 18 個 :free model 的結果（判準＝能吐出 5 維皆為數字的 JSON）：
+  #   下架  openai/gpt-oss-20b:free（404，提示改用付費版）← 原本的 chain 首選，每天白打一次
+  #   429   google/gemma-4-26b-a4b-it / gemma-4-31b（上游 Google AI Studio）、z-ai/glm-5.2（上游 Decart）
+  #   403   thinkingmachines/inkling（only available on agentic harnesses）
+  #   推理外洩 nvidia/nemotron-3.5-lightning、nemotron-3-ultra（吐 "Here's a thinking process"）
   scoring_models:
-    - openai/gpt-oss-20b:free                # 上游 Darkbloom；JSON 乾淨、快
-    - google/gemma-4-26b-a4b-it:free         # 上游 Darkbloom / Google AI Studio
-    - nvidia/nemotron-3-super-120b-a12b:free # 上游 Nvidia；120B 最後備援（較慢）
+    - minimax/minimax-m3:free                # 實測 4/4 乾淨 JSON，1.1s 最快
+    - nvidia/nemotron-3-super-120b-a12b:free  # 上游 Nvidia；實測 2/3（偶發空字串）
+    - openrouter/free                        # 免費 model 隨機路由：每次呼叫重擲，等於再賭一個不同上游
   # 生成 chain（繁中品質優先）
   # 2026-08-11 更新：tencent/hy3:free 轉為純付費（endpoints=0，呼叫回 404 並提示改用 tencent/hy3），
   # 換上 nemotron-3-ultra。首選與第 3 位同為上游 Nvidia，違反上面的硬規則是刻意的——
@@ -21,7 +27,7 @@ llm:
     - nvidia/nemotron-3-super-120b-a12b:free # 上游 Nvidia
     - agnes-2.0-flash                        # Agnes（apihub.agnes-ai.com）：免費 model 全掛時的可用性保險，寫作品質佳
   # Legacy：GeneratedContent.model_used 顯示 / UI 舊 code 仍讀這些 key
-  model: openai/gpt-oss-20b:free
+  model: minimax/minimax-m3:free
   generation_model: nvidia/nemotron-3-ultra-550b-a55b:free
   # 批次生成：改用本機 Claude Code CLI（headless），一個 session 寫多篇。
   # enabled: false → 走上面的 OpenRouter 逐篇 chain（預設）；true → 走 CLI 批次，
@@ -36,6 +42,23 @@ llm:
     enabled: true
     model: sonnet
     batch_size: 4
+    timeout_seconds: 900
+  # 批次評分：與 batch_generation 同一套機制（claude_code_generate），一個 CLI session 評多筆。
+  # enabled: false → 走上面的 scoring_models 逐筆 chain；true → 走 CLI 批次，
+  # **缺漏的那幾筆**（不是整批）退回逐筆 OpenRouter。
+  #
+  # batch_size 20 而非生成的 4：評分的輸出是一行 JSON（約 80 token/筆），不像文章那樣
+  # 越寫越長品質越掉；限制因素是 input（每筆素材約 800 token），20 筆一批約 48k input，
+  # 一天 60 筆＝3 個 session，把 ~31k 的 per-session system prompt 開銷攤掉。
+  #
+  # 副作用（刻意接受）：一次看得到整批，模型會做相對排序，同一篇換一批鄰居分數會不同，
+  # 跨日分數不再嚴格可比，換模型當天 analyze-scores 的漂移偵測必定告警。
+  # 2026-09-01 實測 20 筆真實素材：44.8s、0 缺漏、總分範圍 32-77。**沒有證據顯示分數比
+  # 逐筆更分散**——同日 OpenRouter 逐筆存檔的跨度是 47，兩者相當（且母體不同，不可直接比）。
+  batch_scoring:
+    enabled: true
+    model: sonnet
+    batch_size: 20
     timeout_seconds: 900
 collectors:
   # 外部文章正文抓取的字元上限（rss / blogs / hackernews / reddit 共用）。
