@@ -170,7 +170,10 @@ python -m src.cli catchup --days 7     # 補跑最近 N 天中遺漏的日期
 python -m src.cli backfill-votes        # 回補前一天的 HF 論文票數並重排清單
 python -m src.cli repair-content --dry-run  # 清點歷史髒資料規模（不連網、不寫檔）
 python -m src.cli repair-content --days 30  # 實際修復最近 30 天
+python -m src.cli check-models          # 實測 OpenRouter fallback chain 還能不能用
 ```
+
+> `check-models` 是給 **fallback chain** 用的健康檢查。評分與生成的主力都走 Claude Code CLI，`config.yaml` 的 `llm.scoring_models` 只在 CLI 失敗時才會被叫到——平常不執行，就會靜默腐爛（model 下架、上游限流、輸出退化都沒人發現）。判準是「能否對真實評分 prompt 吐出 5 維皆為數字的 JSON」，不是「有沒有回應」。每週一由 `.github/workflows/model-health.yml` 自動跑，有問題會開 `[model-health]` Issue；**不會自動改 config**。
 
 > `backfill-votes` 平常不需手動跑——論文剛發布時票數還沒累積，`run` 收集完會自動回補前一天。只有在想補更早的日期時才用（`--date 2026-07-25 --days 3`）。
 
