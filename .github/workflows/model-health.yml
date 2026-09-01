@@ -1,0 +1,77 @@
+name: Model Health
+
+# 為什麼需要這個：scoring / generation 主力都改走 Claude Code CLI 之後，
+# config.yaml 的 OpenRouter chain 變成**冷路徑**——平常不執行，會靜默腐爛，
+# 等到 CLI 真的掛掉那天才發現備援也是死的。這裡定期去踩一次那條路。
+#
+# 判準是「能否對真實評分 prompt 吐出 5 維皆為數字的 JSON」，不是「有沒有回應」。
+# 2026-09-01 實測，只看有沒有回應會漏掉推理外洩與回空字串兩種壞法。
+
+on:
+  schedule:
+    - cron: '23 6 * * 1'   # UTC 週一 06:23 = 台灣週一 14:23（避開 daily-pipeline 的 05:47）
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -e . -c constraints.txt
+
+      - name: Probe scoring chain
+        id: probe
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_API_KEY_2: ${{ secrets.OPENROUTER_API_KEY_2 }}
+          OPENROUTER_API_KEY_3: ${{ secrets.OPENROUTER_API_KEY_3 }}
+          AGNES_API_KEY: ${{ secrets.AGNES_API_KEY }}
+        # --strict 讓「chain 有洞」以 exit 1 表達；continue-on-error 讓後面的
+        # 開 Issue 步驟照跑，並用 outcome 判斷要不要開。
+        continue-on-error: true
+        run: python -m src.cli check-models --out health-report.md --strict
+
+      - name: Open or update issue
+        if: steps.probe.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const title = '[model-health] OpenRouter 評分 chain 有 model 需要更換';
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const today = new Date().toISOString().slice(0, 10);
+            let report = '（報告檔案不存在，請看 Run log）';
+            try { report = fs.readFileSync('health-report.md', 'utf8'); } catch (e) {}
+            const body = `${report}\n\n---\n檢查日期：${today}\nRun: ${runUrl}`;
+
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo,
+              state: 'open', per_page: 100
+            });
+            const existing = issues.find(i => i.title.includes('[model-health]'));
+
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: existing.number, body
+              });
+              console.log(`已追加留言至 Issue #${existing.number}`);
+            } else {
+              const { data: created } = await github.rest.issues.create({
+                owner: context.repo.owner, repo: context.repo.repo, title, body
+              });
+              console.log(`已開新 Issue #${created.number}`);
+            }

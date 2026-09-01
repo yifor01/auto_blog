@@ -346,6 +346,34 @@ def backfill_votes(
         console.print(f"[bold green]✅ 共更新 {changed} 篇論文票數[/bold green]")
 
 
+@app.command(name="check-models")
+def check_models(
+    out: str = typer.Option(None, "--out", "-o", help="把 markdown 報告寫到檔案（供 CI 開 Issue 用）"),
+    strict: bool = typer.Option(False, "--strict", help="chain 有需要更換的項目時 exit code 1"),
+):
+    """實測 OpenRouter 評分 fallback chain 還能不能用（零 LLM 判斷，純實測）。
+
+    主力改走 Claude Code CLI 後，這條 chain 是冷路徑，會靜默腐爛。定期跑一次。
+    """
+    from src.model_health import check_scoring_chain, render_report
+
+    console.print("[cyan]實測 OpenRouter 評分 chain（用真實評分 prompt）...[/cyan]")
+    result = check_scoring_chain()
+    report = render_report(result)
+    console.print(Markdown(report))
+
+    if out:
+        Path(out).write_text(report, encoding="utf-8")
+        console.print(f"[dim]報告已寫入 {out}[/dim]")
+
+    if result["broken"]:
+        console.print(f"[bold yellow]⚠️ {len(result['broken'])} 個 model 需要更換[/bold yellow]")
+        if strict:
+            raise typer.Exit(1)
+    else:
+        console.print("[bold green]✅ chain 全部可用[/bold green]")
+
+
 @app.command(name="repair-content")
 def repair_content(
     days: int = typer.Option(None, "--days", "-n", help="只修最近 N 天（預設全期）"),
