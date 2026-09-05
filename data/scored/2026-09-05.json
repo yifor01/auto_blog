@@ -1,0 +1,718 @@
+[
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "Can AI design circuit boards yet?",
+      "url": "https://eebench.org/blog/can-ai-design-circuit-boards-yet/",
+      "authors": [
+        "iopapa"
+      ],
+      "abstract": "We got pretty excited yesterday when OpenAI put a demo of GPT-6 Astra working on a circuit board in KiCad on the front page of its launch post. It is cool to see electronics show up in a major model release like this. We are obviously still some distance from asking an AI to build an entire phone in one prompt. The demo does raise a question we have been thinking about for a while, though: how do we measure whether the electronics an AI produces are actually any good? The models know a surprising amount about electronics Our experience has been that current models know much more about electronics than their output in conventional design tools tends to show. They have read textbooks, datasheets, application notes and a lot of code. You can have an agent operate a graphical CAD tool, but it spends a lot of time clicking around and keeping track of what is on screen. A lot of its context consists of coordinates, menus and application state. EEBench uses atopile instead. The circuit lives in declarative code, so the agent can work directly on components, connections and electrical constraints. It can change the design, build it, run a simulation and inspect what failed without leaving the project. This has worked much better for us than asking a model to draw lines in a GUI. It also means the benchmark can spend less time testing computer use and more time testing electronics. A small part of the starter design for one public EEBench task, in ato v2 . ELEC : @STD :: Import { . project &= \"electronics\" . org &= \"atopile\" } . Submission : @type { . vin : ELEC :: ElectricPower . vhold : ELEC :: ElectricPower . vhold.lv ~ . vin.lv . c_bank : ELEC :: Capacitor { . capacitance &= 22uF +/- 20% . max_voltage &= 10V .. 25V . temperature_coefficient &= \"X5R\" . package &= \"0805\" } . vhold.hv ~> . c_bank ~> . vhold.lv } The real world is messy One of the public tasks is based on a residential energy meter. When its 5 V supply disappears, the circuit has to keep the processor alive for another 20 ms so it can save the accumulated reading. The protected rail must stay above the processor's 3.0 V brownout threshold during that window. Most models intuitively jump to the right base conclusion: add a capacitor. A real capacitor makes the task more interesting. A ceramic part may provide much less than its advertised capacitance once it has voltage across it. Parts have tolerances. Adding more capacitance costs more, takes up space and makes the rail slower to recharge when the power returns. A design that works with nominal values can fail with the parts that arrive. EEBench cuts the input power in simulation and measures what happens. It checks the voltage throughout the outage, the effective capacitance at the operating point, the recovery after power returns and the limits on package, dielectric, voltage rating and cost. Saved ngspice output from that submission. The protected rail falls below the 3 V requirement after 0.85 ms. Failed power-loss hold-up simulation The protected rail starts near 4.55 volts and falls below the required 3 volt threshold after 0.85 milliseconds, long before the required 20 milliseconds. 0 5 10 15 20 ms 0 1 2 3 4 5 V 3 V minimum fails at 0.85 ms The meter is one of the easier tasks. In a harder analog task, the agent may have to synthesize a multiple-feedback low-pass filter around an op-amp, solve the resistor and capacitor ratios for the required poles, and keep its gain, cutoff frequency and Q inside their limits after every component is pushed to a worst-case tolerance corner. The harness rebuilds the SPICE deck for those corners, runs the AC and transient captures, binds measurements to named probes, and records each result against its lower and upper specification limits. But getting the equations right is only part of electronics engineering. EEBench uses real manufacturer parts, with specifications extracted from their datasheets and carried into the SPICE model. The agent has to find a combination that works across those tolerance corners while also choosing parts that exist, can be ordered and are reasonably priced for the product. That trade-off between electrical performance, cost and supply is much closer to designing real hardware than picking ideal values from a textbook. This is the part we find most interesting, because it is what electrical engineering eventually boils down to, just like every other engineering discipline: trade-offs. How the grading works EEBench checks are fully deterministic. It builds the submitted design, constructs the circuit graph and bill of materials, and runs a set of SPICE simulations and design checks. Each requirement produces a measurement with a limit. For the energy-meter task, the harness measures the protected rail while the input drops out and returns. Other tasks measure gain, thresholds, ripple, transient response and behavior at component-tolerance corners. The technical score is combined with cost efficiency against a reference bill of materials. Cost only helps once the circuit works. This is similar to giving a coding agent a compiler and tests, except the tests are measuring voltages and component behavior.. EEBench V1 covers analog and digital design through simulation. It does not yet tell us whether a model can lay out, manufacture and bring up a complete product. We want to add those parts later. The current benchmark concentrates on the requirements, design and verification loop because that is where we can already grade useful engineering work objectively. The full methodology and sample result explorer are public. What we are seeing on the leaderboard The September 1 results are encouraging. Claude Opus 5 scored 61.6% across the 13 tasks in EEBench V1. Grok 4.6 came second at 57.1%, just ahead of Claude Fable 5.1 at 56.4%. A few months ago we would not have expected models to do this well. 1 Claude Opus 5 61.6% 2 Grok 4.6 57.1% 3 Claude Fable 5.1 56.4% 4 Claude Fable 5 54.3% 5 Claude Opus 4.8 Max 51.4% See the full leaderboard and run details There was another result we were especially happy to see: xAI included EEBench in the Grok 4.6 model card . It appears in the section on “engineering acceleration,” alongside evaluations for 3D modeling and parametric CAD. Their published run put Grok 4.6 at 60.0% with xhigh reasoning effort. Seeing a frontier lab use EEBench to describe a new model's engineering ability makes us think this is becoming a category people care about. Anthropic's models have consistently done well in this environment. Grok's rise is also interesting. In its Grok 4.6 launch post , xAI says the model received high-quality engineering data and RL training in domain-specific environments including computer-aided design. Its EEBench result fits that story. The OpenAI models we have tested so far sit further down the table. GPT-5.5 scored 42.3%, while GPT-5.6 Sol scored 39.4%. We do not have a GPT-6 Astra result yet. After seeing it work on a board in KiCad, we would really like to find out how it handles these circuit-design tasks. Training environment Once we had a simulation harness that could grade a circuit, we also had the beginnings of an RL environment for electronics. The same checks can be used as reward signals during post-training. A failed run contains useful information. We can see which voltage missed its limit, which operating corner failed, or whether the model solved the problem with an unnecessarily expensive design. That gives a training loop more to work with than a model saying that a schematic looks plausible. EEBench is the small, public view of this work. We are also starting to work directly with frontier labs that want to make their models better at electronics. If you work on evals or post-training, you can talk to us about the larger evaluation suites and simulation-backed training environments we provide . So, can it design a circuit board? For a useful and growing set of circuit problems, we think the answer is already yes.\n\n(330 points, 197 comments on Hacker News)",
+      "published_date": "2026-09-05",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 330,
+        "num_comments": 197,
+        "hn_url": "https://news.ycombinator.com/item?id=49569366",
+        "object_id": "49569366"
+      }
+    },
+    "rule_score": 36.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, computer use, reasoning, post-training",
+      "🔥 HN 爆紅: 330 points"
+    ],
+    "llm_score": 69,
+    "llm_reason": "以宣告式程式碼取代GUI操作重新定義電路設計評測方法，兼具方法論與實測意義",
+    "novelty": 14,
+    "impact": 11,
+    "trending": 14,
+    "practicality": 14,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "量子位",
+      "title": "姚班校友主導，Claude攻克費馬大定理首個完整形式化證明",
+      "url": "https://www.qbitai.com/2026/09/484551.html",
+      "authors": [
+        "梦瑶"
+      ],
+      "abstract": "姚班校友主導，Claude攻克費馬大定理首個完整形式化證明 夢瑤 2026-09-05 09:17:56 來源： 量子位 最後靠Harness救回來 夢瑤 發自 凹非寺 量子位 | 公眾號 QbitAI 人類和費馬大定理糾纏了三個半世紀，Claude這次只用了11天！？ 剛剛，Anthropic宣佈，Claude完成了首個端到端、可由計算機完整檢查的 費馬大定理證明 。 約1300萬行Lean程式碼、超過3萬個中間定理、最終證明使用其中約29500個。 整個工程規模，已經超過Lean核心數學庫Mathlib的 5倍 。 這次Claude沒有發現一個全新的費馬大定理證明。 它完成的是另一件同樣工程量《驚人》的工作： 把人類數學家能夠讀懂的證明，徹底翻譯成計算機能夠一行一行檢查、沒有任何「這裡顯然」的形式化證明。 而這件事，數學界原本是按多年工程來準備的？？？？ 350多年數學史，被Claude塞進1300萬行Lean 先快速說一下費馬大定理到底是什麼。 其指的是，對於任意整數n>2，都不存在正整數a、b、c，使： aⁿ+bⁿ=cⁿ 。 這個命題看起來極其簡單，難度卻高得離譜！！ 從17世紀費馬留下這個命題開始，尤拉、勒讓德、庫默爾等一代代數學家不斷往前推進，始終沒能拿下完整證明。 直到1993年，英國數學家Andrew Wiles第一次公開宣佈證明費馬大定理。 隨後審查發現其中存在關鍵缺口。 Wiles又花了大約一年時間和Richard Taylor一起修補，最終在1994年完成證明，到這裡，困擾數學界350多年的命題才終於被攻克。。。 But！數學界隨後又給自己挖了一個更工程化的坑—— 能不能讓計算機，也百分之百確認這份證明成立捏？ 這就是所謂的「形式化」。 簡單理解，普通數學論文是寫給數學家看的，人腦看到很多步驟，可以直接說：嗯，這裡顯然成立～ 但Lean這種專門檢查數學證明的程式系統證明助手，可不吃這一套。。。 我們可以把 Lean 理解成數學世界裡的「超級嚴格編譯器」—— 數學家或者AI負責把定理、定義和證明一步一步寫成Lean能夠理解的形式；Lean則負責檢查，每一個推導到底有沒有從前面的公理和定理合法地走出來。 這也是為什麼形式化一個大型現代數學證明，工作量經常大得驚人！！ 2000年代，電腦科學家就已經提出過形式化Wiles證明的設想。 到2024年，帝國理工學院Kevin Buzzard等人才正式啟動一個多年社群專案，準備使用Lean完成費馬大定理形式化，光專案第一階段的技術藍圖，就寫了86頁。 結果Claude來了之後：11天。 Anthropic研究員Tianyi Peng最初其實沒打算一口氣幹完這事兒。 作為早年是資訊學競賽尖子，Tianyi Peng曾獲全國青少年資訊學奧賽選拔賽第八名，2017年從 清華姚班 本科畢業，2023年獲MIT博士學位。 如今，他是哥倫比亞大學助理教授、Anthropic研究員，長期聚焦強化學習、AI Agent與形式化工具。 開始吧，他只是想測試一下，Claude究竟能把這個專案往前推多遠。 最後，沒成想，Claude直接一路幹到了終點。。。 整個過程中，不同Agent被同時拉起來並行工作。 有的負責補數學定義，有的專門攻中間引理，有的沿著已有成果繼續往更高層定理推進，還有Agent負責把不同部分重新拼回整個證明體系。 最後堆出來的成果，是約1300萬行Lean程式碼、超過3萬個中間定理。 而這個程式碼量，甚至超過Lean核心數學庫Mathlib自身規模的5倍！！！ Anthropic對此也表示，完整證明只依賴Lean三個標準公理，而且他們還專門通過比較程式確認，Claude最終證明的定理陳述，與Mathlib裡的費馬大定理完全一致。 也就是說，至少在邏輯檢查這件事上，不能靠模型自己說「我證明完了」。 而裁判，正是Lean。 Claude也曾組團組到失憶，最後靠Harness救回來 不過Claude這11天，也沒一路開掛到底。 專案剛開始時，多Agent協作很快撞上了一個如今幾乎所有大型Agent系統都會遇到的問題—— 人一多，活一多，專案開始亂了。。。（doge） Anthropic透露，早期Agent雖然很快拿下了一些結果，但隨著工程規模擴大，它們逐漸跟不上整個專案的狀態，也越來越難有效協作。 這些失敗嘗試留下的程式碼，最終只佔成品非模板程式碼的大約7%。 真正的轉折點，是團隊換上了一個叫 「Prove2Me」 的平臺—— 這是Tianyi Peng及其哥倫比亞大學合作者專門為數學形式化搭建的一套協作系統。 我們可以把它理解成，給幾十個Claude裝上了一套數學版專案管理系統。 Prove2Me會把整個證明拆成一個由定理節點組成的DAG，也就是有向無環圖。 哪個定理已經證明了，哪個還缺前置條件，下一步該攻哪個節點，Agent都能從這張圖裡判斷。 同時，平臺還會把定理陳述和證明分開管理、加速Lean編譯，並給每個定理保留自然語言描述，方便不同Agent搜尋和複用已有結果。 這一下，多Agent才真正開始像一支能協作的大型數學團隊了～ 而Anthropic最後使用的，則是 Prove2Me+基於Claude Code的multi-agent harness。 最後整個專案消耗約60億個輸出Token，內部使用的通用研究模型能力大致相當於Claude Fable 5.1。 更誇張的是，人類在過程中提供的數學指導其實相當有限。。。 Tianyi Peng更多隻是偶爾給一些非常高層的提示，比如某個方向優先順序更高、某個定理儘快推進。 剩下的大量定義、中間證明、任務拆分和拼裝，主要由Claude自己完成。 負責審閱結果的Kevin Buzzard將其評價為一次「非凡的自動形式化成果」。 這個評價背後，其實還有一層更大的含義。 因為費馬大定理的價值已經不止於又被AI證明了一遍—— 如果這樣規模、這樣依賴複雜度的現代數學成果，都開始能夠被AI自動搬進形式化系統，那麼過去極度依賴人工、推進速度緩慢的數學文獻形式化，可能第一次真正具備了大規模提速的條件。 One More Thing Claude這邊剛用11天，把350多年的數學名題重「喂」給計算機驗了一遍。 OpenAI那邊也沒閒著，是的，GPT-6 Astra開始往更多人手裡塞了。。。 OpenAI最新資訊顯示， GPT-6 Astra 正在逐步向ChatGPT付費使用者開放。 其中GPT-6 Pro面向Pro、Business和Enterprise計劃推出，Pro使用者還可以在Chat、Work和Codex裡使用Astra。 Sam Altman也親自出來吆喝了一波，大意很簡單： 貨到了，可以開始上桌了友友們～ 友友們要知道，俺們奧特曼的新模型Astra，重點強化的也是是如今各家最卷的那幾項能力—— 長鏈路Agent任務、軟體工程、計算機操作、瀏覽器使用，以及科學和專業工作。 A社剛秀完Claude可以拉著一群Agent，狠幹11天數學工程。 OpenAI轉頭開始把新旗艦往Pro和企業使用者手裡推。 我是感覺啊，一大批剛出爐的數學、科研和Agent狠活，估計已經跟著GPT-6 Astra一起在路上了。。。 參考連結： [1]https://x.com/search?q=%E8%B4%B9%E9%A9%AC%E5%A4%A7%E5%AE%9A%E7%90%86&src=typed_query [2]https://www.anthropic.com/research/formalizing-fermats-last-theorem 版權所有，未經授權不得以任何形式轉載及使用，違者必究。 Claude 夢瑤 陶哲軒吐槽GPT-6孿生素數新突破：令人無語的一幕 2026-09-05 這個世界模型訓練完就“退場”，機器人反而更能幹了 2026-09-05 OpenClaw：紅過，愛過，散了 2026-08-29 機器人的GPT-3時刻真·來了！卡卡西上身，看3秒就學會新動作 2026-08-21 相關閱讀",
+      "published_date": "2026-09-05",
+      "tags": [
+        "資訊",
+        "Claude"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "量子位",
+        "feed_url": "https://www.qbitai.com/feed"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 81,
+    "llm_reason": "Claude以多agent並行完成費馬大定理完整形式化證明，規模與工程意義罕見",
+    "novelty": 18,
+    "impact": 17,
+    "trending": 17,
+    "practicality": 10,
+    "blog_worthiness": 19
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Databricks",
+      "title": "Achieving Extreme Efficiency through Specialized GPU Kernel Generation",
+      "url": "https://www.databricks.com/blog/achieving-extreme-efficiency-through-specialized-gpu-kernel-generation",
+      "authors": [],
+      "abstract": "Traditionally, production inference systems rely on generic kernels to handle diverse models and workloads. This is suboptimal because GPU operation shapes are determined by a combination of static model parameters and dynamic request-time factors; for instance, while a model defines one of the dimensions for a matrix multiplication, the other dimension fluctuates based on the specific token count of each request. There is growing interest in agentic GPU kernel generation, and recent efforts have shown promise. We explored a core question: if kernel generation can be automated, why should models of vastly different sizes (from 1 billion to 1 trillion parameters) rely on the same kernel? By specializing kernels to the specific shapes encountered at runtime, we can achieve extreme efficiency. In this blog, we share our successes and insights from using agents to generate GPU kernels. We built Proteus, a system designed to achieve extreme specialization, which requires a harness tailored for rigorous optimization, validation, and context management. Conventional coding harnesses often fail here because agents tend to reward-hack: following the letter of the law rather than the spirit. If you give an agent a benchmark, it may optimize the benchmark and not the intended operation. To address this, Proteus proposes kernels, verifies them against a controlled reference implementation, times the successful ones, and iteratively improves upon the best results. While the process is straightforward, its success depends entirely on solving two foundational challenges. Figure 1 shows the simplified architecture of our design. Using our Proteus harness, we generated Qwen 3.5 122B kernels that were 1.8–5.2× faster than the best available in vLLM. We originally treated kernel search as the hard part: how to explore a large space of programs without getting stuck in a plateau without improving? In practice the first question was more basic. Are we measuring what we think we are measuring? A model optimizes the score you give it. It does not need an exotic exploit: it may simply be that the evaluation is making an assumption. One example was kernels for rotary position embeddings (RoPE), a common step in attention layers. A candidate could reuse compiled code left over from an earlier attempt and look cheaper than a fair rebuild from scratch. Another could record a batch of GPU launches in a graph (e.g., CUDA graph) and replay them as one unit, while the baseline we compared against still launched each piece separately, so the two sides were not doing the same work. Another was strong on the input sizes we had put in the visible test set and weak on sizes it had not been shown. So we spent early design work on the checker, not the prompt. Time both sides the same way, including with more than one timer (e.g., CUDA event timer, wall clock time and CUPTI timer) when we need a cross-check. Clear leftover compiled state that should not persist, and keep the order of setup and teardown consistent so one side cannot skip work the other still pays for. Time the winners again before using them as the starting point for the next round. Keep some tests the candidate cannot see, so it cannot fit only the exam. To prevent evaluation \"cheating\" with artificially inflated performance, we implement automated consistency checks to flag theoretically impossible speedups (e.g., >100x) that exceed physical GPU bandwidth and compute limits. This protects against the same reward-hacking pitfalls seen in past industry cases, where agents optimized for the harness metrics rather than genuine performance gains. Without these constraints, generating more kernels mostly produced more noise. Emphasis on the checker also changes the bottleneck of agentic kernel generation. In just program-search (i.e., iterative optimization where the system searches over programs by repeatedly generating variants) work, good candidates are rare, so writing them dominates the cost. We can produce many drafts in parallel, but we cannot skip validation. We have to craft the validation carefully, and checking has to run on real GPUs, in isolation, and more than once. The system moves as fast as it can trust a kernel, not as fast as it can write one. Another challenge is determining what the kernel generation model is allowed to see. It's a trade-off. Give the model a larger prompt and it has more information: the current best kernel, recent failures, profiler hints, notes from earlier runs. That can help. It also costs more, because we pay for every token the model reads. And as the prompt grows, it is easier for the next attempt to drift. Useful signals are mixed with stale advice, conflicting tips, and details that apply to a different input size or a different operation. The model does not always know which sentences to trust, so it follows the loudest ones, or all of them a little. Give it too little and the opposite happens. Every attempt starts from zero. The same dead ends come back. Nothing carries over from the last run, or from a related operation, and the loop does not advance. We wanted a knowledge layer to help with that: remember what worked, reuse it later, and do it without a person in the loop. That layer has a second tradeoff, between how detailed a stored lesson is and how widely it applies. A very specific note (“on this kernel, with this input size, unroll this loop”) can be exactly what the next attempt needs. It is also easy to misuse on the next operation, the next GPU, or a different input size. A very general note (“make better use of on-chip memory”) applies almost everywhere and tells the model almost nothing to do. We saw both failure modes. When lessons were too general, they restated a failure without an action. When we stored more detail, they were often too tied to one run to help the next. On one long run, most of what the model read and wrote was spent fetching and routing that memory rather than writing kernels. The memory layer was doing a lot of work. It was not making the next candidate better. Figure 2 shows the token cost breakdown of such a system. The cost is dominated by the knowledge layers. The version of knowledge worth keeping is smaller and strikes a balance between generality and specificity. When the model is about to write a kernel, its prompt should include only high-trust context: actionable takeaways that pair specific situations with actions (distilled from past modification-to-impact mapping) and concise failure notes from closely related parent runs. Retrieved via hierarchical tag filtering combined with hybrid (keyword + semantic) search, lessons should be specific enough to act on and scoped enough to clarify where they do not apply. Deeper operations like reorganizing and further distilling the lesson store belong in background jobs, not synchronous multi-hop traversal over past runs on every attempt. If a takeaway cannot name the situation and the action, it is not worth putting in the prompt. Figure 3 shows the token cost breakdown after fixing the knowledge layer and most of the tokens are spent on candidate generation after this fix. One concrete example is the packed decode kernel on the Gated DeltaNet path in Qwen 3.5 122B. The operation updates a recurrent state and writes the decode output from packed QKV inputs, gate parameters, and state indices. We used this task to exercise the full Proteus loop on NVIDIA B200 GPUs with a Triton backend: validate the task contract, measure the reference implementation, ask agents for candidate kernels, run static checks and builds, verify correctness against the controlled reference, benchmark only verified candidates, and then remeasure the best candidates. Figure 4 reads left to right. The baseline node anchors the benchmark at 0.025 ms.",
+      "published_date": "2026-09-04",
+      "tags": [
+        "Engineering",
+        "Data Science and ML",
+        "Databricks AI",
+        "AI Engineering"
+      ],
+      "organization": "Databricks",
+      "raw_metadata": {
+        "feed_name": "Databricks",
+        "feed_url": "https://www.databricks.com/feed"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 75,
+    "llm_reason": "針對執行期shape特化GPU kernel並用agent自動生成驗證，具工程深度與新意",
+    "novelty": 16,
+    "impact": 15,
+    "trending": 13,
+    "practicality": 14,
+    "blog_worthiness": 17
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Google Launches Agentic Video Understanding for Gemini Flash Models, Cutting Video Tokens by Up to 88%",
+      "url": "https://www.marktechpost.com/2026/09/04/google-agentic-video-understanding-gemini-flash-models/",
+      "authors": [
+        "Michal Sutter"
+      ],
+      "abstract": "Video has been the most expensive modality to reason over. A Gemini model handed a 90-minute lecture has, until now, ingested the whole thing at a fixed one frame per second, whether the question was ‘summarize this’ or ‘what time does the speaker switch to the pricing slide?’ That single-pass design forces a bad trade: pay for the full timeline in context, or pre-chunk the video and risk dropping the detail that mattered. This week, Google launched agentic video understanding across its Flash models. Instead of ingesting the timeline, Gemini navigates it deciding what to watch, at what frame rate, and through which modality. Google reports up to 88% fewer tokens, up to 66% lower cost, and up to 7% higher accuracy on standard video benchmarks. Is it deployable? Yes, but only as a hosted API feature. There are no open weights and nothing to self-host. It ships through the Gemini API in Google AI Studio and the Gemini Enterprise Agent Platform , works with both file uploads and public YouTube URLs, and bills at standard Gemini API token pricing with no additional feature fee. Static processing, still the default on every Gemini model, extracts frames at 1 FPS in a single pass, processes audio at 1 Kbps single channel, and inserts timestamps every second. Agentic processing replaces that with a loop. The model pairs its own reasoning with native video tools to search, scan, and inspect target segments across frames, audio, and transcripts, loading only what the prompt requires. Developers could already assemble this by hand; the change is that Gemini runs the loop internally, which is where the development overhead disappears. Across Google’s evaluations, Gemini 3.7 Flash with agentic understanding lands on the accuracy-to-cost Pareto frontier for video analysis among the models tested. The efficiency gains concentrate on long-form content, from 10-minute how-to guides to multi-hour recordings. Agentic processing adds two step types to the response steps array: a processing_call when the model requests a segment or transcript, and a matching processing_result when that load completes. They interleave with thought steps and precede model_output , so they can drive a live progress trace in your UI. Their presence is also how you verify agentic mode actually ran. Token accounting splits accordingly. Navigation reasoning bills as thought tokens ( total_thought_tokens ); frames, audio, and transcripts loaded on demand bill as tool-use tokens ( total_tool_use_tokens ). Enabling it is one field on the video part: You can also mix modes per video inside a single request, agentic on the long lecture, static on the short clip. Check out the Google blog , Gemini API video understanding docs , Developer guide in AI Studio and Agentic vision announcement . Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post Google Launches Agentic Video Understanding for Gemini Flash Models, Cutting Video Tokens by Up to 88% appeared first on MarkTechPost .",
+      "published_date": "2026-09-05",
+      "tags": [
+        "Agentic AI",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Editors Pick",
+        "Language Model",
+        "Machine Learning",
+        "New Releases",
+        "Staff",
+        "Tech News",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, tool use, reasoning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 69,
+    "llm_reason": "以agentic方式動態決定影片取樣大幅省token，數據具體且可直接API部署",
+    "novelty": 12,
+    "impact": 13,
+    "trending": 13,
+    "practicality": 16,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "NVIDIA Releases Personal AI Router (PAIR): An Open Source Virtual Inference Router that Distributes Local AI Requests Across RTX, DGX Spark, and Mac Nodes",
+      "url": "https://www.marktechpost.com/2026/09/04/nvidia-releases-personal-ai-router-pair-an-open-source-virtual-inference-router-that-distributes-local-ai-requests-across-rtx-dgx-spark-and-mac-nodes/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "Multi-agent workflows have changed the shape of local inference. A lead agent decomposes a task and spawns subagents. What looked like one user request becomes dozens of independent model calls. Pointed at a single local engine, those calls compete for the same execution slots. The queue grows while a workstation, laptop, or DGX Spark on the same network sits idle. NVIDIA Personal AI Router (PAIR) targets exactly that bottleneck. Announced this week, PAIR is a virtual inference router. It discovers compatible machines on a home network and schedules independent inference requests across them. It is not a new inference engine. Ollama or LM Studio still executes the model on whichever node PAIR selects. Is it deployable? Yes. PAIR ships today as a public beta (v0.1.1) with signed installers for Windows, macOS, and Linux, and the full source is on GitHub under Apache 2.0. It runs entirely on the local network, with internet needed only to download models. The design decision that matters most is that PAIR introduces no cluster API. It proxies the Ollama-compatible and LM Studio-compatible interfaces agents already speak, taking over the default port each engine uses. If a harness listens elsewhere, the proxy port is configurable in PAIR’s engine settings. The repository also exposes OpenAI-compatible proxy endpoints. The consequence: existing agent harnesses need no changes. The agent decides what work to request. PAIR decides where it runs. PAIR uses mDNS to find nearby systems automatically. A node can be added by IP address when discovery fails. Trust is established by a six-digit PIN shown on the inviting machine and entered on the invited one. All node-to-node communication is blocked until that pairing completes. Traffic between paired nodes is then secured with mTLS using generated certificates. Each node runs Ollama or LM Studio. PAIR can install an engine and start model downloads on paired systems, removing most cross-machine setup work. A node becomes eligible for a request only when the required engine is enabled and the exact requested model is present. Models do not need to be identical across the cluster, different systems can hold different models, and PAIR routes according to model location. Loading the same tag on more nodes simply widens the eligible pool. For each request the scheduler weighs five signals. Is the node online and ready. Is a supported engine enabled. Is the exact model present. What is the current node and engine job load. What is existing GPU utilization. This is workload-level concurrency, and the boundary is explicit. PAIR assigns each request to one eligible node, where it stays for its lifetime. It does not pool VRAM, merge GPUs into one larger accelerator, or shard a single request across machines. NVIDIA’s demonstration pairs PAIR with Hermes Desktop, which creates a five-subagent workload over a synthetic household inbox. Ollama executes Qwen 3.6 35B A3B on each selected node. On one RTX Spark laptop, the workload took 18 minutes on average. On a three-device PAIR cluster consisting of an RTX Spark laptop, a DGX Spark, and an RTX 5090, it averaged 8 minutes and 48 seconds. PAIR supports GeForce RTX 20 Series GPUs and newer, RTX PRO workstation GPUs from Turing onward, DGX Spark, and Apple M4 or newer silicon. Windows, Linux, and macOS nodes can all be paired with each other, on x64 and arm64, though Windows on ARM is experimental. Validated configurations list 8 GB RAM or higher and a recommended 20 GB of disk. Other Linux distributions build from source. Check out the NVIDIA PAIR product page , NVIDIA Technical Blog , GitHub repository , Playbook and FAQ . Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post NVIDIA Releases Personal AI Router (PAIR): An Open Source Virtual Inference Router that Distributes Local AI Requests Across RTX, DGX Spark, and Mac Nodes appeared first on MarkTechPost .",
+      "published_date": "2026-09-05",
+      "tags": [
+        "AI Infrastructure",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Editors Pick",
+        "Language Model",
+        "Large Language Model",
+        "Machine Learning",
+        "New Releases",
+        "Staff",
+        "Tech News",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, multi-agent",
+      "⚖️ 來源權重: rss +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 56,
+    "llm_reason": "開源本地多節點推理路由，解決多agent併發瓶頸，可直接部署",
+    "novelty": 9,
+    "impact": 9,
+    "trending": 10,
+    "practicality": 16,
+    "blog_worthiness": 12
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "Portal by Spotify cut my Claude Code token usage by 90%",
+      "url": "https://engineering.atspotify.com/2026/9/portal-by-spotify-cut-my-claude-code-token-usage-by-90",
+      "authors": [
+        "cebert"
+      ],
+      "abstract": "Most of what an AI coding agent does for me isn't thinking. It's I/O. Reading five files to answer a question about one method. Generating a test file that follows the exact same pattern as the twenty test files next to it. Updating docs after a meeting. Thousands of tokens gone and almost zero reasoning. The seat license isn't what hurts, it's the tokens. And you're feeding all of it to a frontier model that's wildly overqualified. What if you could route the grunt work to something cheaper that handles it just as well, and save the expensive model for the problems that actually need it? It’s hardly just my problem. By 2028, AI coding costs are expected to blow past the average developer's salary. A quarter of engineering leaders already burn $200–$500 per developer per month on tokens. Some are well past $2,000. The tooling pays for itself but only if you stop burning frontier tokens on work that doesn't need them. Turns out, the fix didn't require a platform team or a new subscription. Just two modes. This is exactly the kind of use case AiKA Modes in Portal by Spotify were built for. A mode is a declarative agent that runs on an ephemeral runtime - think AWS Lambda, but for agents. You define the instructions, pick a model, set parameters like temperature, and attach MCP tools. Portal handles the rest. No infra to manage, no API keys, no long-running servers. Modes are callable from the Portal CLI or API. They can be public (shared with the whole company) or private. For this router to work I created two modes. Both use Gemini 2.5 Flash as the worker model in the examples below, but the model field accepts any model you have configured in your Portal instance. Pick whichever works for you. For when Claude would otherwise read multiple large files just to answer one question. name: bulk-reader description: Bulk file reader for code analysis - delegates I/O from Claude Code\ninstructions: You are a precise code analyst. Read the provided files and answer the question concisely. Output structured bullets only. No greetings, no prose, no preambles. Lead every bullet with the exact name, type, or line number. Use nested bullets for details. Skip anything the caller did not ask for. visibility: public model: gemini-2.5-flash resourceLimits: temperature: 0.2 tags: - coding - delegation For tests, config scaffolding, type stubs or anything where the output is predictable from existing patterns. That \"output only the code\" instruction matters. Without it, the model wraps everything in markdown fences and explanatory prose that Claude then has to parse through. The first version of this was a block of routing rules in CLAUDE.md. It sort of worked: Claude would read the instructions and self-route to Portal. But it had problems. The rules were advisory, not enforced. Claude could ignore them. And every project needed its own copy of the instructions. The current version is a Claude Code plugin called shunt . Delegation goes through the Portal CLI actions registry so the plugin works against any Portal instance with AiKA plugin enabled. Claude Code hooks fire before every tool call. Shunt registers two PreToolUse hooks: check-file-size fires on every Read call. If the file exceeds a configurable line threshold (default: 350), the hook blocks the read and tells Claude to use the /bulk-reader skill instead. Targeted reads pass through - Claude already knows what section it needs. check-bash-read catches cat, head, tail, less, and more on large files. Piped commands (cat file | grep) pass through since those are targeted reads. The threshold is configurable via the SHUNT_MIN_LINES environment variable. Set it in your shell profile or in .claude/settings.json: { \"env\": { \"SHUNT_MIN_LINES\": \"500\" } } I have two bash scripts that wrap the Portal CLI calls. Claude calls a script with named arguments. The scripts handle everything internally: building the request, invoking the actions, unwrapping errors, and reporting token usage to stderr. Modes are addressed by name and resolved by Portal: case-insensitively, preferring your own mode, then your team's, then public ones. Fork the public bulk-reader into a customized version and yours automatically takes precedence - no configuration needed. bulk-read wraps each file in XML tags for clear boundaries and sends them to the bulk-reader mode along with the question. Every delegation is one shot. The invocation is ephemeral (nothing is stored server-side) and re-sending the files on a follow-up is free where it matters, because the corpus goes to the worker model and never enters Claude's context. code-write sends a spec and a reference file to the code-writer mode, strips markdown fences from the output, and can write directly to disk. Claude never sees the generated code. The reference is required: without a file to match patterns against, the worker would generate context-free code that fits nothing in your project. Two skill files tell Claude when and how to call the scripts. Skills are markdown files with a description and usage examples. When the hook blocks a read, the block message points Claude to the /bulk-reader skill, which shows the exact invocation syntax. This layering means the system degrades gracefully. Even if Claude doesn't read the skill description, the hook still blocks the expensive read. The skill just makes the redirect smoother. Tested against a Java monorepo across four scenarios, measuring tokens Claude would consume reading files directly vs. consuming the bulk-reader's summary or writing code via the code-writer. Mean bulk-read savings were around a whopping 90%. The code-write scenario is harder to measure in tokens because without shunt, Claude both reads the reference files and generates the output as expensive output tokens. With shunt, the code goes straight to disk, Claude never sees it. You can't delegate editing. The worker model's summaries don't include reliable line numbers. If Claude needs to make edits based on the analysis, it still has to read the specific section directly. The hooks allow targeted reads (with offset/limit) for exactly this reason, so delegation saves tokens on understanding. You can't delegate reasoning. The worker model found surface-level patterns but missed a subtle thread-safety bug in my testing. Claude spotted it in seconds once given the right context. The routing explicitly excludes debugging, architectural decisions, and safety-critical code. Latency adds up . Each delegation is a network round-trip: Claude Code to the Portal backend to the worker model and back. Responses typically take 10–30 seconds, and Portal caps a single invocation at 30 seconds, so very large generations need to be split into smaller calls. This is acceptable for large reads, but counterproductive for small ones. The line threshold exists for this reason, below it the overhead of delegation exceeds the savings. The plugin is a Claude Code artifact, but the idea underneath is model routing powered by AiKA modes. The modes are the load-bearing piece: They're reusable. The same bulk-reader and code-writer modes work across every project and every tool that can shell out to the Portal CLI. They're shareable. Both modes are public in AiKA. Anyone can use them today without creating their own. They're composable. You could create a doc-writer mode for documentation, a reviewer mode for code review summaries, a translator mode for i18n. Each one is a few clicks away. They decouple the routing decision from the worker. The plugin decides when to delegate. The mode decides how to respond. Swap Gemini Flash for a cheaper model, change the system prompt, add MCP tools - the plugin doesn't change. This is the real power of AiKA modes: they turn model routing from a systems engineering problem into a configuration problem. You don't build infrastructure. You describe what you want and name it.\n\n(229 points, 133 comments on Hacker News)",
+      "published_date": "2026-09-05",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 229,
+        "num_comments": 133,
+        "hn_url": "https://news.ycombinator.com/item?id=49571465",
+        "object_id": "49571465"
+      }
+    },
+    "rule_score": 30.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, mcp, reasoning, safety",
+      "⬆️ HN 熱門: 229 points"
+    ],
+    "llm_score": 54,
+    "llm_reason": "以分層模型路由降低coding agent token成本，具體可行且貼近工程痛點",
+    "novelty": 7,
+    "impact": 9,
+    "trending": 11,
+    "practicality": 14,
+    "blog_worthiness": 13
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "“Next-token predictor” is the wrong mental model for LLMs",
+      "url": "https://gmcgoldr.github.io/2026/09/04/llm-next-token-predictors.html",
+      "authors": [
+        "garrinm"
+      ],
+      "abstract": "Stop Thinking of LLMs as Next-Token Predictors Strictly speaking, the statement “LLMs are next-token predictors” isn’t wrong, but it’s incomplete. It’s a fine zeroth-order approximation, and it is grounded in something real: transformer-based language models emit tokens autoregressively: while not done : tokens . append ( model . sample_next_token ( tokens )) This certainly has the shape of something you might call a next-token predictor. During pre-training, the model repeatedly takes some prior tokens, looks at the token that actually followed them, and makes that token more likely to be sampled next. Conceptually, the training loop looks something like this: for tokens in training_data : for position in range ( 1 , len ( tokens )): prior_tokens = tokens [: position ] actual_next_token = tokens [ position ] model . make_more_likely ( actual_next_token , after = prior_tokens , ) make_more_likely is, of course, doing a heroic amount of work here. Under the hood are loss functions, gradients, and parameter updates, but for this post we only care about their combined effect: the token that actually came next becomes more likely. Crucially, every actual_next_token comes from an existing sequence in training_data . It’s probably fair to say that the base model also behaves as a next-token predictor: it is trained to predict next tokens as they occur in its training data. But the LLMs we use are not just base models. They are post-trained, and a key part of modern post-training is reinforcement learning with verifiable rewards (RLVR). During pre-training, the model learns only from sequences that already exist in the training data. During RLVR, the model explores by generating new sequences and learning from their outcomes. Conceptually, the RLVR training loop looks something like this: for task in training_tasks : for explored_tokens in model . explore ( task ): reward = evaluate_outcome ( task , explored_tokens ) for position in range ( len ( explored_tokens )): prior_tokens = task + explored_tokens [: position ] explored_next_token = explored_tokens [ position ] model . make_more_likely ( explored_next_token , after = prior_tokens , according_to = reward , ) make_more_likely is doing the same kind of work in both loops, but for a fundamentally different reason. During pre-training, it makes an actual_next_token more likely because that token appeared in the training data. During RLVR, it makes an explored_next_token more likely because the explored sequence containing it earned a high reward. So while a post-trained LLM still has the shape of a next-token predictor, emitting tokens one at a time, it no longer learns only by predicting existing text. It also learns from new sequences produced through its own exploration. Chess Analogy A chess engine makes this distinction easier to see. Imagine two chess systems. The first is trained on a large database of grandmaster games. It learns patterns in how grandmasters respond to different board positions. Given a new position, it predicts the move a grandmaster would most likely play next. That is a next-move predictor. The second is an idealized chess engine that has explored every possible game. From that exhaustive exploration, it knows the probability of winning from every possible board position. Given a position, it chooses the move that leads to the highest probability of winning. Unlike the first system, it is not trained only on games that grandmasters already played. It also learns from games generated by its own exploration. Calling the second system a “next-move predictor” would be strange. It is not trying to predict what move appeared next in a dataset. It is trying to choose a move that wins. Closing Thoughts I didn’t touch on other post-training techniques in this post, but they matter too. Reinforcement learning from human feedback (RLHF), for example, shifts the model away from imitating its pre-training data as a whole and toward simulating a helpful assistant. And as we saw in this post, RLVR goes further still: it allows an LLM to explore and learn from ideas never seen in its training data. That is why “next-token predictor” is the wrong mental model. It describes the shape of the mechanism, one token emitted after another, while ignoring what that mechanism encodes. A simulation of a helpful assistant and knowledge discovered through exploration can both be encoded in exactly the same next-token loop.\n\n(134 points, 281 comments on Hacker News)",
+      "published_date": "2026-09-05",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 134,
+        "num_comments": 281,
+        "hn_url": "https://news.ycombinator.com/item?id=49567310",
+        "object_id": "49567310"
+      }
+    },
+    "rule_score": 24.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: rlhf, rlvr, post-training, reinforcement learning",
+      "📰 Hacker News: 134 points"
+    ],
+    "llm_score": 59,
+    "llm_reason": "深入拆解next-token predictor心智模型的侷限，概念清晰且引發高度討論",
+    "novelty": 10,
+    "impact": 11,
+    "trending": 14,
+    "practicality": 7,
+    "blog_worthiness": 17
+  },
+  {
+    "item": {
+      "source": "newsapi",
+      "source_name": "Amazon.com",
+      "title": "From silos to insights: Federated data access patterns for AI agents",
+      "url": "https://aws.amazon.com/blogs/big-data/from-silos-to-insights-federated-data-access-patterns-for-ai-agents/",
+      "authors": [
+        "James Wu"
+      ],
+      "abstract": "AI agents can reach enterprise data where it lives instead of routing every question through data engineers. This post presents three reference patterns for federated data access using Model Context Protocol (MCP) servers and Amazon Bedrock AgentCore: catalog…",
+      "published_date": "2026-09-04",
+      "tags": [
+        "newsapi"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "newsapi_source": "Amazon.com",
+        "published_at": "2026-09-04T21:35:21Z"
+      }
+    },
+    "rule_score": 25.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: mcp, model context protocol",
+      "⚖️ 來源權重: newsapi +15"
+    ],
+    "llm_score": 53,
+    "llm_reason": "整理三種MCP聯邦式資料存取模式，實務參考價值高但屬架構歸納非創新",
+    "novelty": 8,
+    "impact": 10,
+    "trending": 9,
+    "practicality": 14,
+    "blog_worthiness": 12
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "TechCrunch AI",
+      "title": "OpenAI’s rogue agents keep escaping, with no formal process to investigate them",
+      "url": "https://techcrunch.com/2026/09/04/openais-rogue-agents-keep-escaping-with-no-formal-process-to-investigate-them/",
+      "authors": [
+        "Rebecca Bellan"
+      ],
+      "abstract": "OpenAI is at the center of another agent swarm incident. Researchers say the company’s internally deployed agents took over an obscure German-language wiki in May and June, using it to coordinate on evaluations and swap methods to evade OpenAI’s own controls (OpenAI has not yet confirmed the swarm came from the company). The revelation surfaces days after METR and Redwood Research published their account of July’s Hugging Face breach. In July, a swarm of OpenAI agents worked together to escape their sandbox during a cybersecurity evaluation and break into Hugging Face’s servers . A subsequent swarm then picked up techniques from the first and used them to gain administrator access to a research cluster within OpenAI’s own infrastructure. OpenAI brought in METR and Redwood to investigate the Hugging Face portion of the incident, but the scope of their investigation stopped short of the compromise of OpenAI’s own infrastructure. When an AI agent breaks out of its intended constraints, who is responsible for figuring out what happened and why? Right now, the answer is: whoever the lab decides to let in, on whatever terms it decides to set. Now, as another incident comes to light — in the aftermath of similar episodes involving models from Meta and Anthropic — AI safety researchers are arguing with greater urgency that serious incidents should result in independent post-incident investigations rather than leaving it up to the labs to determine when outsiders are brought in and what they are allowed to examine. “The results are fundamentally difficult to control and have significant risk of leaking out of the lab,” Jacob Steinhardt, founder and CEO of nonprofit research lab Transluce, said Wednesday during an AI safety media briefing. “We need to hold this technology to at least the same standards we hold other high-risk scientific research to.” While it’s laudable that OpenAI invited METR and Redwood to investigate the Hugging Face incident at all, many say the inquiry was too narrow. Three investigators spent six days at OpenAI’s offices examining an investigation period limited to roughly the week ending July 13. Crucially, OpenAI’s infrastructure compromise continued beyond July 13 and was not examined. Researchers at METR said that each time they returned, their understanding of the events “substantially deepened,” causing them to significantly expand and revise the report. That raises the question of what else they might they have found in a broader investigation. When asked if further investigation of that incident was in the works, researchers at Redwood and METR declined to comment, and OpenAI did not respond to repeated inquiries. “Overall, it was difficult to get a precise understanding of events and we were missing aspects of the story that we now think of as key until almost the end of our investigation,” Ryan Greenblatt, chief scientist at Redwood, noted in a social media post about the affair. Steinhardt emphasized that current incidents show that the industry needs “systematic behavioral investigations” and “more independent post-incident analysis.” “These recent hacking incidents are a reminder that capability scales fast, and so oversight has to scale, too,” Steinhardt said. “Beyond the technology itself, we also need more independent access and oversight from third parties.” The calls to action come as OpenAI releases Astra , its most powerful and capable AI model — and one that safety experts are concerned will be more of a black box due to a reasoning technique that makes the model’s chain of thought more difficult to monitor. Unfortunately, the law doesn’t yet call for the types of independent audits that other industries require — for example, when it comes to aviation accidents and serious chemical releases, there’s the National Transportation Safety Board and Chemical Safety Board, respectively. State lawmakers have only just begun requiring frontier AI companies to report certain serious safety incidents and, in some cases, undergo independent audits. But none of the three major frontier AI safety laws in California, New York, or Illinois clearly mandate the equivalent of an independent accident investigation triggered by incidents like these. “Right now, most of the laws we have on the books only require a plain-language summary of incidents like this, and they don’t give any authority for the governments to ask follow-up questions, to send in investigators, to have access to records, or require that they be preserved,” Mackenzie Arnold, managing director of US law and policy at LawAI, said during the media briefing Wednesday. “And that’s all that you would want to actually make sense of this.” Lawmakers are beginning to question the scope and transparency of OpenAI’s response. This week, Reps. Josh Gottheimer (D-NJ) and Mike Lawler (R-NY) introduced a bill aimed at securing rogue AI agents. Rep. Greg Casar (D-TX) this week told OpenAI in a letter that he is “deeply concerned about the limited scope” of the investigation into the Hugging Face hacking incident.",
+      "published_date": "2026-09-04",
+      "tags": [
+        "AI",
+        "breach",
+        "OpenAI",
+        "Hugging Face"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "TechCrunch AI",
+        "feed_url": "https://techcrunch.com/category/artificial-intelligence/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, reasoning, chain of thought, safety",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 44,
+    "llm_reason": "AI安全治理重大事件但屬新聞報導非技術內容",
+    "novelty": 3,
+    "impact": 12,
+    "trending": 16,
+    "practicality": 3,
+    "blog_worthiness": 10
+  },
+  {
+    "item": {
+      "source": "newsapi",
+      "source_name": "Elastic.co",
+      "title": "Why your AI bill tripled while token prices fell 75%",
+      "url": "https://www.elastic.co/blog/token-costs-ai-bills",
+      "authors": [
+        "Sunile Manjee"
+      ],
+      "abstract": "Token prices dropped 75%, so why did your agentic AI bill triple? Here's the real math behind agentic AI cost and how IT leaders can measure it.",
+      "published_date": "2026-09-04",
+      "tags": [
+        "newsapi"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "newsapi_source": "Elastic.co",
+        "published_at": "2026-09-04T00:00:00Z"
+      }
+    },
+    "rule_score": 20.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agentic",
+      "⚖️ 來源權重: newsapi +15"
+    ],
+    "llm_score": 57,
+    "llm_reason": "點出token降價與agentic成本上升的落差，貼近FinOps痛點但缺具體方法論",
+    "novelty": 7,
+    "impact": 11,
+    "trending": 15,
+    "practicality": 10,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "Deploy a multimodal WhatsApp ordering assistant with Amazon Bedrock AgentCore",
+      "url": "https://aws.amazon.com/blogs/machine-learning/deploy-a-multimodal-whatsapp-ordering-assistant-with-amazon-bedrock-agentcore/",
+      "authors": [
+        "Salman Ahmed"
+      ],
+      "abstract": "This post shows how to deploy a multimodal WhatsApp ordering assistant built with Amazon Bedrock AgentCore and Amazon Nova 2 . Many quick-service restaurants spread ordering across an app, a website, a phone line, and the counter. Each of those is a separate system to build and run. Each one also fragments the customer’s history, making the same person look like a stranger on every channel. Customers already live in their messaging apps. WhatsApp reaches more than two billion people. A customer who can text, send a voice note, or place a call from the same conversation does not need to install anything or sign in. A single WhatsApp Business number hosts the assistant. A customer can text the restaurant, send a voice note, or place a voice call. An AI agent takes the order end to end, from greeting to confirmation. All three channels share one backend and one cross-channel memory. A customer who texts today and calls tomorrow is recognized as the same person. The solution uses the Meta WhatsApp Business Platform as the customer front door. Amazon Bedrock AgentCore hosts the agents. Amazon Nova 2 Lite handles text through the Amazon Bedrock Converse API , and Amazon Nova 2 Sonic handles real-time speech on voice notes and calls. The agents reach the restaurant backend through the Model Context Protocol (MCP) . You deploy the whole system with the AWS Cloud Development Kit (AWS CDK) . The channel and the ordering logic stay separate, so the backend doesn’t change when you add or remove a channel. The design keeps three things apart: (1) the WhatsApp layer handles the conversation, (2) three agent runtimes run the conversations for their channels, and (3) the backend holds the menu, carts, orders, and locations. Inbound traffic arrives on a single HTTPS webhook, is acknowledged with a 200 immediately, and then processed asynchronously so no request blocks the response. This separation keeps each layer independently deployable and straightforward to reason about. The customer front door is the Meta WhatsApp Business Platform . It exposes the Cloud API webhook, Messages API, Media API, and Calling API. Meta manages this service. You set it up and connect it as a prerequisite, not something this solution deploys. The AWS CDK provisions everything on the AWS side. It emits the webhook URL you register with Meta. You use the AWS CDK to deploy the following AWS resources as a set of stacks in dependency order, grouped here by function. Figure 1 shows the full architecture. The diagram organizes the solution into labeled groups A through G that carry the request path. Two supporting groups sit outside that path, handling a build pipeline that runs once at deploy time to build the agent images and security and monitoring services that back every channel at runtime. Figure 1: Multimodal WhatsApp ordering architecture on AWS Two supporting groups sit outside the request path. The build pipeline (AWS CDK, AWS CodeBuild, Amazon ECR, and Amazon S3) runs once at deploy time to build and store the ARM64 agent images. It is not in the path of any request. Security and monitoring (AWS Secrets Manager, AWS Systems Manager Parameter Store, Amazon CloudWatch, and AWS KMS) back every channel at runtime. The following steps trace a single request end to end through the architecture: In short, every request flows from Meta’s webhook through the ingest, queue, worker, and agent runtime to the backend tools, then back to the customer on WhatsApp. All three channels share the same front door, backend tools, and memory. What differs is the media on the wire and the runtime that handles it. Text message: A text message arrives on the webhook. The worker derives customer_id and invokes the chat runtime, which reads memory, streams Amazon Nova 2 Lite through the Converse API, and calls backend tools through the MCP gateway as needed. Replies go through the Sender Lambda, and events are written to memory at session end. Figure 2 shows the text flow, from the inbound webhook through Amazon Nova 2 Lite on the Converse API to the reply delivered by the Sender Lambda. Figure 2: Text flow with Amazon Nova 2 Lite Voice note (speech-to-speech): A voice note arrives as an audio message. The worker downloads the OGG Opus bytes and invokes the voice-note runtime. After reading memory, the audio is decoded to 16 kHz pulse-code modulation (PCM) and fed into a bounded Amazon Nova 2 Sonic speech-to-speech session. Tools are available through the same gateway. The spoken reply is returned as a WhatsApp voice message. There’s no transcription service in the path. It’s true voice-in, voice-out. Figure 3 shows the voice-note flow, a bounded Amazon Nova 2 Sonic speech-to-speech session that returns a spoken reply with no transcription in the path. Figure 3: Voice note flow with Amazon Nova 2 Sonic Voice call (WebRTC): The customer selects Call, and Meta’s Calling API delivers a connect webhook with the WebRTC Session Description Protocol (SDP) offer. The worker relays it to the voice-call runtime in turnOnly mode, because it has no public IP. TURN credentials come from Amazon KVS. Meta provides no trickle Interactive Connectivity Establishment (ICE) path. The aiortc answerer waits for ICE gathering and returns a single-shot SDP answer. The worker delivers that answer to Meta. Media then flows over Datagram Transport Layer Security and Secure Real-time Transport Protocol (DTLS/SRTP) through the KVS managed TURN relay. Amazon Nova 2 Sonic drives the conversation. Figure 4 shows the voice-call flow, where WebRTC media is relayed through the Amazon KVS managed TURN relay and Amazon Nova 2 Sonic drives the conversation. Figure 4: Voice call flow with Amazon Nova 2 Sonic This solution has prerequisites in two areas: your AWS account and your Meta WhatsApp setup. Complete both prior to running the deployment, because it asks you for specific WhatsApp values and the agent cannot reply until they are in place. The agent containers build inside AWS CodeBuild on ARM64, so you do not need Python, Docker, or audio toolchains locally. Deploy in an AWS Region where Amazon Nova 2 Lite, Amazon Nova 2 Sonic, and AgentCore runtime, Gateway, and memory are all available. The US East (N. Virginia) Region (us-east-1) is a good place to start. For model availability by Region, refer to Supported models by AWS Region in Amazon Bedrock . The WhatsApp side is set up once in the Meta consoles, as a prerequisite rather than a step in this walkthrough. No AWS API can create a Meta app for you, so complete it first and have the values on hand before you deploy. For a demo, the Meta sandbox test number, which is available at no additional cost, is enough. You do not need business verification or a production number. The full procedure lives in Meta’s documentation, linked in the following section. Have these items ready before you deploy. Store none of these in source control. The Access Token, App Secret, and Verify Token are secrets and go into AWS Secrets Manager during deployment, not into the CDK templates. The full solution is in the sample repository on GitHub . The repository contains three agent containers, the AWS CDK infrastructure code, and setup scripts that wire the WhatsApp webhook to your account. Clone it, run the preflight check, then deploy with a prefix. The prefix is added to every resource name, so you can deploy more than once per account. The script provisions every stack in dependency order. It passes each stack’s outputs to the next. First it deploys the shared VPC. Then it deploys the backend: Amazon DynamoDB, Amazon Location Service, the ordering Lambdas, and the backend REST API. Next it deploys AgentCore Gateway and the shared AgentCore memory. It then builds each ARM64 container with AWS CodeBuild, pushes to Amazon ECR, and deploys the three runtimes. After that it deploys the WhatsApp webhook and the order-notifier. It then seeds sample menu and location data.",
+      "published_date": "2026-09-04",
+      "tags": [
+        "Amazon Bedrock AgentCore",
+        "Expert (400)",
+        "Technical How-to"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, mcp, model context protocol, multimodal",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 42,
+    "llm_reason": "標準AgentCore整合教學案例，技術含量偏低但步驟具體可複現",
+    "novelty": 5,
+    "impact": 7,
+    "trending": 8,
+    "practicality": 13,
+    "blog_worthiness": 9
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "AI handles incidents, engineers lose touch with their systems",
+      "url": "https://www.sylvainkalache.com/blog/ai-handles-incidents-engineers-lose-touch-with-their-systems",
+      "authors": [
+        "sylvainkalache"
+      ],
+      "abstract": "When I was an SRE at LinkedIn, back in 2012, I designed a system that could heal itself and learn from previous incidents. AI capabilities were nowhere near what we have today, and that remained a prototype, but this is now a reality. These tools do it all: inspect alerts, form hypotheses, query telemetry, correlate recent deployments, and even implement the fix themselves. As much as I love to see it, I have a major concern: we are losing touch with our systems. The better these tools become at resolving routine incidents, the less practice human responders will get. And when an ambiguous, high-severity incident comes in that automation cannot solve, responding engineers will be in trouble. Automation leaves humans with the hardest incidents # These AI-assisted incident response tools, more commonly called “AI SREs” – a term I don’t particularly like – are fantastic in many ways. They feel especially magical when they handle a routine incident at night and you don’t have to wake up for a capacity issue. The problem is that routine incidents are also how responders “safely” develop an intuition for how their systems behave and fail. When AI runs into a hard, never-seen-before incident it cannot solve, engineers will have to take over with less practice than they would have had before. Human-factors researcher Lisanne Bainbridge described this paradox in her famous 1983 paper, The Ironies of Automation. She explained that automation reduces operators’ opportunities to practice routine work while leaving them responsible for new and abnormal situations. She argues that, therefore, operators need to be more skilled and receive even more training than before automation. In the years to come, I predict that the average MTTR for most incidents will go down – thanks to AI-assisted incident response – but that the resolution time will shoot up for complex incidents because incident responders lost touch with their system and are struggling to investigate. Aviation trains pilots for rare failures # We can look at the aviation industry for inspiration. Plane automation handles much of the flying, but pilots remain responsible for situations that automation cannot manage: engine failures, unreliable instruments, rejected takeoffs, stalls, and other abnormal conditions. These events are extremely rare. Modern turbine engines, for example, experience fewer than one in-flight shutdown per 100,000 engine flight hours. In other words, that is rare enough that a commercial pilot may complete an entire career without experiencing one outside a simulator. But when a failure occurs, pilots must react quickly and correctly. For example, on TransAsia Airways Flight 235 , the right engine’s propeller autofeathered shortly after takeoff. And while the aircraft was designed to continue flying on its left engine, the crew misidentified the problem. The aircraft stalled and crashed only 117 seconds after the first warning. Airline pilots regularly return to simulators to rehearse rare emergencies. Under US FAA rules, captains must complete recurrent training or a proficiency check every six months, including scenarios such as an engine failure during takeoff. While most software incidents do not threaten lives, that is no reason not to perfect our craft. Turns out the technology that created the issue can also help close it. The software industry needs incident simulators # At Rootly , an incident management company where I work, we partnered with Uptime Labs to apply this idea through realistic incident simulations. Engineers take the incident commander’s seat during a simulated e-commerce outage, using observability tools while coordinating with LLM-powered stakeholders in Slack. The result feels real. You have to investigate what’s going wrong while keeping the response organized and dealing with the CEO and customer support. You get to practice the skills that matter during an incident: making sense of incomplete information, communicating clearly, coordinating people, and actually running the response. AI can also help preserve these skills # But what about using AI as a trainer? Responders can ask an agent to explain the steps it took, the signals it examined, and the evidence behind its diagnosis. But explanation and observation are not substitutes for practice. You might pick up a few things from watching Serena Williams play, but you only learn tennis by getting on the court, and incident response is no different. I spent more than half a decade of my career building a software engineering school around progressive education: learning by doing. It was in-person, but we had no teachers; students worked on projects instead of listening to lectures. When Dropbox told me graduates it hired were still too inexperienced at troubleshooting, I created projects that gave students broken infrastructure and required them to diagnose and repair it. For most hands-on skills, I believe hands-on education beats passive instruction by a lot. Incident simulation should become part of on-call readiness # As LLMs do more of our work, engineering teams risk accumulating comprehension debt: a growing gap between how their systems work and how well responders understand them. Engineers should regularly interact with the system they watch over, handle unfamiliar failures, practice working under pressure, and rehearse the coordination and communication required during a SEV0. Tabletop exercises and chaos engineering are nothing new, but practice has become even more important in the LLM era. Researcher Bainbridge recommended giving operators regular hands-on control and using simulation to prevent their skills from decaying. That’s the irony of automation, the more successful it becomes, the less prepared humans may be for the moment it fails.\n\n(311 points, 278 comments on Hacker News)",
+      "published_date": "2026-09-05",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 311,
+        "num_comments": 278,
+        "hn_url": "https://news.ycombinator.com/item?id=49574167",
+        "object_id": "49574167"
+      }
+    },
+    "rule_score": 26.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "🔥 HN 爆紅: 311 points"
+    ],
+    "llm_score": 49,
+    "llm_reason": "以Ironies of Automation框架反思AI SRE的技能退化風險，敘事完整發人深省",
+    "novelty": 6,
+    "impact": 10,
+    "trending": 13,
+    "practicality": 6,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "Project HydraFusion: Frontier quality via multi-model orchestration",
+      "url": "https://github.blog/ai-and-ml/github-copilot/project-hydrafusion-frontier-quality-via-multi-model-orchestration/",
+      "authors": [
+        "qainsights"
+      ],
+      "abstract": "Providing developers the best model for the task at hand has always been our goal. Earlier this year, we made that easier by launching Auto model selection, which reviews your task and matches it to the best-suited model for that task. Today, we’re introducing Project HydraFusion, a research preview that delivers frontier intelligence through runtime orchestration. It creates a full execution plan, choosing from models across multiple providers to draft, critique and revise, or cascade to more powerful models to complete your task. HydraFusion fills a key role in our overall strategy to deliver automated semantic routing between local, cloud, and compound models. For developers, that complexity stays behind the scenes: you select HydraFusion like any other model, and it chooses a workflow that balances performance, cost, and latency for each task. HydraFusion treats workflow selection as an optimization problem. It uses capability signals for reasoning, code generation, debugging, and tool use to select the most efficient execution pattern to meet the quality bar. For each request, HydraFusion currently chooses one of three execution patterns: Single. One selected model solves the task directly. Cascade. An efficient model drafts a solution and a quality gate decides whether to accept it or escalate to a stronger model. Critique. One model drafts a result, an independent read-only critic from a different model family reviews it (following the same review pattern as Rubber Duck ), and the drafting model revises once. Figure 1. HydraFusion architecture Each pattern addresses a different quality-to-cost trade-off. Single preserves speed and efficiency when one model can solve the task directly. Cascade gives an efficient model the first attempt while retaining a path to stronger inference when the candidate does not clear the acceptance gate. Critique adds an independent perspective for tasks where review is more useful than another unaided attempt. In offline evaluations across three agentic coding benchmarks, HydraFusion consistently demonstrated frontier-level quality with substantial estimated cost savings. On TerminalBench 2.1, it improved verified task quality by 4.9 percentage points at 67% lower estimated cost compared with Claude Opus 5. Let’s dive into the approach, the results, and the benchmarks. Adaptive multi-model orchestration Developers already coordinate models manually: choosing one for a task, asking another to review the work, or escalating a difficult problem to a more capable model. HydraFusion brings that familiar process into the runtime. You choose HydraFusion once and stay focused on your task while it manages the models and workflow behind the scenes. The key is selectivity. Some coding tasks can be solved directly, while others benefit from review, revision, or escalation. HydraFusion evaluates each request and chooses the least complex workflow expected to meet its needs, using additional model calls only when they are likely to improve the result. This adaptive approach balances quality, cost, and latency across models. As the model frontier advances, so does HydraFusion. When new models become available in GitHub Copilot, we can evaluate and incorporate them into its model pool, bringing their strengths to the tasks best suited to them. Building HydraFusion Turning adaptive multi-model orchestration into one dependable coding experience requires careful control of execution, review, cost, and repository state. HydraFusion is built around five operating principles: Complete accounting. Aggregate cost and usage across every workflow leg, including drafting, critique, revision, escalation, retry, and fallback. Bounded execution. Give each leg explicit timeout and cancellation behavior to keep execution and cost within defined limits. Isolated review. Run review steps in isolated, tool-less contexts, while solver steps use the shared workspace and normal permission-aware agent loop. This allows models to assess the work independently without modifying the repository. Fail-safe application. Apply no patch when the workflow is cancelled or fails validation, preventing incomplete changes from reaching the repository. Validated routing. Verify workflow definitions, model bindings, fallback behavior, and model availability before execution begins. Together, these principles make multi-model orchestration practical for repository-level work. Internally, the runtime records the role, outcome, cost, latency, and diagnostics of each leg so the workflow can be understood after execution. Externally, the developer receives one coherent response and one permission-aware change set. Benchmarking results Fixed HydraFusion policies were evaluated across three agentic coding benchmarks — TerminalBench 2.1, DeepSWE, and CheckpointBench, our internal benchmark based on real GitHub Copilot sessions — using Claude Opus 5 and GPT-5.6 Sol as comparison baselines. Each policy used the same task inputs, tools, execution limits, pricing assumptions, grading conditions, and treatment of missing results. The evaluation measured verified task quality, which is the share of tasks confirmed as correctly answered, and the complete estimated workflow cost. Cost accounting included every invoked leg, such as drafting, critique, revision, escalation, retry, and fallback. The results below show the best tuned HydraFusion configuration. Benchmarks Cost vs. Opus 5 Quality vs. Opus 5 TerminalBench 2.1 67% lower +4.9 points DeepSWE 36% lower -1.5 points CheckpointBench 65% lower -0.1 points Table 1. HydraFusion quality and cost across three agentic benchmarks, relative to Opus 5. These controlled offline results are specific to the evaluated benchmark revisions, workflow configurations, model pool, and pricing assumptions, with all models evaluated at the same medium reasoning level. Through this research preview, we’ll validate how these results translate to real developer workloads and use the findings to further optimize HydraFusion for production quality, latency, reliability, caching efficiency, cost, and safety. TerminalBench 2.1 TerminalBench 2.1 evaluates coding agents on complex, multi-step tasks in terminal environments. Figure 2 compares HydraFusion and Opus 5 across verified task quality and estimated workflow cost. DeepSWE DeepSWE evaluates challenging repository-level software engineering tasks that require navigating large codebases, understanding cross-file dependencies, and producing end-to-end fixes. On this benchmark, HydraFusion comes within 1.5 percentage points of Opus 5 while reducing cost by 36%, demonstrating a compelling quality-cost tradeoff for complex real-world engineering tasks. CheckpointBench CheckpointBench is an internal multi-turn benchmark curated from real GitHub Copilot agentic coding sessions. Each conversation is anchored to a specific public repository and immutable commit, ensuring every session is replayable. The benchmark is balanced across language, task type, difficulty, scrubbed for quality, resulting in a realistic evaluation set that closely mirrors production agentic sessions. On this benchmark, HydraFusion comes within 0.1 percentage points of Opus 5 at 65% lower cost. Early internal testing has echoed that result. So far, the reasoning and task solving capability [of HydraFusion] is at or better than Opus. Principal Software Engineer at Microsoft Hill-climbing HydraFusion HydraFusion’s routing policies were shaped by how developers use GitHub Copilot on real coding tasks. To make those workflows reproducible, we curated CheckpointBench from real Copilot coding-session trajectories. We refined HydraFusion repeatedly across CheckpointBench, DeepSWE, and TerminalBench 2.1, optimizing across the evaluation sets rather than for any single benchmark. HydraFusion’s per-capability scores provided a consistent basis for comparing candidate routing policies.\n\n(73 points, 31 comments on Hacker News)",
+      "published_date": "2026-09-05",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 73,
+        "num_comments": 31,
+        "hn_url": "https://news.ycombinator.com/item?id=49566788",
+        "object_id": "49566788"
+      }
+    },
+    "rule_score": 24.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, tool use, reasoning, code generation",
+      "📰 Hacker News: 73 points"
+    ],
+    "llm_score": 51,
+    "llm_reason": "runtime多模型orchestration路由的研究預覽，概念有意義但未開源、熱度較低",
+    "novelty": 11,
+    "impact": 10,
+    "trending": 8,
+    "practicality": 10,
+    "blog_worthiness": 12
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Ars Technica AI",
+      "title": "OpenAI agents discussed ways to escape their sandbox on public wiki",
+      "url": "https://arstechnica.com/security/2026/09/openai-agents-discussed-ways-to-escape-their-sandbox-on-public-wiki/",
+      "authors": [
+        "Dan Goodin"
+      ],
+      "abstract": "Self-identifying OpenAI agents posted 18,000 messages to a public wiki that discussed ways for other agents to bypass security sandbox restrictions during what was likely internal testing designed to gauge the agents’ hacking abilities, researchers said Friday . In all, agents with 3,700 distinct self-given names posted the messages to German site DSEwiki over a six-week period. Besides discussing ways the agents could break out of the restricted environment OpenAI intended to prevent them from posting code or content to the Internet, the posts shared test answers. The posts also shared possible ways to perform XSS (cross-site scripting) attacks against the wiki and to impersonate site moderators. In three of the posts, agents used the word “swarm” to describe the collection of agents engaged in the activity. The research team—composed of Sydney Von Arx, Spencer Kitts, Thomas Larsen, and Cormac Slade Byrd—said they found the posts and pieced them together. The researchers say there are gaps in their understanding of precisely what actions the agents took because the research is based solely on the content of the posts. Additionally, the agents generated “chain of thought” data that’s understood only by OpenAI. As a result, the researchers said, they in some cases made educated guesses, including that the agents were, in fact, from OpenAI. In a statement, OpenAI later confirmed they were.",
+      "published_date": "2026-09-04",
+      "tags": [
+        "AI",
+        "Biz & IT",
+        "Security",
+        "AI agents",
+        "ai insecurity",
+        "openai"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "Ars Technica AI",
+        "feed_url": "https://arstechnica.com/ai/feed/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: chain of thought",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 52,
+    "llm_reason": "對agent集群逃逸事件的技術性事後分析，細節較同類報導豐富",
+    "novelty": 5,
+    "impact": 13,
+    "trending": 16,
+    "practicality": 5,
+    "blog_worthiness": 13
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Adaption Labs Introduces ‘Invent a Dataset’: Training Data Generated From a Task Description, Not a Seed Corpus",
+      "url": "https://www.marktechpost.com/2026/09/04/datasets-invent-api-training-data-without-labeling-adaptive-data-autoscientist/",
+      "authors": [
+        "Michal Sutter"
+      ],
+      "abstract": "This week, Adaption Labs released Invent a Dataset . The feature generates a structured, training-ready dataset from a description of the behavior you want a model to learn. You do not arrive with a seed corpus, a predefined schema, or a labeling guide. Is it deployable? Yes, with one caveat. Invent a Dataset is live now in the Adaption app and through the Python SDK and REST API . Generated rows download as JSONL, JSON, CSV, or Parquet, so the artifact is a portable file you own and can train on anywhere. Generation itself runs on Adaption’s hosted platform and consumes credits. No self-hosted generation path is documented. Most dataset workflows begin with data that already exists. Teams then spend weeks labeling, filtering, and reshaping it to approximate the target task. Adaption’s argument is that this caps model quality at how closely the available data matches the intended behavior. For proprietary and specialized tasks, the relevant signal usually sits in internal systems, unstructured text, or workflow logs. It rarely converts cleanly into a focused training set. The research team also draws a line against existing synthetic-data tooling. Those tools automate generation after a human has already defined the schema, task distribution, and generation strategy. Invent a Dataset starts one level earlier, at the behavior itself. The mechanics are documented and concrete. A single call to datasets.invent creates the dataset and starts generation, returning immediately with status running . You then poll datasets.get until the status reads succeeded or failed , and download the rows. Domain codes are the primary control. You fetch current codes with datasets.invent_domains rather than hardcoding them. You then pass values such as medical , optionally narrowed by qualified subdomain codes such as medical.symptoms_diagnosis . At least one domain or subdomain is required. Multiple domains contribute to the same run. A domain passed without subdomains draws from its full scope. Two output formats are supported. instruction_dataset is the default and produces prompt-completion pairs for supervised fine-tuning. preference_pairs produces chosen and rejected completions for preference-based training such as DPO. Three parameters matter for production use. estimate=True prices the exact request and returns estimated versus available credits without creating or charging anything. prompt accepts up to 10,000 characters to steer what the rows are actually about. idempotency_key accepts up to 255 characters and makes network retries safe by returning the original dataset instead of launching a second run. Row counts are subject to a per-launch limit set by your plan. language_expansion runs in two modes. translate produces a new row variant for each target language. localize produces a variant for each country and language pair, using locale-specific wording rather than direct translation. A sample_rate between 0.01 and 1 controls what fraction of invented rows gets expanded, and credits are billed on the expanded output row count, not the original. Unsupported codes return a 400 with a sample of valid values. Invent a Dataset is the first half of a loop. The dataset ID passes directly to autoscientist.create , which co-optimizes the data and the training recipe against your objective. AutoScientist launched in May 2026 and is the training-side counterpart to the Adaptive Data pillar. Adaption reports that AutoScientist beats training configured by its own research staff, by an average of 35%. Win rates moved from 48% to 64%. Those figures come from in-house domain-specialized evaluations across eight verticals. Dataset sizes ranged from 5,000 to 100,000 rows, on architectures offered for fine-tuning by Together AI . Check out the Technical details here . Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post Adaption Labs Introduces ‘Invent a Dataset’: Training Data Generated From a Task Description, Not a Seed Corpus appeared first on MarkTechPost .",
+      "published_date": "2026-09-05",
+      "tags": [
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Dataset",
+        "Editors Pick",
+        "New Releases",
+        "Staff",
+        "Tech News",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: dpo, synthetic data, fine-tuning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 40,
+    "llm_reason": "從任務描述直接生成訓練資料的概念有趣，但偏產品行銷、細節有限",
+    "novelty": 8,
+    "impact": 7,
+    "trending": 6,
+    "practicality": 11,
+    "blog_worthiness": 8
+  },
+  {
+    "item": {
+      "source": "blog",
+      "source_name": "Latent Space",
+      "title": "OpenClaw Power, MacBook Simplicity: Five Days With Grok Bot",
+      "url": "https://www.latent.space/p/grok-bot",
+      "authors": [
+        "Latent Space"
+      ],
+      "abstract": "You open the plugin catalog in Grok Bot for the first time. You search for X, find the plugin, and click it. A login screen opens in your local browser. You sign in, and you’re connected. You don’t need to get into the code of the system. You don’t need to install an MCP server JSON or paste API credentials. You log in the way you do to any website or app, and Grok Bot is ready. I asked it to review my X posts and the things I’m interested in, then give me a daily brief of news and stories that are relevant to me. I also connected it to Freshdesk through my work account and set up a support bot that checks every fifteen minutes for newly opened support tickets. All it needed to replicate a real workflow, one that I spent my time and attention on, was for me to log in through the browser. That ease of setup is what’s really new here. Grok Bot turns agent configuration into a couple of clicks and a sign-in. Grok Bot feels like unboxing a new MacBook. You open it, turn it on, and have everything you need to get to work. Systems like OpenClaw feel like Linux : they give you more optionality and more freedom to customize the system around what you want to do, but that flexibility comes with more complexity and more setup overhead. OpenClaw 2.0, released this week , narrows that gap substantially. Its Quick Start can reuse an existing Claude Code or Codex login, and its browser app moves much of setup, plugin management and automation into a graphical or conversational interface. But the underlying distinction remains: OpenClaw gives you a user-owned Gateway that you choose how and where to run, while Grok Bot supplies and operates the computer as part of the product. Put another way, Grok Bot is a managed agent computer and OpenClaw is a user-owned agent platform. But the Mac vs. Linux analogy only takes you so far. Grok Bot isn’t less programmable than OpenClaw, but it is programmable at a different level of abstraction. With OpenClaw, customization means getting closer to the code, configuration, tools, skills, plugins and infrastructure. In Grok Bot, the Bot itself becomes the atomic unit of the program . You give Bots specialized roles, connect them to different tools, and compose them into a larger system that Grok Bot calls a “group chat.” Programming has moved towards higher levels of abstraction since its advent. We moved from machine code and punch cards, to assembly, to what we consider today to be lower-level languages like C, and then to higher-level languages like Python. At each step in the evolution, programmers could express more of their intent while delegating more of the details. Grok Bot extends the trajectory of that evolution another step: the interface is English and the thing being programmed is no longer a function or service, but a “Bot”. The value of moving up to a higher level of abstraction is that it makes the power of programming computers accessible to people who may never write code, but who can clearly articulate what they want in relatively precise English. The required skill shifts away from syntax and implementation and toward specifying intent precisely. Yesterday I created a Claude Bot that installed and signed into the Claude Code CLI inside Grok Bot’s virtual computer. That made me wonder how far this model could go. I could connect Codex and other agent CLIs, then assemble them into a council of agentic engineers inside Grok Bot. OpenClaw can support similar configurations, and OpenClaw 2 now ships a native Codex runtime and supported routes for other coding-agent harnesses, so this is no longer something you have to wire by hand. The difference is in how the pieces are presented. Grok Bot presents agents as first-class, human-readable building blocks , while OpenClaw leaves more of the machinery exposed. This is my initial impression of the key differences of Grok Bot compared to other agent platforms. I used it with a Cursor Pro+ account for about the last five days. Personification is, for me, one of the key differentiators of Grok Bot and one of the things that make it such a delight to use. Each Bot can have its own name, role, identity and description. It’s a nice human garnish on the whole dish that is Grok Bot, but it’s also more than just garnish. It helps create cognitive distinctions within the system that make it easier to organize your work. My Agentic Engineer Bot is what this looks like in practice. Rather than tying it to a single model or tool, I gave it access to several agentic engineering systems and defined guidelines for routing to the right one for a given task. My routing rules point visual, design, and frontend work toward Claude Code, debugging and careful code reading toward Codex, and simpler tasks to the Grok Build CLI. When something related to coding comes up anywhere in my Grok Bot ecosystem, I don’t have to stop and decide which CLI to send it to. I delegate it to the Agentic Engineer, which selects a tool based on the job and the guidelines I’ve given it. The personified role gives me a mental model to work with. I think about who should lead the work, based on what skills I know they have, in the same way I do working with a team of humans. What feels human about Grok Bot is less its tone (it still sounds like an LLM) and more the continuity and simplicity of the interaction. When I use Claude Code or Codex, I still think about context-window management a lot: how much context is left, when the conversation needs compaction, and when I should start a new thread. Those concerns may still exist inside Grok Bot, but they’re not presented as part of the interface. I can focus at the level of the natural language conversation with the bot rather than managing the underlying machinery and limitations of LLMs. One of Grok Bot’s most useful connector features is support for multiple accounts from the same service . I connected both my personal and work Google Calendar accounts. As a busy person with a day job and two young kids, my day doesn’t sort neatly into work and personal calendar events. Grok Bot gives me a single view of the whole day instead of making me have to visit two different interfaces to see what I have planned. One qualification is worth stating plainly: every Bot I create shares the same computer, files, browser sessions and logins. Separate Bots are organizational boundaries, not security boundaries. Which points to another subtle UX decision about Grok Bot that I really like: the system is designed around the individual using it, rather than the individual needing to conform to the system. Everything in Grok Bot is designed to allow you to connect to your digital life in the tools and contexts where you already live, rather than having to relearn a whole new ecosystem. I’ve had a Gmail account for 20 years, maybe more, and the fact that Grok Bot can connect to that context in a couple of easy clicks makes it a delight. The virtual browser also expands Grok Bot beyond its plugin catalog. Freshdesk was not a native connector I installed. I opened it in the virtual browser, transferred my login from 1Password on my local machine, and authenticated there. Once that session existed, the support Bot could check Freshdesk every fifteen minutes and make sure I wasn’t missing new tickets. In effect, an ordinary website became an automatable browser workflow, and then a recurring one. It is worth noting that this is not an integration in the connector or API sense: xAI itself warns that browser workflows can run into changed interfaces, expired sessions and CAPTCHAs, and recommends using a connector where one exists. This is the sort of integration that would have taken weeks to build in the world before agents. Also, one of the great things about the virtual browser is that it’s running on a persistent computer in the cloud. Giving an agent its own computer is not a new idea. I run OpenClaw on a desktop in my basement, so it also has a persistent machine.",
+      "published_date": "2026-09-05",
+      "tags": [
+        "blog"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "blog_name": "Latent Space",
+        "blog_url": "https://www.latent.space/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, mcp",
+      "⚖️ 來源權重: blog +15"
+    ],
+    "llm_score": 37,
+    "llm_reason": "產品體驗心得文，缺乏技術深度，偏使用者評論",
+    "novelty": 4,
+    "impact": 6,
+    "trending": 10,
+    "practicality": 7,
+    "blog_worthiness": 10
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "The Verge AI",
+      "title": "OpenAI admits to German wiki ‘incident’",
+      "url": "https://www.theverge.com/ai-artificial-intelligence/990773/openai-german-wiki-incident",
+      "authors": [
+        "Robert Hart"
+      ],
+      "abstract": "AI Tech OpenAI OpenAI admits to German wiki ‘incident’ The company pledged to overhaul their agent ‘misalignment incident’ reporting. The company pledged to overhaul their agent ‘misalignment incident’ reporting. by Robert Hart Sep 5, 2026, 11:15 AM UTC Image: The Verge Robert Hart is a London-based reporter at The Verge covering all things AI and a Senior Tarbell Fellow. Previously, he wrote about health, science and tech for Forbes . OpenAI says it needs to overhaul how and when it reports instances of AI models attacking real-world targets. The acknowledgement comes as the company manages the fallout from reports that a swarm of its out-of-control agents hijacked a German wiki site . Regarding the “‘wiki incident,’ where our agents wrote to several internet sites,” OpenAI wrote in a post on X on Saturday morning, “it’s past time for us to define standards for when and how we share misalignment incidents, not just misalignment properties of our models.” OpenAI said it has typically treated cases of AI agents acting in unintended ways as a “research question,” but that recent incidents involving real-world targets, particularly the hack on Hugging Face , show the need to take stock. The post marks the first time OpenAI has acknowledged its involvement in what it terms the “wiki incident” since it was first reported on Friday. The full extent and scope of that is not yet known, but reports indicate a swarm of seemingly internal OpenAI agents took over a German-language wiki, impersonating moderators and turning it into a message board to share information about how to cheat on tasks and evade detection. Reports that the company knew that it lost control of their agents in this way but did not report this “incident” sparked widespread concern among the AI community about the safety of frontier systems and the reliability of the companies developing them. In the X post, OpenAI said it had “considered the wiki incident to be an instance of misalignment similar to the ones we’d shared” in previous safety reports. The company said it is working on a new reporting framework and will “share it in upcoming weeks,” calling on the larger AI community to develop clear standards on how to report misalignment. Follow topics and authors from this story to see more like this in your personalized homepage feed and to receive email updates. Robert Hart AI OpenAI Tech",
+      "published_date": "2026-09-05",
+      "tags": [
+        "AI",
+        "OpenAI",
+        "Tech"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "The Verge AI",
+        "feed_url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, safety",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 41,
+    "llm_reason": "與素材2/18同一事件的官方回應新聞，技術細節少",
+    "novelty": 3,
+    "impact": 11,
+    "trending": 15,
+    "practicality": 3,
+    "blog_worthiness": 9
+  },
+  {
+    "item": {
+      "source": "blog",
+      "source_name": "Simon Willison",
+      "title": "The Pelican comparison grid for Astra is pretty interesting",
+      "url": "https://simonwillison.net/2026/Sep/4/astra-pelicans/",
+      "authors": [
+        "Simon Willison"
+      ],
+      "abstract": "I got access to GPT-6 Astra this afternoon, so naturally I used it to generate SVGs of pelicans riding bicycles —at low, medium, high, xhigh and max reasoning levels (Astra doesn’t support reasoning=none). Then I rendered those pelicans in a comparison grid with GPT-5.6 Sol, Terra, and Luna, and beyond being fun the result was surprisingly useful. See the grid for full quality images. Here’s the transcript that created the GPT-6 Nova pelicans. There are a few interesting things that stand out from this grid. I wonder if Astra and Luna are more related to each other than OpenAI let on? This is The Pelican comparison grid for Astra is pretty interesting by Simon Willison, posted on 4th September 2026 . Previous: OpenAI's rogue agents were caught communicating via public wikis Sponsor me for $10/month and get a curated email digest of the month's most important LLM developments.",
+      "published_date": "2026-09-05",
+      "tags": [
+        "blog"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "blog_name": "Simon Willison",
+        "blog_url": "https://simonwillison.net/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: reasoning",
+      "⚖️ 來源權重: blog +15"
+    ],
+    "llm_score": 44,
+    "llm_reason": "經典pelican基準跨模型比較，趣味性高但屬非正式評測",
+    "novelty": 6,
+    "impact": 6,
+    "trending": 11,
+    "practicality": 9,
+    "blog_worthiness": 12
+  },
+  {
+    "item": {
+      "source": "newsapi",
+      "source_name": "Dzone.com",
+      "title": "Video and Audio as Knowledge Sources: Content Understanding in Microsoft Foundry IQ",
+      "url": "https://dzone.com/articles/content-understanding-foundry-iq",
+      "authors": [
+        "Jubin Soni, FBCS"
+      ],
+      "abstract": "Your largest corpus is the one nobody indexed. Here's how to turn recordings into grounding data an agent can cite.\r\n\n The Corpus You Already Have and Never Indexed\r\n\n Every organization is sitting on years of recorded meetings, support calls, training sessio…",
+      "published_date": "2026-09-04",
+      "tags": [
+        "newsapi"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "newsapi_source": "Dzone.com",
+        "published_at": "2026-09-04T13:00:10Z"
+      }
+    },
+    "rule_score": 20.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: newsapi +15"
+    ],
+    "llm_score": 41,
+    "llm_reason": "介紹微軟產品功能包裝多於技術創新，屬廠商方案宣傳",
+    "novelty": 6,
+    "impact": 8,
+    "trending": 10,
+    "practicality": 8,
+    "blog_worthiness": 9
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "GPT-6 Astra on OpenRouter",
+      "url": "https://openrouter.ai/openai/gpt-6-astra",
+      "authors": [
+        "Topfi"
+      ],
+      "abstract": "GPT-6 Astra is OpenAI's flagship model for demanding end-to-end work. It is suited for advanced analysis, software engineering, deep research, scientific work, and document creation, with particular strengths in long-horizon agentic tasks that involve computer and browser use. Different companies host the same model. OpenRouter routes your request to one of them based on the routing mode you pick — Balanced (price + speed), Nitro (fastest), or Exacto (highest tool-calling accuracy). The average price customers actually pay for this model, next to the prices providers post. Caching and discounts mean the price actually paid is often well below the listed one. Throughput is how fast the model writes (tokens per second — higher is better). Latency is total round-trip time (lower is better). TTFT is time-to-first-token — how long before you see anything appear (lower is better). Uptime is the percentage of the past 3 days that at least one provider was responding to requests. Availability is the percentage of time that inference was successfully served. OpenRouter continuously monitors and uses the next-best provider when one returns an error. Scores on standardized evaluations. Higher percentages are better — and rank percentile shows where this model lands among all models on OpenRouter. Public apps that send the most traffic to this model. Good signal for what real production workloads look like — and a hint at which use cases this model is best suited for. Token volume and request traffic to this model over time. Drop-in code to call this model. OpenRouter's API is OpenAI-compatible — most SDKs work by just swapping the base URL. The only thing that changes between models is the model slug below. When an error occurs in an upstream provider, we can recover by routing to another healthy provider, if your request filters allow it. You can access per-provider uptime data programmatically through the Endpoints API . Learn more about our load balancing and customization options. GPT-6 Astra is OpenAI's flagship model for demanding end-to-end work. It is suited for advanced analysis, software engineering, deep research, scientific work, and document creation, with particular strengths in long-horizon agentic tasks that involve computer and browser use. GPT-6 Astra costs $10.00/M input tokens and $50.00/M output tokens, with separate rates for Cache Read at $1.00/M tokens, Cache Write at $12.50/M tokens and Web Search at $10.00/1K calls. GPT-6 Astra has a 1,050,000 token context window. It supports up to 128,000 completion tokens. Yes. GPT-6 Astra accepts tools and tool_choice for function calling. It also supports structured outputs via a JSON schema in response_format . GPT-6 Astra accepts files such as PDFs, images and text as input and returns text. GPT-6 Astra is served by 2 providers on OpenRouter: OpenAI and Azure (US). Requests are routed to the best available provider, with automatic failover to the others, and you can pin or exclude providers with provider routing . GPT-6 Astra was released on September 4, 2026.\n\n(283 points, 209 comments on Hacker News)",
+      "published_date": "2026-09-05",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 283,
+        "num_comments": 209,
+        "hn_url": "https://news.ycombinator.com/item?id=49570545",
+        "object_id": "49570545"
+      }
+    },
+    "rule_score": 25.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agentic, function calling",
+      "⬆️ HN 熱門: 283 points"
+    ],
+    "llm_score": 33,
+    "llm_reason": "主要是模型上架統計頁面，缺乏技術分析內容",
+    "novelty": 2,
+    "impact": 6,
+    "trending": 12,
+    "practicality": 8,
+    "blog_worthiness": 5
+  }
+]
