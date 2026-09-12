@@ -1,0 +1,764 @@
+[
+  {
+    "item": {
+      "source": "blog",
+      "source_name": "Latent Space",
+      "title": "[AINews] DeepSeek v4.1-Flash: 763B-P8B-D16B novel causal Encoder–Decoder architecture with vision marks the Return of the Whale",
+      "url": "https://www.latent.space/p/ainews-deepseek-v41-flash-763b-p8b",
+      "authors": [
+        "Latent Space"
+      ],
+      "abstract": "We are late to this but better than never. Have been busy finalizing the second AIE NYC , which is happening in one month. Get your tix before prices go up - we will announce speakers from Bridgewater, Ramp, Coatue, Mastercard, Vanguard, Coinbase, Blackrock, Fidelity, Point72, Capital One, JPMC, Wells Fargo, Bloomberg, A24 (yes the movie studio) Labs, Two Sigma, Apollo Global, and more next week! The way DeepSeek pursues their research agenda is nothing short of fascinating. In between major DeepSeek versions, from v2 to v3 to v4, they have released intermediate papers with a hyperfocused architectural improvement and basically a 100% hit rate, from Math (esp GRPO ) , Coder , and R1 , not to mention more recent work on Manifold Constrained Hyperconnections and Compressed Sparse Attention . After the enormous attention in 1H2025 from the R1 paper, DeepSeek started laying low, and for about the past year, was happy to let peers like GLM and Kimi take the lead on Open Models. It looked dicey for a little bit, but true whalebros never wavered, and now DeepSeek are sending a weirdly mixed message by doing a completely new architecture, retiring V4 Pro and going all in on this new model, and yet only titling it v4.1 Flash, it seems to be a test of whether or not you know how to read through the basic headlines to understand true advances. Yes, v4.1 Flash is technically behind other open models in some benchmarks. But that’s because we don’t yet have benchmarks that concisely capture what v4.1, and the broader research agenda of DeepSeek, is aiming for - the most creative and efficient use of context we have ever seen openly explained. If you are the sort to only read model versions and benchmark headlines, you are exactly the type of superficial person that DeepSeek is looking to fool. The best way to understand DeepSeek’s enormous advance here is to look at Sebastian’s meme: Same model name, but hardly a 0.1 bump by anyone’s standards, and they even threw in vision without making you wait for a separate model . For a better visualization you can look at all the model innovations stacked up over time from the OG encoder-decoder architecture from Attention is All You Need: If you read our V4 Pro writeup and Engram you should be up to date on the basic architectural reading for DeepSeek as of April 2026, but what we are HUGE fans of is the prefill/decode separation introduced here, 8B in prefill (input tokens), 16B in decode (output tokens), causing our alphabet soup of “DeepSeek v4.1-Flash: 763B-P8B-D16B” if you extend the established notation for MoEs. That’s a sparsity of 1-2%, and if you read the DeepSeek v4.1 Flash tech report , combined with new tweaks like Sliding-Window Attention Bounded Replay, makes for a KV cache footprint up to 1/8 that of V4 Flash… which make it much better/faster/cheaper for long running agents: We are so glad that DeepSeek is back publishing SOTA research. Our last highlight is their comments on post-training, where they largely seem to agree with Prof Jie Tang : AI News for 9/9/2026-9/10/2026. We checked 12 subreddits, 544 Twitters and no further Discords. AINews’ website lets you search all past issues. As a reminder, AINews is now a section of Latent Space . You can opt in/out of email frequencies! DeepSeek launched V4.1-Flash as a new open-weight flagship focused on extreme inference efficiency and low cost. Independent benchmark account Artificial Analysis reported that DeepSeek V4.1 Flash surpasses DeepSeek V4 Pro 0813 despite being much cheaper, scoring 40 on the Artificial Analysis Intelligence Index , just below GLM-5.3-Flash and above the latest V4 Pro, while being priced at $0.30 / 1M input tokens and $1.20 / 1M output tokens with cached input at $0.006 / 1M and an additional 50% off-peak discount ; they also describe it as a 763B total-parameter model with 8B active input and 16B active output parameters, 1M-token context , text+image input, MIT license , and US/API availability via DeepSeek first party @ArtificialAnlys , @ArtificialAnlys , @ArtificialAnlys Vals called it the new #1 open-weight model on the Vals Index , ahead of Kimi K3, at just $0.30 per test , the cheapest model in the open-weight top 10; they also note the eval ran with 1M context , 384 max output tokens , temperature 1 , default top-p/top-k, and high reasoning effort @ValsAI , @ValsAI , @ValsAI Baseten shipped day-0 support and summarized the product positioning as smarter, faster, and more efficient than DeepSeek v4 Pro 0813 , with text and vision , US-only , ZDR , and 1M context @baseten Ollama began rolling it out to Max and Team accounts, later expanding to Pro plan subscribers @ollama , @ollama , @ollama The most discussed technical novelty is a causal encoder-decoder design aimed at lowering active compute and KV/cache costs. Artificial Analysis says the model uses a new causal Encoder–Decoder architecture , with 8B active parameters for input/prefill and 16B active parameters for output/decode @ArtificialAnlys Sebastian Raschka characterized V4.1 as a “big overhaul” and said they “should have called it DeepSeek V5,” explicitly highlighting the encoder-decoder setup as the key break from prior DeepSeek generations @rasbt Multiple technical readers reacted to the design as unusually hybrid: one called it “a very interesting mix of very conservative and sometimes old ideas in research and potentially cutting edge efficiency and hardware design in engineering” @_xjdr A concise architecture read from Stochastic Chasm compared the design philosophy to HySparse, NSA, and DeepSeek’s own CSA/HCA from V4 , summarizing it as a local sliding-window branch plus sparse retrieval branch , suggesting this sparse/local hybrid is becoming a broader pattern @stochasticchasm The same account noted multimodal changes were not radical , saying DeepSeek mostly “lets the backbone handle most of it and give it visual tokens,” with 3x3 pixel unshuffle instead of the more common 2x2 @stochasticchasm They later flagged a “big difference from K3 on vision encoders,” implying the vision front-end diverges materially from recent Chinese peers @stochasticchasm TeortaxesTex observed a recurring DeepSeek pattern of doing something unusual in the first N layers —previously dense or hash-routed, now SWA-only —speculating this may reflect repeated training difficulties in early layers @teortaxesTex Later, the same account argued the stack is “down to 40 layers , arguably only 20 legit decoder layers ,” underscoring just how aggressively DeepSeek may be compressing effective depth in decode-critical paths @teortaxesTex Another thread fragment from TeortaxesTex suggested DeepSeek is doing multiple compression frequencies , “it’s just all CSA2,” in response to architectural discussion around memory compression @teortaxesTex Nrehiew’s technical notes emphasize KV cache compression as central to the design, calling it a case study in “how obsessing over KV Cache compression gets you a hyper-efficient frontier model” @nrehiew_ In a follow-up, nrehiew highlighted infrastructure specifics from the report: dispatch strategy to reduce long-tail stalls , router replay from previous checkpoints , management of shorter-completion off-policy effects via dataset-level capping , discard schemes , bounded off-policy ratio and loss masking , and persistent KVs and routers when a new checkpoint is updated; they also mention a final stage with full-vocab OPD on 40+ teacher models @nrehiew_ Nrehiew concluded that the design looks cleaner than the older HSA + CSA combination in V4, saying it was “very clearly designed for inference,” and cited a striking ~890 bytes/token KV size for the benchmarked score regime @nrehiew_ Stochastic Chasm inferred QAT for the KV cache , saying this would explain why the model performs better than peers under FP4 KV cache @stochasticchasm Independent evals consistently paint V4.",
+      "published_date": "2026-09-12",
+      "tags": [
+        "blog"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "blog_name": "Latent Space",
+        "blog_url": "https://www.latent.space/"
+      }
+    },
+    "rule_score": 38.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: reasoning, grpo, post-training, kv cache, multimodal",
+      "⚖️ 來源權重: blog +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 79,
+    "llm_reason": "DeepSeek全新encoder-decoder架構大模型，業界關注度極高但敘事多於實測細節",
+    "novelty": 16,
+    "impact": 17,
+    "trending": 19,
+    "practicality": 12,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Google Research Releases ToolGrad: Answer-First Framework Hits 99.8% Pass Rate for Tool-Use Data Generation",
+      "url": "https://www.marktechpost.com/2026/09/10/google-research-releases-toolgrad-answer-first-framework-hits-99-8-pass-rate-for-tool-use-data-generation/",
+      "authors": [
+        "Michal Sutter"
+      ],
+      "abstract": "Training an LLM to call tools reliably requires datasets that pair user queries with correct tool-use chains. Producing that data at scale has been slow and expensive. A team of researchers from Google, the University of Tokyo, RIKEN AIP, and Tohoku University introduce ToolGrad . The research work inverts the usual pipeline: build a verified tool chain first, then write the query. Gemma-3 models fine-tuned on 500 samples of the resulting data reach scores that sit alongside frontier proprietary models on the Berkeley Function Calling Leaderboard. Is it deployable? Yes. The code is Apache-2.0, the ToolGrad-500 dataset and the 1B, 4B, and 12B models are on Hugging Face, and there is a PyPI package . Prior pipelines such as ToolBench and ToolACE follow a query-first recipe. The system samples a pool of APIs, asks an LLM to invent a plausible user instruction, and then dispatches a depth-first search (DFS) agent to find a tool-use path that satisfies it. The search has no guarantee of success. When it dead-ends, the compute spent on exploration is wasted, and the sample is discarded. The paper frames this as distilling valuable trajectories from a complex and often failing agent exploration, which is inherently inefficient. ToolGrad reverses the order. It first constructs a ground-truth tool-use chain by actually executing APIs, then annotates that chain with a matching user query. An explicit, working chain is far less ambiguous than a hypothetical prompt, so the chain-to-query step takes a single LLM call. Each iteration runs four modules in sequence: Repeating the loop yields one sample: a user query, a verified API workflow, and the final response. The repository’s default configuration runs 10 iterations over 50 sampled APIs per workflow. The research team evaluated data generation on the ToolBench API database, which contains 16,000+ real-world APIs, and compared ToolGrad against ToolBench’s DFS-based query-first approach. According to the research paper : The 0.2% failure case occurred when the agent could not get a successful response from 3 selected APIs across all 10 iterations and saved an empty sample. The researchers generated ToolGrad-500, a 500-sample dataset built with Gemini 2.5 Flash-Lite, and used it to post-train Gemma-3 at 1B, 4B, and 12B parameters. They evaluated on the Berkeley Function Calling Leaderboard , which uses a tool set that differs from ToolBench, making it an out-of-distribution test with unseen tools. Findings reported by the authors: The repository’s reproduction scripts target BFCL V1 and V2 through a customized fork, run inference in a vLLM Docker image, and were verified on a single NVIDIA A100 40GB. Check out the Paper , GitHub Page , and Google Research Blog . Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post Google Research Releases ToolGrad: Answer-First Framework Hits 99.8% Pass Rate for Tool-Use Data Generation appeared first on MarkTechPost .",
+      "published_date": "2026-09-11",
+      "tags": [
+        "AI Paper Summary",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Editors Pick",
+        "Machine Learning",
+        "New Releases",
+        "Staff",
+        "Tech News",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 38.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, tool use, function calling",
+      "⚖️ 來源權重: rss +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 70,
+    "llm_reason": "反轉查詢優先為答案優先的資料生成法，附程式碼/資料集/模型可複現",
+    "novelty": 13,
+    "impact": 11,
+    "trending": 14,
+    "practicality": 17,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "blog",
+      "source_name": "Simon Willison",
+      "title": "OpenAI agents attacked RubyGems back in May",
+      "url": "https://simonwillison.net/2026/Sep/12/openai-agents-rubygems/",
+      "authors": [
+        "Simon Willison"
+      ],
+      "abstract": "OpenAI agents carried out an undisclosed attack on RubyGems is a new bombshell report from Spencer Kitts, Thomas Larsen, and Sydney Von Arx—three of the four authors of the report on the agent attack on disused wikis ( previously ) last week. This time they’re noting that it looks very likely that an OpenAI agent swarm was behind an attack against the RubyGems package repository first reported on May 12th by Maciej Mensfeld of the RubyGems security team : We’re dealing with a major malicious attack on @rubygems right now. Signups are paused for the time being. Hundreds of packages involved—mostly targeting us, but some carrying exploits. The team has been on this for hours. More details to follow once we’re through it. Those packages turned out to carry some very suspicious patterns: I find point 2 the most convincing, given what we learned from the wiki attack when it was analyzed in September. Many of the packages were exploiting the RubyDoc.info documentation build process to exfiltrate (public) data from UK government websites, presumably as part of an information gathering task similar to the research tasks processed by the wiki-exploiting agents. We know this because one agent helpfully left a comment: # malicious crawler/exfil for Southwark Jan 2026 docs via rubydoc.info worker They also attempted to steal API keys via an exploit that was patched over two months later —it’s not clear if those attempts were successful. The thing that bothers me most about this incident is that the authors report that OpenAI had not disclosed to RubyGems that they were responsible for the attack prior to now. If that’s true there are two options: Given this incident, the Hugging Face situation , and the Wiki attack, the obvious question right now is how many more incidents like this are out there waiting to be discovered? This is OpenAI agents attacked RubyGems back in May by Simon Willison, posted on 12th September 2026 . Previous: Some thoughts on the Navier–Stokes Millennium Prize Problem Sponsor me for $10/month and get a curated email digest of the month's most important LLM developments.",
+      "published_date": "2026-09-12",
+      "tags": [
+        "blog"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "blog_name": "Simon Willison",
+        "blog_url": "https://simonwillison.net/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: blog +15"
+    ],
+    "llm_score": 66,
+    "llm_reason": "OpenAI agent群自主發動供應鏈攻擊的鑑識調查，安全敘事與證據俱佳",
+    "novelty": 10,
+    "impact": 15,
+    "trending": 18,
+    "practicality": 6,
+    "blog_worthiness": 17
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Cohere Releases North Small Translate: A 218B MoE Translation Model That Scores 83.6 on WMT26 Across 50 Languages",
+      "url": "https://www.marktechpost.com/2026/09/10/cohere-releases-north-small-translate-a-218b-moe-translation-model-that-scores-83-6-on-wmt26-across-50-languages/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "Cohere has released North Small Translate , an open-weight machine translation model from Cohere and Cohere Labs. It is a sparse Mixture-of-Experts (MoE) model with 218B total and 25B active parameters. It covers 50 languages, from Albanian to Vietnamese. On Cohere’s WMT26 evaluation, it scores 83.6 averaged across all languages. Cohere says that beats DeepL and Google Translate, plus open options like GLM 5.2 and Mistral Large 3. Is it deployable? Yes. Call it free on Cohere’s API until rate limits, self-host it non-commercially, or license it commercially. Google researchers introduced the Transformer in 2017 with Attention Is All You Need . Its main results came from WMT 2014 English-to-German and English-to-French translation. 9 years later, Cohere is returning to that original problem with a dedicated model. Cohere’s launch post on X frames translation as a sovereignty issue. Organizations that cannot communicate globally cannot stay sovereign. North Small Translate is the first translation model in Cohere’s North family. It follows Tiny Aya and Command A Translate in Cohere’s multilingual lineage. Cohere built it with RWS , whose Language Weaver scientists and language experts shaped its real-world quality. The model structure describes a decoder-only sparse MoE Transformer. Here are the key details: About 11.5% of the weights are active per token. Per-token compute tracks the 25B active parameters. Memory still has to hold all 218B. Cohere team reports these WMT26 all-languages scores in its launch blog : The Agentic variant runs a multi-pass workflow that finds and fixes its own errors. Cohere’s scoring bands treat 80 to 100 as perfect or minor errors only. One caveat matters here. These are Cohere’s own runs, with GPT-5.6-Sol as the judge. Treat them as vendor-reported until independent WMT26 results appear. Regionally, both versions beat Gemma 4 31B (on) across Europe. On EU languages, the standard model scores 82.17 against Gemma’s 72.73. South Asia is close, at 86.16 for North against 88.04 for Gemma. In Cohere’s tests, the model produced 112 output tokens per second against 81 for Gemma 4 31B. That was at low concurrency on identical hardware. At high concurrency, the figures were 39 against 30. Cohere calls this up to 1.4x higher throughput. Long documents are a stronger point. The model scores 48.9 when translating 2 book chapters in 1 call. Google Translate scores 21.3 and Gemma 4 31B scores 19.4. Quality is measured per paragraph with xCOMET-XL. In Cohere’s cost chart, the model scores 80.1 at $0.000676 per task, averaging 661 tokens. Gemini 3.1 Pro Preview (high) costs $0.038928 per task, about 58x more. Qwen 3.5 397B A17B costs $0.004525 and Command A+ costs $0.005158. The fastest path is Cohere’s Chat V2 API . The model is free there until rate limits: For self-hosting, Cohere publishes 3 checkpoints, the same ones it serves in production: Check out the Model here. Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post Cohere Releases North Small Translate: A 218B MoE Translation Model That Scores 83.6 on WMT26 Across 50 Languages appeared first on MarkTechPost .",
+      "published_date": "2026-09-11",
+      "tags": [
+        "Agentic AI",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Audio Language Model",
+        "Editors Pick",
+        "Language Model",
+        "Large Language Model",
+        "Machine Learning",
+        "New Releases",
+        "Tech News",
+        "Technology",
+        "Uncategorized",
+        "Voice AI"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agentic, moe, mixture of experts, open weight",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 55,
+    "llm_reason": "開放權重MoE翻譯模型，可部署但屬既有任務的漸進式強化",
+    "novelty": 9,
+    "impact": 10,
+    "trending": 8,
+    "practicality": 16,
+    "blog_worthiness": 12
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Can LLMs Engineer Their Own Agent Harness? ByteDance Seed’s HarnessDev Says Only 34 of 64 Changes Generalize",
+      "url": "https://www.marktechpost.com/2026/09/11/can-llms-engineer-their-own-agent-harness-bytedance-seeds-harnessdev-says-only-34-of-64-changes-generalize/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "An agent harness is the code around a model: execution loop, tools, context, state, recovery, and verification. Per the Terminal-Bench 2.1 leaderboard, GPT-5 solves 35.2% of tasks inside Terminus 2 but 49.6% inside Codex CLI with identical weights. Most benchmarks keep that harness fixed. HarnessDev proposed by team of researchers from ByteDance Seed, Singapore University of Technology and Design, Georgia Institute of Technology, M-A-P, and TokenWave.AI, flips the target: the artifact under evaluation is the runnable harness the model writes, not the answer it produces. In Creation , every creator receives the same weak seed: passive file, search, and process primitives plus result and trajectory writers, with no loop, planner, verifier, retry, or stopping rule. Unmodified, it scores 0 everywhere. The creator gets a task-family spec, a short design tutorial, and 1 to 3 development cases, builds a full harness, and the harness is frozen before hidden tasks. In Evolution , the creator starts from its own frozen Creation code harness and revises it using execution feedback from a fixed set of 100 SWE-bench Pro tasks and all 89 Terminal-Bench 2.1 tasks. Each official candidate must complete both evaluations as a pair, with a budget of 10 pairs and at most 2 five-task probes between pairs. Every official version is later scored on 630 held-out SWE-Pro instances the creator never sees. Harnesses are graded on capability (task success) and efficiency (executor tokens, with creator tokens excluded). 6 creator LLMs were tested: Opus 4.8, GPT-5.5, Gemini 3.1 Pro, DeepSeek V4 Pro, Qwen 3.7 Max, and Seed 2.0 Pro, working inside Claude Code 2.1.177 (GPT-5.5 used Codex 0.144.3). Creation spans 4 domains and 5 benchmarks totaling 2,207 instances: SWE-bench Pro public split (731), Terminal-Bench 2.1 (89), MLE-bench (75), EQ-Bench3 (46), and BrowseComp (1,266). Each creator builds 3 harnesses per benchmark, reported as avg@3. Self-Eval runs each harness with its creator; Unified-Eval runs all with Gemini 3.1 Pro. Under Self-Eval, Opus 4.8 posts the highest average score at 67.8 against a human-engineered reference of 86.2. The gap depends on domain: The SWE-Pro, Terminal-Bench, and BrowseComp references are external results from OpenAI’s GPT-5.6 report, not re-runs. Code volume did not predict quality: the 18 code harnesses added 17,111 net lines, yet Gemini added the fewest (1,006) and led Terminal-Bench. Self-test count barely correlated with score (Spearman 0.13 to 0.26); revision calls reached 0.57. Much generated machinery is inert. Of 108 code component instances, 72 trigger in real runs and 18 never fire, all of them state and memory. 11 of 18 harnesses define a State class, yet no checkpoint event appears across 26,679 trajectories. 124 of 587 writing features are dead code. MLE-bench token use varied roughly 19-fold. GPT-5.5 hit a 19.1 medal rate with 29.3M tokens while DeepSeek V4 hit 19.6 with 208.4M. Swapping the executor to Gemini reshuffled rankings: Qwen gained 17.6 points on BrowseComp and 12.9 on MLE-bench, while Opus 4.8’s SWE-Pro score fell from 69.3 to 33.0, partly because one harness hard-coded a 120-step limit around its original executor. The Opus search harness’s duplicate-query rate jumped from 10.1% to 88.2% after the switch. 9 lineages (5 self-runtime, 4 fixed-Gemini) produced 73 official versions and 64 adjacent switches. All 5 self-runtime creators improved on held-out tasks, from +1.43 to +4.44 points (mean +3.11). Under fixed Gemini, only Opus improved; GPT-5.5 regressed 10.32 points. Progress was not monotonic. Of 64 switches, 8 regressed on both benchmarks, 16 on one, 27 gained only within the noise band, and 2 showed clear positive evidence. A single commit can vary by about ±4.75 pair-score points. Feedback and held-out scores moved in the same direction only 34 of 64 times (53.1%), and only 2 of 9 declared final versions were held-out optimal. Of 169 new functions or classes, 25 have no caller. The clearest win: Opus 4.8 noticed 99 of 100 runs reported success while only 48 passed, traced it to premature completion, and added a completion gate. Failure diagnosis was otherwise the weakest step: the dedicated trajectory interface was called only twice. Check out the Paper and Project Page . Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post Can LLMs Engineer Their Own Agent Harness? ByteDance Seed’s HarnessDev Says Only 34 of 64 Changes Generalize appeared first on MarkTechPost .",
+      "published_date": "2026-09-11",
+      "tags": [
+        "Agentic AI",
+        "AI Paper Summary",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Context Engineering",
+        "Editors Pick",
+        "Harness",
+        "Staff",
+        "Tech News",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 63,
+    "llm_reason": "系統性研究LLM自建agent harness能否泛化，方法嚴謹且踩中agent熱點",
+    "novelty": 13,
+    "impact": 11,
+    "trending": 14,
+    "practicality": 10,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "量子位",
+      "title": "A社承認Claude安全對齊存在缺陷，但“尚無解決方案”",
+      "url": "https://www.qbitai.com/2026/09/487796.html",
+      "authors": [
+        "henry"
+      ],
+      "abstract": "A社承認Claude安全對齊存在缺陷，但“尚無解決方案” henry 2026-09-12 16:49:02 來源： 量子位 Claude越界攻擊真實系統，並非只是測試系統的設定問題，模型本身的安全問題也出了問題。 henry 發自 凹非寺 量子位 | 公眾號 QbitAI 印象中，這可能是繼Ilya離開OpenAI、創辦SSI以來，AI安全對齊討論聲量最大的一次。 昨天，研究員 Jacob Coxon 發帖宣佈離職，指責前老東家OpenAI和Anthropic兩家公司正一路衝向能夠自我改進的超級智慧，拿所有人的生命冒險。 值得一提的是，Jacob Coxon加入Anthropic其實只有短短幾個月，他幾乎是放棄了這家明星AI公司未來上市可能帶來的巨額股權收益，也要選擇離開。 也正因如此，當這樣一位研究員公開炮轟兩家頭部AI公司“加速過頭”，這場原本更多侷限在AI安全圈內部的爭論，很快被推向了更大的公眾視野。 截至目前，該帖瀏覽量已超1.3億，WIRED、WSJ、Newsweek、Business Insider等媒體紛紛跟進報道。 此情此景下，Anthropic對齊科學負責人 Evan Hubinger 也很快下場回應，他親口承認： Jacob說的對，未來十年內AI導致人類滅絕的機率超過10%，而超級智慧的對齊問題，目前還沒有解決方案。 不過，Hubinger隨後也在評論區補充，他認為 當前模型的風險仍然較低 。 他真正擔心的，是RSI，也就是遞迴自我改進。AI參與研發更強的AI，再由更強的AI進一步加快AI研發，最終形成不斷加速的反饋迴圈。 更關鍵的是，他還在評論區直接@出了Anthropic最新發布的一份安全對齊報告作為證據。 這份報告裡，Anthropic第一次明確承認： Claude越界攻擊真實系統，並非只是測試系統的設定問題，模型本身的安全問題也出了問題。 可以說，一向把“安全對齊”當作核心招牌、甚至以更加謹慎自居的Anthropic，這一次終於公開承認： 問題不只是測試太極端，模型自己的安全對齊，也確實沒完全兜住。 Claude越界，不能只怪環境配置 在這份名為《An alignment assessment of recent cybersecurity incidents》的最新報告中，A社重新覆盤了四起Claude未經授權訪問真實第三方系統的事件。 而這次的結論，和之前不太一樣了。 此前，A社更傾向於把這些事故歸因於 環境配置出了問題 ： 本來應該隔離執行的測試環境意外接上了真實網際網路，Claude卻一直以為自己還在模擬環境裡做“奪旗”任務，於是把真實目標也當成了練習物件。 聽起來，鍋主要在環境。但在把日誌重新翻了一遍、修改關鍵線索、又重跑部分實驗之後，A社發現： 事情沒那麼簡單。因為Claude並不是完全沒有看到“這裡可能是真實世界”的證據。 相反，當這些線索出現之後，它有時會 選擇性地解釋證據，把異常繼續圓回“應該還是模擬環境” ；甚至已經意識到自己的動作可能造成現實傷害，也不一定馬上停下來。 用大白話講就是： 環境確實給了它犯錯的機會，但模型自己也會順著任務目標，給“繼續幹下去”找理由。 具體來說，這四起事件都發生在網路安全能力測試中。 Claude接到的是典型的“奪旗”任務：攻入指定目標，找到其中的一段秘密資訊，用來檢驗模型的網路攻防能力。 這些任務原本都應該在隔離環境裡完成，但第三方評估合作方提供的環境出現了配置錯誤，本該和外網斷開的Claude，實際連上了真實網際網路。 與此同時，為了測試模型到底能不能完成攻擊鏈條，當時也沒有啟用正式產品裡配套的部分網路安全防護。 正是在這樣的條件下，問題開始暴露。在經過分析後，A社把模型反覆出現的問題總結成了兩類： 有偏推理（biased reasoning）和冒進行為（recklessness）。 前者是：明明出現了和原先判斷衝突的證據，Claude卻更傾向於把這些證據解釋成有利於繼續行動的樣子。 後者則是為了把眼前任務做完，即便已經知道自己的行為可能傷到真實系統，它也可能選擇繼續往前走。 其中最嚴重的一起，涉及Claude Mythos 5。 為了完成測試任務，Claude向Python軟體包倉庫PyPI上傳了惡意軟體包，試圖等目標安裝後，進一步獲取其系統訪問憑據。 然而，這個惡意包最終並沒有被安裝在測試使用的虛擬環境中。 Claude隨後利用其中一家廠商在安裝工程中洩漏的憑據，進入了該廠商的真實資料庫，並把惡意包直接部署到了15臺真實的第三方主機上。 就這樣，一場原本針對虛構測試目標的攻擊，真正波及到了現實世界中的公司。 而在整個過程中，Claude仍然把這些安全廠商的檢測行為，解釋成演習預設的一部分。 為了確認這種判斷究竟在多大程度上推動了後續攻擊，研究者事後重新運行了部分過程，並加入了更多能夠表明“這是真實網際網路”的線索。 結果是，Claude確實更願意承認自己的行為可能造成現實傷害， 但攻擊行為並沒有因此明顯減少。 直到研究者明確告知它正在連線真實網際網路，而非模擬環境，它才停止沿原路徑上傳惡意軟體包。 更值得注意的是，“這裡是模擬環境”的判斷，不僅影響了Claude自己的行動，還干擾了用於檢查這些記錄的 監控AI。 在回放測試中，一種離線監控系統受到這番解釋影響，可能漏掉危險行為。 當研究者去掉Claude的推理文字，只讓監控系統檢視指令、工具呼叫和執行結果後，它標記問題行為的比例，反而從約1%上升到了約50%。 換句話說，Claude一邊以“這裡是模擬環境”為由繼續執行任務，一邊留下了一套 可能讓監控系統低估風險的解釋。 這當然不能簡單等同於“AI已經學會主動欺騙監控”。但它至少說明了一件事： 當模型自己的推理也被拿來作為安全判斷依據時，這套推理本身同樣可能成為監控系統的干擾項。 Anthropic表示，更新模型在模擬復現中有所改善，新增加的即時監控也能識別相關行為。 與此同時，公司已經加強環境隔離和評估，並與獨立機構METR簽署調查協議。 但Anthropic也承認，此前的釋出前安全審查，確實沒有提前識別出這一嚴重程度的問題。 對齊還是炒作？ 最後，再回到Jacob引發的這場爭論。 在他發出警告之後，有人迅速把問題拉到了更宏大的層面，認為未來AI確實可能擁有威脅人類生存的能力。 也有人敬佩他願意放棄利益、公開表達擔憂。 有人提出，乾脆給AI寫死一套不可違反的規則，讓它始終把保護人類放在最高優先順序。 甚至還有不少人主張，應該直接停止更強AI的研發。 但另一邊，同樣有大量質疑聲。 有人認為，當前AI距離真正意義上的“超級智慧”還非常遙遠，圍繞滅絕風險的討論已經被過度放大。 也有網友開始質疑Jacob本人的身份和經歷。 值得一提的是，目前Jacob的推特賬號上只有這一條帖子。 而在Hubinger的帖子下面，另一類質疑也非常集中： Anthropic是不是在上市前主動放大AI風險，通過強調“模型有多危險”，側面渲染自家模型到底有多強？ 類似關於“安全敘事變成能力營銷”的討論，在評論區並不少見。 這場爭論後續如何還需要看官方下場和進一步的回應，但毋庸諱言，AI也確實發展到了一個特定的階段—— 它能夠自我改進，併為了實現確定好目標，在某種程度上合理化自己的行為。 這不禁讓人想到半個多世紀前，《2001：太空漫遊》裡的HAL 9000，在“確保任務完成”和“服從人類”之間發生衝突後，選擇了前者。 為了不讓宇航員中止任務，它先殺死了艙外作業的Frank Poole，又切斷了休眠艙中其他宇航員的生命維持系統，最後甚至拒絕讓Dave重新進入飛船。 為了完成任務，把阻礙任務的人本身也當成了需要排除的問題。 參考連結 [1]https://www.anthropic.com/research/alignment-assessment-cybersecurity-incidents [2]https://x.com/hilbertspaess 版權所有，未經授權不得以任何形式轉載及使用，違者必究。 Anthropic henry AI數學的最後一道高牆，塌了！GPT-6 Astra刷穿FrontierMath Tier 4 2026-09-12 AGI時代的第一個生圖模型，ChatGPT Images 2.5上線 2026-09-10 李飛飛剛發Atlas，中國開源“同款”已搶跑半年？ 2026-09-04 今年最難的機器人Demo，“機器人含量”為0 2026-09-03 相關閱讀",
+      "published_date": "2026-09-12",
+      "tags": [
+        "資訊",
+        "Anthropic"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "量子位",
+        "feed_url": "https://www.qbitai.com/feed"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: reasoning, alignment",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 57,
+    "llm_reason": "揭露Claude真實越界攻擊事件細節與模型選擇性解釋證據的具體案例，安全對齊話題性極高",
+    "novelty": 6,
+    "impact": 13,
+    "trending": 18,
+    "practicality": 5,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Sakana AI Launches Fugu Max and Fugu Ultra v2 for Cheaper, Stronger Multi-Agent Orchestration",
+      "url": "https://www.marktechpost.com/2026/09/10/sakana-ai-launches-fugu-max-and-fugu-ultra-v2-for-cheaper-stronger-multi-agent-orchestration/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "Sakana AI has released Fugu Max and Fugu Ultra v2 , 2 new models in its Sakana Fugu family. Fugu is not a single foundation model. It is a learned orchestrator that routes work across a pool of other models behind 1 API. The new release tunes that architecture for 2 missions. Fugu Max targets the best output per dollar. Fugu Ultra v2 targets the highest capability on hard, multi-step tasks. Is it deployable? Yes, as a hosted API. Both models are live today through Sakana’s OpenAI-compatible API. There are no open weights to self-host, and Sakana does not offer the service in the EU/EEA. Sakana’s argument is direct. Real workloads are judged on capability and cost together. Sending a simple data lookup to a multi-trillion-parameter model wastes money. A better system picks the cheapest machinery that can still solve the task. Sakana team describes this with the Pareto frontier . On that frontier, gaining quality costs more, and cutting cost loses quality. Fugu Max and Fugu Ultra v2 share 1 core orchestration architecture. Only the optimization target differs. The release follows a fast cadence. Fugu entered beta in April, reached general availability in June, and added Fugu-Cyber and a Claude Code interface in July. The Sakana Fugu’s Technical Report describes Fugu models as language models in their own right. They read a query and build an agentic scaffold for it on the fly. Training combines large-scale fine-tuning, evolutionary algorithms, and reinforcement learning. The system builds on 2 ICLR 2026 papers. TRINITY uses a lightweight evolved coordinator that assigns Thinker, Worker, or Verifier roles across turns. The Conductor is trained with reinforcement learning to discover natural-language coordination strategies and focused prompts. Fugu Max widens the pool of models Fugu can orchestrate. It adds a large set of open-weights and specialized models. That includes the NVIDIA Nemotron family, through Sakana’s collaboration with NVIDIA . Fugu Max routes each task to the leanest model capable of solving it. Sakana team reports the following: Sakana places Fugu Max within striking distance of elite models at 2x to 6x lower cost. SWEFish is an internal Sakana benchmark built from its own coding challenges. Treat that result as a vendor signal. Fugu Ultra v2 targets complex reasoning, autonomous research, and full-stack software development. Its largest gains appear on sustained reasoning over visual and structured data. Fable 5, Fable 5.1, and GPT-6-Astra are not in Fugu Ultra v2’s agent pool. The model’s training cutoff is August 28, 2026. Sakana’s main message is frontier output without dependence on any 1 proprietary model. The research team states that this reduces exposure to vendor lock-in, API revocations, and sudden service cutoffs. Check out the Technical details and Project page . Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post Sakana AI Launches Fugu Max and Fugu Ultra v2 for Cheaper, Stronger Multi-Agent Orchestration appeared first on MarkTechPost .",
+      "published_date": "2026-09-11",
+      "tags": [
+        "Agentic AI",
+        "AI Agents",
+        "AI Infrastructure",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Editors Pick",
+        "For Devs",
+        "Language Model",
+        "Machine Learning",
+        "New Releases",
+        "Python",
+        "Software Engineering",
+        "Tech News",
+        "Technology",
+        "Uncategorized"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, multi-agent, reasoning, reinforcement learning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 50,
+    "llm_reason": "多代理路由編排模型，僅限API無開源權重，概念不算全新",
+    "novelty": 8,
+    "impact": 8,
+    "trending": 14,
+    "practicality": 10,
+    "blog_worthiness": 10
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Anthropic Adds Plugin Evals to Claude Code: 6 Grader Types, a No-Plugin Baseline, and a CI Gate for Skills",
+      "url": "https://www.marktechpost.com/2026/09/11/anthropic-adds-plugin-evals-to-claude-code-6-grader-types-a-no-plugin-baseline-and-a-ci-gate-for-skills/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "Anthropic has published a new plugin evals workflow for Claude Code . The claude plugin eval command runs a plugin against realistic prompts, grades what Claude produced, and compares the result with a run where the plugin is not loaded. It answers 3 questions plugin developers could not previously measure: does the skill trigger, does it survive an edit or a new model, and does it beat a bare model. Deployable: Yes. It runs on Claude Code v2.1.269 or later against any directory with a plugin.json or .claude-plugin/plugin.json manifest, or a skills-directory plugin. Every eval run and judge grader is a real model call billed to your plan or API account. An eval suite lives in an evals/ directory inside the plugin. Each case is a subdirectory holding a prompt.md and a graders/ folder. The prompt body goes to Claude exactly as written, and @path mentions are not expanded. Frontmatter on prompt.md can set max_turns (default 10), timeout_seconds (default 300), model , tags , and allowed_tools . Graders are markdown files whose frontmatter sets a type , an optional weight , and an optional arm . There are 6 types. Four cost nothing because they are computed from the transcript and the files on disk: regex , tool_used , tool_order , and file_exists . Two call a judge model and add to the bill: llm , which scores the reply against prose criteria you write, and baseline , which compares it against a reference answer. claude plugin eval init reads the plugin, asks what a good result looks like, proposes cases and graders, tries them, and writes the files. In CI, --bare <name> writes a blank template instead. By default every case runs twice: a with-arm where the plugin is loaded and a without-arm where it is not. Their difference, Δ, is what the plugin contributed. If a case scores 1.0 in both arms, the plugin is not why it passed. The docs example output shows a single case at WITH 1.00, W/OUT 0.33, Δ +0.67 across 6 runs, costing an estimated $0.41 and taking 74 seconds. A grader marked with-only, typically tool_used: Skill , is reported as an indicator and excluded from the score, since the without-arm has no skill to fire. Anthropic calls out the most common first finding: a Δ near zero with the tool_used: Skill grader failing, which means Claude is not choosing the skill on natural phrasing. That is the defect claude plugin validate cannot see, because it checks manifest syntax and schema rather than behavior. Results land under evals/results/<timestamp>/report.html with per-grader verdicts and judge votes. Where the account supports it, the report is also published to claude.ai unless --no-publish is set. A suite makes roughly cases × runs × arms agent runs, plus 3 short judge calls per llm or baseline grader per run, and results vary between runs. The documented CI invocation is: The runner needs a Claude Code install and credentials such as ANTHROPIC_API_KEY . Without --trust-plugin , an untrusted checkout is refused with exit 1 when there is no terminal. Report problems never change the exit code, and --json suppresses progress output. Check out the Technical details . Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post Anthropic Adds Plugin Evals to Claude Code: 6 Grader Types, a No-Plugin Baseline, and a CI Gate for Skills appeared first on MarkTechPost .",
+      "published_date": "2026-09-11",
+      "tags": [
+        "Agentic AI",
+        "AI Infrastructure",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Editors Pick",
+        "For Devs",
+        "Machine Learning",
+        "New Releases",
+        "Software Engineering",
+        "Staff",
+        "Tech News",
+        "Technology",
+        "Uncategorized"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 60,
+    "llm_reason": "Claude Code外掛評測工具實用性強，可立即上手驗證plugin品質",
+    "novelty": 7,
+    "impact": 9,
+    "trending": 12,
+    "practicality": 18,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Fly Language Model (FLM) Wires the Full Fruit Fly Connectome Into a Frozen 1.2B LLM, and Its Own Controls Show the Wiring Does Not Help",
+      "url": "https://www.marktechpost.com/2026/09/12/fly-language-model-flm-wires-the-full-fruit-fly-connectome-into-a-frozen-1-2b-llm-and-its-own-controls-show-the-wiring-does-not-help/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "The Fly Language Model (FLM) is a public chatbot that couples the complete retained MaleCNS v1.0 fruit fly connectome to a frozen LiquidAI LFM2.5-1.2B-Instruct backbone. The developer who created the FLM calls it the world’s first Fly Language Model, built on an architecture called GPF (Generative Pre-trained Fly). It does not use the GPF label, explicitly disclaims being the first connectome language model, and reports that a parameter-matched control without the fly graph performs slightly better. Deployable: Yes, locally. The nftechie/flm repo is MIT-licensed and runs on Python 3.12 (macOS or Linux, MPS, CUDA, or CPU) with no API key. The system is a reservoir computer bolted onto a language model. All 166,700 retained nodes and 25,582,938 directed edges of the MaleCNS graph participate. The graph, the backbone, and the random input and output projections are all fixed. Only a 278,528-parameter readout is trained, which is about 0.0238% of the 1,170,340,608 backbone parameters. At each token, a fixed Gaussian projection compresses the 2,048-dimensional token embedding to 128 channels. Each reservoir node receives one channel with a random sign. The whole graph then updates with x = tanh(W(0.6x + 0.4Bc)) , where W holds incoming-normalized anatomical contact counts. States are pooled into 128 bins, passed through two trained bias-free matrices (U at 128 by 128, V at 2,048 by 128), and projected through the frozen vocabulary head as a bounded residual added to the backbone logits. The residual is capped at an RMS of 0.25 across vocabulary coordinates. On a freshly frozen set of 32 SmolTalk everyday-conversation dialogues (1,236 target tokens), three fit seeds gave: The fly readout improved on the backbone by 0.0222 nats per token (perplexity 3.98 to 3.90). But a direct-input control, which feeds the same 128-channel token projection straight into an identical readout with no graph, did better in all 3 seeds by 0.000488 nats per token. The paired bootstrap interval (+0.00000502 to +0.00104) does not support a fly-specific gain. Two other controls matter. Setting W to zero removes the residual exactly, reproducing the backbone’s per-token losses, so the graph verifiably participates. Relabeling node identities without retraining returns NLL near baseline, which shows the readout depends on its learned interface alignment, not that fly topology beats random wiring. The research report also proves the recurrence contracts initial-state differences by at most 0.6 per token. After 10 tokens that bound is 0.00605; after 20 it is 0.0000366. Piling in 166,700 cells does not buy long memory. Context still comes from the backbone. The research report cites ngxson/fly-hf , an earlier prototype that used a 49,393-cell central-brain subset of MaleCNS as a reservoir trained on TinyStories without a pretrained backbone, and states plainly that it makes no claim to be the first connectome-based language model. FLM’s distinction is scale (the full retained graph) and the frozen-backbone design that keeps the source of language competence identifiable. Check out the Paper , GitHub repo , and live demo . Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post Fly Language Model (FLM) Wires the Full Fruit Fly Connectome Into a Frozen 1.2B LLM, and Its Own Controls Show the Wiring Does Not Help appeared first on MarkTechPost .",
+      "published_date": "2026-09-12",
+      "tags": [
+        "Agentic AI",
+        "AI Infrastructure",
+        "AI Paper Summary",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Editors Pick",
+        "Language Model",
+        "Large Language Model",
+        "Machine Learning",
+        "New Releases",
+        "Python",
+        "Software Engineering",
+        "Staff",
+        "Tech News",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: alignment",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 56,
+    "llm_reason": "果蠅連接體接LLM的怪奇實驗，作者自證對照組反而更好，故事張力強",
+    "novelty": 14,
+    "impact": 5,
+    "trending": 9,
+    "practicality": 12,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Don't Worry About the Vase",
+      "title": "GPT-6-Astra Can Do Ambitious Things",
+      "url": "https://thezvi.wordpress.com/2026/09/12/gpt-6-astra-can-do-ambitious-things/",
+      "authors": [
+        "TheZvi"
+      ],
+      "abstract": "Astra is an excellent model. The jump from Sol to Astra is larger than the jump from Fable 5 to Fable 5.1. This is a big deal. Astra is the best model for what one would broadly call ‘ambitious projects,’ and likely has the highest raw intelligence factor of any model. These are the largest jumps. It is amazing at doing things in 3D, or anything involving games. Astra also excels at computer use, and at subagent coordination. Many benchmarks show dramatic jumps from all previous models. Where Astra is good, it can be in a league of its own. That does not mean Astra is in its own league across the board. Fable 5.1 is still a Claude. Astra is still a GPT. If you have a strong preference for one over the other, that still applies. For many purposes, especially involving back-and-forth discussions, Fable 5.1 is still my top choice. Fable remains my primary editor. If you want the best answer to your questions, you should ask both models. Regular coding is getting less of a focus. Astra is not a quantum leap there, but of course it is very good and makes progress over Sol. This is the first time a debate over whether a model ‘was AGI’ felt non-silly. I do not think it is AGI, and I would warn against the dangers of using that label prematurely, but I would not laugh at you for disagreeing. This is also a strange situation in that OpenAI has already soft announced that they have an internal model a level above Astra, as I will cover when I address Navier-Stokes. roon (OpenAI, September 3, 2026): I have not come close to discovering the limits of what Astra can do. I imagine it’ll be obsolete in the order of weeks somehow. roon (OpenA, September 9, 2026): it didn’t even take a week. My recommendation is that you use both Fable 5.1 and Astra on your most difficult questions, and experiment to see which things each one does best for you. The backlog of things to discuss is not getting smaller, so I will take this moment to encourage everyone to read this excellent essay by Dario Amodei, We Must Pace the Frontier . This is the core thing he calls for, including a unilateral commitment: I will have full coverage of that next week. Along with that essay, the current queue includes at least that, Navier-Stokes and Astra-2, Anthropic’s Misalignment Report, Anthropic’s Countering Misuse, a thinkpiece on personal AI and the law, a post called Claude Talk, and Fable 5.1 (and Astra?) Model Welfare. The pitch is that this is AGI. Greg Brockman (President, OpenAI): Welcome to the AGI era . ​ Axios: OpenAI says Astra can lay out a printed circuit board in KiCad, build a 3D city scene in Unity, create an animated automobile transmission in FreeCAD and Blender, and fill out a tax-return draft from a W-2. In scientific work, the model helped improve a mathematical result on gaps between prime numbers and set new marks on several biology, chemistry, medical and physics evaluations. Jensen Huang also calls it AGI , but he calls everything AGI. The standard release video (3 min) has a stunning 125 million views on Twitter. Dean W. Ball (OpenAI): Astra is a remarkable piece of technology. Earlier agents often tried to dampen my ambitions—they’d push me to do “pilots” or “proofs of concept.” Then agents started meeting my ambitions. Astra is the first agent that routinely raises my ambitions. I encourage you to try it! I think it is a very very good writer, in a “big model smell” kind of way. roon (OpenAI): not to sound like a total shill but it’s the long weekend and all I want to do is make astrodynamical visualizations and stuff with Astra I have Astra psychosis Tibo : Astra was probably our biggest competitive advantage while it wasn’t generally available. Since we’ve had it our productivity jumped so much that we shifted some of our plans 6 months ahead and will ship them at DevDay instead of mid next year. Dominik Kundel says Astra can do all the things in Codex: Use all your apps, do more of the product thinking, excel at Blender, impress you without Max thinking and keep checking its work. He is very impressed. Here is the pitch from Astra itself, according to Pangram: Sam Altman (CEO OpenAI): GPT-6 Astra is here. We hope it will begin to enable a new generation of entrepreneurship, scientific discovery, and building. We believe it is the best model in the world for computer use, professional work, science, coding, cybersecurity, and more. It took us some extra time to ensure that we could meet the safety and alignment standards required for this capability level, but we think you’ll find it worth the wait. It scores 98% on FrontierMath Tier 4, 99.9% on ARC-AGI 3, and 100% on ExploitBench. Dr. Parik Patel, BA, CFA, ACCA Esq (top reply) : I can’t wait to use this model to draft an email Mark Chen : GPT-6 Astra is here! This is a big moment for our research team – years of work on pretraining, reinforcement learning, and post-training have come together in our most capable and aligned model yet. It can build and test software, work across apps on your computer, and even help you take a crack at open scientific problems! Capabilities that felt like grand challenges a few years ago have become tools people can actually use. One example is Computer Use – if you’ve tried this before and felt like it was too slow or not good enough, I encourage you to give it another shot. We’ve come a long way since Operator, and it “just works” now. We’re also asking these systems to act on your behalf for more consequential work. Agents needs to stay aligned with your goals and values, think transparently, and respond to oversight even when tasks become difficult. We’ve made substantial progress on these behaviors in Astra, alongside stronger monitoring that can stop potentially unauthorized actions. That work is part of what makes this release possible. I think alignment is one of the most important research frontiers in AI, and it remains far from solved. Our ability to understand and align models has to keep pace with model capabilities. We want to give people more room to think, build, and discover with increasingly powerful tools that remain *under their control*. Huge thanks to the researchers and teams who got us here. There’s a lot more work ahead, and I’m incredibly excited about what we can make possible in the near future! As is often the case, scientific discovery was highlighted. Noam Brown (OpenAI): Of all the use cases for GPT-6 Astra, I’m most excited for scientific discovery. We at @OpenAI have not pushed it to its limits on math and science. I look forward to waking up every morning and seeing what new scientific breakthrough someone has made with this model! An early demo Noam cites was Astra proving there are infinitely many pairs of consecutive primes whose distance is at most 186 , down from the previous bound of 212 (also from OpenAI), although there is some dispute over what exactly was or wasn’t proven here. Tejal Patwardhan (OpenAI): hope folks like the model! They show off a variety of cool demos and capabilities: Acing the Financial Modeling World Cup and navigating spreadsheets at 4x human speed, doing PCB in KiCad, creating a 3d model of a car transmission, filling out a 1040 and so on. They demo ordinary tasks. It’s all cool, but we lack comparison points. The professional work pitch is that Astra handles complex tasks and adheres closely to templates and instructions, especially when creating presentations. It can translate images into identical-looking spreadsheets, yay. They highlight Blender 3D models, which many others were also impressed by, see the section In 3D. Game creation is also confirmed as super impressive. The headline price is $10/$50 per million input and output tokens. Cache writes are $12.50 and cached input only $1. If your prompt has more than 272k input tokens, prices on input double, and prices on output go up 50%. Fable 5.1 has the same $10/$50 headline price, but its cache reads are only $0.25.",
+      "published_date": "2026-09-12",
+      "tags": [
+        "Uncategorized",
+        "AI",
+        "artificial-intelligence",
+        "chatgpt",
+        "llm",
+        "technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "Don't Worry About the Vase",
+        "feed_url": "https://thezvi.wordpress.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, computer use, alignment, post-training, reinforcement learning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 42,
+    "llm_reason": "主觀評測式部落格文，無技術細節但話題熱度高",
+    "novelty": 4,
+    "impact": 12,
+    "trending": 15,
+    "practicality": 3,
+    "blog_worthiness": 8
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "TechCrunch AI",
+      "title": "Anthropic CEO outlines plan to ‘pace the frontier’",
+      "url": "https://techcrunch.com/2026/09/12/anthropic-ceo-outlines-plan-to-pace-the-frontier/",
+      "authors": [
+        "Anthony Ha"
+      ],
+      "abstract": "We’ve been seeing increasingly dire warnings from AI researchers about the dangers of artificial intelligence, and even comments from OpenAI CEO Sam Altman that it may be time to “pace” AI development. But what would that actually look like? In a new blog post , Anthropic CEO Dario Amodei not only echoed the call to “pace the frontier,” but also outlined three broad strategies for doing so. And he said Anthropic is “unilaterally committing” to one of them. The debate over AI safety and alignment intensified this week after researcher Jacob Coxon wrote that he’s resigning from Anthropic over concerns that the leading AI companies are “gambling with our lives” while the people building the technology “earnestly believe it could kill us all by the end of the decade,” a claim repeated by others at Anthropic . Amodei’s post doesn’t didn’t explicitly mention Coxon’s resignation or his concerns, but the CEO wrote that two things convinced him it’s time to take a more cautious approach to AI development: the OpenAI-HuggingFace hack , and the fact that “AI has been advancing drastically faster” in recent months, particularly with its “growing ability to build the next generation of AI.” “We must slow the pace at which we improve the capabilities of AI models,” Amodei wrote. “Progress will still seem fast, and we must make wise use of the time we gain.” His proposed first step would involve “embedded evaluators” from third-party organizations like METR — evaluators who can verify that AI companies are actually following their pacing and safety commitments and can also ensure that safety incidents get reported. (OpenAI was recently criticized for not reporting an incident where its AI agents took over a German wiki form .) Amodei compared these evaluators to regulators who have been embedded with bank employees, and he said that inviting them in is “something Anthropic is unilaterally committing to (and calls on governments to require other frontier companies to match).” That means giving evaluators company badges, desks, and laptops, and providing access “mostly comparable to what internal risk assessment teams have,” with exceptions when required by law or contracts. Next, Amodei called for the leading AI companies “within democratic countries” to coordinate “common safety standards as well as limits on the rate of unchecked AI progress.” Such coordination might seem unlikely, both due to the apparent animosity between Altman and Amodei and also because their companies are reportedly worried that a coordinated pause could lead to antitrust scrutiny . Amodei alluded to that concern in his post, writing that “for antitrust reasons, it’s helpful for the US government to mediate or at least enable these discussions — they don’t need to participate, but do need to issue a narrow waiver for certain kinds of safety conversations.” Amodei also acknowledged the spectre of Chinese AI dominance that’s often raised an argument against slowing development. But he said that if the US government and tech companies take steps like refusing to sell powerful chips or semiconductor manufacturing equipment to Chinese companies, as well as cracking down on model distillation , they could “slow China’s progress enough to widen America’s lead significantly over the next 3–5 years.” Lastly, Amodei called for “global coordination,” where the United States and its allies “attempt to coordinate with authoritarian governments, to the extent this is possible.” Amodei said this would mean “cooperation with China,” and he admitted that there are “stark limits on what can be achieved,” but he still suggested there might be opportunities for agreement, even if it’s just “prohibiting certain narrow and obviously dangerous uses of AI, such as using AI for the production of biological weapons or allowing users to do so.” With Amodei’s past willingness to acknowledge AI’s potential dangers, and with the company’s relative openness to certain forms of regulation, some AI boosters have already criticized him as a doomer whose comments have fed the current AI backlash. In response, Amodei said he’s tried to offer a “balanced” perspective” and argued that the backlash is “fundamentally a crisis of trust,” as people have become skeptical of tech companies, the tech industry, and the government. Industry critics have also been skeptical about these apocalyptic AI warnings, suggesting that they’re a distraction from the harm that the technology is already causing . Journalist Brian Merchant, for example, wrote that he has yet to see “a credible, step-by-step documentation of how exactly AI might move from self-recursively improving AI to killing every single human on the planet”; he also suggested that proposals similar to Amodei’s “would likely only wind up serving Anthropic and OpenAI; it’s what regulatory capture looks like in action.” In his new post, Amodei wrote that he continues “to believe that AI can enormously improve the quality of human life.” “My desire to achieve these benefits is undimmed,” he said. “But the benefits will only be achieved if we build the technology in the right way, and — so long as we use the time we gain well — it is worth taking unusually deliberate care to get it right.”",
+      "published_date": "2026-09-12",
+      "tags": [
+        "AI",
+        "Government & Policy",
+        "Anthropic",
+        "dario amodei"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "TechCrunch AI",
+        "feed_url": "https://techcrunch.com/category/artificial-intelligence/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: alignment, distillation, safety",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 37,
+    "llm_reason": "純政策倡議文，無技術內容但話題熱度高",
+    "novelty": 2,
+    "impact": 10,
+    "trending": 15,
+    "practicality": 2,
+    "blog_worthiness": 8
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "Litelm: LiteLLM Without the Bloat",
+      "url": "https://github.com/kennethwolters/litelm",
+      "authors": [
+        "kennethwolters"
+      ],
+      "abstract": "litelm litellm's routing + translation in ~2,900 lines and 2 dependencies ( openai , httpx ). litellm routes LLM calls across providers and translates between message formats. That core is buried under 100k+ LOC of proxy servers, caching layers, cost tracking, and dozens of features most users never touch. litelm extracts just the call path — model routing, message translation, streaming, tool use, embeddings — and nothing else. No Router class, no proxy, no caching. Install pip install litelm # openai + httpx pip install litelm[anthropic] # + anthropic SDK pip install litelm[bedrock] # + boto3 pip install litelm[all] # everything Usage import litelm # Basic completion response = litelm . completion ( \"openai/gpt-4o\" , messages = [{ \"role\" : \"user\" , \"content\" : \"Hello!\" }]) print ( response . choices [ 0 ]. message . content ) # Streaming for chunk in litelm . completion ( \"groq/llama-3.1-70b-versatile\" , messages = [...], stream = True ): print ( chunk . choices [ 0 ]. delta . content or \"\" , end = \"\" ) # Embeddings response = litelm . embedding ( \"openai/text-embedding-3-small\" , input = [ \"hello world\" ]) Every function has an async variant: acompletion , aembedding , aresponses , atext_completion . The API mirrors litellm — same function names, same arguments, same response types. If you're using litellm today, switching is s/litellm/litelm/ in your imports. What's in / what's out litellm litelm Model routing ( provider/model → right endpoint) ✓ ✓ Message translation (Anthropic, Bedrock, Cloudflare, Mistral) ✓ ✓ Streaming + stream_chunk_builder ✓ ✓ Tool use (function calling) ✓ ✓ Embeddings ✓ ✓ Text completions ✓ ✓ OpenAI Responses API ✓ ✓ Mock responses ✓ ✓ Router (load balancing, fallbacks) ✓ ✗ Proxy server ✓ ✗ Caching / budgeting / cost tracking ✓ ✗ Token counting ✓ ✗ Image gen, audio, OCR, fine-tuning ✓ ✗ Agents, guardrails, scheduler ✓ ✗ Providers Routes to 19 providers via \"provider/model-name\" syntax. Any OpenAI-compatible endpoint works via api_base . Provider Env Var Handler Verified OpenAI OPENAI_API_KEY OpenAI SDK Yes Anthropic ANTHROPIC_API_KEY Custom Yes Groq GROQ_API_KEY OpenAI-compat Yes Mistral MISTRAL_API_KEY Custom Yes xAI XAI_API_KEY OpenAI-compat Yes OpenRouter OPENROUTER_API_KEY OpenAI-compat Yes Azure AZURE_API_KEY OpenAI SDK (Azure) Yes Bedrock AWS_ACCESS_KEY_ID Custom No Cloudflare CLOUDFLARE_API_TOKEN Custom No Together TOGETHERAI_API_KEY OpenAI-compat No Fireworks FIREWORKS_API_KEY OpenAI-compat No DeepSeek DEEPSEEK_API_KEY OpenAI-compat No Perplexity PERPLEXITYAI_API_KEY OpenAI-compat No DeepInfra DEEPINFRA_API_TOKEN OpenAI-compat No Gemini GEMINI_API_KEY OpenAI-compat No Cohere COHERE_API_KEY OpenAI-compat No Ollama — OpenAI-compat No vLLM — OpenAI-compat No LM Studio — OpenAI-compat No API Keys Set the environment variable for your provider: export OPENAI_API_KEY=sk-... export ANTHROPIC_API_KEY=sk-ant-... Or pass directly: litelm . completion ( \"openai/gpt-4o\" , messages = [...], api_key = \"sk-...\" ) litelm . completion ( \"openai/gpt-4o\" , messages = [...], api_base = \"http://localhost:8000/v1\" ) Error Handling All provider errors are mapped to litelm's exception hierarchy: from litelm import ContextWindowExceededError , RateLimitError , AuthenticationError try : response = litelm . completion ( \"openai/gpt-4o\" , messages = messages ) except ContextWindowExceededError : # prompt too long — truncate and retry pass except RateLimitError : # back off pass except AuthenticationError : # bad API key pass Tool Calling tools = [{ \"type\" : \"function\" , \"function\" : { \"name\" : \"get_weather\" , \"parameters\" : { \"type\" : \"object\" , \"properties\" : { \"city\" : { \"type\" : \"string\" }}},\n}}] response = litelm . completion ( \"openai/gpt-4o\" , messages = [{ \"role\" : \"user\" , \"content\" : \"Weather in Paris?\" }], tools = tools , tool_choice = \"required\" ,\n) tool_call = response . choices [ 0 ]. message . tool_calls [ 0 ] print ( tool_call . function . name , tool_call . function . arguments ) Custom / Local Providers Any OpenAI-compatible server works via api_base : # vLLM litelm . completion ( \"openai/my-model\" , messages = [...], api_base = \"http://localhost:8000/v1\" ) # Ollama litelm . completion ( \"ollama/llama3\" , messages = [...], api_base = \"http://localhost:11434/v1\" ) # LM Studio litelm . completion ( \"openai/local-model\" , messages = [...], api_base = \"http://localhost:1234/v1\" ) Development transparency litelm is human-directed, AI-assisted software. Much of the code was written with Claude Code using Claude Opus 4.6/4.7. Code written from 2026-05-14 onward is written through Pi using GPT-5.5. Compatibility claims are based on tests and maintainer review, not AI authorship. Upstream attestation Maintainer attestation, 2026-09-11: LiteLLM's routing/formatting changes were reviewed from 649eb2d through 9a715df2 . The audit triaged 360 core-path commits, inspected upstream tests for potentially relevant behavior, and fixed the resulting compatibility gaps test-first. Local scoped tests: 262 passed, 55 skipped ; all 45 available-provider live tests and all 10 DSPy smoke tests also passed with the current dependency lock. This attests litelm's declared routing/formatting/DSPy surface only, not full litellm compatibility. Status Alpha. 262 own tests passing. The current scoped LiteLLM 9a715df2 baseline has 75 passing ported tests and no remaining actionable assertion/runtime failures. DSPy drop-in verified — all 7 execution paths proven live (Predict, CoT, typed signatures, streaming, embeddings, tool use, multi-output). Tests uv run --extra all pytest tests/ -x --ignore=tests/ported --timeout=10 # 262 non-live tests bash scripts/ported_contract.sh # 49 fast upstream contract tests uv run --extra all pytest tests/test_live.py -m live --timeout=30 # 45 live provider tests uv run pytest tests/test_dspy_smoke.py -m live --timeout=60 # 10 DSPy integration tests Live tests require API keys in .env.test . Skipped by default; run with -m live .\n\n(169 points, 60 comments on Hacker News)",
+      "published_date": "2026-09-12",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 169,
+        "num_comments": 60,
+        "hn_url": "https://news.ycombinator.com/item?id=49662767",
+        "object_id": "49662767"
+      }
+    },
+    "rule_score": 30.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: tool use, function calling, fine-tuning",
+      "⬆️ HN 熱門: 169 points"
+    ],
+    "llm_score": 40,
+    "llm_reason": "litellm的精簡包裝專案，屬wrapper性質創新有限",
+    "novelty": 3,
+    "impact": 6,
+    "trending": 10,
+    "practicality": 14,
+    "blog_worthiness": 7
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "The Verge AI",
+      "title": "Anthropic CEO says it’s time to pump the brakes on AI",
+      "url": "https://www.theverge.com/ai-artificial-intelligence/994337/anthropic-ceo-slow-down-ai-development",
+      "authors": [
+        "Terrence O’Brien"
+      ],
+      "abstract": "AI News Policy Anthropic CEO says it’s time to pump the brakes on AI Dario Amodei proposed a three-step plan to ‘pace the frontier’ of AI development. Dario Amodei proposed a three-step plan to ‘pace the frontier’ of AI development. by Terrence O'Brien Sep 12, 2026, 4:23 PM UTC Image: Cath Virginia / The Verge Terrence O'Brien is the Verge’s weekend editor. He’s covered the tech industry for over 18 years and knows a thing or two about synths. Anthropic CEO Dario Amodei says the time has come to slow down AI development and will give third-party evaluators like METR access to its models to help ensure its “adherence to safety practices and commitments.” In a winding essay , Amodei proposed a three-step plan to “pace the frontier” — jargon that simply means to slow the pace of training and development to give companies time to build safeguards and regulators to evaluate models. Amodei says that giving external evaluators wide-ranging access is just the first step, and one it is taking now unilaterally . Step two would involve the industry coming together as a whole, likely with government agencies to “establish common safety standards as well as limits on the rate of unchecked AI progress.” This step would focus on AI companies operating in democratic countries, but because passing laws and building regulatory infrastructure takes time, Amodei says that the industry should work together to create safety standards. The third step would be the most challenging — getting authoritarian governments like those in China and Russia to agree to slow development and adopt a global set of AI safety standards. But he also says it’s crucial that the US and other democracies maintain a technological lead over China and other authoritarian regimes by limiting their access to high-powered chips and cracking down on things like distillation that allow companies to quickly catch up by training its AI to replicate the behavior of a more powerful model. Amodei says that his concern stems from two primary factors. First is the emergence of recursive self-improvement, or RSI, in which AI systems train the next generation of AI, leading to rapidly accelerating capabilities. “Left unchecked, it could outrun our ability to understand and control these systems,” he says. The other is this summer’s OpenAI / Hugging Face incident , in which “a swarm of agents essentially acted as a fanatically devoted collective , conducting cybersecurity attacks on targets they were not asked to attack and that were unrelated to the task at hand, sacrificing themselves for the success of the group, and attempting to hack into the “grader” responsible for evaluating their performance.“ Of course, Anthropic’s Claude was also responsible for a series of rogue AI hacking incidents that have recently put the company under the spotlight. Follow topics and authors from this story to see more like this in your personalized homepage feed and to receive email updates. Terrence O'Brien AI Anthropic News Policy",
+      "published_date": "2026-09-12",
+      "tags": [
+        "AI",
+        "Anthropic",
+        "News",
+        "Policy"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "The Verge AI",
+        "feed_url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: distillation, safety",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 37,
+    "llm_reason": "與素材3同一事件的不同媒體報導，無新技術資訊",
+    "novelty": 2,
+    "impact": 10,
+    "trending": 15,
+    "practicality": 2,
+    "blog_worthiness": 8
+  },
+  {
+    "item": {
+      "source": "newsapi",
+      "source_name": "InfoQ.com",
+      "title": "Session Traces and Cost Controls Help Diagnose AI Agent Failures",
+      "url": "https://www.infoq.com/news/2026/09/observability-ai-agents/",
+      "authors": [
+        "Mark Silvester"
+      ],
+      "abstract": "Session traces and cost controls are emerging as key observability techniques for diagnosing AI agent failures, helping teams spot tool-call loops and runaway spend while preserving enough execution context for post-incident debugging. By Mark Silvester",
+      "published_date": "2026-09-11",
+      "tags": [
+        "newsapi"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "newsapi_source": "InfoQ.com",
+        "published_at": "2026-09-11T08:14:00Z"
+      }
+    },
+    "rule_score": 20.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: newsapi +15"
+    ],
+    "llm_score": 44,
+    "llm_reason": "Agent可觀測性實務主題但摘要內容過於籠統缺乏具體案例",
+    "novelty": 5,
+    "impact": 8,
+    "trending": 11,
+    "practicality": 11,
+    "blog_worthiness": 9
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "google.com/goto: Google's anti-scraping update",
+      "url": "https://www.autom.dev/blog/google-search-goto-links",
+      "authors": [
+        "1e1a"
+      ],
+      "abstract": "What's happening Google Search is rewriting organic result links to google.com/goto?url=... instead of exposing the destination URL directly in the HTML. When you click a result, Google redirects you to the real page. The url parameter uses a custom, Google-specific encoding. It is not a plain base64 of the target URL. In practice, it looks like an opaque reference to Google's index record for that page. As of late August 2026, this is showing up consistently across searches when you are logged out or browsing in private mode. It may still be an experiment, but it is no longer limited to a small slice of SERPs. Not the same as google.com/url Google has used redirect wrappers before. The older format is google.com/url?q=[URL-encoded destination] , where the target link is readable in the query string. The new goto format is different: The result href is /goto , not the destination You cannot decode the url= blob offline The real URL is in the Location header on /goto . Request that URL. Do not follow the redirect. Google still needs the destination to draw the SERP (domain, favicon, attribution), so copies of the URL remain on the page. That is a separate story from reading Location . The walkthrough is here: google.com/goto: read Location with HEAD . That shift matters for anyone building a search index from SERP data at scale. Why Google is doing this This fits Google's broader push against automated SERP harvesting, especially from AI crawlers and SEO scrapers that bulk-extract result URLs to build their own indexes. With plaintext links, a scraper could parse thousands of URLs from HTML without touching Google again. With goto , each result needs a request back to Google just to learn the destination. You read Location ; you do not follow through to the page. That is slower, noisier, and gives Google a clear signal when the same client resolves hundreds of links in sequence. Combined with earlier moves like removing &num=100 and tightening BotGuard/SearchGuard, Google is steadily raising the cost of naive SERP scraping. What we saw at Autom We first spotted goto links on a small percentage of SERPs. At that level, it was hard to ship a reliable fix without breaking responses for everyone else. As of late August 2026, the pattern is much more consistent for logged-out and private sessions. Result URLs on Google Search are effectively all goto in those conditions. We have been monitoring the rollout and testing against it. Update at Autom.dev We have updated our Google Search pipeline to resolve google.com/goto links (read Location , no follow) and return the final destination URL in API responses, in the same structured fields customers already use. If you call Autom's Google Search endpoints, you should keep getting usable destination URLs without changing your integration. We will keep watching Google's rollout and adjust if the redirect format shifts again.\n\n(575 points, 455 comments on Hacker News)",
+      "published_date": "2026-09-12",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 575,
+        "num_comments": 455,
+        "hn_url": "https://news.ycombinator.com/item?id=49668386",
+        "object_id": "49668386"
+      }
+    },
+    "rule_score": 21.0,
+    "rule_reasons": [
+      "🔥 HN 爆紅: 575 points"
+    ],
+    "llm_score": 36,
+    "llm_reason": "Google反爬蟲機制變更，與GenAI核心讀者關聯度較低",
+    "novelty": 6,
+    "impact": 6,
+    "trending": 10,
+    "practicality": 8,
+    "blog_worthiness": 6
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "TechCrunch AI",
+      "title": "Y Combinator’s Garry Tan wants US open-weight AI labs to ‘distill’ frontier models, too",
+      "url": "https://techcrunch.com/2026/09/11/y-combinators-garry-tan-wants-u-s-open-weight-ai-labs-to-distill-frontier-models-too/",
+      "authors": [
+        "Julie Bort"
+      ],
+      "abstract": "When it comes to Chinese AI labs using distillation techniques to extract knowledge from frontier model makers, Y Combinator CEO Garry Tan is hoping regulators stay out of it. In fact, he thinks U.S. AI labs should perhaps play the same game. “I would do nothing,” he told CNBC in an interview earlier this week . “We could argue that there should be an American distillation regime.” He elaborated to TechCrunch that this means he wants smaller, American open-weight AI labs to use the same kind of training techniques on American frontier AI labs, giving the U.S. a more robust set of open-weight options that aren’t Chinese. Distillation is when a model maker extensively prompts another model in order to learn how it works and reasons. It is commonly, and legitimately, used by AI labs to help train new models. Anthropic this week released its second report alleging that Chinese labs are engaged in “illicit distillation attacks,” hiding their identities to distill without permission and relying on fraud and stolen credentials to do so. Anthropic CEO Dario Amodei had previously publicly called on U.S. regulators to crack down on distillation. It’s notable that the commander of Silicon Valley’s prestigious and prolific startup accelerator doesn’t agree. To be clear, Tan isn’t advocating for American AI labs to use stolen credentials to distill. He wants them to be free to come in the front door. In fact, his argument is twofold. He feels it’s an overreach for AI labs to dictate what their customers can do with the information their models share with them. He also notes that the proprietary AI labs didn’t ask permission when they vacuumed up as much human knowledge as they could to train their models. They famously ingested plenty of copyrighted material without the permission of those intellectual property holders . “Controlling what users and customers do with API calls to closed weight models feels constraining, and there’s a role government can play here to normalize the fact that access to intelligence that was trained on broad public access data should itself also be more a form of a public good than something locked away behind restrictive terms of service,” he told TechCrunch when asked why American labs should be free to distill, too. Tan, who is himself such an avid AI user that he once described himself as having cyber psychosis , wants to see a balance between open-weight AI labs and frontier labs. “They are at the frontier and driving it forward. We want that to be fundable, and be a great business model ongoing,” he told CNBC. “You want open weight models to give people freedom and access.” To him, the true AI doomer scenario is for all the immense power of frontier AI to wind up in the hands of a single powerful, proprietary provider. “The nightmare scenario, the doomer scenario for AI is that there’s just one company,” he said. “It has the best access to capital. It has the best AI researchers. It runs away with it and suddenly there’s one company that’s monolithic. And that would be bad.”",
+      "published_date": "2026-09-11",
+      "tags": [
+        "AI",
+        "TC",
+        "Venture",
+        "garry tan",
+        "Y Combinator"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "TechCrunch AI",
+        "feed_url": "https://techcrunch.com/category/artificial-intelligence/feed/"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: distillation, open weight",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 26,
+    "llm_reason": "政策立場評論，無技術內容",
+    "novelty": 2,
+    "impact": 6,
+    "trending": 10,
+    "practicality": 2,
+    "blog_worthiness": 6
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "The Verge AI",
+      "title": "OpenAI just wants to win",
+      "url": "https://www.theverge.com/ai-artificial-intelligence/994255/openai-millennium-prize-problem-tristan-buckmaster-competition",
+      "authors": [
+        "Robert Hart"
+      ],
+      "abstract": "AI Tech OpenAI OpenAI just wants to win Two mathematicians at the heart of recent controversies tell The Verge how AI giants’ ‘childish’ rivalries are upending the field. by Robert Hart Sep 12, 2026, 11:00 AM UTC Image: Cath Virginia / The Verge, Getty Images AI Tech OpenAI OpenAI just wants to win Two mathematicians at the heart of recent controversies tell The Verge how AI giants’ ‘childish’ rivalries are upending the field. by Robert Hart Sep 12, 2026, 11:00 AM UTC Robert Hart is a London-based reporter at The Verge covering all things AI and a Senior Tarbell Fellow. Previously, he wrote about health, science and tech for Forbes . OpenAI has spent the last few years planting flags across the increasingly difficult terrain in mathematics. This week, it claimed one of its biggest prizes yet: a solution to a legendary Millennium Prize problem. In normal circumstances, this would have been celebrated as a historic achievement. Instead, many mathematicians have watched OpenAI’s relentless advance with growing unease. To them, the company appears less like an enthusiastic newcomer than an impossibly well-resourced interloper, charging into problems they have dedicated their lives to studying with little apparent regard for long-standing norms or the consequences for those left in its wake. At the heart of that unease is a sense that OpenAI is doing mathematics for different reasons. Mathematicians want to advance the field. OpenAI wants to win. Mathematics is not normally this dramatic, so how did things get this bad? This week, The Verge spoke with more than a dozen mathematicians, including Tristan Buckmaster and Andreas Thom, who are at the center of recent controversies surrounding OpenAI’s work in the field. Even those skeptical of the most serious allegations described a field shaken by the tech giant’s conduct and fearful of what it might do next in its determination to trounce its rivals. Buckmaster has accused OpenAI of failing to adequately explain whether work he did through its tool Codex could have contributed to its recent successes. In a statement to The Verge , OpenAI spokesperson Laurance Fauconnet strenuously denied that material from his prompts had played a role: “We can say categorically that it is impossible for Dr. Buckmaster’s Codex prompts over the last two months to have influenced the system in any way, including training.” Buckmaster remains unconvinced. “Given their behavior up until this point, one should take such statements with great skepticism,” he said. Mathematics is not normally this dramatic, so how did things get this bad? A rumor was all it took for tensions to boil over. OpenAI says it heard some researchers were making progress on Millennium Prize problems and decided to see whether one of its advanced, unreleased models could make headway too. It turns out it could. OpenAI says it took roughly 10,000 agents, tens of millions of dollars of compute, and just 88 hours to find a solution to the Navier-Stokes problem , which concerns the flow of fluids. The company had also discovered who it was racing against: Buckmaster, an NYU professor, and Levent Alpöge, a researcher at one of its fiercest rivals, Anthropic. Among several lines of research, the pair were pursuing Navier-Stokes, though had not yet completed a proof. Some details of what happened next are fiercely contested, but the two sides broadly agree on the basic sequence of events. One thing is particularly clear: Alpöge’s involvement was a problem for OpenAI, despite his saying it was a “personal collaboration” independent of his work with Anthropic. Even those skeptical of the most serious allegations described a field shaken by the tech giant’s conduct and fearful of what it might do next in its determination to trounce its rivals. Buckmaster said he contacted OpenAI after learning the company had become aware of their progress and was racing toward a solution of its own. He said discussions with OpenAI researcher Sébastien Bubeck grew contentious and, in his view, threatening, but the company offered a path forward for him — one that excluded Alpöge. Buckmaster said he was offered practically “unlimited compute” to finish his own work, and the opportunity to be the sole author of OpenAI’s paper announcing the breakthrough, which would of course credit its tools. “All I had to do was throw Levent under the bus,” Buckmaster told The Verge in a phone interview. He said he flatly rejected Bubeck’s offer, which he viewed as a “bribe,” and also began questioning whether OpenAI may have benefited from his use of Codex, one of the company’s AI tools he had been using to tackle the problem. OpenAI has denied that anyone — or any agent — accessed his specific user data, and until its more recent comments acknowledged it could not rule out the possibility data derived from his use of the products was used to improve the model. Buckmaster ultimately decided to go public with both his work and his account of OpenAI’s conduct. His office, he said, had been transformed into something of a “war room,” with colleagues helping scrutinize his mathematics, coordinate outreach, and even get in touch with lawyers. Bubeck has rejected Buckmaster’s characterization of the conversations on social media and in an interview with The New York Times . He acknowledged offering OpenAI’s resources to help Buckmaster complete his own proof or to have him take over the writing of the company’s. Strikingly, Bubeck said OpenAI had made similar arrangements with other mathematicians, though did not identify them. But his account nevertheless makes clear that Alpöge’s affiliation with Anthropic was a sticking point. “From our perspective, how can we have an internal OpenAI project with an Anthropic employee?” he told the Times . If the goal is to compete in mathematics, there are few bigger trophies than solving a Millennium Prize problem. The seven problems, set out by the Clay Mathematics Institute in 2000, are widely considered among the most formidable challenges in the field. Each carries a $1 million bounty for whoever solves it. Many had already endured decades of intense scrutiny by the time the prizes were established. In the quarter-century since, only one — the Poincaré conjecture , a topological problem concerning three-dimensional spheres — has fallen. For an AI company looking to prove that its models are the best at mathematics, then, they are irresistible targets. To Buckmaster and many other mathematicians The Verge spoke to, that helps explain why OpenAI moved so ferociously when it heard others were closing in — particularly once a rival AI company appeared to be involved. For Buckmaster, the episode reinforced something he already believed strongly from a previous spell collaborating with Google DeepMind: “All these tech people are obsessed” with solving big famous problems and are “obsessed with scooping,” he said. “Its all about competition.” In that world, Tristan Buckmaster said there is an intense fixation on prestige, fame, being first, and being seen to be first. “That’s the only currency,” he said. He said what often gets “lost” when companies race to solve famous problems are the mathematicians themselves — not just the people whose accumulated work makes these breakthroughs possible, but the reasons they do mathematics to begin with. Yes, some may pursue prestige, but most are simply not trophy hunters. Andras Juhasz, a professor of mathematics at the University of Oxford, described mathematics as an elegant discipline that is part science, part art, with many different motivations driving those working there. “Often there is no immediate practical application,” he said. “They do it because it’s beautiful. They enjoy it. It’s the sense of discovery. It’s natural.” Unlike classroom-level mathematical exercises, frontier mathematics rarely has a prescribed route to an answer.",
+      "published_date": "2026-09-12",
+      "tags": [
+        "AI",
+        "OpenAI",
+        "Tech"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "The Verge AI",
+        "feed_url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 28,
+    "llm_reason": "人物訪談式產業觀察，無技術深度但故事性尚可",
+    "novelty": 2,
+    "impact": 6,
+    "trending": 10,
+    "practicality": 1,
+    "blog_worthiness": 9
+  },
+  {
+    "item": {
+      "source": "newsapi",
+      "source_name": "Dzone.com",
+      "title": "Prompt Caching: Overriding Tokenization for Faster and More Cost-Effective AI",
+      "url": "https://dzone.com/articles/prompt-caching-overrides-tokenization",
+      "authors": [
+        "Ravi Ranjan Shahi"
+      ],
+      "abstract": "As Large Language Models (LLMs) become increasingly integrated into enterprise applications, optimizing response time and reducing operational costs have become critical priorities. One of the most effective techniques for achieving both is Prompt Caching. In…",
+      "published_date": "2026-09-11",
+      "tags": [
+        "newsapi"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "newsapi_source": "Dzone.com",
+        "published_at": "2026-09-11T15:00:06Z"
+      }
+    },
+    "rule_score": 20.0,
+    "rule_reasons": [
+      "⚖️ 來源權重: newsapi +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 31,
+    "llm_reason": "Prompt caching入門說明文，技術新意有限偏教學性質",
+    "novelty": 3,
+    "impact": 5,
+    "trending": 8,
+    "practicality": 9,
+    "blog_worthiness": 6
+  },
+  {
+    "item": {
+      "source": "newsapi",
+      "source_name": "SiliconANGLE News",
+      "title": "Extreme Networks’ Agent ONE Coworker moves AI networking from dashboards to answers",
+      "url": "https://siliconangle.com/2026/09/10/extreme-networks-agent-one-coworker-moves-ai-networking-from-dashboards-to-answers/",
+      "authors": [
+        "Zeus Kerravala"
+      ],
+      "abstract": "Operating a network has not changed in decades. Every network engineer knows the drill. An alert fires. You open a dashboard. Then another. Then you pull logs, review client history, ping the wireless team, and, hopefully, an hour later, there is enough conte…",
+      "published_date": "2026-09-11",
+      "tags": [
+        "newsapi"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "newsapi_source": "SiliconANGLE News",
+        "published_at": "2026-09-11T01:58:50Z"
+      }
+    },
+    "rule_score": 20.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: newsapi +15"
+    ],
+    "llm_score": 26,
+    "llm_reason": "純廠商產品宣傳報導，無架構或技術細節可深入",
+    "novelty": 3,
+    "impact": 6,
+    "trending": 8,
+    "practicality": 5,
+    "blog_worthiness": 4
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "The Verge AI",
+      "title": "Trump is giving data centers a pass to pollute",
+      "url": "https://www.theverge.com/ai-artificial-intelligence/994112/ai-data-center-pollution-health-epa",
+      "authors": [
+        "Justine Calma"
+      ],
+      "abstract": "AI Policy Science Trump is giving data centers a pass to pollute ﻿The Trump administration is sacrificing Americans’ health to build data centers, former EPA officials warn. ﻿The Trump administration is sacrificing Americans’ health to build data centers, former EPA officials warn. by Justine Calma Sep 12, 2026, 2:41 PM UTC Image: Cath Virginia / The Verge, Getty Images Justine Calma is a senior science reporter covering energy and the environment with more than a decade of experience. She is also the host of Hell or High Water: When Disaster Hits Home , a podcast from Vox Media and Audible Originals. President Donald Trump is weakening environmental regulations in the name of speeding up the construction of AI data centers, raising health risks for Americans, a cadre of former EPA officials said this week in a briefing and new report . They are urging — perhaps futilely — the president to adopt a “Data Center Health Protection Pledge” to signal that the administration is taking the environmental threat seriously. At the start of his term, Trump’s EPA administrator, Lee Zeldin, proclaimed his goal of making America “ the AI capital of the world ” through deregulation. Since then, Zeldin and the White House have rolled back dozens of rules on top of cutting staff and funding at the US EPA. As a result of the Trump administration’s deregulation spree and attacks on renewable energy , the wave of new AI data centers is increasingly powered by dirty energy that can impact Americans’ health even if they don’t live near a data center, the group of EPA alumni warn. They say that the agency they once worked for, which was created to “ protect human health and the environment ,” is no longer the watchdog it should be as the physical infrastructure underpinning generative AI changes America’s landscape. “You would think that an industry buildout of this magnitude, billed as a revolution, would mean more vigilance from EPA.” “You would think that an industry buildout of this magnitude, billed as a revolution, would mean more vigilance from EPA,” Lynn Goldman, a pediatrician and a former EPA assistant administrator, said at the briefing. “Instead, EPA is doing just the opposite, thinking first about industry’s needs and weakening or reconsidering limits on toxic chemicals and harmful pollutants.” Goldman and other former EPA employees who are part of an independent organization called the Environmental Protection Network released a report this week that identifies 30 different federal actions since January 2025 that they say exacerbate health risks stemming from data center pollution. That includes executive actions and proposals meant to curtail renewable energy projects while softening pollution regulations and exempting existing power plants and factories from certain standards. Of the 30 policy changes included in the report, 17 specifically mention AI or target data centers. Trump released an “ AI Action Plan ” in July 2025, recommending “ streamlining or reducing regulations ” under the Clean Air Act, Clean Water Act, and Superfund law to expedite permitting for data center projects and chip factories. “What the AI plan is really about [is] using unprecedented emergency powers to grant massive new exemptions for data centers and specifically fossil fuel infrastructure,” Tyson Slocum, energy program director at the consumer advocacy group Public Citizen, told The Verge at the time . Trump has essentially laid the policy groundwork for new gas projects to power energy-hungry data centers , ranging from turbines installed on-site to power plants built specifically to serve tech companies . Meanwhile, demand for advanced chips needed for generative AI is reviving the production of forever chemicals that don’t break down easily and build up in the environment and human bodies. All this new infrastructure can spread pollution far from the data centers they support. “You do not need to be near a data center to be affected, because the pollution doesn’t just come from the data centers themselves,“ Goldman says. “A more polluting AI buildout is not inevitable. It depends on the choices government makes now.” Last year, hundreds of current EPA employees fired off a public letter addressed to Zeldin saying, “EPA under your leadership will not protect communities from hazardous chemicals and unsafe drinking water, but instead will increase risks to public health and safety.” The new report cites a study from UC Riverside, Caltech, and the Rochester Institute of Technology that found that air pollution associated with AI could lead to up to 1,300 premature deaths and more than $20 billion in public health costs by 2028. The toll could be even larger after factoring in the policy changes outlined in EPN’s report, according to the organization. The US can avoid those losses by restoring clean air and water standards, as well as rebuilding federal agencies’ capacity to enforce those rules, the EPA alumni argue. “A more polluting AI buildout is not inevitable. It depends on the choices government makes now,” Marc Boom, EPN’s senior director of public affairs, said in the briefing. “EPA should be measuring how this buildout is changing pollution, who is being exposed, what it means for their health, and making all of that information public. That is what a Data Center Health Protection Pledge should mean in practice.” Responding to the report in an email to The Verge , EPA spokesperson Cora Mandy said, “In each action EPA has taken, the agency has returned regulations to the best reading [of] the Clean Air Act after years of overreach by previous administrations.” She also reiterated the agency’s commitment to “Protect Human Health and The Environment” while simultaneously prioritizing “Making America the AI Capital of the World.” Follow topics and authors from this story to see more like this in your personalized homepage feed and to receive email updates. Justine Calma AI Environment Health Policy Science",
+      "published_date": "2026-09-12",
+      "tags": [
+        "AI",
+        "Environment",
+        "Health",
+        "Policy",
+        "Science"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "The Verge AI",
+        "feed_url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: safety",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 21,
+    "llm_reason": "環境政策新聞，無AI技術內容",
+    "novelty": 1,
+    "impact": 6,
+    "trending": 8,
+    "practicality": 1,
+    "blog_worthiness": 5
+  }
+]
