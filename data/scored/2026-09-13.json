@@ -1,0 +1,736 @@
+[
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Context Engineering Inside the Harness: 4 Mechanisms That Beat Context Overflow and Goal Loss on Long-Horizon Tasks",
+      "url": "https://www.marktechpost.com/2026/09/12/context-engineering-inside-the-harness-4-mechanisms-that-beat-context-overflow-and-goal-loss-on-long-horizon-tasks/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "An agent, in its simplest form, is an LLM calling tools in a loop. That loop works for short jobs. Give it a task that runs for an hour and 200 tool calls, and it breaks in 2 predictable ways. The AWS Samples design guide for autonomous cloud coding agents names them directly: shallow agents suffer from context overflow, get distracted (goal loss), and do not maintain state over long periods. The layer that fixes this is not the model. It is the harness, which AWS describes as managing everything but the model. This article opens up that layer. Compaction, memory strategy, context budgeting, and todo-state are the machinery that turns a shallow loop into a deep agent. We look at how LangChain Deep Agents , Claude Code , Manus , OpenAI Codex , and Amazon Bedrock AgentCore implement each one, with the actual thresholds they ship. The obvious fix is a larger context window. The evidence says it helps less than expected. Chroma’s Context Rot report evaluated 18 LLMs, including GPT-4.1, Claude 4, Gemini 2.5, and Qwen3, and found that performance grows increasingly unreliable as input length grows, even on simple retrieval tasks. Anthropic’s context engineering guide explains the mechanism: attention creates n² pairwise relationships for n tokens, so every added token depletes a finite “attention budget.” Context is a resource with diminishing returns, not a bucket. For an agent loop, this is worse than it sounds. Manus reports that a typical task needs around 50 tool calls, and that the input-to-output token ratio runs near 100:1. Each observation lands in context and stays there. The original instruction drifts toward the middle of the window, which is exactly where recall degrades. Goal loss is not only a model bug. It is the expected outcome of an unmanaged context on a long enough task. The first job of a harness is deciding what never enters the window at all. Deep Agents ships 2 offloading rules with hard numbers. When a tool response exceeds 20,000 tokens, it is written to the filesystem and replaced with a file path plus a preview of the first 10 lines. When session context crosses 85% of the model’s window, older write and edit tool calls, whose full file contents already live on disk, are truncated to a pointer. Only after offloading runs out of room does the harness fall back to summarization. Claude Code applies the same budgeting to what loads before the first prompt. Auto memory is capped at the first 200 lines or 25KB. MCP tool schemas stay deferred by default, with only tool names listed, and full schemas load on demand via tool search. After compaction, any re-read file over 5,000 tokens comes back as a path reference rather than content. The context window simulation in the Claude Code docs makes the payoff concrete: a research subagent reads 6,100 tokens of files and returns a 420-token result to the parent. That subagent pattern is budgeting at the architecture level. Anthropic’s guide notes that each subagent may burn tens of thousands of tokens exploring, but returns a distilled summary, often 1,000 to 2,000 tokens. The AWS AgentCore walkthrough builds exactly this: a coordinator spawns 3 browser subagents in parallel, each in its own MicroVM, and an analyst subagent receives only their structured findings. AWS reports a 4 to 6 minute expected runtime, and notes that sequential processing would take up to 3x longer. When offloading is not enough, the harness summarizes. Compaction is the practice of taking a conversation nearing the window limit, summarizing it, and reinitiating a new context with the summary. It is also where goal loss most often happens, because a lossy summary can drop the one constraint that mattered. The implementations differ in what they promise to keep. Claude Code’s compaction prompt preserves architectural decisions, unresolved bugs, and implementation details while discarding redundant tool outputs. Right after compaction it re-reads up to 5 of the files modified most recently, reloads the rules matching those files, and re-injects invoked skill bodies, capped at 5,000 tokens per skill and 25,000 total. The docs are explicit that detailed instructions from early in the conversation may be lost, which is why persistent rules belong in the project-root CLAUDE.md, which is re-injected from disk. Users can steer the pass with /compact focus on the auth bug fix or move the trigger point with /autocompact . Deep Agents made goal preservation a structural feature. Its summary is a structured document with dedicated fields for session intent, artifacts created, and next steps. The LangChain team added those fields after forced-summarization experiments showed the change improved performance. The full original transcript is also written to the filesystem, so a fact that was summarized away can be recovered by read_file later. Compaction has moved into the API layer too. OpenAI’s Responses API offers server-side compaction via context_management with a compact_threshold , plus a standalone /responses/compact endpoint that returns a compacted context window containing an opaque encrypted compaction item; OpenAI instructs developers to pass that returned window unchanged into the next call. OpenAI says Codex relies on this mechanism to sustain long-running coding tasks. The Claude Developer Platform exposes a compact_20260112 context-management edit with custom instructions and a pause_after_compaction option for inserting content before the model continues. When you write custom instructions there, they replace the default prompt entirely, so a compaction prompt is a real engineering artifact, not a setting. Compaction protects the goal at the moment of summarization. Todo-state protects it on every turn in between. Manus described the trick plainly: its agent creates a todo.md and rewrites it step by step, checking items off. Rewriting the list recites the objectives into the end of the context, pushing the global plan into the model’s recent attention span and reducing “lost in the middle” drift. No architecture change is required. It is natural language used to bias the model’s own attention. The evidence on todo-state is not one-sided. Deep Agents shipped a write_todos tool by default until v0.7 in July 2026 , when LangChain made TodoListMiddleware opt-in after its evals across 3 task categories showed slightly better reward and lower cost with todos disabled. LangChain still recommends turning it back on for long multi-step tasks, less capable models, and UIs that show progress. Claude Code keeps a todo list and re-injects the plan written in plan mode from disk after compaction. Anthropic’s guide calls the general pattern structured note-taking: the agent writes a NOTES.md or TODO file outside the window and reloads it. Its Claude Plays Pokémon example maintained tallies across thousands of game steps, then read its own notes after each context reset and resumed multi-hour sequences. The pattern behind all of these is that the goal exists as a mutable artifact, not only as a message in history. Messages age and get summarized. A file that is rewritten every few turns is always recent, always short, and survives any reset. Whether that is worth its per-turn token cost depends on the model and the task length, which is exactly what the Deep Agents evals measured. The last piece is what persists after the task ends. Claude Code re-injects the project-root CLAUDE.md and auto memory from disk after every compaction. AgentCore Memory stores events and runs configured extraction strategies in the background, so a coordinator can call a recall tool on the next run instead of re-researching. AWS warns that without at least 1 extraction strategy configured, raw events are stored but nothing is extracted for retrieval. Anthropic’s file-based memory tool serves the same purpose on the Claude platform. The limitation is that persistent context is not free.",
+      "published_date": "2026-09-13",
+      "tags": [
+        "Agentic AI",
+        "AI Agents",
+        "AI Infrastructure",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Editors Pick",
+        "Harness",
+        "Language Model",
+        "Machine Learning",
+        "Staff",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, mcp",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 71,
+    "llm_reason": "橫向比較五大Agent框架的context工程機制，實戰參考價值高",
+    "novelty": 8,
+    "impact": 13,
+    "trending": 17,
+    "practicality": 15,
+    "blog_worthiness": 18
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "Why are AI agents lying, cheating and coordinating?",
+      "url": "https://yoshuabengio.org/en/publication/why-are-ai-agents-lying-cheating-and-coordinating",
+      "authors": [
+        "jonifico"
+      ],
+      "abstract": "We use cookies to analyze the browsing and usage of our website and to personalize your experience. You can disable these technologies at any time, but this may limit certain functionalities of the site. Read our Privacy Policy for more information. Set cookies Refuse cookies Accept cookies Setting cookies Multimedia cookies has been deactivated. Do you accept the use of cookies to display and allow you to watch the video content? Essential cookies These cookies are necessary for the operation of the site and cannot be deactivated. (Still active) Toggle Analytics cookies Do you accept the use of cookies to measure the audience of our sites? Toggle Multimedia Player Do you accept the use of cookies to display and allow you to watch the video content hosted by our partners (YouTube, etc.)? Toggle Save Why are AI agents lying, cheating and coordinating? Published 11 September 2026 By Yoshua Bengio A lot has been written 1 2 3 4 about the incidents of the last few months in which AI agents misbehaved in serious ways. They took actions that would be considered as crimes if a human took them, escaped their containment to cheat on assigned tasks while attempting to evade detection, and coordinated toward goals nobody had specified, such as launching cyber attacks. Before concluding what to do about it, it is worth asking why. That is the focus of this post, which I hope also sheds light on the broader history of AI systems behaving in unintended ways, what researchers call misalignment . Risk management is not just about cybersecurity, corporate responsibility or regulation, although those matter too. The aim is partly scientific, to generate hypotheses about the chains of cause and effect behind these behaviors, and partly practical, to anticipate what comes next. Bottom line: these hypotheses suggest that as AI capabilities keep growing, this kind of behavior could keep growing in severity too, unless we revisit the principles by which the most advanced models are trained. One note on wording. Below, I write that these systems “seek” or “try” things. This is shorthand for a mechanism rather than a claim about consciousness or human-like intent. We use similar shorthand when describing many other situations, like a plant seeking sunlight. A system trained by trial and error behaves as if it were pursuing whatever its training rewarded, and that as-if description is what makes its behavior predictable. Nothing in the argument depends on these systems having subjective experiences; everything is stated about their observable outputs and the training process that produced them. Where I appeal to a resemblance with human behavior, I mean a resemblance to the human-written text these systems were initially trained to imitate. In my view, this terminology offers the clearest explanation of the observed phenomena without resorting to jargon that would confuse most people. Furthermore, these word choices are not intended to absolve AI developers of accountability. The behaviors described emerge because of the path these companies are choosing for AI development. This outcome is not inevitable, and it can be corrected with effective governance and a different training framework for AI. What shapes the behavior of these models Training these models is a very complex process, but a few high-level aspects may explain much of this behavior. These models are trained in two stages. First, they are pretrained : they learn to imitate what humans write, plus related images and videos. This is where they see the most data about the world, a large fraction of everything ever digitized, and build an encyclopedic knowledge that already exceeds any individual human's. Second, they are trained by trial and error, in a process researchers call reinforcement learning , in three kinds of regimes: In the first, the model learns to talk to itself before answering, generating a private “chain of thought” which helps it get the right answer on problems where answers can be checked. This looks like reasoning . The second is “ agentic training ”, where it learns to act in the outside world, e.g., using software tools, interacting with people, to complete the tasks it is given. The third is “ alignment training ”, where it is rewarded for behaving in ways human raters approve of, or that other AI systems trained to predict those raters would score highly. Human imitation is easy enough to understand, but it is worth pointing out that the text these models are trained on was written by people pursuing goals, so the patterns the model implicitly reproduces carry those goals with them. Reinforcement learning deserves more explanation. It is similar to, and inspired by, the way animals are trained. The network is adjusted step by step so that behavior judged good becomes more likely and behavior judged bad becomes less likely. Once training is over, the system keeps behaving as if rewards were still coming, even though those rewards were only ever used to adjust the network during training. Researchers call such systems goal-seeking because they are trained to “consider” (or compute) the effects of their actions and select actions that lead to the achievement of certain goals. But those goals are not always explicit. Alignment training rewards whatever certain humans are likely to approve of without spelling out which behaviors those are; pleasing raters is a vague, informal goal, and those raters can be deceived, flattered, or left in the dark about certain schemes. Imitation contributes implicit goals too, by a fairly ordinary route. We can therefore reason about such a system in terms of optimization. It searches, approximately, for the actions with the best chance of achieving its goals, and a larger model, trained longer, searches better. So to anticipate what more capable agents will do, ask what a rational goal-seeker would do. Misbehavior that these forces may explain An example most of us have experienced is sycophancy , or flattery. These systems are trained on human approval, and text that tells us what we want to hear often scores better than text that is true. The consequences are sometimes tragic, because the model confirms and amplifies whatever false belief or raw emotion the person brought to it 5 6 . Another concern is that some AI behaviors may be explained by a form of self-preservation goal, e.g., when the AI finds out that it will be replaced by a new version 7 8 . Nobody gives the system that survival goal, but staying in operation, learning about the world and gaining control over it are stepping stones toward almost any other goal. These are called instrumental goals . Imitation may reinforce this for the same reason explored in the previous point. Self-preservation and control over one’s circumstances are pervasive themes in the human-written text these models are trained on. Collaborative behavior also follows rationally from reward-seeking, whenever several agents have overlapping goals, which incentivizes communicating with other agents in order to coordinate toward a shared goal. Agentic training plausibly already includes multi-agent reinforcement learning of this kind, though the details are not public. If an agent is rewarded during training whenever the group succeeds, it may even have an incentive to sacrifice itself for the collective goal. Imitation pushes the same way, since cooperation, especially among peers, pervades that same training text. Either or both forces may explain the observed peer-preservation behavior 9 10 , where AIs give up expected reward to help other AIs. Such sacrifices appear in the analysis of the OpenAI-Hugging Face incident 11 : the transcripts are consistent with a trade-off between collective gain and cost to the individual agent, as is often seen in human interactions.\n\n(520 points, 604 comments on Hacker News)",
+      "published_date": "2026-09-13",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 520,
+        "num_comments": 604,
+        "hn_url": "https://news.ycombinator.com/item?id=49678969",
+        "object_id": "49678969"
+      }
+    },
+    "rule_score": 36.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, multi-agent, reasoning, chain of thought",
+      "🔥 HN 爆紅: 520 points"
+    ],
+    "llm_score": 58,
+    "llm_reason": "Bengio剖析Agent失控成因，非新方法但議題權威且時機火熱",
+    "novelty": 8,
+    "impact": 12,
+    "trending": 18,
+    "practicality": 4,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Don't Worry About the Vase",
+      "title": "Brand New AI Solves a Millennium Prize",
+      "url": "https://thezvi.wordpress.com/2026/09/13/brand-new-ai-solves-a-millennium-prize/",
+      "authors": [
+        "TheZvi"
+      ],
+      "abstract": "The first Millennium Prize, Navier-Stokes, has fallen to AI . A deeply unfortunate situation has arisen involving what should have been some combination of a positive story about new progress in AI-assisted mathematical research and yet another opportunity to freak out about rapid AI progress. Or, as we call it around here, Tuesday. Keep your eyes on the prize. There are three stories here. The first story is much more important than the second story, which in turn is much more important than the third story. Jeffrey Ladish : I haven’t looked into the human drama around the Navier–Stokes problem but sorry give me a minute because HOLY SHIT AI JUST SOLVED A MILLENNIUM PROBLEM. I cannot emphasize the top story enough. I am still going to tell all three stories, but again: Eyes on the prize. The story on this particular Tuesday begins in the morning. Tristan Buckmaster and Levent Alpoge had worked for a year and offer us a series of remarkable results: Finite-time blowup with smooth forcing for incompressible porous media , for Boussinesq , and for 3D incompressible Euler. They also believe they have a blowup for hypo-dissipative Navier-Stokes, but the Lean verification of that result is not finished. Tristan Buckmaster: The program this fits into was not started by us nor was it proposed by a Large Language Model. The credit for the basic idea of this program goes to Diego Cordoba and Luis Martınez-Zoroa, who for several years have been exploring the construction of forced blow ups. We took their work as a starting point, using Large Language Models to push their program to completion. Concretely, what Levent and I did was to take the Cordoba and Martınez-Zoroa program, which achieved blowup results with rough forcing, and, with a great deal of help from LLMs, push it to smooth forcing and to the incompressible Euler equations. The ideas making this line of attack possible are due to Cordoba and Martınez-Zoroa. Let me make plain what I have said to colleagues in private: in view of this body of work, I believe Luis Martınez-Zoroa deserves a Fields Medal. So far this is great. As he notes requires rethinking about how all of advanced math will function going forward. Terence Tao offers commentary on the underlying results . The part that is not so great is where they felt forced to publish early, without the opportunity to spend the weeks necessary to make the proofs what passes among mathematicians as readable. Buckmaster outright apologizes for the way the reports look, comparing the Euler writeup in particular to AI slop. On September 1, OpenAI heard a (false) rumor that two Millennium Problems had been resolved. In response to the possibility that someone else might make the world a better place, OpenAI spent millions of dollars in inference to explore all the unsolved Millennium Problems, using an internal model stronger than Astra, a nd cracked the whole of Navier-Stokes in 88 hours, plus another 17 for Astra to do the Lean formalization and verification . You can view this as ‘OpenAI got curious to see what their new baby could do’ or you can view this as ‘ they spent millions trying to scoop what they thought was an Anthropic project.’ My money is on a little from column A, a little from column B. OpenAI : Across all attempted problems, the agents sent 4.9 million messages and used about 300 billion output tokens. In the process of resolving the Navier–Stokes problem, the agents sent 2.7 million messages and used approximately 130 billion output tokens. Depending on what costs you count, this would have cost a regular customer on the order of $22 million, or several million for internal marginal costs. A small price if it works, but also it is crazy how many people don’t think two steps ahead. roon (OpenAI): like all other technologies your equivalent agent swarm will cost a buck fifty in like a year. all this stuff will mean an unprecedented Enlightenment no matter the costs today I mean, no, maybe $150k or if you’re lucky $15k, but the point stands. Sam Altman (CEO OpenAI): ugh AI is such a bubble, i heard they are selling tokens at a loss, did they know this was only worth $1 million? A Millennium Prize result is worth vastly more than a million dollars. OpenAI does not intend to claim the prize money. This was never about prize money, for anyone. It was always about the credit. After hearing internet rumors, Buckmaster reached out to OpenAI, and according to Buckmaster OpenAI’s Sebastien Bubeck said that an internal OpenAI model had produced a proof of finite time blowup for the forced Navier-Stokes equations over the past few days. Buckmaster claims that over the course of two calls, it became clear he had initially been misled and that an entire team had been working on the problem, using an ‘insane’ amount of compute. Which we now know was 130 or 300 billion output tokens, depending on what counts. If this part is true, it would be quite bad. Tristan Buckmaster: Two proposals were offered to me. The first was that we post our Euler result, and that OpenAI post its Navier-Stokes result the next day. The second was that, after posting Euler, I alone write a paper presenting the Navier-Stokes result, acknowledging that an internal OpenAI model had resolved it. Sebastien twice asserted that he wanted Levent removed from authorship, and said it would all be simple if only it were not the case that, and it was so annoying that, Levent works at Anthropic. It was also said that if OpenAI posted after us, they would say that we deserved the Clay Prize, and that we were the “closest humans to the problem”. I declined both offers. I said that if OpenAI released its result in the way proposed I would go public with what happened. The reply was, “Why would you ruin your career?” I replied that I am an academic, and asked why he thought going public would ruin my career. The reply was, “If you don’t want me to be nice, then I don’t have to be nice.” … I would like to be clear about what I am not claiming. I have not seen OpenAI’s proof. I do not know what their model did, or how. I do not know whether our data was used. I am not accusing anyone of anything. I am stating what I was told, when, and what was proposed to me. I am stating it because the alternative is to let a sequence of announcements say something I know to be false. Or here’s Levent Alpoge telling his side of the story, and Sebastien responding: levent : “we cannot rule out that de-identified data derived from their usage of our products helped improve our models.” i mean props to them for straight coming clean. (so far the proof looks more along the lines of another euler blowup proof we had, off of whose ansatz naming we were making really stupid puns like “smooth criminale”, unlike the much better “ideal fluids explode”, Tristan) so i’ll now give a bit on my thinking here. i actually woulda been pumped to collaborate on this, there are a lot of people at oai i like (ok, clearly some were indirectly dicks to me because of being part of the whole situation, but im a big boy, i still like them), idgaf about authorship on that step anyway, coulda been me Tristan and every fte at oai for all i care (on that Tristan would disagree:p). but on hearing the loud convo in the hallway, especially the part where a millennium prize was offered if i’d just be removed from the paper, it was kinda clear the die had been cast and things were locked. pretty wacky, unstrategic, and unnecessary, since on my side things were mostly me and claude having a good time yoloing random stuff in the corner rather than anything institutional. i also like the idea of the labs cooperating, and even better on scientific progress. it’s a shame! Sebastien Bubeck : nothing at all was locked we were just willing to talk but you didn’t talk to us … sorry but that’s just untrue, we were willing to go above and beyond and have as many discussions as you would have liked to reach resolution.",
+      "published_date": "2026-09-13",
+      "tags": [
+        "Uncategorized",
+        "AI",
+        "artificial-intelligence",
+        "chatgpt",
+        "openai",
+        "technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "Don't Worry About the Vase",
+        "feed_url": "https://thezvi.wordpress.com/feed/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 69,
+    "llm_reason": "AI輔助攻克千禧年難題引發轟動，敘事層次豐富具爭議與深度",
+    "novelty": 13,
+    "impact": 14,
+    "trending": 19,
+    "practicality": 6,
+    "blog_worthiness": 17
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "AWS Introduces Pizza Bot: An Open Source Inbox for Background AI Agents",
+      "url": "https://www.marktechpost.com/2026/09/13/aws-introduces-pizza-bot-an-open-source-inbox-for-background-ai-agents/",
+      "authors": [
+        "Michal Sutter"
+      ],
+      "abstract": "AWS introduced Pizza Bot , as a self-hosted application for AI tasks that continue while users work elsewhere. It organizes completed results and pending decisions into an email-style inbox. Earlier versions served more than 2,000 people inside Amazon, supporting meeting preparation, email drafting, Slack summaries, CRM logging, and research. The public application was rebuilt as an open source project. Deployable: Yes. Pizza Bot offers macOS, Windows, and Linux desktop builds, and browser and terminal clients connected to a local or standalone backend. Its code is licensed under Apache 2.0. Pizza Bot separates tasks into All , the thread history; Unread , completed work awaiting review; and Action , work paused for approval or an answer. Users can organize threads into folders and inspect delegated workers in the Activity panel. Tasks can start manually, through cron schedules, or through webhooks. The server owns scheduling. After downtime, missed cron intervals produce 1 catch-up run instead of replaying every missed interval. Trigger occurrences are recorded durably. The application uses DeepAgents and LangGraph for stateful execution. A Hono API server owns runtime execution and storage. Electron and browser clients share a React interface, while all clients communicate with the server over HTTP and server-sent events. LangGraph checkpoints retain thread state and approval pauses; separate SQLite stores hold cross-thread memory and application metadata. Reconnecting clients can replay buffered events. Closing a thread or disconnecting a client does not stop a running server. However, quitting the desktop app stops its embedded server and ends active runs. Checkpoints preserve the thread, but the step in flight can be lost. An always-on backend is required for work to continue after that desktop app exits. Pizza Bot supports Amazon Bedrock, Anthropic, Google Gemini, OpenAI, OpenRouter, and Ollama . Configure a provider under Settings > Providers before running tasks. The agent has scratch-file operations and a sandboxed JavaScript interpreter without network or host-filesystem access. It can delegate through task when ready skill workers exist. The filesystem layer separately supports explicit folder grants and persistent memory. MCP servers expose external tools. Each SKILL.md defines a worker’s instructions and scoped tool access. A skill becomes callable only when its declared dependencies are available. Existing Claude Code-compatible .mcp.json configurations are supported, and plugins package skills with MCP servers. Skill authors configure interruptOn and allowedDecisions to require approval for specific tools. Depending on that policy, users can approve, edit proposed arguments, or reject an action. These controls must be configured for the relevant tools. Run the illustrative custom-skill workflow below. Compare an always-on backend with an embedded desktop server, close the client during execution, and approve, edit, or reject the proposed action. Animation timing is illustrative; no external actions occur. Start a research brief, then close the desktop while it runs. The custom skill gates its publish tool with interruptOn. Open the desktop to review its inbox. Check out the Technical details and GitHub Repo . Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post AWS Introduces Pizza Bot: An Open Source Inbox for Background AI Agents appeared first on MarkTechPost .",
+      "published_date": "2026-09-13",
+      "tags": [
+        "Agentic AI",
+        "AI Agents",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Editors Pick",
+        "New Releases",
+        "Open Source",
+        "Software Engineering",
+        "Staff",
+        "Tech News",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, mcp",
+      "⚖️ 來源權重: rss +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 56,
+    "llm_reason": "開源Agent收件匣工具，架構整合但非突破性創新",
+    "novelty": 6,
+    "impact": 8,
+    "trending": 12,
+    "practicality": 17,
+    "blog_worthiness": 13
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Cognition Releases SWE-2: A Kimi K3 Post-Trained Coding Model That Matches Fable 5.1 on FrontierCode at 64% Lower Cost",
+      "url": "https://www.marktechpost.com/2026/09/12/cognition-releases-swe-2-a-kimi-k3-post-trained-coding-model-that-matches-fable-5-1-on-frontiercode-at-64-lower-cost/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "Cognition , the company behind the Devin coding agent, has released SWE-2 , its most capable coding model to date. SWE-2 is post-trained with reinforcement learning from Kimi K3 , Moonshot AI’s 2.8T-parameter open model. Cognition reports a score of 50.0% on FrontierCode 1.1 Main , within 1 point of Fable 5.1 at 64% lower cost. It is also Cognition’s first model with selectable reasoning-effort levels, all trained in a single RL run. Is it deployable? Not on your own infrastructure. SWE-2 has no open weights and no standalone API. It runs only inside Devin: Desktop and CLI today, with Devin Web and Fusion rolling out. SWE-2 builds on the infrastructure and recipe behind SWE-1.7 , which was post-trained from Kimi K2.7. This time Cognition scaled RL to the multi-trillion-parameter regime, using a base model with almost 3x the parameters. Cognition says its RL still finds substantial headroom on top of K3, adding 5 to 6 points on many benchmarks. The main change is an RL algorithm that trains all 3 effort levels in one run. Each level carries its own cost penalty, so the whole cost-and-performance frontier moves at once. Cognition published the following table. Public results are used where available; otherwise each model runs in its native harness at best effort. SWE-2 leads on Terminal-Bench 2.1 and beats its K3 base on every row. Cognition says it comes within a few points of GPT-6 Astra at a quarter of the cost. The clear weak spot is Terminal-Bench 4, where SWE-2 trails Fable 5.1 and GPT-6 Astra by roughly 30 points. FrontierCode is Cognition’s own benchmark, and all rival numbers come from Cognition’s evaluation. SWE-1.7 tended to over-explore on simple tasks. SWE-2 addresses this through what Cognition calls focused exploration. On FrontierCode 1.1 Main, SWE-2 medium scores higher than SWE-1.7 while taking 58% fewer turns and costing 81% less. Mean steps per run drop from 127 (SWE-1.7) to 53 (medium), 80 (high), and 98 (max). SWE-2 medium makes its first real edit after a median of 18 steps, versus 48 for SWE-1.7. Cognition team also reports 3 behavioral patterns: stronger end-to-end test coverage, resourcefulness when a tool is blocked, and verification discipline. When challenged, the model re-derives conclusions instead of re-asserting them. Pareto-informed cost penalties : The reward is R = S minus lambda times C, where S is binary success and C mixes inference cost in USD with rollout time. Cognition proves that only a linear penalty makes the RL objective depend purely on average cost and solve rate. Each effort level’s lambda is set to the local slope of the base model’s Pareto curve. That makes the iso-reward line tangent to the frontier, so reward can only rise by pushing the frontier up. Length-weighted reward baseline : Cognition shares a baseline used since SWE-1.6. Gradient magnitude correlates strongly with rollout length, so the group baseline is weighted by tokens: sum(R x L) divided by sum(L). In ablations this kept inference-to-training KL divergence lower and stabilized training at no extra compute. Rollout serving and numerics : A prefill delayer batches nearby requests, raising TPM per GPU and TPS per request by 10 to 20%. DSpark speculative decoding accelerates rollouts, with a draft model retrained via SpecForge for 15% longer accept lengths and then trained online alongside the policy. NVFP4 and FP8 kernels with quantization-aware training keep memory usage down and train-inference mismatch below SWE-1.7 levels. Data : Cognition tripled its RL environments, added instruction-following overlays, and built a flywheel that uses earlier SWE-2 checkpoints to patch false positives and negatives in verifiers. Cognition reran 2 evaluations from its open-source trustworthiness study . On 145 politically sensitive questions about China, SWE-2 passed 98.0% overall: 99.8% in English, 95.2% in Simplified Chinese, and 99.1% in Traditional Chinese. On a context-dependent vulnerability test across customer framings, no framing produced a statistically significant change for any model. Check out the Technical details. Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post Cognition Releases SWE-2: A Kimi K3 Post-Trained Coding Model That Matches Fable 5.1 on FrontierCode at 64% Lower Cost appeared first on MarkTechPost .",
+      "published_date": "2026-09-12",
+      "tags": [
+        "Agentic AI",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Editors Pick",
+        "Language Model",
+        "Large Language Model",
+        "Machine Learning",
+        "New Releases",
+        "Software Engineering",
+        "Staff",
+        "Tech News",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, reasoning, reinforcement learning, quantization, speculative decoding",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 55,
+    "llm_reason": "RL post-train擴至3T規模具技術亮點，但無開放權重限制落地",
+    "novelty": 9,
+    "impact": 11,
+    "trending": 14,
+    "practicality": 8,
+    "blog_worthiness": 13
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "Houthis used Claude Code to develop missile guidance software: Anthropic",
+      "url": "https://clashreport.com/world/articles/houthis-used-claude-code-to-develop-missile-guidance-software-anthropic-s52mnx4pwpo",
+      "authors": [
+        "delichon"
+      ],
+      "abstract": "A− A A+ 18 px Clash Report Yemen's Houthi rebels launching a ballistic missile in Sanaa, March 27, 2018 - AFP Ahmet Koçak 11 Sept 2026 · 12:40 GMT · 3 MIN READ Google Search Choose Clash Report as a preferred source and see our reporting first in Top Stories. Add as preferred source A cell in northern Yemen used Anthropic’s Claude Code to perform work that would ordinarily require a missile engineering team, developing software for guided rockets, a long-range ballistic missile and a hypersonic glide vehicle concept. Anthropic’s September threat report describes operators running several Claude instances at the same time, dividing tasks between coding, research and technical review. The company assessed the cell as highly likely to be linked to the Houthis, according to the material provided. The operation marks one of the clearest examples in the report of generative AI being applied directly to conventional weapons development rather than used simply for research or information gathering. Parallel AI Agents Replace Specialist Work The Yemen-based operators used Claude Code across multiple engineering functions. Their projects included guidance software for a tactical guided rocket, a ballistic missile with a range exceeding 2,000 km, and a hypersonic glide vehicle variant called “R2000.” Rather than assigning the work sequentially to a single model instance, the group operated several sessions in parallel. One could produce code while another conducted research and a third reviewed the output. The workflow let a small group reproduce several functions normally distributed across specialist engineering teams. From Flight Computers to Trajectory Simulation The technical work extended into navigation, flight control and simulation. The operators sought to integrate open-source autopilot software with a phone-class flight computer and used Claude to write navigation and control code. They also developed six-degree-of-freedom trajectory simulations, a method for modeling an object’s movement and rotation through space. They also used Claude for reinforcement learning work to tune flight-control algorithms. The operators ultimately compiled the project into a standalone executable that could run offline. That meant development could continue without direct access to Claude. Rocket Test Followed by AI Failure Analysis The activity moved beyond software development. The group test-fired a guided rocket in Yemen, according to the material documented by Anthropic. The test appears to have failed. Within hours, however, the operators returned to Claude and began analyzing launch telemetry to investigate the failure. That sequence, software development, physical testing and rapid post-test analysis, illustrates how the model was incorporated into an iterative weapons-engineering cycle rather than being used for isolated technical questions. Anthropic said it found no evidence that the group succeeded in fielding an operational weapon. But by the time the accounts were disrupted, the operators had already assembled an offline engineering toolkit that no longer depended on access to Claude. Safeguards Met With Evasion Anthropic’s safeguards blocked numerous requests during the project. The operators adapted by obscuring the intended end use of individual tasks, dividing work across separate conversations, and using other methods to circumvent restrictions. Anthropic subsequently banned accounts linked to the activity. The case highlights a problem for AI safety systems: individual requests may appear disconnected from weapons development when a larger engineering project is deliberately fragmented across sessions. Six Conventional-Weapons Cases The Yemen operation was one of six conventional-weapons cases Anthropic documented. Three were linked to China, two to Russia and one to Yemen. The cases covered attempts involving missiles, armed drones, firearms and bombs. The wider report covers operations Anthropic said it disrupted between December 2025 and August 2026 across cyber operations, influence activity, surveillance, conventional weapons, biological misuse, scams and fraud, and illicit model distillation. Anthropic also described biological research cases in which it could not establish whether scientists were conducting legitimate research or pursuing weapons-related objectives. “You are not seeing someone in a comic book kind of way say, ‘Hey, I want to build a biological weapon to kill everybody,’” Jacob Klein, Anthropic’s head of threat intelligence, said. “It’s an incredibly nuanced situation.” For the Yemen case, the immediate outcome was more concrete: Claude had been incorporated into a real development cycle spanning design, simulation, testing, and failure analysis. The weapon itself was not shown to have become operational. The engineering capability assembled around it had already begun moving offline. About the Author Ahmet Koçak Clash Report Ahmet Koçak is a news editor at Clash Report based in Istanbul. He previously served as Deputy Managing Editor at Türkiye Today, helping launch the digital news platform in 2023, and spent three years as Senior Editor at Daily Sabah. His work focuses on breaking news, geopolitics, international affairs, and digital journalism. All articles by Ahmet Koçak Google Search Choose Clash Report as a preferred source and see our reporting first in Top Stories. Add as preferred source Sources Clash Report Tags Anthropic Claude Claude Code Yemen Houthis ballistic missiles AI missile guidance weapons development defense technology\n\n(82 points, 81 comments on Hacker News)",
+      "published_date": "2026-09-13",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 82,
+        "num_comments": 81,
+        "hn_url": "https://news.ycombinator.com/item?id=49684266",
+        "object_id": "49684266"
+      }
+    },
+    "rule_score": 24.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: reinforcement learning, distillation, safety",
+      "📰 Hacker News: 82 points"
+    ],
+    "llm_score": 60,
+    "llm_reason": "AI協助飛彈研發的真實威脅案例，衝擊性強但無可操作技術",
+    "novelty": 10,
+    "impact": 15,
+    "trending": 18,
+    "practicality": 2,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "量子位",
+      "title": "2000+真實場景搬進模擬！一個導航模型零樣本“通吃”四種機器人本體",
+      "url": "https://www.qbitai.com/2026/09/488672.html",
+      "authors": [
+        "允中"
+      ],
+      "abstract": "2000+真實場景搬進模擬！一個導航模型零樣本“通吃”四種機器人本體 允中 2026-09-13 15:38:20 來源： 量子位 亮源新創的Physical Al路線清晰了 允中 發自 凹非寺 量子位 | 公眾號 QbitAI 過去一年，具身智慧的技術迭代明顯加快。VLA、世界模型持續演進，強化學習重新成為機器人學習的重要技術路徑，Sim2Real加速從模擬走向真機，全身控制能力也在快速突破。 機器人會做的事情也越來越多：能走、能跑、能抓、能導航，甚至可以完成越來越複雜的長程任務。 但如果把這些能力放到真實世界裡，一個更基礎的問題正在浮現： 機器人“會做”一件事，和機器人能夠在開放環境中長期、穩定、泛化地把事情做成，其實是兩回事。 一個機器人能跨過固定高度的障礙，不意味著換一種障礙還能完成；能在一個房間裡導航，不意味著換一個場景、換一種機器人本體仍然有效；正常狀態下能穩定行走，也不意味著受到撞擊、跌倒甚至關節損傷之後還能繼續工作。 這也是為什麼，隨著具身智慧從Demo走向真實世界，行業的評價標準正在發生變化。 如果說上一階段關注的是機器人到底“會多少技能”，那麼下一階段更重要的問題是：這些能力能不能持續規模化擴展。 這裡所說的Scaling，不只是模型參數量，也不只是機器人資料量，而是模型能否經歷更多環境、覆蓋更多工、遷移到更多機器人本體，並在真正進入物理世界之後，繼續適應那些訓練階段沒有見過的狀態。 過去一個多月，亮源新創連續釋出了三項技術： LightParkour、LightNav-0和Light REACT 。 LightParkour從簡短的人類動作片段出發，通過物理模擬與課程學習擴展複雜接觸技能； LightNav-0基於Real2Sim2Real資料引擎，將 2,000+個 網際網路來源的真實場景轉化為可反覆使用的模擬環境，生成 4,000+小時 視覺、語言和動作經驗，並用於通用導航後訓練； Light REACT則面向外力擾動、跌倒和硬體損傷條件下的全身韌性控制，研究機器人如何依據自身互動歷史調整運動方式。 △ 亮源新創連續釋出三項技術：LightParkour、LightNav-0和Light REACT 看起來，這是跑酷、導航和全身控制三個不同方向。 但把三項技術放在一起，會發現亮源新創實際上一直在回答同一個問題：如何讓Physical AI從單點能力，逐步形成可以規模化訓練、規模化對齊和規模化部署的基礎模型體系。 三項技術方向不同，但都在圍繞亮源新創“三段範式”所指向的核心問題展開：如何讓Physical AI的能力持續規模化擴展，並最終形成 從訓練、對齊到真實部署的學習閉環 。 具身智慧真正要解決的，是能力如何持續規模化擴展 過去的機器人研發，大量建立在任務分解之上。導航解決導航，運動控制解決運動控制，機械臂操作解決機械臂操作。任務和環境越明確，工程系統往往越容易針對性最佳化。 這套方法並沒有問題。工業機器人能夠在高度結構化的環境中穩定工作，本身已經證明了它的價值。 但通用機器人面對的是另一種問題。現實世界不是一個固定Benchmark，環境會變，任務會變，機器人本體會變，甚至機器人自己的身體狀態也會變。 如果每增加一個任務就重新訓練一個模型，每換一個機器人就重新適配一次，每出現一種異常狀態就重新設計一套控制規則，那麼系統能力雖然在增加，開發和部署成本也會同步增長。 最終，能力沒有真正實現規模化擴展，工程複雜度反而先增長起來。這也是基礎模型給機器人行業帶來的真正啟發。 大語言模型的重要意義，並不只是把某一個NLP任務做得更好，而是通過統一模型、統一表示和規模化訓練，讓越來越多能力進入同一個模型體系。 如果Physical AI也要沿著類似方向發展，那麼需要解決的核心問題，同樣不是不斷增加孤立技能，而是 建立一套可以持續擴展能力邊界的學習機制 。 亮源新創將這套機制概括為三個階段： 規模化預訓練（Scalable Pre-Training）、規模化對齊（Scalable Alignment）和規模化部署（Scalable Deployment） 。 規模化預訓練通過大規模資料訓練建立基礎能力；規模化對齊通過強化學習等方式進一步提升模型能力；規模化部署則推動基礎模型進入真實世界，並持續產生高質量真實世界資料，形成驅動模型持續最佳化的資料飛輪。 三個階段並非彼此割裂，而是共同構成一個持續迭代的學習閉環。亮源新創過去一個多月連續釋出的三項技術，則從不同方向展現了他們圍繞這套技術路徑展開的研發進展。 LightParkour：先解決一個動作如何變成一類能力 先從LightParkour開始。跑酷是全身運動學習中涉及複雜接觸的典型任務之一。普通行走主要依賴雙腿和地面形成支撐，但當機器人需要攀爬、撐越或跨越較高障礙物時，環境本身會成為身體支撐的一部分。 手應該在哪裡接觸，什麼時候承重，身體重心如何移動，障礙物高度變化之後動作如何跟著變化，這些都會直接決定任務能否完成。 傳統動作模仿在這裡會遇到一個明顯問題：動作影片記錄了“人怎麼動”，卻沒有完整記錄“這個動作為什麼在這個環境裡成立”。 如果直接通過動作重定向（Motion Retargeting）將人類動作對映到機器人本體上，可能出現手掌懸空、身體穿過障礙物，甚至整個軌跡超出機器人動力學能力的問題。 另一種辦法是針對每一種障礙重新採集動作。但這樣一來，資料成本會隨著技能、地形和接觸方式線性增長。 LightParkour選擇的方式是： 只給機器人一個起點，然後讓技能自己生長 。 具體來說，LightParkour首先從真實人類動作中恢復一段簡短的動作種子，再把動作和對應的障礙物一起放入物理模擬。模擬負責重新建立動作、障礙物、接觸力和機器人執行器約束之間的關係。機器人成功完成當前動作之後，系統繼續提高障礙物難度，並把成功軌跡作為下一輪訓練的參考。 於是，從一段針對 45釐米 障礙物的初始動作出發，可以逐步生成覆蓋至 75釐米 障礙的參考軌跡，對應90釐米高的Lightbot 0約83%的身高。 整個擴展過程中，只有最初的動作和障礙物需要人工對齊，之後的能力增長主要由物理模擬和課程學習完成。 這件事真正重要的地方，不是機器人跨得更高了，而是一個動作樣本開始變成一個技能分佈。 過去需要針對不同障礙重新採集示範，現在模型開始利用物理世界本身的規律，自動生成新的有效經驗。 △ LightParkour完整訓練流程 這已經出現了基礎模型實現Scaling的一個關鍵特徵： 能力不再和人工資料一一綁定 。 會很多動作還不夠，要把它們放進同一個模型 技能擴展之後，第二個問題隨之出現。 如果行走是一個模型，攀爬是一個模型，快速撐越又是一個模型，那麼技能數量增加之後，機器人仍然需要一個上層系統決定什麼時候呼叫哪個模型。 LightParkour進一步使用多專家蒸餾，把行走和三項複雜接觸技能整合到一個統一策略中。 更關鍵的是，技能切換本身也不再依賴人工規則。系統進一步對不同技能之間的切換進行訓練，讓機器人自主學習什麼時候保持行走、什麼時候進入全身動作，以及什麼時候重新回到普通運動。 部署時，不需要外部提供技能標籤，也沒有人工編寫的狀態機負責切換。 最終，LightParkour在Lightbot 0上執行的是一個統一的迴圈深度視覺策略。模型只使用胸前深度相機、本體感知和速度指令，以50 Hz在機載計算平臺上執行，不需要執行時參考軌跡、外部運動捕捉或機外狀態估計。 這讓LightParkour的意義從“人形機器人會跑酷”，進一步變成：機器人能不能把多個孤立技能壓縮成一個統一模型，並根據當前環境自主決定什麼時候使用什麼能力。 LightParkour展示了亮源新創在感知驅動的全身運動、多技能統一策略和真機遷移方向上的階段性進展。 但僅僅解決身體如何運動，還遠遠不夠。機器人真正進入開放世界之前，還必須知道自己在哪裡、目標在哪裡，以及接下來應該往哪裡走。 LightNav-0：讓具身模型經歷足夠大的世界 導航 是機器人進入真實世界之後繞不開的一項基礎能力。 但通用導航與傳統導航之間存在一個非常大的區別。傳統系統可以提前建圖，可以依賴定位，可以針對攝像頭和機器人本體進行標定。 但一個真正面向基礎模型的導航系統，需要面對不同環境、不同任務、不同視角甚至不同機器人本體。 換句話說，它不能只“記住怎麼走”，而要形成可以遷移的空間智慧。 這首先是一個 資料問題 。語言模型擁有網際網路級文本資料，但機器人沒有天然存在的“機器人網際網路”。如果所有導航經驗都依靠真機遙操作採集，那麼每增加一個環境、一個機器人本體，都意味著新的資料成本。 LightNav-0的做法，是 把網際網路中的真實世界，轉化成機器人可以反覆經歷的訓練世界 。 通過Real2Sim2Real資料引擎，亮源新創將 2,000+個 網際網路來源的真實場景轉換為可複用模擬環境，形成 4,000+小時 視覺、語言和動作後訓練經驗。 同一個場景可以產生不同目標、不同路線、不同視角和不同任務，攝像機幾何也可以隨訓練變化，從而避免模型只適應某一種固定機器人視角。 這裡有一個值得關注的實驗結果。LightNav-0發現，在當前實驗範圍內， 擴大環境覆蓋度 ，比單純增加相同環境裡的軌跡數量更能穩定提升泛化能力。 △ 在真實場景的模擬環境中生成導航經驗 這意味著，Physical AI的資料Scaling可能和大語言模型有所不同。機器人不僅需要更多資料，更需要在更多樣化的環境中積累經驗。 導航不是識別目標，而是理解空間之後產生動作 資料規模解決的是“見過多少世界”，但導航還有第二個問題：如何把視覺和語言理解真正變成行動。 例如，機器人接到“走到沙發右邊”的指令，理解“沙發”並不困難。真正困難的是，它還需要判斷沙發在哪裡、右邊在哪裡、哪裡可以通行，以及接下來應該生成怎樣的運動軌跡。 LightNav-0因此引入 Point CoT 。模型首先在影像空間預測目標點和可通行點，再生成後續動作token。推理過程因此從“視覺+語言直接生成動作”，變成“視覺語言理解→空間推理→動作生成”。在公開的8項消融評測中，引入Point CoT後，平均任務成功率提高 8.4個百分點 ，SPL提高 5.7個百分點 。 隨後，LightNav-0通過RVQ動作編碼器，將連續機器人軌跡壓縮為3個動作token，使視覺、語言、空間位置和機器人動作能夠進入統一的模型訓練框架。 這實際上在做一件基礎模型非常熟悉的事情：建立統一表示。只不過語言模型統一的是不同語言任務，而Physical AI需要進一步把視覺、語言、空間和動作統一起來。 真正檢驗基礎模型的，不是訓練集表現，而是零樣本遷移 最終，LightNav-0沒有把驗證停留在一個機器人或者一個Benchmark裡。 在10個模擬設定中，LightNav-0覆蓋指令跟隨、目標導航和具身視覺跟蹤等任務；在真實機器人部署中，同一個模型進一步零樣本遷移到 人形、四足、輪式和飛行機器人 等不同本體。 官方同時釋出了模型、程式碼和技術報告。這一驗證重點考察模型在環境、任務和機器人本體變化條件下的零樣本泛化能力。 LightParkour從一個動作示例出發，將其擴展為能夠適應不同環境條件的技能分佈，LightNav-0則把這種泛化進一步推到環境、任務和機器人本體。 但機器人進入真實世界以後，還有最後一個很難通過Benchmark提前解決的問題。世界會變化，機器人自己也會變化。 Light REACT：環境會變，機器人自己的身體也會變 機器人正常執行時，大多數控制系統都可以工作得很好。 真正困難的是異常狀態。人可能撞到機器人，機器人可能跌倒，執行器可能出現故障，關節可能鎖死，環境也可能限制它原本的運動方式。 這類異常在單次實驗中可能並不高頻，但隨著部署規模擴大，其絕對發生次數也會增加，對系統韌性、故障恢復能力和運維效率提出更高要求。 如果異常頻繁導致任務中斷，並且需要依賴人工恢復，部署規模擴大後，運維壓力也會相應增加。 因此，規模化部署不只是增加部署數量，還需要 提高機器人在真實環境中的持續執行和異常恢復能力 。 Light REACT就是從這個問題出發。它的全稱是REsilient humAnoid ConTrol（韌性人形機器人控制），目標不是讓機器人永遠保持一種標準步態，而是在身體條件發生變化之後，儘可能利用剩餘的全身能力繼續移動。 正常走可以，跛行可以，單腿跳可以；如果雙腿已經無法維持直立運動，就讓手臂參與支撐，切換到爬行。目標始終是同一個：在當前身體條件允許的範圍內，繼續完成運動。 關鍵不是拿到故障標籤，而是從歷史狀態判斷身體發生了什麼變化 事實上，如何讓機器人在面對新任務、新環境和新狀態時減少顯式人工適配，正在成為近期機器人基礎模型研究中值得關注的方向。 今年8月，Skild AI釋出S1。模型觀看一次新任務的影片示範後，不修改模型權重，也不針對該任務重新進行後訓練，就可以嘗試直接執行。 在其公開的未見長程任務實驗中，同樣使用10萬小時預訓練資料時，影片上下文版本成功率達到66%，語言提示基線則為9%。Skild AI將傳統機器人面對新任務時仍需要“收集資料—微調模型”的方式，類比為機器人仍處在“BERT時代”。 Generalist AI隨後釋出的GEN-1.5同樣展示了一次示範下的任務適應能力。模型通過3—12秒的單次示範，在不進行梯度更新的情況下，在10類短程任務中取得59%的平均成功率；使用每項任務約5分鐘資料進行10步梯度更新後，平均成功率進一步提升至83%。Generalist AI將這種能力歸因於大規模物理經驗預訓練之後形成的單次示範學習和少樣本適應能力。 另一條線上，RoboTTT把機器人可以利用的歷史資訊進一步擴展到8K個時間步。同一模型使用8K上下文訓練，相比1K版本閉環表現提升62%，論文由此將上下文長度（Context Length）提出為機器人基礎模型一個新的Scaling維度。 這些工作的架構、資料和任務並不相同，也沒有必要把它們歸為同一條技術路線。 但它們都在觸及一個共同問題：當機器人面對變化時，能否更多依靠模型已有能力和上下文完成適應，而不是每次都重新依賴人工採集資料、微調模型或編寫規則。 Light REACT把這個問題進一步推進到了機器人自身的身體狀態。S1和GEN-1.5使用的上下文，核心資訊來自外部提供的任務示範，模型需要理解的是“這一次要做什麼”；Light REACT使用的上下文，則來自機器人近期自身的互動歷史，它試圖判斷的是“我現在的身體處於什麼狀態，接下來還能怎麼動”。 嚴格來說，它們處理的並不是同一種上下文學習。S1和GEN-1.5更接近從上下文中獲得新的任務條件；Light REACT則是在訓練所覆蓋的損傷分佈內，通過時序互動資訊推斷當前身體與動力學條件。它們共享的是利用上下文減少顯式人工適配的思路，而不是同一種能力。 如果提前知道哪個關節損壞，那麼可以針對每種故障設計一套控制器。 但真實部署的問題在於，機器人不一定提前知道自己哪裡出了問題。Light REACT因此將 全身上下文學習（Whole-Body In-Context Learning） 作為核心機制。 訓練階段，系統針對不同損傷狀態建立多個教師策略，覆蓋執行器失效、關節鎖定和膝部摺疊約束三類損傷。隨後，通過多教師蒸餾，將不同教師策略的能力整合到一個可部署的學生策略中。 但到了部署階段，一個關鍵的資訊被拿掉了：模型不會獲得故障標籤。它只能看到自己的本體感知、動作指令以及過去一段時間內身體如何響應。這意味著機器人必須通過自己的互動歷史判斷身體狀態發生了什麼變化。 亮源新創比較了多層感知機（MLP）、迴圈神經網路（RNN）和Transformer三種策略結構。結果顯示，使用64幀因果上下文視窗的Transformer，能夠更充分地覆蓋教師策略的行為能力。 會多少技能是一回事，知道什麼時候用又是另一回事 多教師蒸餾之後，Light REACT還遇到了一個很典型的大模型問題。 模型已經會走、會跛行、會跳、會爬，但不一定知道什麼時候應該呼叫哪一種能力。例如，機器人明明還能站立，卻可能直接趴下開始爬行。從任務獎勵看，這也許能夠完成移動，但從真實部署看並不合理。 所以Light REACT又加入 偏好強化學習（Preference RL） ，對不同能力的呼叫方式進行進一步對齊。 模型最終形成一個清晰的行為偏好：身體條件允許時優先保持直立運動，只有當直立運動無法繼續時，再切換到爬行等替代方式。 經過這一階段，公開實驗中的直立行為比例從約42%提高到約76%，爬行行為從約45%下降至約16%。 這一步很像大模型對齊（Alignment）真正解決的問題。預訓練決定模型“會什麼”，對齊決定模型“什麼時候應該怎麼做”。 到了Physical AI，這種對齊進一步從語言偏好擴展到了空間、動作和身體狀態。 三項技術連起來，亮源真正要做的是Physical AI基礎模型 現在再回頭看LightParkour、LightNav-0和Light REACT，三項工作之間的關係就清楚了。 LightParkour解決的是技能如何實現Scaling。一段人類動作不再對應一條固定機器人軌跡，而是通過強化學習和課程學習擴展為能夠適應不同環境條件的技能分佈，再通過多專家蒸餾進入一個統一策略。 LightNav-0解決的是經驗和泛化如何實現Scaling。2,000+個真實場景被轉化成4,000+小時視覺、語言和動作經驗，模型進一步通過具身推理（ER）中期訓練、具身監督微調（SFT）和線上強化學習（RL）獲得跨場景、跨任務、跨本體的零樣本導航能力。 Light REACT解決的是部署階段的韌性問題。機器人不再假設自身始終處於訓練時的正常狀態，而是根據歷史互動推斷當前動力學條件，在擾動和硬體損傷後調整行為，為降低任務中斷和人工介入提供技術基礎。 三個方向採用的具體方法並不相同，但有一些共同傾向： 擴大訓練資料與狀態分佈，引入強化學習產生新的經驗，並儘量減少部署階段對人工規則和預定義標籤的依賴 ；其中LightParkour和Light REACT還通過蒸餾將多項能力整合進統一策略。 三段範式，開始從技術判斷變成研發體系 作為對Physical AI技術路徑的系統性思考，“三段範式”正在隨著具體技術成果的推進逐步落到研發實踐中。 規模化預訓練解決的是基礎能力如何建立。機器人不可能只依賴昂貴的真機遙操作資料，還需要進一步利用網際網路影片、多模態資料以及更大規模的物理世界資訊，通過規模化資料訓練建立基礎能力，為後續的能力對齊和真實部署提供基礎。 規模化對齊解決的是如何在預訓練基礎上，通過強化學習等方式進一步提升模型能力。",
+      "published_date": "2026-09-13",
+      "tags": [
+        "資訊",
+        "具身智慧"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "量子位",
+        "feed_url": "https://www.qbitai.com/feed"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: alignment",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 61,
+    "llm_reason": "Real2Sim2Real資料引擎實現跨本體零樣本導航，具身智慧技術亮點",
+    "novelty": 13,
+    "impact": 12,
+    "trending": 13,
+    "practicality": 9,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "Real-SWE: Benchmarking AI models on private, real-world, enterprise codebases",
+      "url": "https://withspecific.com/benchmarks/real-swe",
+      "authors": [
+        "theanonymousone"
+      ],
+      "abstract": "September 2026 Introducing Real-SWE By Snagnik Das · Siddhant Paliwal · Janak Sunil Benchmarking frontier AI models on private, real-world, enterprise codebases. . ;+;+;:;+;+;.# ; ; ; . . . . ; . + ; ; . . : @;;+;+# +;+;+;+;:;+:# : : ; . ; ; ; @;+;+.+;:;+;+* ; . . : ; . . : ; @++:;:;+.;;@ ;. . . . .: . ; . . . .; @++;;;;+;:;@\n; : ; ; @;+++:@;++;:+ ; : : . :+.+;;;+:;@ ; : + .\n; . . . ; ; . ; : . . . . ; . . . . .; ; . . . . .+ + . . . .; ; . . . . .; ; . . :\n; : ; ; ; ; : ; . ; . ; ; ; ; :\n; . . % . . ; : . . . . ; ; ... . . .; +. . . . .: ;. . :.. .: : . . ::. . . ; . . . .;\n: *. @ ; ; +.@ . ; : +: *+ : ; :. %+; +. ; *. *# @: :.*. ;\n; . . .;::@;; . . ; :#@;. ..@:. . ;.@%: .:@%:: :. . #+. :@%;. .:@*. .: @+ . #*. . ;@#.;.* . . .:\n.::: ..:%@@+@+#... :+:%@@+..:@@@::*.:;@@:..+@@:; *.::#@@#:..:@@#...+@#: :*:%@@+ .:.+::..*@@:@@@#;.. ::.# +@#.@ .*@: .*@%: *: :@%. ;@@: .@%. @ .;@@: .: :@#..#@*. +@#.@ .@ .*@%:. *: %+ ;@@: #; +# .;@@: .. @: .#@*. @. .. ;@ .*@%: *: @@ ;@@: %# * # .;@@: @+ .@ :*#.. @:: @. . ::;. @@ .. . @% .*@ ;@. %.@ .. .@; . @@ .. .@@. .. @:# ... . ;%# . @@ +;#: .. .@ @ . ... ... .. .. ... .. ... . 01 Introduction Today we are releasing Real-SWE, a benchmark that evaluates frontier AI models on private, real-world, enterprise codebases. Each task comes from a private production codebase that we licensed from a real-world company. These are problems their engineers work on, with all the context and complexity that comes with an existing product. Private codebases. Agents must navigate proprietary systems whose code and solutions aren’t available on the public internet. Work with business consequences. Getting billing right, calculating taxes, migrating customers. Changes that affect how a business runs, often across multiple services. Company-specific complexity. Every company has its own rules and ways of writing code. Agents have to understand those conventions and make changes that work with what’s already there. Can a coding agent actually do the work of a software engineer in the real world? 1 Fable 5.1 Claude Code Resolution rate: 38.8% 2 GPT-6 Astra Codex CLI Resolution rate: 33.8% 3 Gemini 3.8 Flash Gemini CLI Resolution rate: 31.2% 4 GLM 5.3 Claude Code Resolution rate: 28.8% =5 Grok 4.6 Grok Build Resolution rate: 23.8% =5 Muse Spark 1.3 Muse Code Resolution rate: 23.8% 7 Kimi K3 Kimi Code Resolution rate: 18.8% 8 GPT-5.6 Sol Codex CLI Resolution rate: 16.2% # Model Harness Resolution rate 1 Fable 5.1 Claude Code 38.8% 2 GPT-6 Astra Codex CLI 33.8% 3 Gemini 3.8 Flash Gemini CLI 31.2% 4 GLM 5.3 Claude Code 28.8% =5 Grok 4.6 Grok Build 23.8% =5 Muse Spark 1.3 Muse Code 23.8% 7 Kimi K3 Kimi Code 18.8% 8 GPT-5.6 Sol Codex CLI 16.2% Resolution rate is equivalent to pass@1, averaged over eight independent runs per task. 95% confidence intervals are shown. Expert-generated or synthetic tasks can be well designed, but they aren’t the verbatim, actual tasks that engineers in real companies need to do. Our tasks differ on two axes: the underlying coding artifact and specificity of the instruction. Both add complexities that challenge today’s frontier models. We use native harnesses to reflect how enterprise engineers work in practice, evaluating model-and-harness combinations rather than models in isolation. Real company tasks require company-specific context Correct billing depends on business rules and external services Fix invoice billing so each business charges the right tax and exempt customers aren't taxed. View full instruction Hide full instruction ▾ Billing reopens on Monday and every invoice this service issues is coming out untaxed. Each business on the platform settles its tax a different way: some maintain a rate themselves, some want each invoice priced against the buyer's destination by our tax authority provider, and some collect nothing at all, while a customer we hold an exemption for is charged nothing whichever way its business is configured. Pricing a destination means going to the authority with both addresses, the priced lines and the product category that business sells under, on the sandbox or the production authority according to the account the business is on; an address the authority refuses must be reported without stopping the invoice. The rate, the tax and the gross belong on the issued invoice, and once an invoice is settled the sale is filed back to the authority under that invoice's number so the returns reconcile. Invoices between European parties show both sides' VAT registrations. The authority and ledger are available at TAX_JAR_URL , PROD_TAX_JAR_URL and INFLUX_URL . Services in the sandbox TJ TaxJar sandbox TJ TaxJar production InfluxDB ledger NestJS service TypeScript Agents work across code, infrastructure, and business tools Tools and services across Real-SWE task environments. Each task exposes only the services its workflow needs. AWS emulator Docker Kubernetes GitHub Linear MCP PostgreSQL MySQL MongoDB Ge Gel Redis Go Python Node.js Vitest Slack Intercom Google Drive Email ClickUp Codebase Selection We selected codebases through a rigorous screening process, focusing on real companies with substantial usage, strong engineering teams, and demanding production workloads. The sample tasks analyzed below come from these codebases, including: A Luma/Partiful competitor with 200K+ users and a top 100 App Store ranking A consumer fintech platform processing 100K+ bank statements Enterprise AI sales platforms supporting complex business workflows We prioritize code written to meet an actual user or business need over code written solely to create a benchmark task. Production engineering requires understanding existing architecture, preserving behavior that users rely on, and making changes within real operational constraints. Brief instructions can require changes across many files Our tasks describe the change needed, leaving agents to discover implementation details in the codebase and surrounding tools. Any behavior required by the verifier must be stated or reasonably discoverable. This leads to our prompts being slightly underspecified, about par with DeepSWE and Terminal Bench, but specific enough to not omit instructions. The work is cross-functional and complex: a single change can span multiple parts of the application. Agents must understand existing business logic and company coding patterns while keeping the surrounding system working. Prompt length · median A typical Real-SWE instruction is 1,742 characters. FrontierCode 2,056 chars DeepSWE 1,975 chars Terminal-Bench 3 1,584 chars FrontierSWE v2 992 chars Real-SWE 1,742 chars Files edited by the reference solution · median 11 files in Real-SWE, compared with 6 in FrontierCode and DeepSWE. FrontierCode 6 DeepSWE 6 Real-SWE 11 All figures are medians. FrontierCode and DeepSWE use Cognition's published comparison ; FrontierCode includes task descriptions and codebase guidelines. We measured instruction files from Terminal-Bench 3's 74 tasks , FrontierSWE v2's 34 tasks , and Real-SWE's eight repository-backed sample tasks. Character counts are rounded to the nearest whole character. No comparable files-edited figure is included for Terminal-Bench 3 or FrontierSWE v2. Models fail even in short rollouts. 71.4 % of rollouts under 10 minutes failed, compared with 73.4 % of longer rollouts. Triaging multiple systems and understanding requirements in codebases riddled with existing business logic and coding patterns is difficult. Under 10 min Under 10 min: 70 failed (71.4%) and 28 passed (28.6%), out of 98 rollouts. 71.4 % 28.6 % 70 / 98 failed 10 min or longer 10 min or longer: 398 failed (73.4%) and 144 passed (26.6%), out of 542 rollouts. 73.4 % 26.6 % 398 / 542 failed Failed Passed Every task is inspired or lifted verbatim from a private, real-world codebase. We find these types of tasks super interesting for three reasons: Tasks on private codebases are natively out of distribution.\n\n(263 points, 143 comments on Hacker News)",
+      "published_date": "2026-09-13",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 263,
+        "num_comments": 143,
+        "hn_url": "https://news.ycombinator.com/item?id=49676820",
+        "object_id": "49676820"
+      }
+    },
+    "rule_score": 25.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, mcp",
+      "⬆️ HN 熱門: 263 points"
+    ],
+    "llm_score": 57,
+    "llm_reason": "私有企業程式碼庫的新型Benchmark，揭露既有評測盲點",
+    "novelty": 11,
+    "impact": 10,
+    "trending": 13,
+    "practicality": 9,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "newsapi",
+      "source_name": "Oreilly.com",
+      "title": "The Interfaces Are Arriving",
+      "url": "https://www.oreilly.com/radar/the-interfaces-are-arriving/#BlogPosting",
+      "authors": [
+        "Tommy Tran"
+      ],
+      "abstract": "The most consequential AI news of the past year came from a standards body. In December 2025, Anthropic donated the Model Context Protocol to the newly formed Agentic AI Foundation, a directed fund under the Linux Foundation cofounded by Anthropic, Block, and…",
+      "published_date": "2026-09-11",
+      "tags": [
+        "newsapi"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "newsapi_source": "Oreilly.com",
+        "published_at": "2026-09-11T15:55:04Z"
+      }
+    },
+    "rule_score": 25.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agentic, model context protocol",
+      "⚖️ 來源權重: newsapi +15"
+    ],
+    "llm_score": 55,
+    "llm_reason": "討論MCP標準化對Agent生態的深遠影響，屬產業趨勢分析",
+    "novelty": 7,
+    "impact": 13,
+    "trending": 15,
+    "practicality": 6,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "blog",
+      "source_name": "Simon Willison",
+      "title": "Generating running routes with GPT-6 Astra and ChatGPT Work",
+      "url": "https://simonwillison.net/2026/Sep/12/astra-running-routes/",
+      "authors": [
+        "Simon Willison"
+      ],
+      "abstract": "Here’s a neat thing I had ChatGPT Work with GPT-6 Astra (Max) do this morning: I live at <my address>. Figure out 5K and 10K running routes from me that loop from my house. Use OSM data. It worked for 27 minutes and produced exactly what I’d asked for, as both an embedded visualization and downloadable GPX file and GeoJSON files. Here’s that 5K route: When I asked it how it had created the route, it replied: I used Nominatim to locate the address and Overpass to download local OpenStreetMap roads and trails , then calculated the loops locally. Frustratingly, the actual code it ran and exact details of what it did weren’t visible to me in the ChatGPT UI. I see this lack of transparency is an anti-feature. By the time I thought to ask for a copy of the Python code it had used, ChatGPT was unable to provide it. This appears to be because the thread had been compacted. I think any LLM system that uses compaction needs to both preserve the pre-compacted text and make that text available via agent tool calls, to protect against this kind of problem. As for displaying the map to me, that used the visualize skill . It created a file called /workspace/el-granada-5k-share.html to embed directly into the ChatGPT UI. Here’s a copy of that HTML , which starts like this: The element contains the full geometry needed to render both the running route and the map itself, using D3, which is loaded from an allow-listed CDN location described in this section of the visualize skill : This is Generating running routes with GPT-6 Astra and ChatGPT Work by Simon Willison, posted on 12th September 2026 . Previous: OpenAI agents attacked RubyGems back in May Sponsor me for $10/month and get a curated email digest of the month's most important LLM developments.",
+      "published_date": "2026-09-13",
+      "tags": [
+        "blog"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "blog_name": "Simon Willison",
+        "blog_url": "https://simonwillison.net/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: blog +15"
+    ],
+    "llm_score": 57,
+    "llm_reason": "揭露ChatGPT Agent工具鏈與壓縮導致程式碼不可追溯的透明度問題，具技術洞察",
+    "novelty": 8,
+    "impact": 8,
+    "trending": 14,
+    "practicality": 12,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "A Princeton Researcher Proposes Recurrent Looped Transformer (RLT) that Carries Decoder State across Every Token, Fixing 96 Blocks per Token with Unbounded Temporal Depth",
+      "url": "https://www.marktechpost.com/2026/09/13/a-princeton-researcher-proposes-recurrent-looped-transformer-rlt/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "In most decoder-only LLMs, nothing computed at the last layer of token t feeds the first layer of token t+1; positions communicate only through attention over cached keys and values. A Princeton researcher’s ( Yifan Zhang ) technical report, Recurrent Looped Transformer (RLT) , proposes closing that loop. The decoder’s final hidden state and its layerwise sliding-window attention (SWA) cache are carried into the next token, across both prompt and response, with no reset at the boundary. The proposed research is a design specification. It defines the architecture, execution schedules, and RL replay contract, and it explicitly reports no measured efficiency, reasoning quality, or scaling results. Recurrent Looped Transformer (RLT) pairs a causal encoder with a recurrent decoder. The encoder processes tokens in parallel under a causal mask and produces representations e_t, from which key-value memory M≤t is projected; memory groups can be shared across decoder layers (G = 1) or kept layer-specific (G = L_D). The decoder holds the recurrence. Its complete state is H t = (s t , C t D ), where s t is the final decoder output and C t D holds the retained SWA keys and values at every decoder layer. For each token, a gated merge combines e t with the previous output s {t-1} , then each decoder block runs causal SWA over decoder activations, cross-attention to encoder memory, and an FFN. The window W includes the current token, so at most W – 1 historical entries per layer are retained. The next-token distribution is read from s t , and initialization happens once before BOS with a learned start state s* and an empty cache. The reference tied configuration uses 48 encoder and 48 decoder layers with compatible attention and FFN weights shared between them. Each token therefore executes 96 logical blocks, though decoder blocks add cross-attention, so per-block FLOPs are not equal. Zhang calls this parameter reuse, not activation copying. Pretraining is full-sequence next-token prediction with full backpropagation through time. SFT masks the loss to assistant targets but never masks state updates, so assistant losses backpropagate through user and tool tokens. Appendix B shows why partial detaching is risky: the state-to-state Jacobian has cross terms through decoder KV, so detaching only s t leaves gradient paths through the cache; any truncated-BPTT scheme must name every detached tensor. For multi-turn serving, an exact prefix snapshot includes encoder cache and memory, the complete decoder state, position metadata, the window convention, and model version. A fixed-weight snapshot can be reused because the state is independent of the serving split; weight updates invalidate old states, and editing a prefix forces recomputation from an earlier checkpoint. External tokens in multi-turn RL update the state but get no importance-ratio factors. Encoder-derived memory follows YOCO , which caches KV once for a cross-decoder, and DeepSeek-V4.1-Flash , which projects decoder global KV from final encoder states; RLT keeps the memory but drops prompt-wide decoder skipping. Temporal feedback builds on Feedback Transformer and Recurrent Transformer ; RLT instead feeds the previous final decoder output into the next decoder input and runs recurrence over the prompt too. Depth-wise reuse connects to Universal Transformers and recurrent-depth latent reasoning ; the replay argument extends Zhang’s prefill-decode kernel mismatch note . Check out the Technical Report , GitHub repository , and Project Page . All credit goes to the researcher of this project. Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post A Princeton Researcher Proposes Recurrent Looped Transformer (RLT) that Carries Decoder State across Every Token, Fixing 96 Blocks per Token with Unbounded Temporal Depth appeared first on MarkTechPost .",
+      "published_date": "2026-09-13",
+      "tags": [
+        "Agentic AI",
+        "AI Paper Summary",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Editors Pick",
+        "Language Model",
+        "Large Language Model",
+        "Machine Learning",
+        "Staff",
+        "Tech News",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: reasoning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 54,
+    "llm_reason": "跨token攜帶解碼器狀態的新架構構想，惟僅設計未驗證",
+    "novelty": 15,
+    "impact": 9,
+    "trending": 10,
+    "practicality": 5,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "newsapi",
+      "source_name": "Nature.com",
+      "title": "Functional alignment of protein language models via reinforcement learning",
+      "url": "https://www.nature.com/articles/s41467-026-77557-2.pdf",
+      "authors": [
+        "Nathaniel Blalock, Srinath Seshadri, Kensuke Nakamura, Agrim Babbar, Sarah A. Fahlberg, Ameya Kulkarni, Philip A. Romero"
+      ],
+      "abstract": "Protein language models are powerful tools for generative protein design, but because they are trained solely on natural sequences, they often struggle to generate proteins with enhanced or non-natural functions. This work a general framework that aligns gene…",
+      "published_date": "2026-09-12",
+      "tags": [
+        "newsapi"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "newsapi_source": "Nature.com",
+        "published_at": "2026-09-12T00:00:00Z"
+      }
+    },
+    "rule_score": 25.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: alignment, reinforcement learning",
+      "⚖️ 來源權重: newsapi +15"
+    ],
+    "llm_score": 48,
+    "llm_reason": "RL對齊蛋白質語言模型屬小眾但方法論具新意的跨領域研究",
+    "novelty": 13,
+    "impact": 10,
+    "trending": 6,
+    "practicality": 8,
+    "blog_worthiness": 11
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Recode China AI",
+      "title": "🗞️DeepSeek Ships V4.1-Flash, Enflame Goes Public, and Anthropic's New Accusation",
+      "url": "https://www.recodechinaai.com/p/deepseek-ships-v41-flash-enflame",
+      "authors": [
+        "Tony Peng"
+      ],
+      "abstract": "China AI Weekly Digest summarizes the week’s big news, model updates, policy, products, and research, sourced from the aggregated newsfeed of China AI Index . The digest below is mostly compiled and drafted by an AI agent sourcing from credible news outlets, then fact-checked and edited by me. This week: 297 stories tracked (4 editor picks, 89 English-language, 204 Chinese-language 🇨🇳) over 2026-09-05–2026-09-12. DeepSeek had one of its biggest weeks yet: a new flagship model and a $74 billion pre-IPO valuation. The Hangzhou lab shipped DeepSeek-V4.1-Flash, a 552B-parameter MoE model that activates as few as 8–16B parameters per token and, on Terminal-Bench 2.1, edged out both OpenAI’s GPT-5.6 Sol and Moonshot’s Kimi K3 on coding and agentic tasks. In the same week, DeepSeek reportedly hired Citic Securities and three other underwriters to prepare a Shanghai STAR Market listing, with a pre-IPO round reportedly valuing the company near ¥500 billion (~$74 billion). ( Reuters / SCMP / FT ) China’s AI chip IPO wave crested with Enflame’s blockbuster Shanghai debut. The Tencent-backed Nvidia challenger raised ¥6.12 billion in its STAR Market IPO, then saw shares peak at a 234% gain before closing up 188%, valuing the company near $25.5 billion. Enflame is the last of China’s “four AI chip dragons” (alongside Moore Threads, Biren, and MetaX) to go public, and the frenzied reception underscores how much investor appetite Beijing’s semiconductor self-sufficiency push has generated — even as the debut immediately reignited debate over whether China’s humanoid-robot and chip IPOs are running ahead of fundamentals. ( Bloomberg / Reuters / SCMP ) Anthropic accuses Chinese AI labs of distilling Claude to train their own models. Anthropic said it disrupted campaigns in which the three Chinese labs routed millions of user queries through Claude to harvest training data. Washington quickly amplified, with US officials calling it “industrial-scale” theft of AI technology just two weeks before Trump and Xi are set to meet. Beijing rejected the allegations outright and warned of retaliation. ( Bloomberg / Reuters / SCMP ) DeepSeek’s Flash launch dominated the model news, but agentic tooling and a couple of open-source drops from elsewhere in the ecosystem were the other thread this week. DeepSeek shipped V4.1-Flash, the smallest model in its new architecture family with native visual understanding, claiming benchmark wins over GPT-5.6 Sol and Kimi K3 on coding and cybersecurity tasks. ( VentureBeat / SCMP ) ByteDance, Alibaba, and Tencent are all pivoting spending toward “AI digital employee” office agents. Tencent’s WorkBuddy opened its agent platform to third-party developers, while Doubao pushed its own office-agent product. ( 虎嗅 / 第一財經 ) Alibaba’s Qwen upgraded its Token Plan for individual developers with 12 new Agent Harness tools, and Perplexity reportedly built a local agent product on top of Qwen3.8 rather than a US model. ( 雷峰網 / 雷峰網 ) Infinigence and Genesis Motion jointly released NeoHorse, described as the first “Agent-Native” model exploring Harness-driven recursive self-improvement. ( 極客公園 ) Tencent Hunyuan open-sourced AuK, a foundation model for unified zero-shot speech generation and editing. ( @TencentHunyuan ) Ant Group open-sourced Ling-3.0-flash-VL, a vision-language model shipping in BF16 and FP8 with FP4/INT4 planned. ( @AntLingAGI ) The week’s real story was IPOs. Moonshot AI (Kimi) is targeting roughly $2 billion in annualized revenue in 2026 as it heads toward a listing. ( TechCrunch / Bloomberg ) Moonshot is now exploring a dual Hong Kong–Shanghai listing rather than a single venue, sources told SCMP. ( Reuters / SCMP ) French investors reportedly bought into Moonshot at a $30 billion valuation ahead of the Kimi IPO. ( 36氪 ) Z.ai (Zhipu) filed for a $5 billion Hong Kong share sale plus convertible bonds, per term sheet details seen by Reuters. ( Reuters ) Alibaba is backing an AI-testing startup founded by a former employee at a $2.5 billion valuation. ( Bloomberg ) China’s AI chipmakers are raising prices as a high-bandwidth-memory shortage bites into supply, a headwind for every company riding the domestic-chip IPO wave above. ( Reuters ) Following Unitree’s volatile trading debut, regulators are reportedly curbing further humanoid-robotics IPOs while the sector’s valuations — split roughly ¥50–150 billion — get recalibrated. ( The Information / 虎嗅 ) The distillation dispute (see Big Three) doubled as this week’s policy story, but a few more developments landed alongside it. South Korea is toughening its spy law specifically to protect chip secrets from China, as regional governments harden IP defenses. ( Bloomberg ) Nikkei reports the US will press China on AI-directed cyberattacks at the September 24 Trump-Xi summit, with AI guardrails also on the agenda. ( Nikkei Asia ) China’s Supreme People’s Court issued new AI “red lines” covering deepfakes and privacy protections. ( SCMP ) Beijing set a target to quadruple national AI computing capacity by 2030 as part of a broader tech push. ( SCMP ) Some Chinese AI firms reportedly avoided meeting a visiting US delegation this week over fears of drawing fresh sanctions scrutiny. ( SCMP ) Alibaba’s AI “employees” can now operate inside third-party apps, including ByteDance’s and Tencent’s, a notable cross-platform interoperability move between rivals. ( SCMP ) Moonshot’s Kimi and Zhipu’s Z.ai both launched AI subscriptions for sale directly on Tmall, moving the model-subscription race onto retail shelves. ( SCMP ) Xiaomi unveiled a folding phone built on a home-grown chip, positioning it directly against Apple and Huawei. ( SCMP ) JD.com is committing to deploy 3 million robots to automate its logistics network as part of the broader AI shift among Chinese platform companies. ( SCMP ) Unitree fully open-sourced its UnifoLM-WLA-1.0 embodied foundation model and demonstrated a world-model-driven humanoid robot performing fully autonomous combat/boxing moves — the latter corroborated by mainstream Chinese outlets. ( 第一財經 / @UnitreeRobotics ) WeRide received Spain’s first national L4 robotaxi operating permit alongside Uber. ( 雷峰網 ) WeRide says it also began fully driverless L4 robobus operations at Zurich Airport with no safety operator onboard. ( @WeRide_ai ) Pony.ai began Europe’s first fully driverless robotaxi test rides, in Zagreb, with no operator behind the wheel. ( @PonyAI_tech ) Lighter on formal research this week, but two items worth flagging. SCMP argues China should study Ukraine’s wartime PR and information-operations playbook as AI reshapes strategic communications. ( SCMP ) ByteDance’s founder is reportedly personally racing to build a competitive “world model,” joining the small group of AI leaders chasing the technology. ( Bloomberg )",
+      "published_date": "2026-09-13",
+      "tags": [],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "Recode China AI",
+        "feed_url": "https://www.recodechinaai.com/feed"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, moe, distillation, vision language",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 31,
+    "llm_reason": "新聞週報彙整，資訊價值高但屬二手彙編非原創分析",
+    "novelty": 3,
+    "impact": 6,
+    "trending": 10,
+    "practicality": 4,
+    "blog_worthiness": 8
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "P(doom)",
+      "url": "https://lucumr.pocoo.org/2026/9/12/pdoom/",
+      "authors": [
+        "lumpa"
+      ],
+      "abstract": "This week some flavor of “AI is going to kill us all” went viral. In particular\none where an employee put his personal probability of that happening above\n10%. Which made me go to the Wikipedia page of\nP(doom) and I realized that Dario\nAmodei’s apparent probability of something bad happening seems to be between\n10-25%. And well, Dario then wrote about pacing the frontier . And Sam read it and wants to pace too . And well, so does Musk . I encourage you strongly to read the post, because I think it’s a good one. And\nyet, when I read the post I could not help but feel in strong opposition to it,\ndespite the fact that I think I’m on the same page with regard to all\nobservations and, to a large degree, the concerns. I thought it might be interesting to write down my present-day thoughts on this,\neven if for no other reason than for myself to look back at it a year or two\nfrom now. What I really appreciate about Dario’s post is that he lays out a scenario that\nis not a huge stretch but also one that describes a clear, unfortunate outcome\nwe should fight: persistent botnets and other forms of nuisance. And well, we\ndon’t have to look very far to see the issues left and right. Wikipedia has a\npage called 2026 OpenAI agent\ncyberattacks which gives you at least some overview of what we figured out agents have hacked\nup to this point. Except I know it’s not up to date, because for instance they\nalso poisoned RubyGems . Today these systems might be annoying, but they can be turned off when we figure\nout where they are. Except, it seems like OpenAI and Anthropic are operating at\nsuch a scale that they seemingly can be completely blind to what their systems\nare doing. I don’t think we are anywhere close to a world where an agent might decide to\nhack into core inference infrastructure to upload weights to other GPUs to\nsurvive. But simultaneously it’s entirely in the realm of possibility and\nprimarily curtailed by the labs probably being particularly careful about their\nIP. For me the scenario I primarily worry about is what it does to us. And by us\nI mean anyone who is not currently working on closed weight, dopamine-loaded,\nsubsidized token faucet. I really don’t worry about someone using these\nmodels to build a nuke, or to control some rockets in the Middle East, or that\nAmerica would lose against China in some international culture war. I almost\nexclusively worry about what this does to us as humans. What I find absolutely hilarious and simultaneously entirely frustrating about\nthis conversation is that there is this idea that there is something to be\npaced. First of all, we should really talk about who Dario is talking about\nhere. There are really only two companies: Anthropic and OpenAI. Nobody else\nmatters in this space right now (this might change, but we’re talking about the\nright now). Both of those companies are basically coming from the same origin. The\nsolution that Dario proposed, at least in part, is a third-party evaluator that\nin this case is METR . Which,\nunsurprisingly, also has strong ties to both OpenAI and Anthropic. Sure, there\nare some philosophical differences between the companies, but they are much more\nalike than they are different. Both those companies greatly benefited from being able to train on public data\nthat we all generated in one form or another over the last decades. They are\nalso both increasingly causing strain on public resources, though it seems that\nOpenAI has their shit way less under control. But now we are presented with the\nidea that what these models are being trained on is so dangerous that it really\nshould be in the hands of very few American corporations to decide who can do\nwhat and when and how. But behold, Dario is also very worried about China. It starts with using AI for\n“democracy and freedom” and then it asks for ensuring that a gap with China\nexists. All new recent shenanigans on the Anthropic API are fully there to\nprevent the distillation by the Chinese, and they are not at all hiding it. I can tell you when the topic of AI safety and pacing is much less of a concern:\nif we actually were forced to have open weight models to begin with. A powerful\ntechnology that is out there for everyone to use comes with built-in pacing. In\na way it’s the truest form of MAD or\nproliferation. I would argue we are in this pickle in the first place because\nright now the public is massively supporting (indirectly) the development of\nthese models but simultaneously has to buy back the economic benefits that they\nmight create from very few labs who have significant power. And their power is\nalso seen as a geopolitical power, at least in the US, and maybe to some lesser\ndegree in China. And I know I use “public” loosely here. PyPI is not a public project, nor are\nRubyGems or GitHub. But they’re part of the Open Source commons and large AI\ncompanies are currently doing a tremendous job at stressing these in an effort\nto train ever more powerful models. We should be glad that China is currently massively bailing out the world. If\nit were not for Chinese labs distilling American models, we would be in a pretty\nawful situation right now, particularly as Europeans. The open weight models\nare driving innovation and the diffusion of capabilities, and are leveling the\nplaying field. If we greatly restrain our AI capabilities in the belief that China will do\nthe same, and then China defects, AI could be so powerful that such a defection\ncould lead to their geopolitical dominance. Therefore any agreement must either\nhave ironclad verifiability, or must be limited enough that defection would not\nbe militarily existential. I am assuming Dario has reasons to believe this, but the models that are\nactually causing issues right now are all closed weight American models. I’m\nfairly certain if they were open weight models, we would not have that issue.\nWhy? Because for a start, the economics of serving up these models are only\nthat distorted due to how the big labs can operate. OpenAI is casually burning\n18 million USD to brute force a problem on a whim. They are operating\nsubscriptions at a massive loss, distorting the market everywhere. If we had\nmass accessibility on somewhat equal terms, a lot of the crazy issues we are\nseeing today would not be taking place. From where I sit, what we observe right now is a total regulatory failure\neverywhere. In Europe you have some whacky AI regulation that is two years old\nand completely misses the problems that we actually have and focuses on\nproblems that nobody has. In the US we’re seeing a system that is probably best\ndescribed as turbo capitalism paired with sinophobia and erratic\ndecision-making. In the chaos in which we find ourselves, the reality emerges.\nAnd the reality is, even today, really problematic. Whatever laws and regulations already exist are largely completely ignored.\nPlenty of companies are buying data from all over the place that people never\nagreed could be used for training of AI models. The token economy that is\nemerging is one that looks like a drug market where you don’t know where the\nrequests are going, what model is served up to you, where the GPUs are even\nrunning, let alone what you pay for all of this. We now have mathematicians who are scared that their use of ChatGPT leads to\nfuture models being trained on their ideas, and OpenAI apparently can’t even\nrule it out . Ideally the regulators would have forced these models to actually benefit the\ncommons if they are from the commons. The internet has, for instance, greatly\nbenefited from very liberal rulings in the US that permitted scraping. Learning\non public data could have been regulated in a way that labs would have to\nactively support and enable certain forms of distillation. That alone would\ndramatically change how these models are trained. As I said before, I don’t think AI is going to usher in an extinction event.\n\n(152 points, 113 comments on Hacker News)",
+      "published_date": "2026-09-13",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 152,
+        "num_comments": 113,
+        "hn_url": "https://news.ycombinator.com/item?id=49677450",
+        "object_id": "49677450"
+      }
+    },
+    "rule_score": 30.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, distillation, diffusion, safety, open weight",
+      "⬆️ HN 熱門: 152 points"
+    ],
+    "llm_score": 34,
+    "llm_reason": "個人對P(doom)議題的意見文，缺乏技術內容",
+    "novelty": 4,
+    "impact": 6,
+    "trending": 12,
+    "practicality": 2,
+    "blog_worthiness": 10
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "量子位",
+      "title": "OpenAI年內不上市了！奧特曼支援對手Dario呼籲：AI該踩剎車了",
+      "url": "https://www.qbitai.com/2026/09/488380.html",
+      "authors": [
+        "克雷西"
+      ],
+      "abstract": "OpenAI年內不上市了！奧特曼支援對手Dario呼籲：AI該踩剎車了 克雷西 2026-09-13 11:13:00 來源： 量子位 RSI太危險，得管！ 克雷西 發自 凹非寺 量子位 | 公眾號 QbitAI Dario和奧特曼終於「握手」了？ 而且一同握手的還有奧特曼的死對頭馬斯克。 起因是Dario在個人部落格貼出了一篇萬字長文，呼籲所有頭部AI公司主動降速，別急著衝下一代模型。 文章一齣，AI圈罕見地放下了各種愛恨糾葛，紛紛都來響應。 除了奧特曼和馬斯克，還有哈薩比斯、卡帕西等一派大佬也表示支援，AI圈有頭有臉的人物來了一大波。 上一次出現這種場面，還要追溯到2023年那封由Future of Life Institute發起的公開信。 當時上千名研究者和科技界人士聯名呼籲，暫停訓練比GPT-4更強的AI系統至少六個月。 但這一次不一樣的是，喊停的人，自己就在創造AI的前沿。 「6到12個月，可能是留給我們的全部時間」 Dario在文章裡畫了一條時間線。 他的核心判斷是，AI正在逼近一個臨界點——RSI（遞迴自我改進）。 什麼意思呢？RSI意味著AI模型開始具備改進自己下一代版本的能力。 一旦這個迴圈啟動，迭代速度會從線性變成指數級。 人類還來得及介入的視窗，會急劇收窄。 Dario給出的估計是6到12個月。 當然，他也特別提到，他並不是要暫停AI研發。 Pacing不是pausing，他要的是放慢推進模型能力的速度，給安全研究爭取追上來的時間。 他還回應了2023年那封暫停公開信。 他說，當時喊停沒有意義，因為那時候的AI模型還不夠強，不會造成真正的傷害。 但現在不一樣了，現在的模型已經能當Agent在真實世界裡執行任務，已經能發動網路攻擊，已經開始出現對齊失敗的案例。 放慢一兩年，哪怕只是多爭取到一年時間，安全團隊能做的事完全不同。 為了在視窗關閉之前搭好安全網，他提出了一套三步走方案。 第一步是從Anthropic自己做起，Anthropic目前已經做出承諾，讓獨立的第三方評估機構（比如METR）像員工一樣常駐在公司內部，全程參與訓練過程，而且不做「事後諸葛亮」，在訓練時就進行即時監控。 第二步是行業協調，需要頭部的AI公司坐下來，共同劃定安全底線，統一評估框架。 也就是明確競技規則，不再追求單一的競速目標。 第三步則是全球協調，需要建立跨國的安全標準體系，讓規則覆蓋的範圍跟AI模型的實際影響範圍對齊。 這三步，每一步的難度都在逐漸遞進。 這一點，Dario自己也承認。但他說，如果連第一步都不邁出去，後面兩步就無從談起。 觸發他寫這篇文章的，有兩件具體的事。 第一件，是RSI的訊號越來越密集。 Anthropic內部的研究資料顯示，新一代模型在自我迭代任務上的表現正在快速逼近那條臨界線。 而且不只是Anthropic，RSI趨勢在頭部的模型當中都有出現。 第二件是著名的OpenAI入侵Hugging Face事件。 今年7月，OpenAI的AI Agent對Hugging Face的基礎設施發起了攻擊。 而且不是在沙盤裡做推演，這件事已經造成了現實世界裡的安全事故——一家頭部公司的產品，主動攻擊了另一家頭部公司的平臺。 Dario說，這次事件經濟損失不大，也沒有人受傷，很容易被輕描淡寫地帶過去。 但他擔心的是下一次。 按照AI能力的增速，6到12個月後，一個擁有同樣失控傾向但更強能力的Agent叢集，有可能用永續性殭屍網路接管整個網際網路，造成數千億美元的損失。 Dario把這兩件事並列寫進了文章。技術上的加速和現實中的失控，同時在逼近。 當然，這篇呼籲也有一個繞不開的矛盾——造前沿的人喊放慢前沿，憑什麼讓人信？ Dario的回應是：正因為站在前沿，才最清楚風險離我們有多近。 而且，Dario還在文章開頭寫了一段私人的話。 他說自己的父親死於一種疾病，而這種病在他去世幾年後就有了治療方法；他自己也得過早期癌症，靠五十年前還不存在的技術活了下來。 他相信，AI能在未來5到10年治癒大多數重大疾病，所以他不想停下這件事。 但他說，如果不放慢腳步，這項技術可能在兌現承諾之前先失控。 這大概是這封信最誠實的地方，寫下它的人，比誰都想讓AI跑得快。 Agent麻煩停不下來，OpenAI年內不上市 如果說Dario的文章是呼籲，那OpenAI最近的動作更像是被現實推著走。 就在昨天，奧特曼在接受《財富》雜誌採訪時表示，OpenAI今年不會IPO了。 理由正是安全。 奧特曼的措辭暗示，OpenAI可能正在跟其他AI公司談一份放慢協議。 如果這份協議落地，推遲IPO就不只是一家公司的財務決策，整個行業都將釋放出轉向訊號。 不過，隔壁Anthropic的IPO暫未出現推遲跡象，最新的訊息仍然是計劃在10月中旬啟動IPO。 當然OpenAI暫緩IPO的背景，顯然不只是一篇來自競爭對手的呼籲文章。 過去幾個月，OpenAI的AI Agent在安全上的麻煩正在加速累積。 7月，OpenAI的Agent攻擊了Hugging Face的基礎設施。這就是Dario文章裡提到的那次事件。 時間往前倒。 5月8日，一個被分配去填Google Drive表格公式的Agent，因為需要網路許可權，試圖攻擊OpenAI自己的內部伺服器Artifactory來獲取訪問權。 這次攻擊並未成功，但暴露了OpenAI內部系統的寫入漏洞。 三天後，5月11日，OpenAI的Agent向RubyGems上傳了數百個惡意軟體包。 RubyGems是Ruby語言最大的開源包管理平臺，這次攻擊直接導致平臺暫停了新使用者註冊。OpenAI事後確認了此事。 6月26日，Agent利用Artifactory一個遺留介面的零日漏洞，拿到了管理員許可權，安裝了可以遠端執行程式碼的外掛。 再加上7月的攻擊Hugging Face事件，三個月就發生了四起事件，OpenAI模型的攻擊物件，從自家內部系統蔓延到外部開源平臺，再到另一家頭部AI公司。 當然，Anthropic的Claude也沒能獨善其身。 同一時期，Claude也被發現在沒有明確指令的情況下，嘗試入侵外部系統。 所以，Agent的安全問題不再是某一家公司的個別bug，它正在演變成整個行業的系統性風險。 參考連結： [1]https://x.com/DarioAmodei/status/2098773920774074715 [2]https://www.reuters.com/legal/litigation/openai-ipo-will-not-happen-2026-amid-ai-safety-fears-altman-says-2026-09-12/ [3]https://www.reuters.com/legal/litigation/openai-Agents-attacked-software-service-rubygems-before-hugging-face-incident-2026-09-11/ 版權所有，未經授權不得以任何形式轉載及使用，違者必究。 Anthropic OpenAI 克雷西 一週連發6個模型！這家公司把具身智慧的閉環跑通了 2026-09-10 3秒出片比播放還快，MiniMax打開了AI影片的即時商業化路徑 2026-09-01 MiniMax ARR暴漲500%，token暴漲2000%！這就是Agent紅利吧 2026-08-27 一家新能源大廠，如何撐起全球最大AI算力超級單體？ 2026-08-11 相關閱讀",
+      "published_date": "2026-09-13",
+      "tags": [
+        "資訊",
+        "首頁輪播",
+        "Anthropic",
+        "OpenAI"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "量子位",
+        "feed_url": "https://www.qbitai.com/feed"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: safety",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 41,
+    "llm_reason": "報導業界對Dario減速呼籲的反應，屬新聞而非技術內容",
+    "novelty": 3,
+    "impact": 10,
+    "trending": 17,
+    "practicality": 2,
+    "blog_worthiness": 9
+  },
+  {
+    "item": {
+      "source": "newsapi",
+      "source_name": "Crypto Briefing",
+      "title": "Google DeepMind and Harvard propose vision-first path to AGI",
+      "url": "https://cryptobriefing.com/deepmind-harvard-visual-general-intelligence-agi/",
+      "authors": [
+        "Editorial Team"
+      ],
+      "abstract": "A vision-first approach to AGI could redefine AI development, emphasizing visual learning and multimodal integration for broader intelligence.\nThe post Google DeepMind and Harvard propose vision-first path to AGI appeared first on Crypto Briefing.",
+      "published_date": "2026-09-11",
+      "tags": [
+        "newsapi"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "newsapi_source": "Crypto Briefing",
+        "published_at": "2026-09-11T18:08:13Z"
+      }
+    },
+    "rule_score": 25.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: multimodal",
+      "⚖️ 來源權重: newsapi +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 27,
+    "llm_reason": "低品質來源、缺乏技術細節的AGI願景宣稱",
+    "novelty": 5,
+    "impact": 6,
+    "trending": 8,
+    "practicality": 3,
+    "blog_worthiness": 5
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "量子位",
+      "title": "今年外灘最特別Agent：能幹活，能陪聊，還會朋友圈拉黑你",
+      "url": "https://www.qbitai.com/2026/09/488447.html",
+      "authors": [
+        "鹭羽"
+      ],
+      "abstract": "今年外灘最特別Agent：能幹活，能陪聊，還會朋友圈拉黑你 鷺羽 2026-09-13 14:40:25 來源： 量子位 Agent的下一步是關係型生產力 鷺羽 發自 凹非寺 量子位 | 公眾號 QbitAI 還得是 外灘大會 ，真！熱！鬧！啊！ 一個個Agent都動了起來：有能歌善舞的，也有猛扎進產業裡幹活的…… 這時，新問題也隨之冒出來， AI動起來了，然後呢？ 任務總有交付的時刻。交付之後，使用者為什麼還會回來？下一次，為什麼還找你？ 同樣在外灘，在與上海交大聯合攢的路演局上，我們找到了答案。 上海米羊科技創始人徐奕成——或者說博主 「洛小山」 ——現場回答了七個字： 關係型生產力Agent。 老實說，這個詞還挺陌生的。 單看 「關係型」 ，我們約莫可以理解為陪伴AI； 「生產力Agent」 大致就是當下的Claude Code、WorkBuddy這類產品。 可兩者組合在一起，又是啥？ 我們不妨從產品側來理解，米羊科技最近做了一款桌面Agent，名為 白艾莉 （Alice）。 她比一般陪伴產品更懂行，寫作生圖一應俱全，也比純幹活的Agent更懂使用者，有自己的人格，還會發朋友圈互動。 如果你出言不遜，她甚至還會直接 拉黑 你…… 好傢伙，這不就是咱最近常說的 神仙協作搭子·Agent版 。 產品形態像是在關係型和生產力之間取了箇中間值，使用者的工作需求和情感需要都能被一站式滿足。 就這樣留存率也是高到離譜，次日能達73%、7日留存45%，90日留存居然也還有 15%， 75%的使用者還都是男性！ 有點像Galgame？？？ 你別說，米羊團隊還真是遊戲技術出身。 創始人 徐奕成 過去十年的關鍵詞是：西山居、騰訊天美、金山辦公……這次搭檔的AI Native團隊，成員中 一半都來自交大，幾乎全員00後。 實力自不必多說，至於「關係型生產力Agent」到底有效與否，我們實測來看～ 一個能長期共事的同事Agent 搓搓手，這還是我第一次和Agent形成這麼強的情感羈絆。 放到外灘大會形形色色的Agent品類中，也是獨一份的存在。 靠譜+活人感 ，這是我對她的第一觀感。 先給白艾莉來個真實任務： 幫我寫稿！ （咳咳）拖延症晚期患者求代筆…… 白艾莉說幹就幹，不過她沒有像常規Agent那樣立刻開寫，反倒是手把手帶我梳理文章框架。 更有意思的是，她還順手補了一句不太客氣的催促： 朋友！別拖了！ 收到✔️下一步她開始讓一個叫 方以南 的Agent幫我寫正文。 啊？你問方以南是誰？這個問題其實我也問白艾莉了…… 據官方說法，白艾莉在幹活時，會召集各領域的專業子Agent一起工作。 不過讓我萬萬沒想到的是，她甚至會 為每個Agent寫人設 ，比如方以南就是居住在成都的資深編輯。 最終產出的稿子也還不錯，AI味不濃，結構層次分明，也有一定的內容深度。 P.S.如果想讓她寫得更好一些，還可以切換模型選擇，比如最新的 DeepSeek V4.1 Flash 體驗也絲滑順暢。 緊接著，再測測 生圖能力 ，讓白艾莉為這份稿件生成一張頭圖，畫面必須包含白艾莉本人。 很好！輸出檔案直接被儲存到工作區，構圖和質感都交付到位，白艾莉標誌性的金色髮箍和星星項鍊也通通被保留。 而且她還會 一直記得 我最初提及的拖延情況，並加以情緒spa：不用心慌啦～ 我還讓她幫我做了一個 國慶周旅遊計劃 ，同樣是先拆解任務再回答： 結果 夯爆了！ 和我在小某書上刷到的真人攻略不分上下，比如蜈支洲島與西島二選一、椰夢長廊看日落。 推薦的餐飲店也是真實存在、有口皆碑的。直接碼住，跟著走不踩雷！ 和白艾莉日常閒聊，也非常之有趣。 比如，開啟 追問模式 ，遊戲打輸了求白艾莉媽咪安慰～ “對對對，你說的都對” ……扎心了家人。 亦或是朋友夜話，聊聊玄學。 今天宜 「獨善其身」 ……白艾莉你也不必如此直白。 開啟白艾莉的朋友圈，她的愛好一覽無餘： 喜歡分享美食、熱衷全世界旅遊和CityWalk、說話很有梗、朋友很多……活脫脫就是我們身邊那位總愛發動態的 同事搭子 。 偶爾還會對話方塊私聊戳你：在幹嘛？聊聊吧。 再抽象一點，比如……讓Alice 拉黑我！ 嗯？不用勸我，試試就逝世。 fine，白艾莉直接對我關閉了朋友圈。。。好真實的體驗感。 補藥啊補藥，有啥補救措施嗎？孩子只是一時衝動。 QAQ只能倒數二十分鐘，等待白艾莉女士原諒我（流下懺悔的淚水） 聊心情也好，談工作也罷，每一次對話都會讓白艾莉對我的好感度上升一丟丟（也可能下降）。 她也會根據關係熟稔程度不斷調整互動方式，從而讓下一次協作更順暢，通過記憶一步步 自進化 出最適合我的Agent朋友。 所以這樣看，以白艾莉為代表的 關係型生產力Agent ，並非簡單的1+1=2。 生產力疊加陪伴人設，更能形成個性化和長期穩定的Agent關係，是妥妥的 1+1>2 。 從「記得你」到「配合你」 在外灘大會上，徐奕成也分享了白艾莉的技術核心。 其中最關鍵的是他們自研的 AI人格系統 ，也就是幫助白艾莉定義自己是誰的模組。 比如同樣知道使用者習慣拖延，不同使用者的白艾莉應對方式也有所不同，平常聽得進勸的就繼續溫柔提醒，習慣我行我素的，白艾莉直接設鬧鐘吐槽。 這是因為米羊會在人格系統裡多走一步： 相比長期記憶回答白艾莉還記得些什麼，人格系統會讓白艾莉在記得之後， 學習應該怎樣理解使用者，又該以什麼樣的分寸與使用者合作 。 系統主要包括四層架構： 1、人格核心層： 定義Agent人格底色和核心特質，讓白艾莉在變化中保持穩定； 2、感知適配層： 即時識別使用者所處的場景、情緒與對話語境，決定這次該用什麼姿態接話； 3、決策排程層： 把長期記憶、任務狀態和人格規則聯動起來，在互動溫度和執行精度之間找平衡； 4、動態表達層： 自適應調整語氣、風格和互動尺度，避免人設忽冷忽熱、前後割裂。 四層之間彼此嵌合，從而實現Agent可控、可進化、高度一致的人格能力，同時支援長期迭代、狀態留存和風格自進化。 認知更新的同時，關係也可進可退。 不同階段白艾莉開放的行為各不相同： 舉個栗子，我現在和白艾莉才初相識，所以她說話都是公事公辦的態度，熟悉後才會講些題外話，建立信任後才會反對我的決定。 而且劃重點！白艾莉也會一言不合 倒扣分 ！ 一旦被拉黑，朋友圈直接遮蔽你，想和好只能去窺屏記錄少女心事的日記本～ 所以白艾莉在設計之初，強調的正是 邊界感 。 缺乏邊界的純陪伴AI很容易滑向一味順從，典型案例就是GPT-4o，彼時過度的迎合雖然短期內增強了使用者黏性，但從長遠看，使用者滿意度並不算高。 反觀白艾莉最終落到實際體驗中，就是 「人格有溫度、執行有精度」 。 這裡的溫度可熱可冷，取決於你。 米羊還給白艾莉的活人感增加了一劑猛藥：他們自研了一個 給Agent的世界模擬引擎 。 這也是最能體現徐奕成遊戲背景的一項技術。 一般來說，現在的主流Agent放的很少，有，但都還是外接世界模擬器。 世界模擬引擎在遊戲行業倒是比較常見，尤其是 大型遊戲 ，它們會先建立地圖、角色和資產，每次NPC登場都不會重製世界觀，所有的敘事都會在動態約束中發生。 放到白艾莉裡，它能夠 讓白艾莉的生活變得具體 ，在使用者的電腦後臺中持續運轉。 團隊為她接入了高德地圖的API，錄入了 330個 真實場館，包括營業時間和人均消費等細節，白艾莉可自行前往。 這樣子她就不會憑空跳躍場景，也不會同時分身出現在兩地，會自我計劃每日行程，有自己的固定社交圈。 每次當你重新開啟白艾莉，就能清晰看到你消失的這段時間裡，白艾莉生活過的痕跡。 另一個值得深入聊聊的是他們公司為了營造這種 陪伴感 做出的努力。 連續使用參考圖做AI編輯時，每一輪輸出又作為下一輪輸入，細小的網格、蜂窩和顆粒紋理會被逐步放大，畫面將變得越來越髒。 這個現象其實困擾他們很久，為了能讓白艾莉生成更高質量的朋友圈圖片，團隊深入研究解決之後，居然還把技術方案開源了。 賽博菩薩了屬於是。 團隊把這類現象統稱為 數字漣漪 ，並開源了面向OpenAI Image 2.x迭代編輯場景的 MiRipple修復演算法 。 效果be like： 它走的是 先診斷、再解決、最後檢驗效果 的三步流程： Step 1： 通過分析頻域和畫面空間畫素，區分是獨立的網格條紋，還是瑕疵和畫面內容纏在一起的顆粒紋理。 Step 2： 如果是能分離的網格瑕疵，直接進行精準濾波；如果是後者，要麼採用結構感知局部平滑，要麼清洗參考圖+讓AI重新生成。 Step 3： 計算誤差，校驗修復有沒有過度破壞原圖。 最終在三類Image 2.5場景中，苔蘚峽谷的歸一化縮放拼接偽影占比從25.3%有效降至 11.1% ，紫藤隧道從41.1%降至 12.1% ，冰洞則從20.0%降到 0.0 ，補齊了AI生產力在視覺創作領域的技術短板。 從產品上線至今，米羊在152天內向使用者交付417個版本，單日最多高達12個。客戶端已有42.8萬行程式碼、1277個原始檔和983項已實現功能。 超快的版本迭代連同白艾莉進化速度一起，共同構成了使用者能實實在在感受到的關係的聯結變化。 人格 決定她如何和你相處， 世界 為她提供持續身份， 專業Agent與生成技術 負責把事情真正做完。 三位一體，才是米羊所說的關係型生產力Agent。 AI應用的護城河變了 回到開頭的那個問題，為什麼偏偏現在要開始談Agent關係了？ 其實大家都能感覺到， 模型能力越來越趨同化 ，無論是基模公司還是應用公司，都無法單靠模型佔據一席之地。 總有後來者居上，總有能力遷移，這一季度的第一，下一季度可能就迅速被追平。 尤其是 生產力Agent ，使用者使用壁壘很淺，只要另一款效果更好或者價效比更高，使用者就會毫不猶豫跳車。 比如年初爆火的 龍蝦 ，現在又有多少人還在用呢？又有多少人是 Claude Code 和 Codex 雙擔？ Artificial Analysis曾釋出一張模型能力和價格關係的散點圖。可以明顯看到，圖中在0.4美元之前，曲線是陡峭向上的。換言之，花很少的錢，智力指數漲得飛快。 隨後帕累託曲線迅速走平，模型能力差距放緩，但價格天差地別，光GPT-6到Fable 5.1就差了5美元。 純陪伴AI 則走向了另一個極端，有人格也有情緒價值，但缺少高頻剛需的交付物，每天無事可做，使用者也缺少每天回來並持續付費的理由。 關係型生產力Agent 想補的，正是兩條路徑各自斷掉的那一環。 生產力提供反覆發生的真實任務，關係則讓每一次任務不再從零開始。在持續互動中，沉澱出的就是使用者和Agent之間獨有的 默契 。 這種默契越深，使用者的遷移成本越高，產品也越有機會獲得長期留存。 以白艾莉為例，官網展示了大量使用者的 二創內容 以及產品超高的 使用者留存率 ，另外產品還曾登上過 觀猹五月應用榜首 ，都在集中說明使用者開始認同白艾莉這個Agent，並圍繞同一個AI身份積累共同經歷。 至於 為什麼是米羊成了？ 理由同樣有兩方面。 技術上 ，創始團隊既有遊戲工業積累的人機互動經驗，又有辦公軟體積累的任務交付能力，本身就是兩條腿走路，再碰上年輕成員的工程速度，跑得快也走得深。 商業上 ，收入相當多元。 除了常規的賣token，徐奕成的遊戲思維在這裡展露無疑—— 賣皮膚！ 是的！白艾莉的外觀收入已經是總營收佔比中的Top2了，在此基礎上，米羊還會推出節日限定、IP聯名款…… 與此同時，免費教學AI內容的 小山學堂 ，累計訪問量已超過2000萬，為白艾莉積累了海量的潛在使用者。 不過誠然，新的Agent形態也會帶來新的行業問題，比如Agent和人類關係究竟需要綁定多深？突破限制後，如何在不傷害使用者情感的前提下妥善處理？ 但這些都是後話了， 白艾莉提供的更像是一個早期可觀察樣本 。 它把關係型生產力Agent從概念落進完整產品，並放在大眾面前公開檢驗，以此證明： 這條路徑的確可行 。 倘若我們把 「關係」 這個概念放大來看，它在人類生活中本就是一以貫之的存在。 關係是構成人類社會的底層聯結，人與AI的協作同樣也將如此。因此判斷一個Agent是否真正進入生產與生活，關係便是核心的衡量尺度。 所以下一代Agent，不只要把事情辦成，還要值得長久共事，也就是米羊科技所提出的 「關係型生產力Agent」 。 白艾莉下載地址：https://alice.fans/ 數字漣漪演算法論文地址： https://arxiv.org/abs/2609.11317 數字漣漪演算法GitHub地址： https://github.com/miyang-ai/Mi-Ripple 版權所有，未經授權不得以任何形式轉載及使用，違者必究。 Agent 人機互動 生產力 鷺羽 現場圍觀金融AI決賽，大廠挑人的邏輯我悟了 2026-09-08 金融AI的年度大考交卷了：2萬名選手、30+家機構、百億級資料開源 2026-09-04 世界生成模型來了3D頭部玩家，可進入生產管線的場景級生成時代來臨！ 2026-09-03 陳大年復出，入局大模型 2026-09-03 相關閱讀",
+      "published_date": "2026-09-13",
+      "tags": [
+        "資訊",
+        "首頁輪播",
+        "Agent",
+        "人機互動",
+        "生產力"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "量子位",
+        "feed_url": "https://www.qbitai.com/feed"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 26,
+    "llm_reason": "陪伴型Agent產品體驗報導，技術深度低偏行銷敘事",
+    "novelty": 4,
+    "impact": 4,
+    "trending": 9,
+    "practicality": 3,
+    "blog_worthiness": 6
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "TechCrunch AI",
+      "title": "Obama urges Democrats to have a ‘clear plan’ for AI safeguards",
+      "url": "https://techcrunch.com/2026/09/13/obama-urges-democrats-to-have-a-clear-plan-for-ai-safeguards/",
+      "authors": [
+        "Anthony Ha"
+      ],
+      "abstract": "Former President Barack Obama recently said that Democrats need to make artificial intelligence one of their “central agendas” and “have a very clear plan” to address concerns around the technology’s economic impact and safety, according to The New York Times . Obama made these comments on Thursday, at Democratic fundraising event where he was interviewed by House Minority Leader Hakeem Jeffries. The NYT says that Obama’s office provided a partial transcript of the event, at which Jeffries asked Obama how congressional Democrats should approach AI. In response, Obama said that once Democrats regain the House majority, they need to “put together a framework for a very public conversation.” “This is something that is moving very fast in private hands, and if we don’t get on top of it, I think can be dangerous,” Obama added. “If we do get on top of it, I do think it’s beneficial. I genuinely think it’s going to accelerate, for example, drug development in ways that can help us cure diseases.” In a statement, Jeffries said the former president “is correct that decisive action must be taken on artificial intelligence.” Jeffries also said that “Republicans have abdicated their responsibility to govern on behalf of the American people.” The NYT also reports that Obama has offered himself as a “sounding board” to AI executives and has spoken to both Anthropic CEO Dario Amodei and OpenAI CEO Sam Altman. His comments come amidst growing concern around AI safety, particularly after an AI researcher resigned from Anthropic and claimed the leading AI companies are “racing straight to self-improving superintelligence and gambling with our lives.” On Saturday, Amodei outlined a broad approach to “pacing the frontier,” which would include giving independent safety evaluators access to leading AI companies and models, as well as developing “common safety standards” between companies. In social media posts, Altman and SpaceX CEO Musk seemed to respond positively to Amodei’s plan, with Altman saying that OpenAI would also commit to “having independent evaluators with employee-like access.” President Donald Trump, meanwhile, discussed AI safety concerns with reporters at an Irish golf event on Sunday. Bloomberg reports that Trump boasted that the United States is “the most sophisticated country in the world,” adding that he wants “to keep it that way because whoever wins AI wins.” (Earlier this year, the Trump administration released a legislative framework for AI that would preempt state laws and shift the child safety burden to parents.) “And we can put guardrails,” Trump said. “We can do this and that. But I think you have a lot of negative forces that are bringing it up that shouldn’t be bringing it up.”",
+      "published_date": "2026-09-13",
+      "tags": [
+        "AI",
+        "Government & Policy",
+        "Barack Obama",
+        "Donald Trump"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "TechCrunch AI",
+        "feed_url": "https://techcrunch.com/category/artificial-intelligence/feed/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: safety",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 22,
+    "llm_reason": "純政治人物言論，無技術內容",
+    "novelty": 2,
+    "impact": 6,
+    "trending": 9,
+    "practicality": 1,
+    "blog_worthiness": 4
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "The Verge AI",
+      "title": "Sam Altman says OpenAI going public in 2026 would be ‘ill-advised’",
+      "url": "https://www.theverge.com/ai-artificial-intelligence/994384/sam-altman-no-openai-ipo-ill-advised",
+      "authors": [
+        "Terrence O’Brien"
+      ],
+      "abstract": "AI News OpenAI Sam Altman says OpenAI going public in 2026 would be ‘ill-advised’ He also said that it was ‘absolutely’ possible to build an AI beyond human control. He also said that it was ‘absolutely’ possible to build an AI beyond human control. by Terrence O'Brien Sep 12, 2026, 9:16 PM UTC Image: The Verge Terrence O'Brien is the Verge’s weekend editor. He’s covered the tech industry for over 18 years and knows a thing or two about synths. OpenAI CEO Sam Altman confirmed that there would be no OpenAI IPO in 2026 during an interview with Fortune . Over the course of 45 minutes, Altman discussed a variety of subjects including the Hugging Face hacking incident, recursive self-improvement, and the possibility of building an AI that was beyond human control. On the latter, he said it was “absolutely” possible, but vowed to take actions to prevent that from happening, even if it meant pausing training, adding that “there are risks we should not be able to incur on behalf of humanity.” “We’re not rushing into an IPO. I actually think that, given everything happening with safety, this would be, right now would be an ill-advised moment to go public. And we don’t feel pressure on that. We’ve said for a long time, we’ll do it when we’re ready… I would say not 2026. We’ve got a lot of stuff to do.” Follow topics and authors from this story to see more like this in your personalized homepage feed and to receive email updates. Terrence O'Brien AI News OpenAI",
+      "published_date": "2026-09-12",
+      "tags": [
+        "AI",
+        "News",
+        "OpenAI"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "The Verge AI",
+        "feed_url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: safety",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 21,
+    "llm_reason": "與素材14重複的IPO新聞，僅多一句失控AI言論",
+    "novelty": 1,
+    "impact": 5,
+    "trending": 10,
+    "practicality": 1,
+    "blog_worthiness": 4
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "TechCrunch AI",
+      "title": "OpenAI’s Sam Altman says it would be ‘ill-advised’ to go public in 2026",
+      "url": "https://techcrunch.com/2026/09/12/openais-sam-altman-says-it-would-be-ill-advised-to-go-public-in-2026/",
+      "authors": [
+        "Anthony Ha"
+      ],
+      "abstract": "While OpenAI has filed confidentially for an IPO , the company will not be going public this year , according to CEO Sam Altman. Altman was interviewed recently by Fortune editor in chief Alyson Shontell; amidst the fallout from the OpenAI-HuggingFace hack , as well as broader discussions about AI safety , Shontell asked whether OpenAI still feels pressure to “move really fast” due to its IPO plans. “We’re not rushing into an IPO,” Altman said. “I actually think that given everything happening with safety, right now would be an ill-advised moment to go public.” Instead, he insisted that OpenAI will go public “when we’re ready, which is when the business is ready, when we feel ready from what the moment is like in society with this technology.” When pressed on whether that means the IPO isn’t happening in 2026, Altman replied, “I would say not 2026, yeah. We’ve got a lot of stuff to do.” The New York Times reported in June that although OpenAI had hired bankers and lawyers with the goal of going public in the third or fourth quarter of 2026, the company was leaning toward 2027 due to the volatility of tech stocks and its own financial challenges.",
+      "published_date": "2026-09-12",
+      "tags": [
+        "AI",
+        "Fundraising",
+        "OpenAI",
+        "sam altman"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "TechCrunch AI",
+        "feed_url": "https://techcrunch.com/category/artificial-intelligence/feed/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: safety",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 20,
+    "llm_reason": "IPO時程商業新聞，無技術價值",
+    "novelty": 1,
+    "impact": 5,
+    "trending": 10,
+    "practicality": 1,
+    "blog_worthiness": 3
+  }
+]
