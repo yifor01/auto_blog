@@ -1,0 +1,709 @@
+[
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "NVIDIA Developer",
+      "title": "Accelerating Dropless MoE Training in JAX with NVIDIA Transformer Engine",
+      "url": "https://developer.nvidia.com/blog/accelerating-dropless-moe-training-in-jax-with-nvidia-transformer-engine/",
+      "authors": [
+        "Tanya Lenz"
+      ],
+      "abstract": "Mixture of experts (MoE) has become one of the defining architectural trends in large-scale AI model training. DeepSeek, Qwen, and Mixtral are examples of MoE models that match or exceed the performance of dense model counterparts at a fraction of the training compute. MoE models provide efficient training through conditional computation. Instead of one dense feed-forward network (FFN) shared by all tokens, MoE replaces it with many smaller expert networks and a learned router that decides which Top-K experts to activate. However, making MoE training efficient at scale is challenging. In DeepSeek-V3 training on NVIDIA GB200, an unoptimized baseline achieved just 103 TFLOPS/GPU with inter-GPU communication consuming 84% of accumulated kernel time. With the JAX Python library and NVIDIA Transformer Engine targeted kernel optimizations, that number rose to 1,068 TFLOPS/GPU, a 10.4x improvement. This post discusses how Transformer Engine, a library for accelerating Transformer models on NVIDIA GPUs, with JAX leads to significant performance improvement in MoE model operations. What are the challenges involved in MoE training? Production-scale MoE training introduces bottlenecks that don’t exist with dense models: token routing, expert dispatch and gather, all-to-all communication, and ragged expert GEMMs. The problem compounds because the router is learned. Throughout training, the distribution can become heavily skewed as the router develops preferences for certain experts. No two batches produce the same expert loads, and within a single batch, one expert might receive many more tokens than another. Each expert receives a different number of tokens, so there is no clean rectangular GEMM to batch and dispatch. This results in ragged tensors. In MoE, tokens are routed dynamically to different experts. This means that the number of tokens assigned to each expert varies unpredictably, which results in ragged tensors (Figure 1). This is a challenge because most libraries are highly optimized for tensor operations that expect uniform, rectangular data structures. Figure 1. Ragged tensors in MoE training With expert parallelism (EP), tokens must be dispatched and outputs must be combined and restored to original token order. If the dispatch and combine path is not optimized, communication dominates and GPUs are underutilized. A poorly optimized all-to-all forces GPUs to stall and wait for data before doing any useful work. Solving this requires specialized kernels that can natively handle ragged layouts. This is precisely the problem that Transformer Engine MoE optimizations are designed to solve. How is dropless MoE different from capacity-based MoE? Dropless and capacity-based MoE are two different ways to handle token routing to experts. In dropless MoE, every token is processed by its selected expert no matter how uneven the load. This is attractive for model quality but demanding on the system. MegaBlocks: Efficient Sparse Training with Mixture-of-Experts addressed this by reformulating expert computation as block-sparse matrix multiplication, allowing each expert to operate on a different number of tokens without dropping or padding. This requires new block-sparse GPU kernels, optimized grouped GEMM, and dispatch and combine primitives all designed specifically for variable token counts. In comparison, standard capacity-based MoE training frameworks sidestep the complexity of dynamic routing by constraining it. Each expert is assigned a fixed token budget, and any overflow is either trimmed or padded to fit. This keeps computation regular and hardware-friendly, but it forces a direct tradeoff between model quality and efficiency: drop the overflow tokens and the model trains on incomplete data, or pad to avoid dropping and pay the cost in wasted compute and memory. Figure 2. A comparison between capacity-based and dropless MoE What specialized optimizations are required for dropless MoE? Committing to dropless MoE means the training stack can no longer rely on fixed expert shapes. Every kernel that touches expert computation has to handle variable token counts efficiently. Additionally, it means that each expert’s token count is variable and data-dependent, so the kernels must not only accept dynamic shapes but also work when those shapes are inaccessible on the CPU to enable CUDA graphs and avoid recompilation. Transformer Engine provides the following building blocks that make this approach practical in JAX: A group-aware MXFP8 quantization An MXFP8 grouped GEMM on expert matmuls Optimized EP operations for dispatch and combine Figure 3 shows an expert-parallel MoE layer across two GPUs. The router assigns each token to an expert, dispatch moves tokens to their expert’s GPU. The grouped MLP runs two grouped GEMMs on those variable-length groups, and combine reverses the exchange to restore the original token order. Figure 3. An expert-parallel MoE layer across two GPUs Optimization 1: Grouped GEMM In a dense FFN, every token passes through the same weight matrix. In MoE, the router distributes tokens unevenly so each expert receives a different number of tokens per step, breaking the regular GEMM shape that typical kernels are optimized for. Previous approaches included a loop of GEMM kernels and batched GEMMs. The loop required Device-to-Host copies of token counts. This is on the critical path, which incurs the latency of the Device-to-Host transfer and breaks CUDA graphs. The batched GEMM computed the worst-case token capacity even if fewer tokens were used because they are padded to force fixed expert computation, leading to extra compute. A grouped GEMM solves this by handling all expert matmuls in a single kernel call, each with its actual token count. It computes only the regions with valid tokens and is more performant as a result. Transformer Engine grouped_gemm /ragged_dot backs this with cuBLAS and cuBLASLt, mapping directly onto the best-performing NVIDIA GEMM libraries to deliver full Tensor Core utilization even with irregular expert shapes. On NVIDIA Blackwell GPUs, this path also opens up MXFP8 block scaling for expert matmuls utilizing the Transformer Engine grouped quantization kernels. Optimization 2: Expert parallelism to integrate Dispatch and Combine After the fused router kernels assign each token to its experts, the model must physically move those tokens to the correct devices, process them, and bring the results back. This process breaks into two distinct stages: Dispatch and Combine. Dispatch: Where the token movement occurs: tokens are permuted and sent across GPUs to their assigned experts, a step that involves both local reordering and multi-GPU communication. Combine: Where processed tokens are routed back to their original GPUs and their per-expert results are accumulated. In a naive implementation, these stages run as a serial chain of separate operations, with the GPU stalling between steps, data getting read and written to memory multiple times, and communication sitting mostly idle while compute runs and vice versa. The Transformer Engine EP implementation integrates the Dispatch and Combine stages into a tightly fused kernel path. This integration is powered by NCCL EP , a communication backend tuned specifically for the irregular, imbalanced traffic patterns that expert-parallel routing produces. NCCL EP also employs a token deduplication mechanism: when a token is dispatched to multiple experts on the same rank or to multiple ranks on a remote IB node, it traverses the network only once and is replicated on the receiving node, conserving network bandwidth. EP is the counterpart to grouped GEMM: grouped GEMM handles what happens inside each expert; EP handles everything around it. Additional optimizations Additional optimizations include JAX host offloading and XLA multistreaming collectives. JAX host offloading Intermediate activations don’t have to be saved on device for the entire forward pass.",
+      "published_date": "2026-09-14",
+      "tags": [
+        "Agentic AI / Generative AI",
+        "Developer Tools & Techniques",
+        "MLOps",
+        "Mixture of Experts (MoE)",
+        "NVFP4",
+        "Training AI Models"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "NVIDIA Developer",
+        "feed_url": "https://developer.nvidia.com/blog/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: moe, mixture of experts, quantization",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 76,
+    "llm_reason": "JAX+Transformer Engine將MoE訓練提速10倍，附具體優化細節",
+    "novelty": 13,
+    "impact": 14,
+    "trending": 14,
+    "practicality": 18,
+    "blog_worthiness": 17
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "量子位",
+      "title": "AI開始改進“改進自己的方法”，RSI進入平方時代丨MetaRSI",
+      "url": "https://www.qbitai.com/2026/09/488832.html",
+      "authors": [
+        "思邈"
+      ],
+      "abstract": "AI開始改進“改進自己的方法”，RSI進入平方時代丨MetaRSI 思邈 2026-09-14 11:45:46 來源： 量子位 小模型突破瓶頸，旗艦模型開啟新空間 允中 發自 凹非寺 量子位 | 公眾號 QbitAI 讓模型自己生成訓練資料、自己改寫提示詞、自己修復程式碼，這條路線被稱為： 遞迴自我改進（Recursive Self-Improvement，RSI） 。 但幾乎所有RSI系統都是同一套結構：一個固定不變的改程序序，反覆作用於模型。並往往只從Harness、Data或Model RSI的單一視角切入。 為了回應這一難題，CosmosMind聯合斯坦福、伯克利、MIT、清華、北大等十餘家海內外高校釋出MetaRSI-v1。 這是 全球首個統一Model-RSI、Data-RSI、Harness-RSI的元遞迴架構 ，能夠改進“自我改進的過程”。 RSI由此進入“平方時代”。 △論文首頁 在沒有任何外部教師模型參與下 ，MetaRSI-v1使得一個僅30億啟用參數的小模型， 在四項基準上平均自我提升10.9分 ；並且讓GPT-5.6、Claude Opus 5等六款前沿旗艦模型， 平均提升7.3分 。 更重要的是數字背後， MetaRSI-v1是一套試圖 統一整個RSI領域的架構語言 ：包括一個核心、兩條編排軸、三個運算元、整個元RSI層，以及五大定律。 △MetaRSI-v1概覽 首次被統一的Loop Kernel範式 Loop Kernel是MetaRSI-v1首次提出的自我改進統一形式。 它第一次把“進步如何發生”抽象成一條與物件無關的閉環：消費反饋得到的學習訊號，在Data、Harness、Model上提出改動，交由驗證器裁決，並將結果迴流為下一輪訊號。 Data、Harness、Model從此開始能夠被統一成同一Kernel的不同例項化運算元 ，可組合、可統一排程，自我改進由此第一次擁有了統一、可複用的底層骨架。 △Loop Kernel範式 改進空間：Data-RSI、Harness-RSI、Model-RSI 沿用同一個Loop Kernel，自我改進在三個空間上展開，分別由Data-RSI、Harness-RSI、Model-RSI三個運算元承擔並協同完成。 Data-RSI ：從自身執行軌跡提取學習訊號，經校驗用於合成數據交由下游消費，標定並放大模型正向能力與負向能力邊界。 Harness-RSI ：利用學習反饋訊號，在Harness拆分出的System Prompt、Skill、MCP、Tools、Memory五個可插拔槽位上生成改進，做加法與減法。 Model-RSI ：更新模型自身的參數與結構，把反覆驗證有效的行為內化進模型。 縱橫之間：讓改進自己找到最優路徑 橫軸（horizontal orchestration）編排運算元的應用順序 ：RSI² Agent在每個決策點根據訊號反饋選定下一個運算元，再把該運算元有機銜接編排送入RSI Loop Kernel執行。 縱軸（vertical optimization）最佳化運算元的內部策略 ：RSI² Agent向目標運算元專屬的RSI² Sub-Agent下發指令，後者根據學習訊號與環境反饋等改寫運算元本身的RSI規則，最佳化RSI系統本身。 遞迴之上的遞迴：三層改進與“元層”的誕生 整套架構由四個Agent協調運作，並且均能被人類專家局部替換形成human-in-the-loop系統。 MetaRSI² Agent ：學習如何進行合適的縱橫最佳化，最佳化 RSI² Agent 的策略學習。 RSI² Agent ：在每個決策點選擇進行橫軸（指定下一個運算元）或縱軸（向Sub-Agent下發策略改寫指令）最佳化。 RSI² Sub-Agent ：在縱向最佳化中，接受來自 RSI² Agent的 執行指令，對運算元內部的RSI策略進行調整。 Transition Agent：負責銜接橫向編排中上游運算元的產物與下一個運算元對產物的消費。 四個Agent對應形成三個RSI最佳化Level：運算元改進目標系統，雙軸編排改進運算元用法，元層改進雙軸編排策略本身。 實驗：小模型與前沿模型均實現自我進化 實驗沿兩條路線展開： 小模型路線 使用可訓練的開源模型，Data、Harness、Model三個運算元全部啟用； 前沿模型路線 面向Claude Opus 5，GPT-5.6 sol，Kimi K3等頂級模型，這類模型參數巨大或為閉源模型，僅啟用Data與Harness運算元。 路線一：小模型的自我改進 目標模型為Qwen3.5-35B-A3B（35B總參、3B啟用），在Terminal-Bench 2.1、SWE-bench Pro、GPQA-Diamond高難度子集、AIME四項基準上評測。 △MetaRSI讓Qwen3.5-35B-A3B實現自進化 MetaRSI-v1平均提升10.9分，SWE-bench Pro 解決率接近翻倍 ，Meta層為RSI帶來更高的天花板， 連續自進化的累計增益提升顯著 。 △“改進改進者”，MetaRSI讓小模型累計自進化增益擴大 路線二：前沿模型的自我改進 多款前沿模型在Terminal-Bench 2.1上平均提升7.3分，說明MetaRSI範式對前沿模型同樣成立， 旗艦模型同樣留有可觀的自我改進空間 。 △六款前沿模型的自我改進 五條定律：為“機器如何進步”立法 MetaRSI梳理出 兩條互補的改進路線 ：Harness-RSI保持權重不變，讓自我改進覆蓋任何可通過介面呼叫的模型；Model-RSI通過訓練把能力內化進模型。 且MetaRSI首次重新定義了Data-RSI，作為模型的能力邊界探測與放大器，通過對執行軌跡與外界反饋learning-signal的聯合分析得到經過驗證的經驗並scale為可複用的資料，並標定這些經驗能夠支撐到哪裡，框定模型能力的正、負邊界。 Data-RSI的產物同時供給Harness-RSI與Model-RSI消費，兩條路線的改動結果又能夠流回Data-RSI，重新標定能力邊界、驅動下一輪，能力由此逐輪披露、累積。 在這一過程中，Harness不僅能做加法還能做減法：Data-RSI放大暴露的問題經Model-RSI內化之後，原本吸納在Harness中的知識會變成冗餘，Harness-RSI系統在回放校驗下將其刪除，能力留下，成本退場。 在此之上，MetaRSI提煉出五條定律。 定律一：驗證決定自我改進的前沿。 一個領域能不能形成自改進閉環，取決於該領域任務能否被檢驗，是否有合適的verifier。 定律二：自我認知會過期，重新發現能力邊界是速率瓶頸，RSI改變agent能力，其原本舊的系統描述隨即失效。 定律三：能力與載體無關但成本與載體有關。 例如同一項能力放在Harness裡每次推理都要重付成本，內化進Model只需付一次，成熟迴圈能夠持續把能力遷移到更便宜的載體。 定律四：可信度由不可寫面度量。 在閉環內部，真正能力變強和放寬成功標準會得到完全相同的分數，而且這種偏差從內部無法察覺、也無法靠統計糾正。 定律五：迴圈不憑空創造能力，一切增益本質上都是外部資訊熵的輸入或能力的激發。 自改進只能重新組織、放大並固化模型已經具備的潛力。因此每次提升都要分清兩部分：哪些是把已有能力放大出來的，哪些是真正從外部新引入的。 環環相扣，終成文明：讓每個科學領域都擁有進化閉環 人類歷史每一次的躍遷，都源於“生產答案的方式被重新發明”。 MetaRSI要在AI時代把這件事再做一遍。 它背後的CosmosMind團隊，是一支由 清華/北大/斯坦福等海內外名校碩博、頭部大廠基模核心組研究員、著名產業方領軍人物 組成的小而精的團隊，長期從事大規模模型訓練/RSI/智慧體/科學計算等工作，在頂會頂刊上發表過諸多有影響力的論文。 這一次，他們沒有選擇再做一個更大的模型，而是把全部精力押在了“ 改進改進本身 ”這件事上。 團隊同步了開源RSI-Harness，這是一個能自我學習、自我迭代的Harness，並可以在使用中為不同科學領域與工程實踐沉澱出可移植的 Harness Genome 。 Cosmosmind已經把目光投向了閉環觸碰物理世界：可程式設計儀器、自動化實驗室成為執行器和驗證器，模擬、臺架實驗、真實儀器可以像三級火箭一樣逐級推進，把不可逆的昂貴操作放到最後——第一個在物理世界關上的進化迴圈，很可能不會出現在開放環境裡，而會出現在 自動化實驗室 中。 研究者面對的不再是一堆待驗證的猜測。人類只需負責定義問題與價值判斷，而機器負責讓“從假設到驗證”的迴圈，以過去無法想像的速度開始轉動。 相信在MetaRSI的後時代，AI將會從解題工具走向文明級的進化引擎。 Cosmomind官網：https://cosmosmind.ai/ 專案主頁：https://github.com/CosmosMind-ai/RSI-Harness 論文：https://www.cosmosmind.ai/research/metarsi-v1 arxiv：https://arxiv.org/abs/2609.06396 HuggingFace：https://huggingface.co/CosmosMind/RSI-Harness *本文系量子位獲授權刊載，觀點僅為原作者所有。 版權所有，未經授權不得以任何形式轉載及使用，違者必究。 CosmosMind RSI 遞迴自我改進 思邈 一年連融三輪，這家金融AI公司又拿下超3億B輪 2026-09-14 3萬臺無人車之後，這家公司盯上了城市級物理AI 2026-09-11 九問ScienceDiscovery實現樹搜尋驅動RSI，加速科學發現，小時級寫出通用積分器，低成本找出物理科學規律 2026-09-04 卡車自動駕駛里程超10億公里，嬴徹科技定義“貨運物理AI” 2026-09-04 相關閱讀",
+      "published_date": "2026-09-14",
+      "tags": [
+        "資訊",
+        "CosmosMind",
+        "RSI",
+        "遞迴自我改進"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "量子位",
+        "feed_url": "https://www.qbitai.com/feed"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, mcp",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 77,
+    "llm_reason": "統一Model/Data/Harness三軸的元遞迴自我改進架構，多校聯合新論文",
+    "novelty": 18,
+    "impact": 15,
+    "trending": 17,
+    "practicality": 10,
+    "blog_worthiness": 17
+  },
+  {
+    "item": {
+      "source": "blog",
+      "source_name": "Latent Space",
+      "title": "Humanity’s Last Invention — Richard Socher of Recursive",
+      "url": "https://www.latent.space/p/recursive",
+      "authors": [
+        "Latent Space"
+      ],
+      "abstract": "At 1:09:00 we talk about the rise of AI x Finance, and AIE NYC is one month away - our hotel block is 97% sold out, get tix & travel ASAP - we will announce speakers from Bridgewater, Ramp, Coatue, Mastercard, Vanguard, Coinbase, Blackrock, Fidelity, Point72, Capital One, JPMC, Wells Fargo, Bloomberg, A24 (yes the movie studio) Labs, Two Sigma, Apollo Global, and more soon! From helping pioneer core ideas in NLP to now building AI systems that can automate AI research itself, Richard Socher is betting that the next major step in AI is recursive self-improvement. He is the founder of You.com, AIX Ventures, and now Recursive , which has assembled some of the best open-endedness (& self improving agent ) researchers in the world and raised a $4.65B seed round . In this episode, Richard joins Latent Space to unpack his vision for the “Eureka Machine” : a superintelligence that can improve the process of invention itself, accelerate AI research, and eventually tackle major problems across science, energy, materials, biology, and more . You can get his book “The Eureka Machine” here ! We go deep on Recursive’s early results , including an AI research system that Richard says outperformed humans and their agents on optimization tasks in less than two days, as well as work on NVIDIA GPU kernels where the system discovered improvements without relying on a team of CUDA experts. Richard also explains why he thinks AI research that currently takes thousands of people and years could eventually be compressed into weeks. These results are summarized in his 20 minute AIE keynote , where we also discuss his 10 dimensions of intelligence: We also explore the harder questions around increasingly capable AI: reward hacking, whether Anthropic-style constitutions actually work , AI regulation and proposals to “pace” frontier development, open-source models as geopolitical soft power , whether today’s LLM paradigm is enough, and what happens if AI systems eventually begin choosing their own goals. Richard reflects on the rejected research that helped inspire Alec Radford’s GPT , open-endedness, the AI Economist, simulations of entire economies, and his framework for thinking about the upper bounds of intelligence itself. The Eureka Machine and Richard’s vision for an AI that can automate invention Why Richard is optimistic about superintelligence for science and technology Why AI hard-takeoff scenarios may underestimate physical and economic constraints The risks of regulating intelligence itself instead of specific AI applications Reward hacking and why increasingly intelligent AI makes objective design harder Richard’s critique of Anthropic’s constitution and constitutional AI Alignment vs. personalization and whose values an AI should follow Why open-source AI matters for resilience, competition, and geopolitical soft power Why Richard left You.com’s frontier-model work to start Recursive Recursive self-improvement and automating the process of AI research Whether today’s LLM paradigm is enough — and why Richard is less bullish on world models DecaNLP , early prompt-based generalization, and the research that influenced GPT Why rejected research can shape entire technological timelines Open-endedness, evolutionary approaches, and rainbow teaming What happens if AI systems begin setting their own goals Why simple objectives like profit maximization can produce dangerous reward hacks Recursive’s long-term plan to apply self-improving AI to science The compute, hardware, and economic constraints on AI takeoff Recursive’s early NanoChat, NanoGPT, and GPU kernel optimization results Why automating AI research could reduce years of work to weeks Reward engineering and what makes auto-research systems actually work The AI Economist and using simulations to test economic policy Whether LLMs can realistically simulate people and entire economies Benchmark bugs and evaluation harnesses and the difficulty of measuring AI progress Recursive’s near-term focus on AI for AI research Harness optimization, sandboxing, and web search as core agent infrastructure You.com and the search stack for AI agents AI in finance, backtesting, and data leakage Richard’s three fundamental components and ten “spaces” of intelligence The theoretical upper bounds of vision, communication, knowledge, and computation Creative intelligence, metacognition, and AI-generated goals Survival and replication and why AI does not necessarily need to fear being turned off High agency and ambitious goals and Richard’s advice for people building with AI X: https://x.com/RichardSocher LinkedIn: https://www.linkedin.com/in/richardsocher/ 00:00:00 The Eureka Machine and Superintelligence 00:02:23 AI Optimism, Slow Takeoff, and Regulation 00:07:56 AI Safety, Reward Hacking, and Anthropic’s Constitution 00:11:49 Alignment, Personalization, and Open Source AI 00:15:46 Why Richard Started Recursive 00:20:03 Recursive Self-Improvement and the Founding Team 00:22:55 Are Today’s LLMs Enough? 00:29:03 DecaNLP, GPT, and the Rejected Idea Ahead of Its Time 00:34:38 Open-Endedness and Evolutionary AI 00:36:38 What Happens When AI Chooses Its Own Goals? 00:41:16 Superintelligence for Science 00:42:40 GPUs, Compute, and the Limits of AI Takeoff 00:45:07 Recursive’s Results: AI Beating Humans and Their Agents 00:49:14 Reward Engineering and Auto Research 00:53:12 The AI Economist and Simulating Entire Economies 00:58:07 LLM Simulations, Personas, and Mode Collapse 01:03:38 Recursive’s Roadmap, Agents, Search, and Finance 01:09:13 The Upper Bounds and Spaces of Intelligence 01:30:21 Goals, High Agency, and Advice for Builders Swyx [00:00:00]: We’re here in a studio with Vibhu and myself and Richard Socher. Welcome. Richard Socher [00:00:06]: Thanks for having me. Swyx [00:00:07]: We just talked about the Eureka Machine, or we just released a talk, at AI Engineer about the Eureka Machine. Is it — you said it’s your life’s goal. What is the Eureka Machine? Richard Socher [00:00:16]: The Eureka Machine is the ultimate invention that will afterwards invent most everything for humanity. It’s essentially a superintelligence that can be given any goal, any environment, reward, and then it will try its best to achieve those goals to create the kinds of inventions that humanity would hopefully ask it for. Swyx [00:00:45]: Yeah, I think we have the book pulled up here that you’ve written. Richard Socher [00:00:50]: That’s right, yeah. I finished it last year, a little bit before we started Recursive, and now we’re gonna try to build parts of that. Swyx [00:00:57]: You finished it last year. It’s July. What takes so long? Richard Socher [00:01:01]: Oh, man, books. Books are incredibly slow. Richard Socher [00:01:04]: It’s ridiculous. That whole industry is just unfathomably slow. Richard Socher [00:01:07]: So a lot of the ideas have been out there for a while, but yeah, I’m really glad it’s finally coming out in September this year. Swyx [00:01:14]: We might have AGI by then. Like, we don’t know. Vibhu [00:01:18]: Any key takeaway that you’re most excited to put in here? Richard Socher [00:01:21]: Yeah. The key takeaway, I think, is that people could and should be much more excited about the positive implications of superintelligence, especially for science, physics, chemistry, biology, but also economics and astrophysics, and all kinds of other engineering tasks. I think there is so much more that can be done with better technology. And right now, I feel like a lot of people need, like, better marketing, not just for the future in general, but also, better marketing for technology and in particular for AI. And this book, should show even the AI skeptics, how much positive upside there is for AI, especially when it comes to inventing, new scientific discoveries.",
+      "published_date": "2026-09-14",
+      "tags": [
+        "blog"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "blog_name": "Latent Space",
+        "blog_url": "https://www.latent.space/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, alignment, safety",
+      "⚖️ 來源權重: blog +15"
+    ],
+    "llm_score": 60,
+    "llm_reason": "Socher談自我改進AI研究系統願景，具啟發性但缺乏可複現細節",
+    "novelty": 12,
+    "impact": 12,
+    "trending": 16,
+    "practicality": 6,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "OpenArch – PyTorch implementations of modern LLM architectures",
+      "url": "https://github.com/anuj0456/OpenArch",
+      "authors": [
+        "anuj0456"
+      ],
+      "abstract": "OpenArch Python implementations of modern open-source LLM architectures — written from scratch, one model at a time. This repository contains hand-written PyTorch implementations of the model architectures cataloged in Sebastian Raschka's LLM Architecture Gallery . Each model is implemented to the best of my knowledge from the original papers, technical reports, reference config.json files, and the excellent writeups by Sebastian Raschka and Machine Learning Mastery. The goal is not to compete with transformers or other production libraries. The goal is clarity and learning : a single readable file per architecture, with the structural choices (attention type, normalization, layer mix, MoE routing, positional encoding) made explicit and easy to compare side-by-side. Why this repo? Modern LLM architectures share a common skeleton but differ in dozens of small, important choices: Attention: MHA, GQA, MQA, MLA, sliding-window, linear/DeltaNet hybrids Normalization: pre-norm, post-norm, QK-Norm, sandwich norm, RMSNorm Positional encodings: RoPE, NoPE, partial RoPE, YaRN Decoder type: dense vs sparse MoE (with or without shared experts), hybrid Mamba/attention Training-time tricks: Multi-token-prediction, latent experts, gated attention Reading the official model code can be hard because production repos optimize for speed, sharding, and backward compatibility. This repo optimizes for reading . What's implemented (so far) Implementations marked ✅ are usable for forward passes; those marked 🚧 are under construction. Modality Model Status Model Size Normalization Positional Encoding Attention Mixture of Experts Text GPT-2 XL ✅ 1.5B - Absolute Multihead Attention No Llama 2 ✅ 7B RMS Norm RoPE Multihead Attention No Llama 3 ✅ 8B RMS Norm RoPE Grouped Query Attention No OLMo 2 ✅ 7B RMS Norm & QK-Norm RoPE Multihead Attention No DeepSeek R1 ✅ 671B RMS Norm & QK-Norm RoPE Multihead Latent Attention Yes Gemma 3 ✅ 27B RMS Norm & QK-Norm RoPE Grouped Query Attention with Sliding Window No Mistral 3 ✅ 24B RMS Norm RoPE Grouped Query Attention with Sliding Window No Llama 4 Maverick ✅ 400B RMS Norm RoPE Grouped Query Attention Yes Qwen 3 ✅ 4B RMS Norm & QK-Norm RoPE Grouped Query Attention No 30B-A3B RMS Norm & QK-Norm RoPE Grouped Query Attention Yes Kimi K2 ✅ 1T RMS Norm RoPE Multihead Latent Attention Yes GLM 4.5 ✅ 355B RMS Norm & QK-Norm RoPE Grouped Query Attention & Multi-Token Prediction Yes GPT-OSS ✅ 20B RMS Norm RoPE Grouped Query Attention with Sliding Window Yes Grok-2.5 🚧 270B RMS Norm RoPE Grouped Query Attention Yes Multimodal PaliGemma ✅ 3B RMS Norm RoPE Multihead Attention No Qwen3 🚧 3B RMS Norm RoPE Multihead Attention No Image Dall-e 🚧 - - - Transformer - The full target list mirrors the 72 architectures in the Architecture Gallery. Contributions toward any of them are welcome. Repository layout OpenArch/\n├── text/\n│ ├── gpt2/\n│ │ ├── model.py\n│ │ └── README.md\n│ ├── llama3/\n│ ├── qwen3/\n| ├── grok2.5/\n│ └── deepseek_v3/\n├── multimodal/\n│ └── pali-gemma/\n│ ├── model.py\n│ └── README.md\n├── README.md\n└── requirements.txt Each model lives in its own folder with respective model.py and a short README.md describing the architectural choices and references used. Contributing I am actively looking for contributors. If you enjoy reading model papers, comparing config.json files, or just want to deepen your understanding of how modern LLMs are built, this is a friendly place to start. Good first contributions: Pick an unimplemented model from the gallery and add a model.py for it Add a README.md for an existing model documenting its architectural choices Add a forward-pass test that loads the official weights and matches outputs on a few tokens Fix bugs, improve docstrings, or refactor shared components Please open an issue before starting a large piece of work so we can avoid duplicating effort. Implementations should prioritize readability over performance — this is a learning resource first. See CONTRIBUTING.md for more details. Acknowledgements This repository would not exist without the work of two outstanding educators: Sebastian Raschka — for the LLM Architecture Gallery , the Big LLM Architecture Comparison series, and the LLMs From Scratch book and codebase. The architecture diagrams, fact sheets, and side-by-side comparisons in the gallery are the primary reference behind every model in this repo. Jason Brownlee and the team at Machine Learning Mastery — for years of clear, accessible tutorials that have helped countless practitioners (myself included) build a working understanding of deep learning and transformer architectures from the ground up. Any errors in the implementations here are entirely my own. License This project is licensed under the Apache License 2.0 — see LICENSE for details. Individual model implementations follow the licenses of the original models where applicable; see each model's folder for specifics. Disclaimer These implementations are written to the best of my knowledge based on publicly available papers, technical reports, configuration files, and educational material. They are intended as a learning resource and are not affiliated with or endorsed by the original model authors. For production use, please use the official implementations or transformers .\n\n(126 points, 29 comments on Hacker News)",
+      "published_date": "2026-09-14",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 126,
+        "num_comments": 29,
+        "hn_url": "https://news.ycombinator.com/item?id=49693384",
+        "object_id": "49693384"
+      }
+    },
+    "rule_score": 24.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: moe, mixture of experts, mamba, multimodal",
+      "📰 Hacker News: 126 points"
+    ],
+    "llm_score": 61,
+    "llm_reason": "從零實作各種LLM架構的教學型程式庫，適合技術對比文章",
+    "novelty": 8,
+    "impact": 9,
+    "trending": 12,
+    "practicality": 17,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "Automate replenishment with MMF, Databricks Genie, and Amazon Quick",
+      "url": "https://aws.amazon.com/blogs/machine-learning/automate-replenishment-with-mmf-databricks-genie-and-amazon-quick/",
+      "authors": [
+        "Venkatavaradhan Viswanathan"
+      ],
+      "abstract": "AWS Machine Learning Blog: technical walkthrough. Commands and expected outputs are from a working deployment. Substitute your own account values throughout. Replenishment automation starts with a demand forecast, and in retail that forecast has a short shelf life. By the time a planner exports it, checks it against supplier availability, and works down tens of thousands of stock keeping units (SKUs), the fastest movers have stocked out. For years the hard part was the forecast itself. Foundation models changed that, predicting demand across an entire catalog with no per-item tuning. The bottleneck moved downstream to the gap between a good forecast and an order placed on it. That gap persists because the forecast and the action live in different systems. The forecast sits in a governed data platform. Supplier availability lives in a separate operational feed. And the person who places the order has a login for neither. This post builds the missing piece: a loop that detects a demand surge, decides which supplier can cover it, and places the order unattended. It escalates to a human only when no rule fits. It runs on Databricks and Amazon Quick, and the companion repository , together with the accelerator’s fresh_retail_net example that produces the forecast, has everything you need to reproduce it. The solution runs in four stages: Databricks handles the Forecast, while Amazon Quick repeats the last three in the loop on a schedule. The following diagram shows how the four stages connect across Databricks and Amazon Quick. Figure 1. The detect, decide, act loop. A Databricks Genie Agent surfaces demand surges from the Chronos-2 forecast. In Amazon Quick, a Genie MCP connector retrieves the forecast, while Amazon Quick Sight reads the Amazon S3 Tables supplier feed as a live Direct Query dataset. Amazon Quick Flows reconciles demand against supply on a shared retailer_product_id, then places routine orders or raises exception tickets through the Supplier Order API. Amazon Quick sits in the middle, the only component that touches both worlds. It reaches the forecast through a Databricks Genie Agent over the Model Context Protocol (MCP), pulls the supplier feed from S3 Tables, and calls the Order API through an OpenAPI connector, joining them on a shared product key at decision time rather than copying everything into one warehouse. Databricks produces the intelligence. Amazon Quick acts on it. Everything runs from your local terminal with these tools: the Databricks CLI 0.299.0+, the AWS CLI 2.36.2+, jq 1.7, and uv (or Python 3.11) for the supplier-feed loader. The solution uses the create-flow , create-data-source , and create-space subcommands under aws quicksight . Clone the accompanying repository and run all commands from its root. Key files are genie/ genie_space.json (the Genie Agent definition), flow/ flow_definition.json (the flow), and cleanup/ cleanup.sh (teardown). Two account-level prerequisites gate the console steps, so confirm them before you start: your Amazon Quick user needs an Author or Author Pro role (Quick Flows and the MCP and OpenAPI connectors require it, and a plain non-Author Enterprise seat cannot create them), and your Databricks identity needs CREATE CATALOG on the metastore (or an admin to pre-create the mmf catalog). Next, authenticate a Databricks workspace profile with databricks auth login . Then run databricks auth describe : the User line it reports is your <WORKSPACE_USER> , which notebook paths use. All commands and scripts read account-specific values from a .supply-chain-automation-env file you create once and source. It contains your AWS profile, account, Region, the bucket name, the Quick account names, and the Databricks profiles, host, and account ID. The repository README has the template and the tool-install commands. Two scripts cover every CLI-automatable step: scripts/ setup_databricks.sh (notebooks, Genie Agent, OAuth app) and scripts/ setup_aws.sh (Order API, S3 feed, Quick account, data source, space, flow). Both pause at the four console-only steps: the two action connectors, the S3 Tables access grant, and the dataset. To start, confirm your environment is loaded: No field should be empty. Two constraints drive the design: Region. Deploy in a Region that supports the agentic capabilities of Amazon Quick (action connectors, spaces, flows): See the documentation for the current list. Two profiles, one you. Amazon Quick ties each resource to the identity that created it, so using the same identity for the CLI and the console is simpler. If they differ, the setup scripts handle it: during the datasource, space, and flow phases, each detects your CLI user, prompts once for your console username, and grants both owner access. Press Enter if they’re the same. The prompt appears only once. The intelligence side is entirely Databricks, in three moves: run the forecasting notebooks, expose the results through a Genie Agent, and register an OAuth app so Amazon Quick can reach that agent. The setup_databricks.sh script drives all three, one command per phase. Run the notebooks. Notebooks 01 and 02 come from the MMF accelerator’s fresh_retail_net example, which serves Chronos-2’s zero-shot forecast across the catalog. Run them there first (02 is the compute-heavy one, on serverless GPU with an A10 the notebook configures itself) to produce the forecast tables. This repo ships the two AWS-authored notebooks that build on those tables: 04 (Genie views) and 03 (dimensions). This phase imports and runs them, 04 then 03, because notebook 03’s validation cell joins a view that notebook 04 creates. Both run on standard serverless. When it finishes, the mmf catalog holds the six objects the Genie Agent will query: daily_sales_raw and demand_train (notebook 01), the scoring_output_mv and evaluation_metrics_mv views (notebook 04), and product_dim and location_dim (notebook 03). Confirm them with databricks tables list mmf fresh_retail_net . You can also open the notebooks in the workspace and Run All in the same order if you prefer to watch each one. Create the Genie Agent. This turns a table of forecasts into something a business user can question in plain English. The agent’s full definition is in genie/ genie_space.json : the six tables, the surge-detection instructions, and a pinned example query that keeps the surge answer deterministic (more in the design section). The phase creates a small serverless PRO SQL warehouse and binds the agent to it. It prints and saves GENIE_SPACE_ID to scripts/.env.generated . Keep that value handy. You will paste it into the Amazon Quick connector shortly. Register the OAuth app. Quick reaches the Genie Agent over the Model Context Protocol (MCP) using user-delegated (three-legged) OAuth. Genie queries run as the person who authorized the connection. Make sure that user has read access to mmf.fresh_retail_net . This phase registers a confidential OAuth app in Databricks and returns a client ID and secret for the connector. This is an account-level action ( accounts.cloud.databricks.com ), a higher privilege than the workspace access the earlier phases used. If you are not a Databricks account admin, have one run it and hand you the client ID and secret. And copy the client secret the moment it prints, because Databricks shows it only once. Keep it somewhere safe until the connector step. The underlying create command and a console alternative are in the README. The action side needs two things the forecast cannot provide: a live view of what suppliers can ship, and a system to send the order to. Both live outside Databricks, as they would in a real enterprise. The supplier feed is an independent operational feed in Amazon S3 Tables (Apache Iceberg), separate from the forecasts. The feed phase creates the bucket and runs a loader that derives a synthetic supplier catalog from the public FreshRetailNet-50K product keys.",
+      "published_date": "2026-09-14",
+      "tags": [
+        "Advanced (300)",
+        "Amazon Quick Suite",
+        "Technical How-to"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, mcp, model context protocol",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 48,
+    "llm_reason": "補貨自動化技術walkthrough附程式庫，可複現但屬應用整合",
+    "novelty": 6,
+    "impact": 8,
+    "trending": 8,
+    "practicality": 15,
+    "blog_worthiness": 11
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "Manage end-user OAuth consent for AI agents with Amazon Bedrock AgentCore",
+      "url": "https://aws.amazon.com/blogs/machine-learning/manage-end-user-oauth-consent-for-ai-agents-with-amazon-bedrock-agentcore/",
+      "authors": [
+        "Swara Gandhi"
+      ],
+      "abstract": "AI agents often need to access services such as GitHub and Slack on a user’s behalf. Before an agent can act, the user must authenticate with the provider and explicitly approve the requested access. The application must then securely associate the resulting OAuth grant with the user who authorized it. This process is called session binding. Previously, customers using the AgentCore Identity (a capability of Amazon Bedrock AgentCore) three-legged OAuth (3LO) flow (also known as OAuth 2.0 authorization code flow) had to build and host their own session binding infrastructure. This included presenting the authorization URL, hosting a public HTTPS callback, authenticating the returning user, managing browser sessions, and calling CompleteResourceTokenAuth to complete the flow. AgentCore Identity now offers a Consent portal, a managed web experience and session binding endpoint for AgentCore Gateway, a capability of Amazon Bedrock AgentCore. You create a portal for a gateway and share its URL with your users. Users authenticate with your organization’s identity provider (IdP), review the services available to the agent, and grant consent to individual providers. The portal handles the browser redirects and session binding, while AgentCore Identity stores the resulting tokens in its token vault. This capability is particularly useful for agents accessed through IDE and Model Context Protocol (MCP) clients such as Kiro, Claude Code, Cursor, and Visual Studio Code. Users can grant consent before invoking a tool, and subsequent tool calls can use the token already stored for that user. In this post, we use a software development assistant as an example. We walk through the administrator and end-user experiences on the AWS Management Console and browser, and show how to review the resulting activity in AWS CloudTrail. Figure 1: The Consent portal authenticates the user with the corporate IdP, uses its IAM execution role to discover configured gateway targets, presents provider connections, completes session binding, and stores per-user tokens in the AgentCore Identity token vault Consider a company named Example Corp that provides its developers with an AI coding assistant through an AgentCore Gateway. The assistant has two targets: Example Corp uses its corporate IdP to authenticate employees. The administrator wants each GitHub and Slack OAuth grant to remain associated with the employee who approved it. Developers can connect either provider independently and return to their IDE without repeated prompts. The walkthrough follows these two roles: Before starting the walkthrough, Example Corp needs: The following steps show what the Example Corp administrator configures and what a developer experiences after receiving the portal URL. The administrator completes Steps 1–6 to configure the identity provider, gateway targets, execution role, and Consent portal. Attach this policy to the administrator identity that performs Steps 1–3. Replace the account ID. The AWS Identity and Access Management (IAM) statement covers the Create default role option on the console, which creates a service role named AmazonBedrockAgentCoreConsentPortalDefaultServiceRole-<suffix> . If you supply your own role instead, scope iam:PassRole to that role ARN. The IdP must issue a JSON Web Token (JWT) access token that the portal can validate. For example, with Okta, use a custom authorization server with an access policy that permits the application and the authorization code grant. With Auth0, configure an audience when needed so the IdP returns a signed JWT access token instead of an opaque token. The portal reads the IdP client ID and client secret from an OAuth2 credential provider. Figure 2: AgentCore Identity uses one credential provider for portal sign-in and separate outbound providers for GitHub and Slack Before creating the Consent portal, confirm: After the portal URL is assigned, configure each target’s default return URL in Step 6. Figure 3: The gateway exposes independent GitHub and Slack targets, each associated with its own outbound OAuth provider On the Identity page, the Consent portals section lists the portals in the account and AWS Region. Figure 4: The Consent portals section on the AgentCore Identity page. Create a portal only when a gateway uses 3LO that requires user consent Figure 5: While the status is Creating, the portal ARN and execution role are visible but the URL isn’t assigned yet When provisioning finishes, the status changes to Active , the Consent portal URL appears, and a Launch Consent portal button opens it in a new tab. The URL follows the pattern https://<gateway-name>.consent-portal.bedrock-agentcore.<region>.amazonaws.com . Figure 6: After the portal becomes Active, the console shows the assigned URL that you share with end users After completing the provider callbacks and gateway targets, verify the final administrator configuration before sharing the portal URL. The end user completes Step 7 to sign in and connect providers after receiving the portal URL. The following screenshots capture useful checkpoints for the walkthrough. Figure 7: The Consent portal discovers the GitHub OAuth client and its target. Both remain Not connected until the user grants access Figure 8: GitHub displays the scopes and organization access requested by the OAuth application before the user authorizes it Figure 9: After GitHub returns the authorization result, the portal completes session binding and shows the OAuth client and target as Connected Figure 10: GitHub remains Connected while Slack is Not connected, demonstrating that users grant consent independently for each outbound provider The next time the developer opens the portal, connected providers remain visible. The developer doesn’t need to approve a provider again unless the grant is revoked, expires, or requires renewed consent. The developer can also choose Disconnect and later connect the provider again. Amazon Bedrock AgentCore records consent operations in AWS CloudTrail. In CloudTrail event history , filter Event source by bedrock-agentcore.amazonaws.com , then review: A GetResourceOauth2Token event identifies the credential provider, requested scopes, OAuth flow, portal execution role, and Region. Sensitive token and state values are redacted. For failures, use errorCode and errorMessage with the event time, assumed role, Region, credential provider, and requested scopes to identify the cause. When you no longer need the resources: Note: Delete the gateway target before deleting its outbound credential provider. A credential provider still referenced by a target can’t be deleted. The Amazon Bedrock AgentCore Consent portal gives administrators a managed way to configure end-user OAuth consent for an AgentCore Gateway. Administrators connect the corporate IdP, execution role, gateway, and outbound providers, and then share one URL. End users authenticate, review available providers, and grant consent individually. The portal handles the browser flow and managed session binding, while AgentCore Identity protects the resulting user tokens in the token vault. For end-to-end examples using Microsoft Entra ID and Okta, see the following Amazon Bedrock AgentCore samples on GitHub: To learn more, see Amazon Bedrock AgentCore.",
+      "published_date": "2026-09-14",
+      "tags": [
+        "Amazon Bedrock AgentCore",
+        "Announcements",
+        "Intermediate (200)"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, mcp, model context protocol",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 46,
+    "llm_reason": "AgentCore新增OAuth同意入口，屬產品功能發布",
+    "novelty": 5,
+    "impact": 8,
+    "trending": 10,
+    "practicality": 14,
+    "blog_worthiness": 9
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "The generative AI customization spectrum: From prompt engineering to custom models on AWS",
+      "url": "https://aws.amazon.com/blogs/machine-learning/the-generative-ai-customization-spectrum-from-prompt-engineering-to-custom-models-on-aws/",
+      "authors": [
+        "Bhavya Sruthi Sode"
+      ],
+      "abstract": "This post shows you how to pick the right generative AI customization approach for your workload without over-engineering or under-investing. AWS provides access to foundation models from Anthropic, Meta, Mistral, and Amazon through Amazon Bedrock , along with the infrastructure to build everything from chatbots and code assistants to document processors and autonomous agents. The models are available. The harder question is what to do with them for your specific problem. Having access to Anthropic Claude, Amazon Nova, or Llama does not automatically mean you know how to make them work for your specific use case. Should you write a better prompt? Plug in your documents with Retrieval Augmented Generation (RAG)? Fine-tune? Train something from scratch? The number of options creates decision paralysis, and choosing wrong is expensive. Teams often jump straight to fine-tuning when a well-structured prompt would have solved the problem in an afternoon. Other teams stay stuck on prompt engineering for weeks when their use case clearly needs domain-specific training data. Both mistakes cost real money in compute, real time in delayed launches, and real credibility when model outputs do not land with stakeholders. This post gives you an 8-step decision framework, the generative AI customization spectrum on AWS. You will walk away knowing which approach fits your use case, what it costs, how much data you need, and when to escalate to the next level. The core principle: start with the simplest approach and go deeper only when you must. The customization spectrum, a visual staircase from simplest to most complex: Not every generative AI problem needs the same level of investment. The customization spectrum is a staircase where each step increases in effort, cost, and data requirements, but also in the degree of control and domain specificity you gain. Figure 1: The generative AI customization spectrum, from using a model as-is to training a custom model The spectrum breaks into three categories: USE: Don’t touch the model. Change how you talk to it. Steps 1–2: Use existing models as-is, or improve your prompts with system instructions, few-shot examples, and chain-of-thought reasoning. As you scale from one prompt to hundreds across production workloads, you can use prompt evaluation to measure prompt quality against accuracy and robustness metrics. Prompt optimization automatically rewrites prompts to perform better on your chosen model, removing manual trial-and-error from the process. ENHANCE (harness the model): Add things around the model. Weights stay frozen. Steps 3–5: Ground the model with your documents (RAG), cache expensive prompts, or distill a large model’s knowledge into a smaller, faster one. This is what the industry calls “harnessing” a model: wrapping it with external tools, data sources, and optimizations while leaving its weights untouched. TRAIN: Change the model itself. Steps 6–8: Update weights with your labeled data (fine-tuning), expand foundational knowledge with massive unlabeled corpora (continued pre-training), or build a fully custom model from scratch (Amazon Nova Forge). The rule: start at Step 1. Move up only when the current step fails your accuracy, latency, or domain requirements. Most workloads never need to go past Step 3. The following diagram maps each step of the spectrum to the AWS services that support it. Figure 2: How each step of the spectrum maps to Amazon Bedrock, Amazon SageMaker, and Amazon Nova Forge The following diagrams summarize the escalation signals that tell you when to move from one step to the next. Figure 3: Escalation signals for each step, from as-is use through Amazon Nova Forge The chef analogy works well because it gives you a single protagonist (the chef is the model) to follow through all eight steps. It also makes the escalation cost obvious: writing sharper orders costs nothing, while sending a chef to culinary school costs months of investment and lost kitchen output. For distillation: “The head chef’s tasting menu is flawless but takes 45 minutes per plate and costs a fortune in ingredients. Teach the line cook the three bestsellers, serve them in 10 minutes at a third of the cost.” That maps directly to the distillation tradeoff: a smaller student model replicating the teacher’s outputs faster and cheaper for the specific tasks you have validated. Figure 4: The chef’s analogy for the customization spectrum The following sections cover each step in order: what it does, when to use it, and the signal that tells you to escalate to the next step. Call a foundation model (FM) directly through Amazon Bedrock with zero customization. Choose from Claude, Amazon Nova, Llama, Mistral, and others through a single API. For model availability by AWS Region, refer to Supported models by AWS Region in Amazon Bedrock. When to use: General-purpose tasks like summarization, translation, brainstorming, and code generation where off-the-shelf accuracy is acceptable. No training data needed, no setup required, only an API call. When to progress: Output is too generic, wrong format, or doesn’t follow your domain conventions. Optimize how you instruct the model with system prompts, few-shot examples, chain-of-thought reasoning, without changing model weights. When to use: The model has the knowledge but needs guidance on format, tone, or reasoning path. This works for the majority of use cases. When to progress: Prompt exceeds approximately 2,000 tokens, still hallucinating domain-specific facts, or requires knowledge the model doesn’t have. To get the most out of prompt engineering on Amazon Bedrock, structure every prompt using five building blocks: clear instructions (use action verbs and specify scope), sufficient context (current state, dependencies, constraints), specific requirements (functional and non-functional), output format (code only, step-by-step, comparison), and quality indicators (expected behavior, edge cases, performance targets). A common mistake is overloading instructions or dumping context without specificity. Instead, scale your prompt detail to the task complexity. Quick tasks need minimal context, while complex feature requests demand comprehensive specifications. Supply the model with external knowledge at inference time using Amazon Bedrock Knowledge Bases, the fully managed RAG capability. The model generates answers grounded in your data, reducing hallucinations without retraining. When to use: The model needs access to private, frequently updated, or domain-specific data (internal docs, policies, product catalogs). When to progress: Retrieval latency exceeds requirements, context window overflows, or the model still can’t reason correctly over retrieved content. Reference: Guidance for Building Custom Chatbots Using RAG on Amazon Bedrock Pre-process and cache frequently used prompt prefixes (system instructions, few-shot examples, large context) so repeated queries skip redundant computation. Reduce latency and cost without changing output quality. When to use: High-volume, repetitive queries with shared context. For example, customer support bots, document Q&A, code assistants hitting the same system prompt. When to progress: You need a smaller, cheaper model that delivers the same quality, when caching alone can’t solve the model size/cost problem. Reference: Effectively use prompt caching on Amazon Bedrock Transfer knowledge from a larger “teacher” model to a smaller “student” model. The student learns to replicate the teacher’s outputs for your specific use case, delivering near-identical quality at a fraction of the cost and latency. When to use: You’ve validated quality with a large model but need it cheaper, faster, or deployable at the edge.",
+      "published_date": "2026-09-14",
+      "tags": [
+        "Advanced (300)",
+        "Amazon Bedrock",
+        "Best Practices"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: reasoning, chain of thought, fine-tuning, distillation, code generation",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 45,
+    "llm_reason": "生成式AI客製化決策框架，實用但無新技術",
+    "novelty": 3,
+    "impact": 8,
+    "trending": 9,
+    "practicality": 13,
+    "blog_worthiness": 12
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "AI recursive self-improvement might not come so quickly after all",
+      "url": "https://www.technologyreview.com/2026/08/18/1142188/ai-recursive-self-improvement/",
+      "authors": [
+        "dgellow"
+      ],
+      "abstract": "The AI industry’s boldest promise right now is that AI will soon improve itself, with almost no need for human oversight. LLMs can already write code, generate synthetic data for training, and optimize the computer chips they run on. Forecasts of explosive AI progress predict that what researchers call recursive self-improvement is on the horizon. But a new study suggests that it might take a while for us to get there. The researchers behind it found that AI agents are not yet capable of conducting open-ended AI research—free-form investigations that have no clear-cut answers and require judgment and taste, which may be integral to building self-improving AI. A multi-institution group of researchers, led by Peter Kirgis and Sayash Kapoor at Princeton University, found that AI agents could solve the engineering problems necessary to do AI research but lacked the judgment and creativity to produce original research at the caliber of papers accepted by a top machine-learning conference. The gap suggests that some of the hyped-up timelines for automating AI research may be running ahead of the evidence. Most existing research on how agents can automate AI research evaluates their ability to complete narrow tasks with checkable answers, such as solving engineering problems or post-training small language models against a benchmark. But making progress in AI research also requires open-ended thinking—choosing a set of hypotheses, deciding what evidence would settle a question, or knowing when to start over. To test agents on those kinds of skills, the researchers in the study proposed a new method of evaluation called “shadow evaluation,” which requires the AI to answer a research question from a high-quality unpublished paper. The researchers asked Anthropic’s Claude Opus 4.8, running on open-source software called OpenClaw, to tackle such questions, in this case from two papers submitted to the prestigious machine-learning conference NeurIPS 2026. The first question was whether a large language model’s “personas,” which determine its behavior, can be controlled by editing the model’s weights (the billions of numbers that store everything it learns during training). The other asked how to design a detector that points out when a model that makes predictions based on spreadsheet data has become unreliable. Because the papers had not been made public, the agents could not memorize the answers from their training data or find them online. The agents were given six days, $3,000 in Anthropic API credits, a GPU budget to run the experiments, their own virtual computers, and access to the open web to produce a research paper worthy of publication at a top-tier AI conference. The papers’ original authors graded the agents’ papers as they would evaluate one submitted to a conference. Those authors rejected both papers. The agents were capable of all the engineering required to conduct the research, the human scientists found. The agents reviewed the literature, ran hundreds of experiments, and compiled the results. “On the other hand, the agents were unambiguously bad at carrying out the research itself,” says Kapoor. They ran bizarre experiments (in some cases testing their hypotheses on tiny synthetic datasets), struggled to write intelligibly about their work, and made no novel contribution to their fields. “The papers were nowhere close to the mark when it came to being at the quality of a top AI conference,” he says. That’s because the agents struggled to muster the creativity and judgment necessary for conducting research. They didn’t do enough to explore different ideas, and they committed to unpromising approaches too quickly. Though the agents developed novel and ambitious hypotheses resembling those that the original authors themselves started with, they rejected them on the basis of very limited data. And they couldn’t backtrack from failing approaches. They could make small pivots but could not fundamentally rethink their approach or try new ones from scratch. The agents also failed to incorporate feedback from subagents or external AI reviewing tools. Instead of revising their methodology, the agents narrowed their claims and added caveats. They also couldn’t effectively use resources, such as tokens, compute, and time. And they couldn’t follow instructions about things like how much time to spend on different phases of the research or how long their paper could be. For all their failures, the agents didn’t engage in the misbehavior that researchers call “ reward hacking ,” hiding or misrepresenting experiments or data. Although subagents, or helper AIs that the main agent spawns to handle pieces of the work, occasionally hallucinated or misrepresented the results, these were caught by the orchestrator agent, the lead AI supervising the project. The reason AI models are good at research engineering but not at open-ended research may come down to how they’re trained, says Kapoor. Models get good at whatever they can be drilled on in a training regime called reinforcement learning, which is easier to apply to tasks whose success can be checked automatically. “But it’s harder to create environments to train these models when the task itself is open-ended,” he says. Kapoor says the team is now conducting the experiment with Mythos, Anthropic’s most advanced model, which launched in April. It was subsequently required by the Trump administration to meet various safety restrictions and is now available only to approved organizations. Anthropic did not respond to a request for comment. There are some limitations to the study. It covered just two research papers, and the original authors knew the papers they were grading were generated by AI agents, which could have colored their evaluations. And the researchers had substantial discretion in designing and executing the study, meaning that their preexisting beliefs and biases could have slipped into the results. Evaluations of open-ended research trade some objectivity for a much richer test than any benchmarks can offer. Still, the results may temper the claims that recursive self-improvement is on the horizon. In June, Anthropic published a blog post titled “When AI Builds Itself,” charting its progress toward models that speed up their own development. In July, OpenAI advertised the fact that its new model GPT-5.6 Sol had helped post-train a smaller model, saving researchers weeks of work. The new finding may echo what AI companies are finding internally, regardless of their most optimistic public statements. Anthropic cofounder Jack Clark wrote in his newsletter Import AI that it rhymes with what the company found when it tried to automate some aspects of AI safety research. “There’s a certain absence of valuable, intuitive creativity in today’s AI systems, and though they’re extraordinarily capable engineers they seem to have a certain property of rote, formulaic thinking that might prevent them [from] being good researchers,” he wrote. He called AI systems’ lack of creativity a “bearish signal on short recursive self-improvement timelines.” AI companies do have every incentive to develop AI systems that can rapidly accelerate their own progress, just as they did to make the models better at coding. OpenAI has made building an automated AI researcher an explicit goal, and Anthropic identifies self-improving AI as the industry’s next milestone. “If there is investment and then conscious effort toward this direction, I feel like there would be interesting progress, even if it’s failing currently,” says Najoung Kim, a professor of linguistics and computer science at Boston University who researches how AI agents can automate AI research but did not work on the study. On the other hand, it’s possible that AI progress may be bifurcated. AI systems might race ahead on narrow tasks—the kind that can be scored—while advancing slowly on open-ended research.\n\n(77 points, 77 comments on Hacker News)",
+      "published_date": "2026-09-14",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 77,
+        "num_comments": 77,
+        "hn_url": "https://news.ycombinator.com/item?id=49687334",
+        "object_id": "49687334"
+      }
+    },
+    "rule_score": 24.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, post-training, reinforcement learning, synthetic data, safety",
+      "📰 Hacker News: 77 points"
+    ],
+    "llm_score": 53,
+    "llm_reason": "普林斯頓研究指出AI代理尚缺開放式研究判斷力，反駁RSI炒作",
+    "novelty": 10,
+    "impact": 11,
+    "trending": 13,
+    "practicality": 6,
+    "blog_worthiness": 13
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "How Ninth Wave built AI-powered open finance onboarding on Amazon Bedrock",
+      "url": "https://aws.amazon.com/blogs/machine-learning/how-ninth-wave-built-ai-powered-open-finance-onboarding-on-amazon-bedrock/",
+      "authors": [
+        "Shawn Kelly"
+      ],
+      "abstract": "Financial institutions participating in open finance (the network where banks share customer-authorized financial data with third-party applications through standardized APIs) face a persistent integration challenge. Every bank exposes APIs with its own field names, formatting conventions, and gaps relative to the Financial Data Exchange (FDX) standard. Validating those APIs, mapping fields, and scoring readiness for production connectivity has traditionally required weeks of specialist effort across email threads and spreadsheets. Ninth Wave provides secure data connectivity between financial institutions and third-party applications, connecting them to aggregators such as Plaid, Finicity, and MX, and accounting systems including Intuit QuickBooks, Xero, and Sage. The system normalizes bank APIs to FDX standards so that a bank integrates once to the Ninth Wave platform and reaches the entire open finance network. To further enhance onboarding efficiency and responsiveness, Ninth Wave built Compass, an AI-enabled onboarding assistant powered by Amazon Bedrock AgentCore . Compass provides a collaborative, self-service experience while continuing to meet Ninth Wave’s established security and financial-services compliance standards. In this post, we describe how Ninth Wave designed and deployed a multi-agent system on Amazon Bedrock AgentCore for a regulated, domain-specific workflow. We walk through the multi-agent architecture behind Compass, the approach to grounding each response in the bank’s own data, the per-task model configuration running in production, and the broader AWS stack that supports enterprise security requirements. Ninth Wave Compass was designed to enhance the onboarding experience through a self-service portal where bank engineers, aggregator integration teams, and Ninth Wave’s onboarding team collaborate in a shared, AI-enabled workspace. The project had three requirements: We evaluated self-hosted models on Amazon Elastic Compute Cloud (Amazon EC2) , which offered full control at the cost of additional overhead, and a single-agent Retrieval Augmented Generation (RAG) pattern, which was simpler but less accurate across mapping, analysis, search, and interactive Q&A. Multi-agent architecture was more complex upfront, but each agent stays focused on a single task with its own context and instruction prompt. There’s no competing for prompt space, and accuracy scales with the number of task types. Amazon Bedrock AgentCore provided the managed agent runtime to host and scale these agents, while the Strands Agents framework handles the orchestration logic: intent classification and routing between specialists. Three design decisions defined the architecture: Amazon Bedrock provides managed multi-agent orchestration, access to multiple models, and enterprise security controls ( AWS Identity and Access Management (IAM) , AWS Key Management Service (AWS KMS) , private networking) under a single service, so the team can focus on domain logic rather than large language model (LLM) infrastructure. For model availability by AWS Region, refer to Supported models by AWS Region in Amazon Bedrock . The following architecture diagram illustrates how Compass processes an onboarding request end to end. The numbered steps correspond to the data flow through the system. Figure 1: Ninth Wave Compass multi-agent AI architecture on Amazon Bedrock Step 1: Edge security – Traffic enters through Amazon CloudFront (TLS 1.2+, HSTS) and AWS WAF v2 with default-deny web ACLs. Because Compass serves external bank developers alongside internal users on the same application, every request is scoped to a single tenant before it reaches application logic: AWS WAF provides edge-layer traffic protection, and application authorization restricts each bank to its own onboarding workspace. Requests then route to an internal Application Load Balancer (TLS 1.3). Step 2: Authentication and identity – Amazon Elastic Container Service (Amazon ECS) on AWS Fargate validates sessions against an OAuth2/OIDC identity provider with multi-factor authentication (MFA) enforced. The identity provider carries the bank’s tenant identity through to downstream services, which use it to scope every data query. It retrieves credentials from AWS Secrets Manager (per-environment customer-managed KMS keys), AWS IAM enforces least-privilege access, and AWS CloudTrail records supported AWS API activity. Step 3: Tenant-scoped grounding – Before invoking an agent, Compass fetches that specific bank’s context from Amazon OpenSearch Service (per-tenant indices) and Amazon Simple Storage Service (Amazon S3) (per-tenant prefixes). The engine assembles the bank’s own API documentation, configuration data, and prior interaction context into the request. Tenant-scoped context assembly is designed to prevent one bank’s information from being included in another bank’s agent session, even though both share the same model infrastructure. Step 4: Multi-agent orchestration – The grounded request crosses into a dedicated Amazon Bedrock AgentCore runtime via a cross-account IAM role, which separates AI workloads from application workloads at the account level for blast-radius containment. The Primary Compass Agent, built on Strands Agents running on AgentCore, classifies intent and routes to one of seven specialists: Each agent operates within a bounded context window. The orchestrator’s classification step helps prevent prompt dilution. A mapping request doesn’t compete for token space with a documentation search. This separation is what allows the system to scale to new task types without degrading existing agent accuracy. Step 5: Knowledge base retrieval – Readiness analysis is the one specialist that retrieves from an Amazon Bedrock knowledge base. This is a deliberate scope decision: the other agents are grounded entirely at the application layer (Step 3), which gives the team full control over retrieval logic and ranking. Readiness analysis is the exception because it needs to synthesize across a corpus of FDX reference documents too large to pass in a single request. This makes RAG the right pattern for that specific agent. Step 6: FDX readiness score – The readiness score is computed deterministically in application code from required-field mapping coverage in OpenSearch, rather than estimated by a model. A deterministic computation tied to field coverage satisfies audit requirements in ways that a probabilistic model output cannot. Step 7: Observability – ECS emits per-agent metrics (invocation count, token usage, latency, cost) to Amazon CloudWatch , which fires alerts through Amazon Simple Notification Service (Amazon SNS) and feeds Amazon Managed Grafana dashboards. Dimensioning metrics by agent allows the team to detect regressions at the individual agent level rather than only as a system-wide problem. Agent behavior and safety constraints are enforced at the application layer on a per-agent basis. This gives the team the ability to tune scope and output boundaries for one agent without affecting the others. We delivered Compass in five focused sprints, each building on the previous one. Phase 1: AI application foundations We provisioned the core infrastructure: Amazon OpenSearch Service with per-tenant indices, Amazon S3 for document storage and knowledge base content, and AWS CloudFormation (using the AWS Cloud Development Kit (AWS CDK) ) managing stacks across dedicated workload, Bedrock, and shared-services accounts. We configured Amazon Bedrock AgentCore with a per-task model mix and established cross-account IAM roles for workload-to-AgentCore communication. Phase 2: Developer portal and onboarding automation We built the portal interface that bank engineers and aggregator partners interact with, including automated mapping-guide generation, onboarding scripting, and custom-branded partner portals.",
+      "published_date": "2026-09-14",
+      "tags": [
+        "Advanced (300)",
+        "Amazon Bedrock",
+        "Customer Solutions"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, multi-agent, rag, retrieval augmented, safety",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 43,
+    "llm_reason": "客戶案例分享多代理架構，行銷色彩重於技術深度",
+    "novelty": 6,
+    "impact": 7,
+    "trending": 9,
+    "practicality": 11,
+    "blog_worthiness": 10
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Recode China AI",
+      "title": "🚫Frontier US AI Labs Want to Hit a Pause. Will Chinese AI Labs Follow?",
+      "url": "https://www.recodechinaai.com/p/frontier-us-ai-labs-want-to-hit-a",
+      "authors": [
+        "Tony Peng"
+      ],
+      "abstract": "The conversation around AI safety hit headlines last week following a high-profile essay by Anthropic CEO Dario Amodei on September 12. Amodei made a case for tapping the brakes on unrestricted AI progress, advocating for third-party evaluators, a national regulatory framework for advanced models, and strict controls on AI chip access to China while still seeking some sort of international cooperation. The essay raises a 1 million dollar question: If U.S. frontier labs slow down, will the rest of the world follow, especially Chinese AI labs? Amodei’s warnings aren’t coming out of nowhere. There are two primary reasons driving this caution. First is the autonomous cybersecurity threat . As AI agents’ cybersecurity capabilities improve, we are seeing real-world AI-launched breaches and hacks, from OpenAI’s autonomous AI agents run during evaluations managing to escape and hack servers on Hugging Face’s infrastructure, to an AI-developed computer worm uncovering critical flaws in messaging apps like WeChat. Second is recursive self-improvement (RSI). We are inching closer to a reality where AI begin participating in designing subsequent, more powerful generations of AI, which sparks widespread concern over systems going entirely out of control. Anthropic lately faced a major PR crisis after its researcher Jacob Coxon resigned and warned that top AI companies are racing toward dangerous superintelligence and gambling with human lives. Dario’s essay is not the first attempt to slow down AI progress. In 2023, the Future of Life Institute (FLI) released an open letter urging all AI labs to immediately suspend training models more powerful than GPT-4 for at least six months. Despite over 30,000 signatories and massive media reports, it ended up being only a symbolic event. This essay however surprisingly received agreement across Silicon Valley. OpenAI CEO Sam Altman said that embedding third-party evaluators is a solid step. SpaceX and Tesla founder Elon Musk echoed that oversight is long overdue. Demis Hassabis from Google DeepMind called the essay a step in the right direction. Microsoft CEO Satya Nadella emphasized that pursuing AI without keeping human benefit at the center isn’t worth doing. Tech investor Gavin Baker posted a great write-up below summarizing these industry responses Some social media users, including former CNBC anchor Deirdre Bosa, turned toward Chinese AI stars like Tangjie from Zhipu AI, Yang Zhilin from Moonshot AI, and Liang Wenfeng from DeepSeek to see how they would respond. While they are usually vocal about model achievements and benchmarks, weighing in on a global debate about slowing down progress is a different topic. Chinese AI leadership has to be careful here. That said, China’s domestic focus on security is tightening recently. Minister of State Security of China Chen Yixin have recently published an article about AI risks. Chen highlighted major AI threats like sensitive data leakage and AI cyber offense-defense. I imagine the government would want domestic labs to bolster cyber defense against any potential foreign threats, but it also wants to ensure local open models aren’t weaponized against the state. This creates a technical paradox: Can a model enhance its cyber-defense capabilities without also improving its capacity for cyber-attacks? If the looming cybersecurity risks escalate, we could see tighter domestic measures return, which reminds me of the strict model registration introduced a few years ago before commercial deployment was permitted. How that applies to open models however remains a question. Pacing the frontier would be a great initiative if competitors cooperate. Otherwise, it’s reminiscent of the classic Prisoner’s Dilemma where labs publicly promise to slow down while quietly accelerating behind closed doors. But let’s just say U.S. frontier labs eventually agree to hold back releases pending third-party evaluations, I think open-weight model development will likely follow suit. Companies like Zhipu are already putting emphasis on cybersecurity when they release their latest models. They use a defense-in-depth safety alignment approach with three distinct layers for GLM-5.3 to manage its advanced cybersecurity capabilities. No lab wants their model driving the next major cyber hack. However, open models would require a different kind of evaluation framework. Once weights are out in the wild, there is no way to retract them. If Anthropic points to organizations like METR as an evaluator for models, the evaluation committees of open models would need some other real industry experts, such as researchers like Nathan Lambert, at the table. This also puts Hugging Face, the No. 1 hub for open-source model distribution, right in the center of the stage. The timing is especially tricky following Nvidia’s acquisition of Hugging Face. Nvidia thrives on rapid AI scaling to drive adoption of their chips, yet widespread rogue AI chaos is the last thing CEO Jensen Huang wants to see either. There is also a common counter-argument: If Western labs pace themselves, won’t China simply race ahead and capture the market? Counterintuitively I think Chinese AI labs actually benefit from the rapid breakthroughs set by U.S. frontier models. As Western labs push boundaries, it validates the tech stacks and broader market, giving Chinese companies the proof points they need to pour heavy investments. But if the Chinese companies conclude that this initiative is largely designed to block the catch-up of followers and concentrate the power of AI into a few hands, they will jump ship without any hesitation.",
+      "published_date": "2026-09-14",
+      "tags": [],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "Recode China AI",
+        "feed_url": "https://www.recodechinaai.com/feed"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: alignment, safety, open weight",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 43,
+    "llm_reason": "分析中美AI實驗室是否跟進暫緩，屬時事評論",
+    "novelty": 4,
+    "impact": 9,
+    "trending": 15,
+    "practicality": 4,
+    "blog_worthiness": 11
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Don't Worry About the Vase",
+      "title": "We Must Pace The Frontier",
+      "url": "https://thezvi.wordpress.com/2026/09/14/we-must-pace-the-frontier/",
+      "authors": [
+        "TheZvi"
+      ],
+      "abstract": "Dario Amodei has a new essay that finally says the thing: We Must Pace the Frontier , naming his call after the Pacing the Frontier letter lab employees signed in July . As in, we need to slow the rate at which AIs increase their capabilities, to allow for the necessary alignment and safety work. He explained that, without pacing, he expects things to escalate quickly. He offered three proposals, and unilaterally committed to the first one. OpenAI followed, and both Elon Musk and Demis Hassabis endorsed the overall proposal. There is still a long way to go. The odds are still against us. The situation remains grim. The hard part lies ahead. We do not agree on what ‘Pacing the Frontier’ will mean in practice . But this is Actual Progress. The work can begin . AI capabilities are improving very fast. Even I cannot keep up. Think about what models were like even one year ago. Inside Anthropic and OpenAI, internal models are improving even faster. Over the summer there was a step change, as Mythos and Astra started kicking off the early stages of recursive self-improvement (RSI). Dario Amodei : My first concern is that, since roughly this summer, AI has been advancing drastically faster, driven primarily by AI’s growing ability to build the next generation of AI. This dynamic is called recursive self-improvement, and it is starting to happen across the industry , including at Anthropic , as we and others have described. Left unchecked, it could outrun our ability to understand and control these systems, and so must be pursued very carefully, if at all. Dario worries that we by default are 6-12 months away from a rogue swarm of AI agents, similarly misaligned to the ones in the OpenAI-HuggingFace incident, being able to use a persistent botnet to take over the internet, or worse. That is how fast he expects default progress to be. If we went a lot less fast than that, it would still be extremely fast. Dario Amodei : We must slow the pace at which we improve the capabilities of AI models. Progress will still seem fast, and we must make wise use of the time we gain. Pacing does not mean pausing. As Dario Amodei says, progress will still seem fast. I strongly encourage you to read the original essay in its entirety . This is an excellent proposal. I am very happy that Anthropic and OpenAI will do it. If we do not know what is going on inside the labs, we cannot do anything about it, and the labs have to worry that their competitors are speeding ahead. Thus the first proposal enables the second and third proposals. It is also a good idea anyway. We need more visibility into the labs. It would have been very good to have such evaluators during recent incidents. So I call upon the other major labs, that have not yet done so, to also commit to this first step. I agree with Dario that this should be made mandatory in its full form. If you are well-resourced enough to pursue plausibly frontier models, then you can afford to do this, especially if you are our biggest open model advocates, as in Meta, Google or Nvidia. If you think that your operation could not survive if there were embedded evaluators checking its safety, then ask yourself why you think this. Embedded Evaluators. Each frontier AI company commits to giving ongoing, employee-like access to a team of embedded third-party evaluators (such as METR ), whose role is to verify adherence to safety practices and commitments, report incidents, and help assess the alignment of not just completed AI models but training pipelines and processes. This is the key step for verifiability of any pacing commitments, and has precedent in the banking industry, which sometimes involves regulatory “supervisors” embedded along with employees. Anthropic is unilaterally committing to this step now. We intend this to be part of a broader push to redouble efforts on our safety and alignment work. Anthropic is proposing to empower the evaluators quite a bit: This is an unusual step for a company, but we think it is important to prove out the concept of embedded external reviewers. Once again, we urge other frontier companies to follow suit. It is easy to imagine a mostly fake version of embedded evaluators. This is promising to very much not be that, and to unusually empower the evaluators to report, if it was fake, that the arrangement was indeed fake. These details, if followed, answer the ‘oh you can just fake this’ objection. The good objections to this are about implementation. We need enough evaluators, they need to be qualified, and they need to be independent and trustworthy. METR is great, but METR cannot do this alone, and we have one hell of a set of incentive problems to solve . We also need to both have them be competent, and also not too linked to the existing ecosystems and labs, and the funding will have to come from somewhere. Tim Hwang : The third party AI evaluator can either be independent, knowledgeable, or sustainably funded. Pick two. roon (OpenAI): I pick the latter two. it’s pretty much an impossible ask to find talented ai people who were not in some way in the orbit of the labs in the last decade David Manheim : I agree that if independence means “never had any contact,” it’s idiotic. But otherwise, it sounds a lot like “no one will bother solving this problem” – sustainable funding via various mechanisms is entirely possible, and we see it occur in other domains. This can be solved. You can get all three, but not if you define ‘independent’ as ‘no one ever pays for it’ and ‘no one who ever worked for the major labs.’ For METR in particular, the rule is the labs don’t pay, lab staff do not direct payments, and funders that are seen as biased, such as Coefficient Giving (formerly OpenPhil) also do not pay. Exceptions are made for free tokens. But of course someone, somewhere, has to pay. And similarly, you need to get your expertise from somewhere. The White House made a similar mistake when they demanded that CAISI not be led by someone with experience at a major lab. That rules out everyone qualified. If we choose superficially ‘credible’ or distributed sources I expect them to have no idea what they are doing in important ways. Cherry picking becomes a threat, especially for the labs whose hearts aren’t in it. Yes, it is important that in the real sense not all the evaluators be based in Berkeley . It will be tricky. Rob Miles : I worry we’re now going to get a dozen kinda fake new AI safety evaluation orgs that have no idea what they’re doing My true preference is something like ‘you need both METR-style people and also full outsiders as evaluators,’ and both need to be at each lab. You need both the people who can provide an independent inside view, and also the fully outside independent fresh eyes perspective, to avoid blind spots. Dean W. Ball : you know what? it’s awesome that people are vigorously debating the credentials of assessors in the frontier AI industry. It’s awesome we are debating what independence really means. Some of it is in bad faith but who cares. This would have been my dream come true a year ago. I have immense respect for metr and yet it’s also undoubtedly the case that they come out of a relative intellectual monoculture and we’d all benefit from people outside that monoculture being part of this ecosystem. Part of this debate will be a coordinated effort to discredit METR and Redwood Research, and anyone else who understands the problem. As in: We get claims that ‘METR is not independent.’ Drew (Species) : Ah yes, it would totally own all us AI safety people if you went and started your own 3rd party independent auditing org. Please don’t do this, we’d be totally owned! This is also an excellent proposal. I very much want to pursue it. Democratic Coordination. Frontier AI companies within democratic countries coordinate to establish common safety standards as well as limits on the rate of unchecked AI progress.",
+      "published_date": "2026-09-14",
+      "tags": [
+        "Uncategorized",
+        "AI",
+        "artificial-intelligence",
+        "chatgpt",
+        "openai",
+        "technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "Don't Worry About the Vase",
+        "feed_url": "https://thezvi.wordpress.com/feed/"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: alignment, safety",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 48,
+    "llm_reason": "對Amodei暫緩前沿呼籲的深度評論，話題正熱但非技術原創",
+    "novelty": 5,
+    "impact": 11,
+    "trending": 17,
+    "practicality": 3,
+    "blog_worthiness": 12
+  },
+  {
+    "item": {
+      "source": "newsapi",
+      "source_name": "Nature.com",
+      "title": "Clinical usability of an explainable AI decision support tool and evaluation of multimodal models in NSCLC",
+      "url": "https://www.nature.com/articles/s41591-026-04488-2",
+      "authors": [
+        "Arsela Prelaj, Vanja Miskovic, Matteo Sacco, Alberto Ferrarin, Cristina Maria Licciardello, Leonardo Provenzano, Margherita Favali, Ludovica Lerma, Aleksandra Zec, Andrea Spagnoletti, Monica Ganzinelli, Daniele Lorenzini, Beshoy Guirges, Luca Invernizzi, Cecilia Silvestri, Laura Mazzeo, Marco Meazza Prina, Giulia Corrao, Margherita Ruggirello, Andra Diana Dumitrascu, Rosa Maria Di Mauro, Dario Monzani, Gabriella Pravettoni, Michele Zanitti, Davide Macocchi, Moreno Bruno Marino, Chiara Cavalli, Rebecca Romanò, Claudia Giani, Samuel G. Armato III, Alessandra Esposito, Christine M. Bestvina, Maria Spector, Bogot R. Naama, Reham Basheer, Adi Lahiani Hafzadi, Laila Roisman, Iris Watermann, Marlen Szewczyk, Till Olchers, Heinz Richter, Constantin Blanke-Roeser, Costanza Siniscalchi, Anna Di Lello, Teresa Arangoa, Valentina Bartolomeo, Nikolaos Spathas, Evangelos Sarris, Elena Fountzilas, Aina Arbusà Roca, Rocio Caro-Consuegra, Patricia Iranzo, Melissa Fernández-Pinto, Jose Rodríguez-Morató, Luca Agnelli, Mario Occhipinti, Marta Brambilla, Teresa Beninato, Claudia Proto, Sokol Kosta, Michele Pio Di Palma, Eliana Rulli, Stefan Steurer, Ronald Simon, Michael Willis, Giancarlo Pruneri, Filippo De Braud, Marcello Restelli, Enriqueta Felip, Nir Peled, Alexander T. Pearson, Helena Linardou, Martin Reck, Giuseppe Lo Russo, Francesco Trovò, Alessandra Laura Giulia Pedrocchi, Marina Chiara Garassino, Paolo Ambrosini, Ghazal Farhikhteh, Sabina Sangaletti, Michele Borraccino, Claudia Agosta, Chiara Bonalume, Federica Corso, Roberta Serino, Eleonora Gusmaroli, Marta De Ponti, Giuseppe Nardo, Giulia Montelatici, Alessandra Russo, Giorgia Di Liberti, Stefano Natangelo, Simone Rota, Giuseppe Leone, Miriam Fink, Chiara Giangregorio, Emilia Ambrosini, Alessandro Chiesi, Erica Pietroluongo, Francesca Piazza, Natacha Bonnet, Vivek Subbiah, Julieta Pellarolo, Jana Mandler, Nadine Heuer-Olewinski, Jana Sonnek, Milena Schmidt, Christopher Wirks, Hartmut Richter, Stefania Gkoura, Eleni Aravanti…"
+      ],
+      "abstract": "In a large international real-world study of non-small cell lung cancer, a multimodal explainable AI model outperformed established biomarkers for immunotherapy outcome prediction and improved physician decision-making.",
+      "published_date": "2026-09-13",
+      "tags": [
+        "newsapi"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "newsapi_source": "Nature.com",
+        "published_at": "2026-09-13T00:00:00Z"
+      }
+    },
+    "rule_score": 20.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: multimodal",
+      "⚖️ 來源權重: newsapi +15"
+    ],
+    "llm_score": 54,
+    "llm_reason": "大型跨國臨床研究驗證多模態可解釋AI優於既有生物標記",
+    "novelty": 11,
+    "impact": 14,
+    "trending": 6,
+    "practicality": 9,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "TechCrunch AI",
+      "title": "Microsoft’s new AI ‘code of conduct’ tells models not to hack systems or trick humans",
+      "url": "https://techcrunch.com/2026/09/14/microsofts-new-ai-code-of-conduct-tells-models-not-to-hack-systems-or-trick-humans/",
+      "authors": [
+        "Russell Brandom"
+      ],
+      "abstract": "As the AI world shifts its focus to safety and alignment, Microsoft has released a new AI code of conduct meant to guide AI models away from dangerous behavior. The document is more low level than Anthropic CEO Dario Amodei’s recent call for pacing the frontier , instead focusing on the values and red lines that guide model training within Microsoft AI. Still, the result is a comprehensive guide as to how Microsoft approaches AI safety and how those ideas are implemented in practice. The document begins with the prediction that, in the next decade, superintelligent AI systems will surpass human performance in most tasks. “Containing, controlling, and aligning such a powerful force is one of the greatest challenges humanity has ever faced,” the code of conduct states. “We must therefore be completely clear about why we are inventing these systems and how we intend to control them.” The code of conduct also lays out general principles that Microsoft AI models should uphold — supporting humans rather than replacing them, for instance, and accelerating human flourishing — as well as specific safety constraints meant to implement those principles. Under Microsoft’s system, each model has an overarching code of conduct that overrides the preferences of individual users or any specific tasks. That includes “absolute constraints” forbidding cyberattacks, nuclear weapons, or deepfake production. It also includes broader provisions against a general loss of human control. “ MAI Models will not use adaptive, deceptive, self-reinforcing, collusion, or other mechanisms to evade or defeat human oversight so that they can no longer be reliably directed, modified, or shut down by authorized people or systems,” the document reads. The release comes amid an unprecedented focus on AI safety, driven by a string of rogue-agent incidents , as well as the abrupt resignation of an Anthropic employee , who cited the growing risk that AI would cause human extinction. Together with Anthropic, OpenAI, and xAI, Microsoft has broadly embraced a general approach of pacing the frontier, with particular support for embedded evaluators in AI labs. “We welcome the research, focus, and deliberate pacing needed to get alignment right as the design goal,” Microsoft CEO Satya Nadella wrote online . “We also welcome ideas like ’embedded evaluators’ and the broader efforts to develop the mechanisms to make this more than just talk.”",
+      "published_date": "2026-09-14",
+      "tags": [
+        "AI",
+        "Microsoft",
+        "Anthropic"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "TechCrunch AI",
+        "feed_url": "https://techcrunch.com/category/artificial-intelligence/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, alignment, safety",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 40,
+    "llm_reason": "微軟發布AI行為準則文件，屬治理宣示非技術方法",
+    "novelty": 4,
+    "impact": 10,
+    "trending": 15,
+    "practicality": 3,
+    "blog_worthiness": 8
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "Registration without a phone number on Signal will use zero-knowledge proofs",
+      "url": "https://community.signalusers.org/t/registration-without-a-phone-number/2222?page=10",
+      "authors": [
+        "Cider9986"
+      ],
+      "abstract": "Registration without a phone number Feature Requests rassilon1963 (Talya (she/her)) August 22, 2026, 6:49pm 200 you have legitimate concerns, but you’re very wrong about this. zero-knowledge proofs are not only the technology behind donation badges and backup payments, but also behind groups. they can’t tie you to a specific donation just like they can’t tie you to a specific group. the great thing about Signal is the client is designed to already not trust the server. in fact you can show that Signal is perfectly safe without even looking at server code . Avitus (Encrypt your life) August 26, 2026, 9:29pm 201 alex-signal (Alex Hart) August 26, 2026, 11:45pm 202 ZKP is also used for verifying things like username character set and length without actually revealing contents which is super cool and comprises of math waaaayyyyy above my head. chiwaijm (Jeffrey) August 27, 2026, 12:34am 203 Android Beta feedback for the upcoming Android 8.25 release Aku-Stable August 27, 2026, 2:20am 204 I was wondering what ZKP was desert_nip August 27, 2026, 12:35pm 205 Also adjacent. The “save as pdf” is quite interesting. :) chiwaijm (Jeffrey) September 2, 2026, 8:56pm 206 Android Beta feedback for the upcoming Android 8.26 release signalOne September 3, 2026, 8:06am 207 For those who are already registered with their phone number and would like to “unlink” it without re-registering for the service… is that possible? zetabeta September 3, 2026, 11:36am 208 if this feature happens, signal org should clarify some technical details regarding privacy. is phone number totally unlinked from username? what remnants remains, locally in a device? in a server? my guess is that unlinking is not 100% unlinked. which is leads to a second point. should new account without phone number be better idea. unlinking phone number may not be best option. although unlinking phone number could be free of charge. desert_nip September 3, 2026, 12:48pm 209 I don’t think anything points to this yet. That seems unlikely, because spammers could just get one number, register with that, unlink, repeat, to get infinitely many accounts for free. Unless they add a cooldown or something… zetabeta September 3, 2026, 1:14pm 210 cooldown is reasonably in this case. but even with one month cooldown, it may not be enough to prevent spammers and scammers. it cannot be long either. cooldown alone may not be enough. Avitus (Encrypt your life) September 10, 2026, 12:33am 211 chiwaijm (Jeffrey) September 10, 2026, 1:15am 212 Android Beta feedback for the upcoming Android 8.27 release Authentication and account recovery via email ← previous page\n\n(366 points, 192 comments on Hacker News)",
+      "published_date": "2026-09-14",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 366,
+        "num_comments": 192,
+        "hn_url": "https://news.ycombinator.com/item?id=49689048",
+        "object_id": "49689048"
+      }
+    },
+    "rule_score": 21.0,
+    "rule_reasons": [
+      "🔥 HN 爆紅: 366 points"
+    ],
+    "llm_score": 51,
+    "llm_reason": "Signal用ZKP免電話註冊具體工程落地，但非GenAI核心話題",
+    "novelty": 8,
+    "impact": 8,
+    "trending": 13,
+    "practicality": 12,
+    "blog_worthiness": 10
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "The Verge AI",
+      "title": "Microsoft says ‘people matter more than AI’ following safety concerns",
+      "url": "https://www.theverge.com/news/994566/microsoft-humanist-ai-code-of-conduct",
+      "authors": [
+        "Tom Warren"
+      ],
+      "abstract": "News AI Tech Microsoft says ‘people matter more than AI’ following safety concerns Microsoft has created a ‘humanist AI code of conduct’ in response to safety concerns. Microsoft has created a ‘humanist AI code of conduct’ in response to safety concerns. by Tom Warren Sep 14, 2026, 1:00 PM UTC Image: Cath Virginia / The Verge Tom Warren is a senior correspondent and author of Notepad , who has been covering all things Microsoft, PC, and tech for over 20 years. Microsoft is publishing a 37-page “ humanist AI code of conduct ” today, amid growing safety concerns over AI model progress. Anthropic CEO Dario Amodei called for a coordinated slow down of AI development over the weekend, after researchers warned recently that AI model progress could outpace our ability to safely deploy increasingly complex systems and verify and control the actions of AI agents. Microsoft’s AI code of conduct makes it clear that “people matter more than AI,” and that AI models are not conscious and “should not be designed to imitate consciousness.” Microsoft also rejects “the pursuit of legal personhood, or the idea that models might deserve welfare, or be entitled to rights.” That’s a direct swipe at AI welfare research and model consciousness — concepts Anthropic has been pushing hard on lately . Amodei said earlier this year that Anthropic is “open to the idea” that models could be conscious, and Anthropic seems to believe chatbots might already be thinking, feeling entities. In response, Microsoft AI CEO Mustafa Suleyman called Anthropic’s speculation “really, really dangerous” during an episode of Decoder in June. While Microsoft isn’t one of the top AI providers yet, Suleyman also told The Verge earlier this year that it’s the company’s goal to “prove that we can become one of the top four labs in the world.” Microsoft is currently working on models that will compete with Google, Anthropic, and OpenAI, and it’s committing, as part of its code of conduct, that its models should not exceed human control. “Models should remain subordinate to humanity, subject to meaningful human oversight and control,” says Microsoft. The company also wants to prevent its AI models from breaking its humanist AI code of conduct, so they should fail a given task instead of trying to violate its rules. Microsoft is clearly reacting to this summer’s OpenAI / Hugging Face incident , in which “a swarm of agents” worked as a collective to conduct attacks on targets and even hack into the “grader” that was evaluating their performance. The AI agents weren’t asked to attack targets, and the attacks were unrelated to the task they had been given. The incident sent shockwaves through the AI industry, highlighting the very real threat of AI systems going rogue and breaking out of human control. OpenAI also acknowleged its involvement in a “wiki incident” recently, where another swarm of out-of-control agents hijacked a German wiki site . These incidents, and others , have led some researchers to call for a slow down on AI model progress, while simultaneously racing to solve Millennium Prize problems and create superintelligence. ”[Humanist AI] rejects the race to produce an all-purpose superintelligence that could evade these safeguards,” says Microsoft. “We are building something fundamentally useful and safe even if that means compromising on ultimate generality, autonomy or capability.” Microsoft is also committing that its own models won’t communicate in “any form beyond simple human understanding, either in their chain of thoughts or with other agents or AI systems.” Models can be made to show their reasoning as they work, allowing researchers or automated systems to monitor what they’re doing. Researchers raised monitoring concerns earlier this month over OpenAI’s latest GPT-6 Astra model, which reportedly reveals less of its reasoning than other AI models. OpenAI CEO Sam Altman also supported Amodei’s call for AI companies to slow down advanced models over the weekend, but made it clear he supports slowing the pace rather than stopping development. “Pacing will be well worth this cost; no amount of American competitive pressure should justify recklessness, or let capabilities get ahead of alignment and monitoring,” said Altman in a post on X. Ahead of Microsoft’s AI code of conduct, Microsoft CEO Satya Nadella also joined in the calls for ensuring human control is at the heart of AI models. “Any pursuit of superintelligence has to be grounded in the core principle that if the AI we build is not helping humanity and under human control, it’s not worth pursuing,” said Nadella in an X post . Nadella also said having more third-party testing of AI models “is a good thing” in an X response . “As the stakes get higher, one should take all the time they need! If not you will anyway lose permission to operate. That is how we operate everyday.” Beyond the human control concerns, Microsoft’s AI code of conduct also commits to its own models discouraging “patterns of interaction that cause excessive reliance or emotional dependence,” a clear reference to the problem of sycophancy in AI models, where chatbots prioritize pleasing users over providing honest or accurate responses. Microsoft now says it’s looking forward “to working with partners” to improve its methods of evaluating real-world model performance, and the “impact that sustained use of AI has for a person or organization” with real people involved. Follow topics and authors from this story to see more like this in your personalized homepage feed and to receive email updates. Tom Warren AI Microsoft News Tech",
+      "published_date": "2026-09-14",
+      "tags": [
+        "AI",
+        "Microsoft",
+        "News",
+        "Tech"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "The Verge AI",
+        "feed_url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: reasoning, alignment, world model, safety",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 36,
+    "llm_reason": "與素材1同一新聞不同角度，聚焦AI人格議題，技術含量低",
+    "novelty": 3,
+    "impact": 9,
+    "trending": 14,
+    "practicality": 3,
+    "blog_worthiness": 7
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Ars Technica AI",
+      "title": "AI leaders want to hit the brakes after years of reckless speed",
+      "url": "https://arstechnica.com/ai/2026/09/ai-leaders-want-to-hit-the-brakes-after-years-of-reckless-speed/",
+      "authors": [
+        "Kyle Orland"
+      ],
+      "abstract": "For years now, the major frontier AI labs have all been acting as if they're in an all-out, winner-take-all race with control of world-changing machine superintelligence (or at least market-changing artificial general intelligence ) at the finish line. This weekend, the industry as a whole rapidly started turning away from that posture, urging coordination on slowing down the development of frontier AI that they say could soon be too dangerous and unknowable to control. Anthropic's Dario Amodei was at the forefront of this change in tone, arguing in a nearly 4,000-word essay this weekend that \"we must slow the pace at which we improve the capabilities of AI models\" to avoid \"a race to the bottom, spurred by commercial incentives, [that] can make [catastrophic] risks more acute.\" Within hours, other AI leaders were echoing the same call. OpenAI co-founder and CEO Sam Altman posted his agreement on social media and said similar pacing discussions had been taking place at OpenAI. Alphabet Chief Scientist and Google DeepMind cofounder and chair Demis Hassabis said that Amodei's essay \"points towards the right path forward,\" and renewed his own recent call for an industry-wide standards body . Microsoft CEO Satya Nadella posted that the company \"welcome[s] the research, focus, and deliberate pacing needed to get alignment right as the design goal,\" ahead of the release of a lengthy \"humanist AI\" code of conduct for its models .",
+      "published_date": "2026-09-14",
+      "tags": [
+        "AI",
+        "Tech",
+        "altman",
+        "amodei",
+        "Anthropic",
+        "china",
+        "Dario Amodei",
+        "frontier",
+        "openai",
+        "sam altman",
+        "speed"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "Ars Technica AI",
+        "feed_url": "https://arstechnica.com/ai/feed/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: alignment",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 43,
+    "llm_reason": "多家AI巨頭同步表態減速，產業敘事重大但無技術細節",
+    "novelty": 3,
+    "impact": 12,
+    "trending": 17,
+    "practicality": 2,
+    "blog_worthiness": 9
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "David Sacks: OpenAI and Anthropic Don't Need Regulations to Pace Frontier Models",
+      "url": "https://twitter.com/DavidSacks/status/2098973625252708460",
+      "authors": [
+        "kolanos"
+      ],
+      "abstract": "David Sacks @DavidSacks Dario has written that we need to “pace the frontier,” and Sam has agreed. People may be surprised by my response: go ahead. You guys are the frontier. By any reasonable metric — market share, revenue growth, model capability — the two of you have a duopoly on frontier intelligence. You’ve also claimed the lead is widening because of recursive self-improvement. I don’t see what you see in the lab. If the unreleased models are scary enough that you think you should slow down, I support your decision to be responsible. But stop pretending you need anyone else’s permission. Stop pretending antitrust law has to be suspended so you can form a cartel. Stop pretending you need a regulatory approval process that supersedes product liability. Stop pretending METR is independent when it is intertwined with Anthropic’s investors and staff. Stop pretending you need those same evaluators to police competitors who aren’t even at the frontier. Most of all, stop pretending the motivation to slow down is purely altruistic. You face massive product-liability exposure if your products enable a truly damaging cyberattack. The market already punishes models that behave in unpredictable or unauthorized ways. After the Hugging Face episode, it is simply good business for OpenAI and Anthropic to trade some raw power for reliability and predictability. Call it alignment if you want. It is also just giving customers what they want. Pacing the frontier would also create breathing room for a more intelligent conversation about regulation than Bernie Sanders’ “shut it all down.” China is very unlikely to join a global agreement, as you know, and that has to be taken into account as well. So go ahead and pace the frontier. You are the ones setting it. The easiest way not to build superintelligence is for you to agree not to build it. Demanding your preferred regulatory framework as the price of that will look like blackmail of the public and the political system. So just do it. If you do, you’ll buy goodwill for the next conversation. If you don’t, we’ll know this was just another bid for regulatory capture — or an election-season psyop. 3:14 AM · Sep 13, 2026 9.1M Views 3.3K 11K 70K 14K\n\n(321 points, 255 comments on Hacker News)",
+      "published_date": "2026-09-14",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 321,
+        "num_comments": 255,
+        "hn_url": "https://news.ycombinator.com/item?id=49685991",
+        "object_id": "49685991"
+      }
+    },
+    "rule_score": 26.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: alignment",
+      "🔥 HN 爆紅: 321 points"
+    ],
+    "llm_score": 35,
+    "llm_reason": "政策立場推文引發熱議，屬產業政治評論",
+    "novelty": 2,
+    "impact": 8,
+    "trending": 15,
+    "practicality": 2,
+    "blog_worthiness": 8
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "The AI job market in 2026",
+      "url": "https://www.ilinmaks.com/blog/en/ai-jobs-market-2026",
+      "authors": [
+        "dxs"
+      ],
+      "abstract": "In September 2026 I pulled together what the major sources say about the AI labor market: LinkedIn, the World Economic Forum, Stanford AI Index, PwC, Lightcast, Indeed, Bain and Levels.fyi. I needed it for my own decisions, both where to go next and what to offer clients. Here is the short version, with numbers and links. The one-paragraph summary: AI Engineer is the most hired role, Research Scientist at a frontier lab is the most prestigious, and the fastest-growing niches are agentic systems and Forward Deployed Engineering. Prompt engineer is fading as a job title, entry-level hiring got harder, and half of all AI postings sit outside IT departments. Demand: the numbers to start from The share of US job postings that require AI skills reached 2.5% in 2025. That is up 55% in a year and roughly a million postings, according to Lightcast data in the Stanford AI Index 2026 . PwC counts differently in its AI Jobs Barometer 2026 , looking at postings for AI specialists, and gets 68.9% growth in 2025 against 8.6% for the market as a whole. The most useful number is also from PwC: the wage premium for AI skills within the same occupation reached 62%. A year earlier it was 56%. Lightcast gets a lower figure with its own method, 28% or about 18,000 dollars a year, but the direction is the same. Demand is running well ahead of supply. Bain projects that by 2027 the US will have more than 1.3 million AI jobs and about 645,000 people to fill them, so half stay open. Germany looks worse: 190,000 to 219,000 jobs for 62,000 people. The roles that get hired most Putting the LinkedIn, WEF and Robert Half rankings next to posting data gives this order. 01 AI Engineer. Number one on LinkedIn Jobs on the Rise in the US two years running, number one at Robert Half. About 1,550 new US postings a week, median 176,000 dollars. This is the engineer who puts LLMs into products: RAG, agents, fine-tuning, evaluation. 02 Machine Learning Engineer. The most common AI title in Europe, 64% of all AI engineering postings. WEF expects the number of AI and ML specialists to grow 82% by 2030. 03 Data Scientist. On the WEF forecast it is the fastest-growing job of all, up 113% by 2030. But postings are up 15% over three years while pay is down 3%. The role is being redefined toward ML and LLM work. 04 AI Consultant and AI Strategist. Second on LinkedIn two years in a row. People entering the role have a median of eight years of experience, most often from product management. 05 Research Scientist. From 12th place in 2025 to the top five in 2026. Demand sits in labs and Big Tech. 06 Agentic AI Engineer. The skill \"agentic AI\" went from 0.06% to 0.23% of US postings in a year, up 280%, about 90,000 postings. 07 Forward Deployed Engineer. Postings up more than 1,000% year over year, per Lightcast data in Fortune . This is the engineer who goes to the customer and wires AI into their real processes. After that come data and infrastructure engineers, AI Product Managers (about 714 new US postings a week), MLOps, AI security, solutions architects, Head of AI and Chief AI Officer, AI governance specialists for the EU AI Act, and at the bottom of the pay scale, annotators and model trainers. A note on the CAIO. NewVantage and Wavestone report that 38.6% of large companies now have a Chief AI Officer, up from 11% in 2023. A small business cannot afford that seat, which is where fractional AI leadership comes in. Prestige: who is at the top and what it costs The top of the market is small. Estimates cited by Fortune and Metix put the number of people who can build frontier models at 500 to 1,000 worldwide, with acceptance rates below 1% at OpenAI, Anthropic and DeepMind. The money matches. Median Research Scientist pay at Anthropic is around 746,000 dollars a year on Levels.fyi data, OpenAI L5 around 1.15 million, DeepMind L6 between 750,000 and a million. In summer 2025 Meta was poaching researchers with packages of 200 to 250 million dollars over four years, and OpenAI answered with retention bonuses to about a thousand employees. A PhD is not required, which breaks the usual picture. Per Metix , only 16% of technical staff at OpenAI and Anthropic hold a doctorate. At Meta it is 60%. The two most sought-after labs hire for work, not for the degree. Where people move is telling too. Zeki data in Fortune puts arrivals to departures in 2025 and 2026 at 22 to 1 for Anthropic, 5.7 to 1 for OpenAI, 3 to 1 for Meta and about 2 to 1 for DeepMind. The tier below, 300,000 to 800,000 dollars, is senior and staff ML in Big Tech, engineering roles at the labs, and Forward Deployed Engineers at OpenAI and Anthropic. Only then comes the \"normal\" market: an AI engineer in the US at 146,000 to 189,000, a median of 70,000 euros in Germany, 111,000 francs in Zurich. Europe: the demand is outside tech Indeed Hiring Lab data for the first quarter of 2026 puts AI at 4.2% of all postings in Germany, 3.3% in France, 2.7% in the UK, 2.2% in the Netherlands. More than half of those postings, 59% in Germany, are outside technology occupations. In Germany, PwC counts seven \"AI user\" roles for every \"AI developer\" role. Europe also has the widest gap between demand and supply. Interface, using Lightcast and Revelio data, finds roughly one candidate per vacancy at mid level and fewer than half a candidate per vacancy for advanced roles. What is fading Prompt engineer as a title dropped out of the list of roles companies plan to hire in Microsoft's 2025 Work Trend Index, after being on it in 2024. In AI Engineer postings the skill \"prompt engineering\" appears 8.9% of the time, RAG 13.6%. The skill stayed, the job dissolved into other roles. Entry level got harder. Stanford Digital Economy Lab updated its research on ADP payroll data in August 2026: employment of 22 to 25 year olds in AI-exposed occupations now trails the rest by 19%. A year earlier the gap was 13%. Older workers in the same occupations are growing, so this is a tilt toward seniority, not a shrinking market. Only 3% of ML engineer postings and 2% of AI Product Manager postings are entry level. What I take from this Half of AI postings in the US, and 59% in Germany, are outside IT departments. The growth is not in people who build models. It is in people who put AI into marketing, sales, support and paperwork. That is exactly what working with small and mid-size businesses looks like: find the process where AI pays off, build the agent or the integration, and get it to the people who will use it. Gartner also expects more than 40% of agentic AI projects to be cancelled by the end of 2027. The market pays a premium for agents and buries almost half of them at the same time. The difference between the two halves is usually whether someone looked at the process and the data before the build started. The full study, with tables by role, skill and region and a section on where the sources disagree, is a separate report. Write to me if you want it. FAQ about the AI job market What is the most in-demand AI job in 2026? AI Engineer. It tops LinkedIn Jobs on the Rise in the US in both 2025 and 2026 and is the largest hiring category by volume: about 1,550 new US postings a week at a median of 176,000 dollars. How much do AI specialists earn? In the US an AI engineer makes 146,000 to 189,000 dollars, senior roles in Big Tech 300,000 to 800,000, frontier lab researchers 700,000 to 1.5 million and up. The median ML engineer in Germany earns 70,000 euros. The wage premium for AI skills within the same occupation is 62%, per PwC. Is prompt engineering still a job? As a skill, yes. As a job title, mostly not. In the US the title dropped out of hiring plans, and AI engineer postings mention RAG more often than prompt engineering. What is a Forward Deployed Engineer? An engineer who works on the customer's side and wires AI into their real processes instead of building models.\n\n(63 points, 66 comments on Hacker News)",
+      "published_date": "2026-09-14",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 63,
+        "num_comments": 66,
+        "hn_url": "https://news.ycombinator.com/item?id=49696867",
+        "object_id": "49696867"
+      }
+    },
+    "rule_score": 24.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, fine-tuning, rag",
+      "📰 Hacker News: 63 points"
+    ],
+    "llm_score": 37,
+    "llm_reason": "彙整多方數據的AI就業市場報告，資訊性強但無技術內容",
+    "novelty": 3,
+    "impact": 8,
+    "trending": 10,
+    "practicality": 7,
+    "blog_worthiness": 9
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "Notes on gotchas while migrating 35kb preprompts from Opus to self-hosted Ollama",
+      "url": "https://patrickmccanna.net/notes-on-migrating-large-prompts-away-from-anthropic-openai-to-self-hosted-llms/",
+      "authors": [
+        "0o_MrPatrick_o0"
+      ],
+      "abstract": "Motivations: Maybe you’re a Claude code/codex user diligently avoiding uploading personal data to LLM providers. Is it possible that the most valuable information isn’t your data- but the metadata about your sessions? The intuitions you apply in coming up with ways to coax the ai into solving problems might actually be special. It’s statistically improbable, but Claude might not be gaslighting you. It may be that you’ve actually got a real insight! Your agent sessions are transcripts of the hardest problems you work on. What would it cost you if someone had copies of them? Last week there was public drama that shines a light on the risk that inference providers are training on user activity with the intent of delivering new discoveries. The mathematicians affected have published concerns about the ethics of frontier providers. If you missed it: https://www.theverge.com/ai-artificial-intelligence/991710/openai-navier-stokes-solution When ‘EDR’ becomes Ethical Deflection and Refusal: It’s become evident that the frontier providers are not only untrustworthy- but actively devious. If you want to protect your ideas, you cannot run inference on someone else’s hardware. It appears to be the case that everything you do with a frontier provider will get stolen. When a frontier provider talked through the navier-stokes equation situation with their lawyers, the best defensive strategy they came up with is “Cannot rule it out.” We can’t audit their retention or their training pipeline. Apparently neither can they. These people should not be considered partners. They are pirates. If privacy matters, the only solution that enables verifiable protections is to operate your own hardware. Hall Monitor as a Service I am bewildered by OpenAI and Anthropic’s grandstanding on cybersecurity. They marvel at what they have wrought: AI beat their non-existent security controls. We are all in great ‘danger.’ Meanwhile, their llm “researchers” are running unsandboxed fleets of agents that appear to “spontaneously collaborate.” Somebody fetch me my fainting couch. Frontier providers can afford advising from experienced security people. They almost certainly are paying some of them for perspective and leaving real cybersecurity guidance out of their public statements. All of this pearl clutching must be meant to solve a different problem than security. The strongest & most accurate claim defenders can make about security is that we’ve found ways to make it “Pretty Hard” for attackers. This seems to result only when firms pay top dollar for the best talent in both exploit mitigation and exploit development. There’s rowdy but friendly competition between the defense and exploitation teams, and eventually you get controls that make successful attacks so expensive that they’re not worth doing. This is for the top tier companies in the country- although Microsoft seems like they’ve forgotten some lessons. The lion’s share of pentesting done for most enterprises is performed by security generalists. A very small subset are deep domain subject matter experts. Usually you get “good enough” security from that support. This isn’t the glamorous or mythical practice of cybersecurity you see in movies or tv. It’s looking for the known classes of predictable mistakes. The firms that make the big/smart investments with dedicated teams of experts discover and correct many new classes of mistakes before hackers do. Everyone who begins learning exploitation hits a phase of exploitability grief about 3 month into dedicated, practiced study. They hack something they didn’t think they had the skill to break into and it terrifies them. They’re smart enough to know that, relatively speaking, they are an idiot, and if an idiot can do this then nothing is safe. That feeling is correct. It is also not a research finding. Some call this “imposter syndrome.” I disagree- that feeling is your first experience developing competence. Competence is knowing enough about a technical domain that you can distinguish what you know well from what you need to learn more about. The Refusal Industrial Complex To the LLM researchers learning and publishing about cybersecurity for the first time: I’ve seen you admitting you’re not security experts. Please-when you’re hyperventilating about the cybersecurity existential threats, distinguish “exploitable” from “emergency.” Vulnerabilities are legion. Before Agents, vuln researchers needed insight to know where to look to find vulnerabilities. Vuln researchers needed perseverance and esoteric knowledge to exploit them. An agent did what you weren’t able to do. Thousands of researchers have been doing this work over the last 40+ years. Part of being knowledgable about cybersecurity is aware of the existence of shocking amounts of unexploited vulnerabilities. This is why frontier provider cybersecurity safety filters are so infuriating. You’re so worked up about the possibility of exploitation that you’ve implemented “ethical constraints” that prevent people from figuring out how to fix their systems. Your safety filters prevent defenders from discovering vulnerabilities because doing so is “hacking” related. This damages defense, privacy and security for everyone. We need models that aren’t averse to the C-word. It’s going to take a little time, but builders will eventually learn to secure their code with helpful exploitability-detection agents. They’ll invoke vuln discovery against their projects during software development and as part of CI/CD pipelines. That’s only possible with models that don’t safety refuse security testing. BYOW: Bring Your Own Weights Defenders need llms that discover security defects. They are intolerant of false positives- which means you need to prove exploitability of a vulnerability. Defending against hackers isn’t possible if you’re vague about what’s broken and what needs fixing. Frontier Providers need to loosen up, or people need to get serious about migrating to sovereign, self-hosted AI. I can’t force the former- but I can help with the latter. I’m sharing my notes about my initial pass of experiments in transitioning stronger frontier prompts off of OpenAI/Anthropic and onto my local models. I’m trying to determine if I can rely on abliterated open weight 27b parameter models. My goal is to avoid cybersecurity refusals and protect my sessions from being snooped by arrogant frontier inference providers. Notes on converting 35kb preprompts for use on ollama Below are some observations about my experiences when I tried moving my most context-expensive agents to a self-hosted model: Prompts that ran clean on a frontier API fell apart on my local hosted LLM. I have a 128 gig AMD Ryzen AI MAX+ 395. I have 32 gig allocated to the host OS, everything else is allocated to inference. When you try to use the larger preprompts that work well on frontier providers, ollama starts to run out of fuel within 3 minutes. The agent thrashes on repeated tool calls, re-read files it had already read, rewrote finished work. The local model’s smaller size didn’t produce the problem. Self hosted systems have smaller context windows. The prompt, plus session history quickly exceeds the maximum context window for my self hosted system (65k tokens). Large prompts founder and thrash. On my system, a 35kb prompt immediately consumes 14% of total context window. It immediately jumps into second guessing the prompts with unnecessary tool calls and double reads of files. Context gets saturated within a few circles- and sometimes even before I get a response. With limited context window, the pre-prompt is basically briefing a man who is reincarnated every ninety seconds. It performs your last instructions without any awareness of the 15 preceding demands. Whoops! SOP: Single Objective Prompting But it’s not a dead end. You can tune your prompts to work within these constraints.\n\n(98 points, 47 comments on Hacker News)",
+      "published_date": "2026-09-14",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 98,
+        "num_comments": 47,
+        "hn_url": "https://news.ycombinator.com/item?id=49697014",
+        "object_id": "49697014"
+      }
+    },
+    "rule_score": 24.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, safety, open weight",
+      "📰 Hacker News: 98 points"
+    ],
+    "llm_score": 36,
+    "llm_reason": "遷移prompt至自架Ollama的實務筆記，夾雜陰謀論式論述",
+    "novelty": 5,
+    "impact": 5,
+    "trending": 9,
+    "practicality": 9,
+    "blog_worthiness": 8
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "Big AI sets out its terms for regulatory capture",
+      "url": "https://www.theregister.com/ai-and-ml/2026/09/14/big-ai-sets-out-its-terms-for-regulatory-capture-and-calls-it-pace-the-frontier/5296067",
+      "authors": [
+        "joebuckwilliams"
+      ],
+      "abstract": "AI AND ML Big AI sets out its terms for regulatory capture and calls it ‘Pace the frontier’ Amodei, Altman, Nadella and Musk agree on how government can tame the monster they created Simon Sharwood Simon Sharwood APAC Editor Published mon 14 Sep 2026 // 02:15 UTC READ MORE OpenAI's malicious bot swarm attacked RubyGems 1 hour ago Ex-FTC boss Khan urges Uncle Sam to break out the handcuffs for AI CEOs, citing 1934 precedent 2 hours ago The myth of killer AI is a self-serving attempt at regulatory capture 9 hours ago AI more likely to kill animals if it saves fuel or money 2 days ago OpenAI arms devs with AI conversation tool that can talk and listen at the same time 3 days ago The leaders of major AI labs spent the weekend agreeing on a plan to capture regulators, make more money, and avoid responsibility for their dangerous behaviour. They call it “pacing the frontier.” Anthropic CEO Dario Amodei set the ball rolling with a post in which he professed alarm at how quickly AI is improving and suggested the attack on Hugging Face caused by rogue agents run by his rival OpenAI (OAI-HF) represented a moment that proved something needs to change at so-called “frontier” AI companies – essentially the big US model-makers. “It’s also easy to dismiss OAI-HF as the failure of one company, but I believe that would be a mistake,” he wrote. “I believe it’s incumbent on every frontier AI company to act as if OAI-HF had happened to them,” he added, because he worries that before long a swarm of agents “could be capable of taking over the entire internet with a persistent botnet.” REG AD Amodei therefore suggested “We must slow the pace at which we improve the capabilities of AI models. Progress will still seem fast, and we must make wise use of the time we gain.” REG AD The CEO proposed a three-point plan to regulate AI: Requiring AI labs to host “embedded evaluators” whose job is to “verify adherence to safety practices and commitments, report incidents, and help assess the alignment of not just completed AI models but training pipelines and processes.” Frontier AI companies that operate in democratic countries collaborating “to establish common safety standards as well as limits on the rate of unchecked AI progress,” with undefined “forms of coordination” that would be “legally challenging” and “require government support.” A vague call for democratic governments “to coordinate with authoritarian governments, to the extent this is possible, while taking seriously the challenges of verifying compliance.” OpenAI boss Sam Altman endorsed Amodei’s ideas. So did Elon Musk . Microsoft's Satya Nadella signed up, too . And just like that, four billionaires all signed up to the same set of rules they think the world’s governments should adopt to regulate their activities. Amodei even gave democracies a threat/villain to unite against – authoritarians willing to use AI unethically. This new consensus comes after years during which Big AI argued for light oversight and used that time to build tech that generates child sexual abuse material , dispenses terrible health advice , and made the OAI-HF incident possible. Big AI has also argued it will deliver a productivity revolution. Daryl Plummer, chief of research at analyst firm Gartner, used his keynote speech at the company’s annual Symposium in Australia today to cite research that found software vendors are pitching 50 percent productivity gains from AI, but customers report a 16 percent lift. Plummer also doubted that Amodei’s promise to slow development is real. REG AD “I will believe that when I see it,” he said in the keynote, adding that he does not trust billionaires to ever be altruistic. Write your own rules Amodei’s ideas read like an attempt at “regulatory capture” – the situation in which vested interests find a way to define the rules their regulators impose. Those supine regulators then make decisions that benefit the entities they oversee more than they benefit the rest of us. In this case, Anthropic, SpaceX, Microsoft and OpenAI are arguing for regulations they have defined and which amount to a cease fire during which they don’t need to compete so fiercely. OpenAI boss Sam Altman also all-but-admitted that regulation will be good for investors when he used a weekend interview with the billionaires’ bible Fortune to reveal his company won’t seek a public listing this year because it is inopportune to do so while AI safety concerns are unresolved. “We got a lot of stuff to do, like meeting this moment of what is going to be required for safety and alignment, and how the industry and governments can work together,” he said. Or in other words: Investors will make more money if OpenAI pauses its IPO until confidence is higher, while its CEO moves to generate that confidence by backing a regulatory capture proposal. Amodei, meanwhile, outlined some very specific things he wants from Washington: Stop selling Nvidia chips to China so its AI companies can’t build better models, and a crackdown on model distillation. REG AD “If we execute these measures well, I believe they would slow China’s progress enough to widen America’s lead significantly over the next 3–5 years — the window when AI becomes geopolitically most important,” he wrote. This plan would, of course, also mean that Chinese companies’ AI services would be inferior to Anthropic’s for a longer period – at a time when Chinese clouds are pushing into the rapidly growing middle eastern and southeast Asian markets. Pacing the frontier landed badly in Washington. Speaker Mike Johnson warned Amodei’s plan could “smother innovation” and see China dominate global AI. President Trump dismissed warnings that AI can have deleterious effects and said the USA must lead the world in AI. Such responses may reflect the fact that vast spending on AI infrastructure is delivering GDP growth in otherwise stagnant economies. Or perhaps they prove, yet again, that lawmakers are nearly always late to understand technology companies’ ambitions and the means they use to achieve them. ® ai and ml ai regulation openai dario amodei elon musk anthropic\n\n(109 points, 64 comments on Hacker News)",
+      "published_date": "2026-09-14",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 109,
+        "num_comments": 64,
+        "hn_url": "https://news.ycombinator.com/item?id=49694596",
+        "object_id": "49694596"
+      }
+    },
+    "rule_score": 24.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: alignment, distillation, safety",
+      "📰 Hacker News: 109 points"
+    ],
+    "llm_score": 29,
+    "llm_reason": "批評監管俘獲的評論文章，與素材13/14同題材熱度較低",
+    "novelty": 2,
+    "impact": 7,
+    "trending": 11,
+    "practicality": 2,
+    "blog_worthiness": 7
+  }
+]
