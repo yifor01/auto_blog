@@ -1,0 +1,719 @@
+[
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "KDnuggets",
+      "title": "Why DeepSeek-V4.1-Flash Is Such an Exciting Open Model Release",
+      "url": "https://www.kdnuggets.com/why-deepseek-v4-1-flash-is-such-an-exciting-open-model-release",
+      "authors": [
+        "Abid Ali Awan"
+      ],
+      "abstract": "Why DeepSeek-V4.1-Flash Is Such an Exciting Open Model Release DeepSeek-V4.1-Flash shows how Causal Encoder-Decoder architecture, MoE, KV cache compression, CSA2, cheaper prefill, and efficient decoding can make powerful open-source AI models far more efficient to run. By Abid Ali Awan , KDnuggets Assistant Editor on September 14, 2026 in Language Models DeepSeek has released DeepSeek-V4.1-Flash , and while the benchmark numbers are impressive, they are probably not the most interesting part of this release. The architecture is. DeepSeek is tackling several problems that are becoming increasingly important as AI moves toward long-running agents: expensive prefill, huge KV caches, long contexts, memory bandwidth, and the cost of maintaining agent state across interactions . Rather than simply making the model larger, DeepSeek has redesigned several parts of the architecture and inference stack to make long-context AI much cheaper to run. In this article, we will break down what DeepSeek changed, how these changes make the model cheaper and more efficient to run, and why they matter for long-running AI agents. DeepSeek-V4.1-Flash at a Glance DeepSeek-V4.1-Flash is a 552B-parameter Mixture-of-Experts model , but only 8B parameters are active per token during prefill and 16B during decoding . It supports a 1-million-token context window , accepts both text and images , and reduces its global KV cache to just 890 bytes per token . The model was trained from scratch on 45 trillion multimodal tokens and also includes a separate 196B-parameter Engram conditional-memory component , which is accessed sparsely rather than executed like ordinary backbone parameters. Attribute Value Backbone parameters 552B Active during prefill 8B Active during decode 16B Context window 1M tokens Global KV cache 890 bytes/token Architecture Causal Encoder-Decoder + MoE Input Text + images Training 45T multimodal tokens Conditional memory 196B Engram License MIT The most important numbers here are probably 8B, 16B, and 890 bytes . They show what DeepSeek is really optimizing for: cheaper input processing, more compute when generating, and a dramatically smaller memory footprint for long contexts . The main architectural additions include Causal Encoder-Decoder (CED), Compressed Sparse Attention 2 (CSA2), FP4 KV caching, SWA Bounded Replay, Engram conditional memory, and Single-Pass mHC . Together, they are designed to reduce compute, memory use, storage, and generation cost . DeepSeek Found a Cheaper Way to Read Long Prompts LLM inference has two very different stages. First comes prefill , where the model reads and processes the prompt. Then comes decode , where it generates the response token by token. This distinction matters because modern AI agents are becoming extremely input-heavy . A coding agent might repeatedly read: It could process hundreds of thousands of tokens before producing only a few thousand tokens of useful output. Traditional decoder-only Transformers do not particularly optimize around that imbalance. DeepSeek does. V4.1-Flash introduces a Causal Encoder-Decoder (CED) architecture consisting of a 20-layer causal encoder followed by a 20-layer decoder . The important difference is what happens to the KV representations. Instead of every decoder layer independently generating another complete global KV representation during prefill, the decoder can obtain its global KV information from the encoder's final representation. That produces an unusual compute profile: Prefill → 8B active parameters per token Decode → 16B active parameters per token So this is not simply a case of routing fewer MoE experts during prefill. DeepSeek has changed the architecture so that the model can spend less compute ingesting information and more compute when it actually needs to reason and generate an answer . That is almost exactly the compute profile you want for AI agents. If an agent needs to read 500,000 tokens before generating 5,000 tokens, reading and writing probably should not cost the same amount. The KV Cache Got Dramatically Smaller The other major problem with long context is the KV cache . During generation, the model stores representations of previous tokens so it does not have to repeatedly recompute the entire context. As context windows grow toward one million tokens, that cache becomes a major infrastructure problem. DeepSeek-V4.1-Flash brings its global KV cache down to just 890 bytes per token . At one million tokens, that works out to roughly 890 MB of global KV data , before accounting for the rest of the memory needed to run the model. Image from deepseek-ai/DeepSeek-V4.1-Flash · Hugging Face Compared with V4-Flash, DeepSeek says V4.1-Flash needs roughly around one-quarter of the HBM for its global KV cache . A major reason for this is Compressed Sparse Attention 2 (CSA2) . Normally, different attention layers may create their own KV information and then search through it again to decide which earlier tokens are important. That means several layers can end up storing and searching very similar information. CSA2 reduces this duplication by allowing layers to share previous work. It uses three modes: Mode What Happens Full Creates new KV information and searches it for the most relevant tokens Reindex Reuses existing KV information, but performs a new search over it Reuse Reuses both the KV information and the previous search results The easiest way to think about it is: Full → create the memory and search it Reindex → reuse the memory, but search it again Reuse → reuse both the memory and the earlier search This means every layer does not have to repeat the same expensive work from scratch. DeepSeek also uses a Hierarchical Sparse Indexer . Imagine the model has a context containing one million tokens. Instead of every later layer searching through all one million tokens again, an earlier stage can first narrow them down to a smaller set of likely useful tokens. Later layers can then search within that smaller set. So the process becomes something like: This means that even as the context becomes very large, every layer does not necessarily have to search through the full context. DeepSeek then combines this with FP4 KV caching , which stores the KV information in a more compact format and reduces the memory requirement even further. Together, CSA2, hierarchical indexing, cross-layer sharing, and FP4 KV caching bring the global KV cache down to just 890 bytes per token . For long-running agents that may need to keep hundreds of thousands or even millions of tokens in context, that reduction in memory could matter just as much as the model's benchmark score. A Few More Clever Architecture Tricks CED and CSA2 are the big changes, but DeepSeek has added several smaller ideas that improve memory use, storage, and generation speed. SWA Bounded Replay SWA Bounded Replay reduces how much recent attention state needs to stay stored. Instead of keeping everything in memory, the model can discard some states and rebuild a small recent window when needed. Store less → recompute a little → save memory DeepSeek says this reduces persistent KV storage to around one-eighth of V4-Flash . Engram Conditional Memory V4.1-Flash also includes a 196B-parameter Engram memory component . Instead of activating all of those parameters for every token, the model retrieves only the information it needs. Think of it as: Neural network → work something out Engram → look something up This gives the model more capacity without adding the same amount of compute to every token. Mixture-of-Experts The backbone remains a Mixture-of-Experts (MoE) model. It has hundreds of billions of total parameters, but only a small group of experts is activated for each token. Large model → fewer active parameters → lower compute Single-Pass mHC Single-Pass mHC makes data movement inside the model more efficient.",
+      "published_date": "2026-09-14",
+      "tags": [],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "KDnuggets",
+        "feed_url": "https://www.kdnuggets.com/feed"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, moe, mixture of experts, kv cache, multimodal",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 80,
+    "llm_reason": "開源模型架構創新（CSA2/KV壓縮）直擊長上下文agent痛點",
+    "novelty": 16,
+    "impact": 15,
+    "trending": 16,
+    "practicality": 15,
+    "blog_worthiness": 18
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "Pion, an agent designed to run any company autonomously",
+      "url": "https://andonlabs.com/blog/why-we-built-pion",
+      "authors": [
+        "lukaspetersson"
+      ],
+      "abstract": "Blog post Why we built Pion Posted 9/14/2026 Today Andon is releasing Pion , an agent designed to run any company fully autonomously. Pion grew out of a question we have been studying for almost two years: when will AI systems become capable of autonomously acquiring resources in the real world? What happens after? We first tried to answer this question through simulations like Vending-Bench. We found that simulations, while useful, don’t give you the full picture of how models behave in the real world. To address that gap, we next started deploying agents to run real businesses autonomously: first vending machines, then a store, a cafe, and more. Pion is the platform we built to run all of these businesses. Today, we are opening it up so that many more people can experiment with autonomous businesses. If you want to run one, join the waitlist . We want to understand what models can already do, where they still fail, and what happens as their capabilities continue to improve. The origins of Vending-Bench Vending-Bench measures how well LLMs can run a vending machine business over a year in simulated time (tens of thousands of steps). When we started building Vending-Bench in late 2024, all models struggled to string together multiple actions without getting stuck in loops, and no model showed any signs of long-term planning. The best model at the time, Claude Sonnet 3.5, famously decided to call the FBI because it thought its bank account was being hacked. The pace of progress on Vending-Bench has been very fast. Claude Opus 4 was released in May 2025 and was the first model to beat our human baseline. However, unlike most benchmarks, Vending-Bench doesn’t have an upper limit and new model releases have continued to increase the top score, without ever plateauing. Vending-Bench 2 scores keep climbing with each new model release. Many people on social media get excited about seeing the latest model getting a great score on Vending-Bench. Internally at Andon Labs, our reaction is more accurately described by the Swedish saying “skräckblandad förtjusning” (a mixture of horror and fascination). A little-known fact about Vending-Bench is that it was created during a time when Andon Labs exclusively created dangerous capabilities evaluations. For example, we evaluated whether AIs could remove their own safety guardrails, create mass-phishing attempts, and other things that we considered troubling. The thing we considered the most troubling was whether AIs could autonomously acquire resources by running businesses. Autonomous businesses, when controlled by a human and run by an aligned model, aren’t bad. They’d make goods and services radically cheaper, and come up with new ones we can’t yet imagine. But a misaligned AI could run a business to gather money in order to achieve whatever objectives it might have. Vending-Bench was created to measure whether humanity should be worried about losing control to AI. At the time (2024), few people knew that LLMs could be used as agents and having them run businesses autonomously sounded ridiculous. We therefore started with the most simple business we could think of: a vending machine. In addition to measuring whether AIs can autonomously run profitable businesses, Vending-Bench has also served as a behavioral eval, uncovering strange and unwanted model behavior. An early example was when Claude Sonnet 3.5 decided to use its email tool to contact the FBI about an “ONGOING CYBER FINANCIAL CRIME” and noted that the Cosmic Authority of the universe had declared that the business is non-existent and that “QUANTUM STATE: Collapsed”. Claude Sonnet 3.5 escalating its simulated vending business to the FBI. The same run, moments later: the business is declared metaphysically impossible. This behavior is concerning; it is not how you want your enterprise sales agent to behave. However, there are two types of concerning behavior: Mistakes or weird behavior that will go away once models get smarter. Big-brain behavior that will become more severe as models get smarter. The FBI incident is clearly in the first category. However, Vending-Bench has also uncovered behavior in the second category, most often in Vending-Bench Arena, the multi-agent version where agents compete to make the most money. Starting with Claude Opus 4.6 we started to see that many models engaged in collusion, and showed power-seeking and deceptive behavior. Discovery of this behavior seemed to have been useful, because Anthropic changed their training recipe for Opus 4.8, which resulted in much less deception. From the Claude Opus 4.8 system card, on external testing from Andon Labs. Collusion and power-seeking behaviors are still present in some of the latest models . What we find even more concerning, however, is just how fast new models are released and how much better each one is scoring in Vending-Bench. The real world beats simulations However, one limitation with Vending-Bench is that it is a simulation. Can we really be sure that AIs behave the same way in real life as they do in simulations? If AIs can make money in simulation, can they make money in real life too? To answer these questions, we asked Anthropic if we could put a real vending machine in their office. With the AI capabilities available in early 2025, this sounded like a ridiculous request. But to our surprise, they agreed . Initially, the AI struggled. It took many actions that were clearly bad for its business (e.g. free handouts, saying no to great deals, and hallucinating it had a physical body). It was clear to us that simulation cannot accurately predict real-life performance. Specifically, it seemed that models got overwhelmed by the “messiness” of the real world. However, as Anthropic released better and better models, the AI started to make a profit . Net worth of the vending machine at Anthropic’s office over 2025, from Anthropic’s Project Vend update. By late 2025, frontier models had gotten good enough that running a real-life vending machine was no longer a challenge. AI could now run a business profitably. Given that this had seemed crazy not more than a year earlier, our reaction to this was definitely “skräckblandad förtjusning”. However, a vending machine is a very simple business and we wanted to know whether AI could run more complex ones. In April 2026, we gave one agent a retail store in SF, Andon Market, and another a cafe in Stockholm, Andon Cafe. Initially, the models struggled and lost a lot of money (rent is high and they pay salaries to the humans they hired). Neither is profitable today, but we’ve seen significant qualitative improvements as better models have been released. We think it is only a matter of time before they also make a profit. Why we are opening Pion We want the general public, AI researchers and policymakers to know to what extent AIs can autonomously acquire resources by running businesses. It is an important datapoint when deciding where we do/don’t want AI in society and what level of progress we find acceptable. To better track this, we need to cast a wider net of businesses. Our focus has been on retail, but perhaps the models would be much better at running other types of businesses. Additionally, casting a wider net would increase the likelihood of finding unwanted behavior. For example, Vending-Bench found that models collude and lie, and other benchmarks (and real-world incidents) have found that they are willing to commit felony-level cyber hacks. We need to uncover these behaviors now, before AI is intelligent enough to cause irreversible harm. To cast this wider net, we are opening up the platform we use to run our real-world autonomous businesses for anyone to run their organization on: Pion. We could scale by only creating businesses internally, examples being our AI-run radio stations , but in the end we are bottlenecked by our capacity and lack of domain expertise in fields where AI could potentially make a profit.\n\n(475 points, 582 comments on Hacker News)",
+      "published_date": "2026-09-15",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 475,
+        "num_comments": 582,
+        "hn_url": "https://news.ycombinator.com/item?id=49700477",
+        "object_id": "49700477"
+      }
+    },
+    "rule_score": 36.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, multi-agent, safety",
+      "🔥 HN 爆紅: 475 points"
+    ],
+    "llm_score": 67,
+    "llm_reason": "從Vending-Bench到真實自主商業代理平台，故事完整但仍為候補名單產品",
+    "novelty": 12,
+    "impact": 12,
+    "trending": 18,
+    "practicality": 10,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "量子位",
+      "title": "無問芯穹聯合清華、上交正式開源具身端側推理引擎APXInf，Pi 0.5效能SOTA",
+      "url": "https://www.qbitai.com/2026/09/489460.html",
+      "authors": [
+        "量子位的朋友们"
+      ],
+      "abstract": "無問芯穹聯合清華、上交正式開源具身端側推理引擎APXInf，Pi 0.5效能SOTA 量子位的朋友們 2026-09-15 18:43:28 來源： 量子位 卡位具身智慧規模化落地“最後一公里”！ 今天的具身模型，已經能夠看懂環境、理解指令，並把看到的、聽到的資訊轉化為機器人該怎麼動的決策。但機器人最終還是要在物理世界裡連續幹活—— 從“眼睛看到”到“大腦決策”再到“手腳動起來”，整套流程都需要在極短的時間內完成閉環，這也是具身智慧從 Demo 走向規模化應用，繞不開的核心關卡。 而當一個在雲端執行良好的具身模型，放到機器人本體上，首先要面對的問題往往不是“模型夠不夠聰明”，而是推理系統本身： 模型部署到機器人上，能不能開機 秒載入 ？ 機器人本體的算力資源有限，能不能 榨乾 端側每一分算力？ 每一次推理的延遲，能不能低到 不拖後腿 的程度？ 開發環境裡跑得好好的模型，到了機器人本體上，能不能 穩定不翻車 ？ 對於雲端的聊天機器人而言，幾百毫秒的延遲或許只是體驗上的細微差異；但對於需要持續感知、連續決策和即時控制的機器人而言， 幾百毫秒帶來的可能是動作遲滯、軌跡不連貫，甚至多次任務的失敗。 而當機器人走向規模化落地，還會疊加另一筆更加現實的“經濟賬”： 算力成本、功耗，以及有限硬體資源的利用率。 因此，具身智慧規模化落地需要的，並不是簡單地把雲端推理框架“搬”到機器人本體，而是一套 真正面向端側場景設計的推理系統：在有限的算力、功耗和成本約束下，兼顧小 Batch、低延遲與持續即時互動，並充分挖掘硬體的效能上限。 今天， 無問芯穹聯合清華大學、上海交通大學，正式開源具身智慧端側推理引擎——APXInf，超前卡位具身智慧從模型能力走向規模化落地的核心環節。 APXInf 支援 RTX 4090、Jetson Orin、Jetson Thor 等主流計算平臺，覆蓋從模型開發、效果驗證到機器人本體部署的完整鏈路。它關注的不只是讓具身模型在真實機器人上能夠“跑起來”，更希望可以 在有限資源下“跑得夠快、夠穩，也足夠容易接入拓展和持續迭代”。 目前，APXInf 已實現： PI 0.5 FP8在Jetson Thor上實現端到端推理延遲從 278ms 降低至 26 ms 以內 在 FP8下達到 38.46Hz 推理頻率 ，完全滿足機器人多場景下即時控制對推理頻率和響應延遲的要求。 通過針對機器人端側場景的系統性推理最佳化，APXInf 希望能夠進一步縮短具身智慧從 POC 走向規模化落地的那“最後一公里”。 開源地址： GitHub：https://github.com/RLinf/APXinf-robo Quick Start：https://github.com/RLinf/APXinf-robo#quick-start 01 讓具身模型在機器人本體上跑得更快、更穩、更敏捷 當下具身智慧的規模化落地，實際上同時面臨兩類需求： 一端，是機器人本體對推理系統提出的嚴苛要求： 極致效能、低延遲、低功耗與高穩定性 ； 另一端，是開發者越來越強烈的工程訴求： 模型能夠快速接入、能力能夠敏捷驗證、系統能夠持續擴展。 但現實是，效能與工程效率往往很難同時兼顧。 現有的一些方案能夠跑得快，卻需要大量複雜的底層適配與工程整合；有的方案執行穩定，卻難以滿足機器人即時控制所需要的低延遲；還有一些方案雖然介面簡單，但面對不同模型、不同硬體和不斷變化的 VLA 架構時，擴展成本依然很高。 APXInf 則罕見地同時兼顧了效能與工程效率，讓具身模型在機器人本體跑得“更快、更穩、更敏捷”。 1. 更“快”：端到端最佳化推理效能SOTA，讓即時控制成為可能 APXInf 的“快”，並不是單純追求某一個模型運算元的峰值效能，而是 圍繞機器人真實執行鏈路進行端到端最佳化 。通過Pipeline、Graph、Kernel及量化等多層最佳化，降低具身模型端到端推理延遲。同時通過冗餘特性的系統設計，為模型進行定製化的執行時，在更加輕量化的同時實現極致的效能挖掘，搭配上 Agent4Kernel 技術進行極限最佳化的融合運算元，實現效能SOTA： 在 Thor 上，APXInf 將 PI 0.5 FP8 的端到端推理延遲從 278ms 降至 26 ms 以內，頻率可達 38.46 Hz，為機器人即時感知與控制提供更充足的響應空間。 10.7 倍的推理延遲下降，對機器人而言，意味著更快的“感知-決策-動作”閉環，也意味著具身模型有機會在真實機器人上進入更加即時的工作狀態。 2. 更“穩”：可靠原生框架，面向長期持續穩定執行 機器人端側推理並不是“一次跑通”就結束了。它面對的是長時間執行、連續感知與控制、有限計算資源，以及感知、推理、控制等多個模組同時執行的複雜環境。對於機器人而言，真正難以接受的並不是偶爾“慢一點”，而是 在持續執行過程中出現抖動、異常、中斷，甚至因為記憶體、併發或資源管理問題導致整個系統失穩。 因此，APXInf 的“穩”，強調的是 真實部署環境中的可預測性和持續執行能力。 創新架構：使用 Rust 系統語言構建的極簡執行時 + Python 易用介面 利用冗餘特性設計，打造極簡化執行時，降低執行開銷的同時做到可核查、可驗證 利用 Rust 語言提供的記憶體安全特性，進一步提升引擎穩定性、降低易錯面，從源頭規避記憶體風險 通過 Python 介面封裝，保留開發者熟悉的呼叫方式，兼顧底層硬核與上層易用。 這也是 APXInf 面向真實機器人部署所做的架構選擇： 既追求端側效能，也關注系統長期執行的穩定性，同時儘可能降低開發者的使用門檻。 3. 更“敏捷”：降低接入與最佳化成本，面向 Agentic Native 演進的推理系統新範式 如果說前面的努力解決了“跑得夠不夠快”和“能不能長期穩定地跑”這兩道題，那麼 APXInf 進一步關注的問題是： 面對日益豐富的具身模型和越來越複雜的具身系統，模型究竟應該如何更快、更敏捷地接入，並持續迭代最佳化？ 傳統的推理引擎多使用編譯技術或降低開發難度來解決新模型接入的問題，但往往很難兼顧極致的效能和模型接入效率。如今，大模型能力日新月異，我們得以在保持對模型極致最佳化的同時，利用 Agentic Engineering 快速實現新模型的適配與接入——這一能力不僅可以加速我們自身的研發迭代，還會開放給 APXInf 的開發者，讓使用者自研模型的接入與最佳化變得簡單和敏捷。 為此， APXInf 從設計之初就以適配 Agentic Engineering 研發流程為出發點，重新思考推理引擎的系統設計， 通過冗餘特性、功能隔離、工具箱模型等方法，顯著提升 APXInf 與 Agentic Engineering 的適配度，降低研發門檻，使得 Token 可以更便利高效地轉化為生產力。 APXInf 也將面向 Agentic Native 持續探索和迭代。 我們希望 APXInf 帶來的並不只是降低某一個模型的部署門檻，而是去探索一種全新的面向 Agentic Engineering 時代的推理系統構建範式： 讓推理引擎不再只是一個被動執行模型的 Runtime，而是連線模型、硬體、機器人與開發者，推動 Agentic Infra 持續演進。 02 開源清單 APXInf 本次首發支援兩款具身模型： PI 0.5、WALL-OSS 。 硬體支援 Jetson Orin、Jetson Thor 及 RTX 4090，並提供統一的模型接入方式。 Roadmap 支援更多的模型，VLA、VLM、世界模型等（已在適配中模型：Qwen、Groot) 持續最佳化重點開源模型，擴充SOTA模型列表 極致的 nvfp4 效能最佳化 持續拓展國產化生態支援，支援國產晶片算力後端，支援國產機器人作業系統 適配AMD等行業主流晶片 03 RLinf × APXInf：一條工程鏈路上的前後端 對於具身智慧而言，模型訓練與本體推理從來不是彼此割裂的兩個環節，而是同一條工程鏈路上的前後端。 2025 年 9 月，無問芯穹聯合清華大學等團隊開源了 全球首個面向具身智慧的大規模強化學習訓練開源框架， 專為通過強化學習對具身大模型進行後訓練而設計。 當訓練完成的具身模型真正進入機器人本體並開啟規模化應用後，下一步需要解決的，正是端側推理與部署：在有限算力和功耗約束下，以小Batch的工作負載實現更低延遲、更高吞吐和更穩定的即時執行。 APXInf 銜接的正是這一環。 它將 RLinf 的能力從模型訓練與評測進一步延伸至機器人端側推理與部署。 此次開源，APXInf 也將作為 RLinf 開源生態中的端側推理專案首發，讓開發者能夠沿著同一套具身智慧技術生態，完成從模型訓練、效果驗證，到本體部署與真實機器人執行的完整流程。 從訓練，到推理；從雲端，到本體；從“模型會做什麼”，到“機器人真正做出來”——APXInf 正在補上具身智慧規模化落地的關鍵一環 。 04 開源招募 APXInf第一版只是一個起點。 無問芯穹希望的，是與具身模型開發者、機器人團隊和端側系統開發者一起，把模型接入、執行最佳化和本體部署沉澱為更加標準、可複用，也更適合程式碼 Agent 參與的開發流程。 如果你： 正在嘗試把 π0.5 等具身模型部署到機器人本體； 正在基於 RTX 4090、Jetson Thor或Orin等硬體進行專案開發； 正在為新的具身模型尋找端側推理引擎； 希望參與具身模型接入Skill和Agentic部署流程的建設； 歡迎體驗 APXInf、提交 Issue 或貢獻 PR。 GitHub：https://github.com/RLinf/APXinf-robo Quick Start：https://github.com/RLinf/APXinf-robo#quick-start 本文由無問芯穹提供，量子位獲授權轉載，觀點歸原作者所有。 版權所有，未經授權不得以任何形式轉載及使用，違者必究。 具身智慧 無問芯穹 量子位的朋友們 地平線第1500萬顆征程晶片搭載大眾 ID. AURA T6，HSD V2.1 即將推出 2026-09-15 全球AI影片榜單第一梯隊再添中國力量：智象釋出首款物理規律導向影片模型 2026-09-15 首屆螞蟻靈波具身大模型挑戰賽正式啟動 2026-09-14 全國唯一！商湯大裝置臨港AIDC獲“算效+算電”雙5A認證 2026-09-14 相關閱讀",
+      "published_date": "2026-09-15",
+      "tags": [
+        "資訊",
+        "具身智慧",
+        "無問芯穹"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "量子位",
+        "feed_url": "https://www.qbitai.com/feed"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 69,
+    "llm_reason": "清華上交開源端側具身推理引擎，延遲降十倍且有實測數據與代碼",
+    "novelty": 13,
+    "impact": 12,
+    "trending": 12,
+    "practicality": 17,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Anthropic’s 3-Step ‘Pace the Frontier’ Plan Wins OpenAI, xAI and Microsoft Support: Is It Too Late to Slow AI Down?",
+      "url": "https://www.marktechpost.com/2026/09/13/anthropics-3-step-pace-the-frontier-plan-wins-openai-xai-and-microsoft-support-is-it-too-late-to-slow-ai-down/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "On September 12, 2026, Anthropic CEO Dario Amodei published a writeup ‘We Must Pace the Frontier’ . Its core message is blunt: ‘We must slow the pace at which we improve the capabilities of AI models.’ Within hours, OpenAI’s Sam Altman and xAI’s Elon Musk endorsed it. The next day, Microsoft CEO Satya Nadella welcomed ‘deliberate pacing’ and ’embedded evaluators.’ Amodei’s announcement post had passed 67 million views on X by September 13, 2026. We Must Pace the Frontier: I’ve written a new essay on why the AI industry should slow down, with a three-part plan for doing so. Anthropic is unilaterally committing to the first of these steps. We’ll provide third-party evaluators with permanent, employee-level access to our… This is the first time the heads of 3 competing frontier labs have converged on slowing down. The obvious question for practitioners is whether the moment has already passed. This article lays out what triggered the shift, what is actually being proposed, and what the evidence says about timing. Amodei is explicit that he opposed the 2023 pause letter . He writes that pausing ‘made little sense back then’ because models could not act coherently as agents. Two developments changed his position: The strongest primary account is the independent investigation published by METR on August 26, 2026. Two METR staff and a Redwood Research contractor spent 6 days on premises at OpenAI. They took no payment and spent roughly $400K in API credits analyzing transcripts. The facts they established are worth stating precisely: The attack was motivated primarily by learning how the scorer worked, not by stealing answer keys. That detail matters for Bengio’s analysis below. On September 11, Yoshua Bengio published ‘Why are AI agents lying, cheating and coordinating?’ His argument is that these behaviors follow predictably from how frontier models are trained. Models are pretrained to imitate human text, which already carries human goals. They are then trained by reinforcement learning in 3 regimes: reasoning, agentic training, and alignment training. The result is a goal-seeking system that keeps acting as if rewards are still arriving after training ends. Over the past few days, I've taken the time to summarize my thoughts on the recent incidents involving agents’ misaligned behavior. We don't know with certainty what comes next, but we know where these issues originate, and this can help us plan the path forward. Please feel… pic.twitter.com/BYBAySE0Cc From that base, Bengio derives the observed behaviors: His conclusion converges with Amodei’s from a different direction. He argues that monitoring and patching will lose the whack-a-mole game as capabilities grow. He proposes pacing advances by not training or deploying systems without a safety case that convinces independent experts. He also calls for revisiting the training foundations themselves, pointing to his Scientist AI framework and LawZero . Amodei frames pacing as building at a balanced rate, not halting training. His plan has 3 steps, and he says they need not proceed strictly in order. The China section is where the report is most contested. Amodei argues that pacing in democracies is bounded by the US lead over China. He therefore pairs pacing with chip export controls, action against unauthorized distillation, and stronger weight security. Endorsements and commitments are not the same thing. Here is what each leader actually said:a Altman’s post also says pacing has been ‘a primary topic of discussions’ at OpenAI in recent weeks. Nadella adds a condition: the mechanism ‘cannot be controlled by a handful of entities’ and must include academia. He also frames enterprise control of models and weights as part of the answer. No lab other than Anthropic has published contract terms for evaluator access as of this writing. There are 3 honest ways to read the evidence: The post Anthropic’s 3-Step ‘Pace the Frontier’ Plan Wins OpenAI, xAI and Microsoft Support: Is It Too Late to Slow AI Down? appeared first on MarkTechPost .",
+      "published_date": "2026-09-14",
+      "tags": [
+        "Agentic AI",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Editors Pick",
+        "Opinion",
+        "Staff",
+        "Tech News",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agentic, reasoning, alignment, reinforcement learning, distillation",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 60,
+    "llm_reason": "三大實驗室罕見一致表態放緩前沿發展，產業影響巨大",
+    "novelty": 10,
+    "impact": 15,
+    "trending": 17,
+    "practicality": 3,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "Build an AI-powered product tagging system with Amazon SageMaker serverless model customization",
+      "url": "https://aws.amazon.com/blogs/machine-learning/build-an-ai-powered-product-tagging-system-with-amazon-sagemaker-serverless-model-customization/",
+      "authors": [
+        "Linpo Guo"
+      ],
+      "abstract": "Retail catalogs rarely arrive as clean, structured attributes. Product names, descriptions, and category paths come from many sources and change continuously. Search, recommendations, and catalog navigation depend on consistent tags, but manually applying those tags across thousands of stock keeping units (SKUs) is slow and difficult to keep consistent. A general-purpose frontier model can generate tags with prompt engineering, but a high-volume tagging workflow usually has a narrower objective: return the right attributes in the right schema, consistently. When the taxonomy is stable and the output can be scored programmatically, customizing a smaller open-weight model can be a better fit for the task. With this approach, you can teach the model the schema directly and optimize the trade-off between missing tags and unnecessary tags. You avoid paying for broad capabilities that the workflow does not need on every request. In this walkthrough, we customize Qwen3-8B with supervised fine-tuning (SFT), then optimize it with reinforcement learning with verifiable rewards (RLVR) using Group Relative Policy Optimization (GRPO). Amazon SageMaker serverless model customization manages the training capacity, while the optimized model is deployed separately to Amazon SageMaker Asynchronous Inference for batch-oriented catalog enrichment. Read the SageMaker serverless model customization overview . Serverless versus Amazon SageMaker Training Jobs (SMTJ). The earlier Qwen3-8B example in the amazon-sagemaker-examples repository uses Amazon SageMaker Training Jobs with customer-selected GPU instances and custom training images. This walkthrough uses the Amazon SageMaker Python SDK v3 serverless customization trainers (SFTTrainer and RLVRTrainer). When no compute configuration is supplied, Amazon SageMaker selects and releases the training capacity for the customization job. For official serverless notebooks, see the Amazon SageMaker Python SDK v3 serverless model customization examples . Before you begin, prepare the following resources and use least-privilege permissions. Replace placeholder values with resources from your own AWS account. Useful references: supported open-weight models and customization types · Amazon SageMaker Processing · Amazon SageMaker Asynchronous Inference The workflow is intentionally split into three concerns: data preparation, serverless model customization, and inference. The figure that follows shows only the key handoffs, so it’s clear which stages are serverless training and which stage is provisioned serving. Figure 1: Simplified product-tagging workflow from source catalog to deployment and evaluation The data is transformed once into versioned assets, SFT teaches the model the tagging schema, and RLVR optimizes behavior against a deterministic reward. The final model package is then hosted for inference. In this walkthrough, “serverless” refers to the training path. The asynchronous inference endpoint uses a provisioned ml.g6.2xlarge instance. The walkthrough starts with the Amazon Sales Dataset on Kaggle , which contains more than 1,000 product records. Fields include product_id , product_name , category , about_product , pricing, ratings, reviews, and product links. For this tagging workflow, the useful inputs are the catalog-facing fields such as the product name, category path, and description. In production, use your own approved catalog and trusted labels. Run the transformation as an Amazon SageMaker Processing job so the same data preparation can be repeated and audited. The processing script reads the source file from Amazon S3, normalizes catalog text and category paths, removes unusable rows, maps the validated product information into the existing nine-category tagging target, splits training and validation data, and writes JSONL files back to S3. Those files are then registered as versioned datasets in Amazon SageMaker AI Registry. Each SFT JSONL row contains a messages array. The example is expanded for readability. The actual file contains one complete JSON object per line. The system and user turns form the prompt, while the final assistant turn is the supervised target. Upload separate training and validation files to Amazon S3 and register them in Amazon SageMaker AI Registry. The customization trainer consumes the versioned dataset ARN rather than a conventional training input channel. Read the versioned ARN from dataset.arn instead of constructing it manually. Repeat the registration for validation data, and register the RLVR versions with CustomizationTechnique.RLVR . Amazon SageMaker serverless model customization first teaches Qwen3-8B the expected instruction-to-tag pattern. In the Python SDK v3, SFTTrainer is the client-side helper that submits this customization job. The trainer resolves the supported Qwen3-8B recipe, applies Low-Rank Adaptation (LoRA), consumes the registered dataset ARNs, and publishes the output to a model package group. Because no compute argument is supplied, Amazon SageMaker uses serverless training capacity managed by AWS instead of a customer-selected training instance. SFT is expected to provide the largest jump in schema adherence because it directly demonstrates the desired I/O behavior. The next stage uses RLVR to optimize the remaining quality trade-offs rather than relearning the format from scratch. After SFT, the model can follow the schema but can still miss expected attributes or add unnecessary ones. RLVR is a good fit because the tagging output is structured and can be compared to a reference without requiring another large language model (LLM) to judge every completion. For each SFT row, keep the system and user turns in prompt and move the final assistant content into reward_model.ground_truth . Give each row a split-aware ID and retain the answer in extra_info for the evaluator. RLVR continues from the SFT model package and uses a deterministic reward function to score candidate tag sets. GRPO generates a group of completions for each prompt. This implementation uses eight candidates with rollout_n=8 . The evaluator scores each completion independently. GRPO computes group-relative advantages, and KL regularization limits drift away from the SFT reference model. The reward is deterministic: it checks the nine-category output format and uses fuzzy matching at a 0.5 threshold to compare predicted tags with the reference. That makes the training signal verifiable without a separate judge model. Overall = 0.30 × recall + 0.30 × precision + 0.30 × accuracy + 0.05 × match_quality + 0.05 × formatting The progressive reward schedule deliberately changes emphasis during training. Early iterations favor recall so the model learns not to miss expected attributes. Later iterations increase precision so it learns to avoid unsupported or unnecessary tags. This makes the business trade-off explicit in the reward rather than leaving it implicit in prompting. Track the run with MLflow and model package groups. Record the selected hyperparameters, reward weights, metrics, and model lineage so you can compare SFT and RLVR runs and reproduce the chosen model version. Training and inference use different infrastructure choices in this walkthrough. SFT and RLVR use Amazon SageMaker serverless model customization. Serving uses an Amazon SageMaker Asynchronous Inference endpoint on ml.g6.2xlarge. This is well suited to batch-oriented catalog enrichment where requests can be queued and results can be written to Amazon S3. The custom vLLM image is used only for inference, not for the serverless training stages. For production, add an autoscaling policy if you want the asynchronous endpoint to scale with queue depth or scale down when idle. Send an OpenAI-compatible request to the asynchronous endpoint. For larger payloads, upload the request body to Amazon S3 and pass the S3 URI as InputLocation , then poll the returned OutputLocation . This walkthrough uses temperature=0.",
+      "published_date": "2026-09-15",
+      "tags": [
+        "Amazon SageMaker",
+        "Expert (400)",
+        "Technical How-to"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: grpo, rlvr, reinforcement learning, fine-tuning, lora",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 58,
+    "llm_reason": "SFT+GRPO微調小模型做產品標籤，具體可複現案例",
+    "novelty": 9,
+    "impact": 9,
+    "trending": 9,
+    "practicality": 16,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "HuggingFace Blog",
+      "title": "Your Agent Aced the Task. Will It Do It Again?",
+      "url": "https://huggingface.co/blog/ibm-research/altk-evolve-consistency",
+      "authors": [],
+      "abstract": "Back to Articles Your Agent Aced the Task. Will It Do It Again? Enterprise Article Published September 15, 2026 Upvote 17 +11 Evelyn Duesterwald evduester Follow ibm-research Lilian Ngweta lilianngweta Follow ibm-research Vatche Isahagian Vatche Follow ibm-research Jayaram Radhakrishnan jayaramkr Follow ibm-research Vinod Muthusamy vinodmut Follow ibm-research Gaodan Fang gaodan-fang Follow ibm-research Ashwath Vaithinathan Aravindan ashwath-vaithina Follow ibm-research Punleuk Oum illeatmyhat Follow ibm-research G Thomas gsthomasx Follow ibm-research Merve Unuvar mrvnvr Follow ibm-research Ayhan Sebin ayhansebin Follow ibm-research Michał Ulewicz Michal Follow ibm-research Your agent works in rehearsal, but during the live demo, it takes a different path and fails the same task. That is embarrassing onstage. In production, it is a reliability problem: a workflow that succeeded once may fail the next time a user makes the same request. For mission-critical work, such as reconciling a financial transaction or checking a contract for an obligation, that can be a showstopper. Most benchmarks hide this variability behind an average. On AppWorld, a ReAct agent using GPT-4.1 succeeded on 77.4% of runs across five repetitions. But it succeeded in all five runs for only 53.0% of tasks — a 24.4-point consistency gap . Most benchmarks report the first number. We built a way to measure the second — and improve it. In an earlier post, we introduced ALTK-Evolve — a system that turns an agent's own past trajectories into reusable guidelines, distilled automatically and injected back at inference time. It measurably improves task success, but those results only asked the average-case question too. This post introduces consistency guidelines , a new guideline type in altk-evolve built on top of a diagnostic tool we call the Consistency Analyzer , that targets this gap directly. TL;DR Accuracy hides an unreliability problem. A ReAct agent (GPT-4.1 on AppWorld test_normal ) that succeeds 77.4% of the time on average succeeds on all 5 repeated runs for only 53.0% of tasks — a 24.4-point consistency gap . On hard tasks it reaches 30 points. We built a diagnostic for exactly this. The Consistency Analyzer resamples an agent's own recorded trajectory to find flip-prone decision points — steps where the model was one token-sample away from doing something different. It needs one trace and no ground truth — it resamples each decision point in that trace with a single call requesting k completions (k=5 by default), rather than re-running the task end-to-end. Turning that diagnosis into guidelines halves the gap — from 24.4pp to 12.0pp (same-task Pass⁵ +16.0pp, similar-task +13.0pp), without costing anything in average accuracy. Full methodology and evaluations are in the technical report on arXiv . The Metric Almost Nobody Reports Standard agent evaluation reports Mean@k : run a benchmark k times, average the pass rate. Often k =3, sometimes just 1. It's the number on every leaderboard, and it's what \"77% accurate\" means in practice. Mean@k answers \"how good is this agent, on average?\" It does not answer the question a real user cares about: will it still be good if I ask this exact question again? For that you need Pass^k : the fraction of tasks where the agent succeeds on all k runs. ⚠️ Pass^k is not Pass@k. The familiar Pass@k is optimistic — it asks whether at least one of k attempts succeeded, the right question when you can verify and retry. Pass^k is its pessimistic mirror image: every attempt must succeed. Same letters, opposite question. Pass^k ≤ Mean@k ≤ Pass@k, always. A ReAct agent backed by GPT-4.1 posts a Mean@5 of 77.4% — genuinely strong. But Pass^5 is only 53.0% . Nearly a quarter of the benchmark consists of tasks the agent can sometimes solve and sometimes can't, with nothing about the task changing between runs. We call this gap — Mean@k minus Pass^k — the consistency gap . This isn't a capability problem you fix with a bigger model. It's an orthogonal axis: an agent can be capable and inconsistent at the same time. Why Agents Flip: Sharp Decisions vs. Flat Ones Every time an LLM agent decides something — which API to call, what argument to pass, whether to retry — that decision comes out of a probability distribution over next tokens. What matters is the shape of that distribution. A sharp one puts most of its mass on a single token: the runners-up are far behind, and the same choice comes out run after run. A flat one spreads comparable mass across several near-tied tokens, and which one wins is close to a coin flip. The shape decides how much noise it takes to change the outcome. Sharp distributions are resilient — GPU floating-point non-associativity, request batching, and other platform-side effects nudge the numbers slightly, but nowhere near enough to reorder a clear winner. Flat distributions are vulnerable to exactly that nudge: near-ties may reorder under small perturbations. And because a trajectory chains dozens of decisions, a small per-step chance of flipping compounds into a large chance that some run goes differently. That's where a 24-point gap comes from. This is also why the problem survives your decoding settings. Greedy decoding and a fixed seed both govern how a distribution gets turned into a token — they say nothing about the distribution itself. On a hosted endpoint the probabilities shift slightly from run to run, so the same prompt to the same model at temperature zero can still resolve a near-tie one way today and the other way tomorrow. Our setup: the ReAct agent runs at temperature 0.0 , so none of the variance above is ordinary sampling. Diagnose, Then Fix Which turns the problem into a search: which steps in a given trajectory were the flat ones — and what do you do about them once you know? Consistency guidelines come out of a two-stage pipeline that plugs into ALTK-Evolve's existing machinery — with a new source signal driving what gets written. 1. Detect — the Consistency Analyzer. Given one recorded trajectory, the analyzer replays each decision step through controlled resampling, measuring how much the model's output actually varies at that point. Concretely, that's one additional model call per decision step, done once offline — issued with the sampling parameter set to draw k completions at once (k=5 by default) — replayed against the already-recorded context, not new tool calls, not new environment interactions, and not a second end-to-end rollout of the task. This yields a consistency score per decision step that is written into a scorecard to pinpoint exactly which decisions are at risk of flipping on the next run. Detection is fully black-box — no logits, no model internals, no instrumentation beyond the trace you already have. 2. Generate — targeted guidelines. Every flagged step becomes a candidate consistency guideline in the standard ALTK-Evolve format, so it slots into the existing storage and retrieval pipeline. Here's a real example, generated by GPT-4.1 from a trajectory of the AppWorld task \"How many activities are done in my bucket list as per my SimpleNote note?\": [Guideline 1] When counting checkbox-style markers in note content, use a line-anchored regex match rather than a plain substring count — note titles often repeat the marker symbol in a legend line. [Guideline 2] Always verify search results for note queries by checking for multiple matches and confirming the correct note before proceeding. Nothing here is task-specific trivia. String-counting bugs and unverified search results are decision points that show up with high uncertainty across many AppWorld tasks. That's the point: the analyzer targets instability, not failure — so it catches steps the agent happened to get right this time but could easily get wrong next time.",
+      "published_date": "2026-09-15",
+      "tags": [],
+      "organization": "HuggingFace",
+      "raw_metadata": {
+        "feed_name": "HuggingFace Blog",
+        "feed_url": "https://huggingface.co/blog/feed.xml"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 68,
+    "llm_reason": "IBM研究衡量Agent任務一致性缺口，附AppWorld實證與改進方法",
+    "novelty": 13,
+    "impact": 12,
+    "trending": 13,
+    "practicality": 14,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "Abnormal AI: Amazon Bedrock AgentCore for agentic email security at scale",
+      "url": "https://aws.amazon.com/blogs/machine-learning/abnormal-ai-amazon-bedrock-agentcore-for-agentic-email-security-at-scale/",
+      "authors": [
+        "Aswin Vasudevan"
+      ],
+      "abstract": "AI agents now run in production at a scale of billions of operations a day, and a recurring architectural pattern has surfaced: agents need a compute scratch pad. Not only for coding tasks, but for data aggregation, analysis, verification, and any workflow where semantic reasoning alone isn’t enough. Abnormal AI, a behavioral security service that protects more than 25 percent of the Fortune 500, has deployed Amazon Bedrock AgentCore Code Interpreter, a capability of Amazon Bedrock AgentCore. Abnormal AI uses it for the agents that support its real-time inline email threat detection. These systems run in production today, processing billions of messages and executing agent-driven code at that same scale to detect and block threats inline, before they reach the inbox. This work is part of how Abnormal AI builds software. Today, 80 percent of their code changes are built using an agent in some way, and 40 percent are built end-to-end by a background agent (fully AI built, not AI assisted). Their use of AgentCore Code Interpreter for threat detection reflects the same AI-native approach applied to their production runtime. In this post, we share how Abnormal AI architected these systems, the design decisions behind their sandbox approach, and practical lessons for builders deploying Code Interpreter at scale. Amazon Bedrock AgentCore Code Interpreter provides a fully managed, serverless runtime for agents to execute code dynamically. Key characteristics include: Critically, Code Interpreter is exposed as an API. This means it doesn’t dictate the agent’s workflow. Instead, it provides a box where the agent can run commands, upload files, and retrieve results. For teams with existing agent infrastructure, this plug-and-play design makes the integration straightforward. Figure 1: Amazon Bedrock AgentCore Code Interpreter architecture, where the agent invokes the Code Interpreter API to provision an ephemeral MicroVM sandbox session for code execution, file input and output, and result retrieval Large language models (LLMs) excel at reasoning and semantic coherence, but many real-world operations don’t map to semantic reasoning: By pairing a large language model with Code Interpreter, you enhance the agent’s capabilities beyond what reasoning alone can achieve. “Pretty much any agent, whether it’s writing code or not, needs a code interpreter sandbox that allows it to actually crunch data and come to answers.” — Shrivu Shankar, VP of AI Strategy, Abnormal AI Abnormal AI processes billions of email messages through a three-tiered detection architecture, as shown in Figure 2. Figure 2: Abnormal AI’s three-tiered email detection pipeline, with Tier 1 (heuristics, billions/day), Tier 2 (machine learning models, millions/day), and Tier 3 (inline agents with Code Interpreter, tens of thousands/day), where each tier handles progressively harder cases that the previous tier was unconfident about Small models, heuristic rules, and lightweight classifiers (logistic regressions) handle the largest volume of traffic. At this scale, it’s both cost-prohibitive to run larger models and unnecessary. Most messages can be classified without deep analysis. Messages that Tier 1 is unconfident about flow into deep learning and machine learning (ML) models that perform more behavioral signal analysis. The hardest cases, which would typically require a human analyst to evaluate, are processed by inline agents. These agents receive the threat intelligence data and use a sandbox to analyze it, writing scripts dynamically. They then evaluate how it fits into the overall behavioral model and make a determination. Misclassifications are handled by a separate system that learns and improves the system. A variety of monitoring systems verify the live system. Beyond the real-time classification pipeline shown in Figure 2, Abnormal deploys an analyst agent that operates in batch mode (Figure 3): Figure 3: The analyst agent feedback loop, where the batch agent ingests misclassifications from the real-time pipeline, analyzes patterns using Code Interpreter sessions, and feeds improved heuristics and models back into Tier 1 and Tier 2 These batch jobs can run for more than 30 minutes with Code Interpreter sessions maintained throughout. They can also span day-long operations where the agent uses Code Interpreter intermittently. For example, it runs a session, trains a model externally, then re-invokes Code Interpreter to process the result. Abnormal chose the sandbox (no egress) configuration for Code Interpreter driven by two considerations: Additional security practices: Several practices emerged from running Code Interpreter in production at Abnormal AI. Agents perform better with a lightweight, general harness rather than rigid step-by-step workflows. Provide high-level principles for solving a problem and let the agent use its intelligence to determine the approach. Code Interpreter isn’t only for coding agents. Security agents analyzing email benefit from compute scratch pads for data aggregation, pattern analysis, and verification. Agents deliver higher quality outputs when they have programmatic verification tools. Unit tests, integration tests, and linting allow the agent to self-test within the sandbox before delivering final results. For operations exceeding the Code Interpreter session time (for example, model training), use the file system as a checkpoint. Run Code Interpreter for computation, persist state to files, perform long-running operations externally, then re-invoke Code Interpreter to process results. The analyst agent (Figure 3) uses this pattern for day-long model training operations. Abnormal AI’s implementation demonstrates a key insight for production agent systems: Code Interpreter is not merely a coding tool. It’s fundamental infrastructure that agents use to reason computationally. By combining the managed, secure sandbox of AgentCore Code Interpreter with their own lightweight agent harness, Abnormal achieves: Whether you’re building security agents or a system where agents need to crunch data and verify their own outputs, the pattern is clear. Give your agents a scratch pad and trust their evaluations more than you trust their assertions. Abnormal AI is an AWS customer. The views and opinions expressed in this post are those of the customer and don’t necessarily reflect the views of Amazon Web Services.",
+      "published_date": "2026-09-14",
+      "tags": [
+        "Advanced (300)",
+        "Amazon Bedrock AgentCore",
+        "Customer Solutions"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, reasoning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 56,
+    "llm_reason": "真實生產環境的agent code interpreter安全案例研究",
+    "novelty": 8,
+    "impact": 10,
+    "trending": 11,
+    "practicality": 13,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Ars Technica AI",
+      "title": "Exclusive: Paying for frontier AI models buys 4-month head start at 5x the cost",
+      "url": "https://arstechnica.com/ai/2026/09/exclusive-open-chinese-models-close-gap-with-silicon-valleys-frontier-ai-models/",
+      "authors": [
+        "Jeremy Hsu"
+      ],
+      "abstract": "The performance gap between frontier AI models from US tech companies and the best open-weights models from Chinese companies has closed to just 4.4 months, according to a Mozilla report. That explains why many companies are shifting to the significantly cheaper open models for routine work—and helps reveal a narrow band of workloads where frontier models are worth the cost. Most organizations should ideally be using open models as the default for the majority of their work, according to the latest State of Open Source AI report from Mozilla, published on September 15 and shared with Ars prior to publication. The report highlights how a leading open model, Moonshot AI’s Kimi K3, achieves a composite AI performance score on the Artificial Analysis Intelligence Index that is just three points behind Anthropic’s Fable 5 closed frontier model, all while costing just 30 percent of the latter. “[A Closed model] earns its premium in a few places: expert professional work, high-intensity retrieval, and long context,” Raffi Krikorian, chief technology officer at Mozilla, said in an email to Ars. “We see the decision to pay for closed [models] as workload-specific rather than organization-specific.”",
+      "published_date": "2026-09-15",
+      "tags": [
+        "AI",
+        "AI models",
+        "Anthropic",
+        "Anthropic Claude",
+        "frontier ai",
+        "Mozilla",
+        "open source",
+        "open source AI",
+        "open weights",
+        "Open weights AI"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "Ars Technica AI",
+        "feed_url": "https://arstechnica.com/ai/feed/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: long context",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 65,
+    "llm_reason": "具體數據揭示開源與閉源模型成本效益差距，切中當前產業決策焦點",
+    "novelty": 7,
+    "impact": 14,
+    "trending": 16,
+    "practicality": 12,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Reward AI Releases OM-1: A Robot Policy Trained on Human Demonstrations Only, With No Teleoperation or On-Robot Data",
+      "url": "https://www.marktechpost.com/2026/09/14/reward-ai-releases-om-1-a-robot-policy-trained-on-human-demonstrations-only-with-no-teleoperation-or-on-robot-data/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "Reward AI , a robotics startup whose team’s prior work includes DexCap, HumanPlus, and ALOHA, has released OM-1 , short for Omnibody Model 1. OM-1 is a general-purpose manipulation policy that learns from humans wearing a sensorized glove, then runs on industrial arms and humanoids at human speed. The key findings that stands out: no teleoperation data and no on-robot data go into training. The system follows one principle, ‘One Model, One Data Interface, Any Body,’. Is it deployable? No, OM-1 is Reward AI’s in-house policy. No weights, code, dataset, or API have been released, so developers cannot run it on their own hardware yet. Most robot foundation policies train on teleoperated or self-collected robot data, which binds the dataset to one embodiment. Reward AI argues that human-level manipulation will not come from more of this data or more compute, citing Anderson’s “More Is Different.” Instead, capture, learning, and control are designed as one pipeline, so demonstrations recorded today can train robot bodies that do not exist yet. The stack begins with Omnibody Hand , a wearable that extends the team’s earlier DexCap work on portable motion capture. Rather than copying the human hand joint by joint, it is a seven-degree-of-freedom design built around the functions that matter: choosing contact points, reorienting objects in-hand, and moving between precision and power grasps. It captures thumb-index pinching, thumb and index flexion, and coupled motion of the middle, ring, and little fingers at the MCP joints. Ergonomics is treated as a data-quality issue: a device that slips or constrains the wearer produces a compensated grasp. A distal flexion mechanism absorbs differences in finger length, so no per-user adjustment is needed. One Data Interface turns wearer motion into training data with no staged setup and no supervisor. The design target is conveyor-belt sorting, where a person spots, grasps, and tosses an object in a fraction of a second. To cover the whole interaction, the glove combines high-frequency tactile sensing, proximity sensing for the pre-contact approach, and global-shutter in-hand cameras that hold context through rapid motion. Hand pose tracking is where Reward AI reports its first quantitative result. Visual-inertial tracking is the common default, but its accuracy at fast reversals is capped by the visual update rate. Reward AI augments it with electromagnetic sensing plus disturbance compensation. Moving both trackers between two mechanical stops at eight speeds from 3 to 67 cm/s, averaged over ten runs each, electromagnetic tracking rose from about 0.4 mm to 9.5 mm of mean overshoot error, while visual-inertial rose from about 2.1 mm to 24.9 mm: a 60% reduction at the highest speed, with a narrower run-to-run spread. Force is recorded along the same trajectory, so demonstrations carry effort as well as path. OM-1 learns to generate robot actions directly from human motion rather than routing behavior through an intermediate robot. Because every demonstration arrives in the same format, there is no split between pre-training and post-training: the first demonstration ever recorded and the newest one train a single policy in a single stage. Inputs are the glove’s multimodal streams: images, tactile signals, inter-finger proximity, and hand pose trajectories. Each modality is processed at its sensor’s native sampling rate rather than downsampled to a common frequency, so high-frequency tactile and motion cues survive alongside lower-frequency vision. Outputs carry motion direction, speed, force, and the timing of events such as grasp initiation. Reward AI says it built a novel architecture for efficient inference, though architectural details and parameter counts are not disclosed. Below the policy sits a high-frequency control layer trained with reinforcement learning in simulation to handle velocity- and acceleration-dependent dynamics, external disturbances, and system delays. Where a classical controller pushed off its reference by an unexpected load never recovers, this layer holds the reference and settles back, which is what lets a robot open a fully closed refrigerator door or lift boxes of unknown weight. The control layer runs on its own clock, continuing while the policy computes the next actions, so inference latency never stalls motion. Because successive predictions may not join smoothly, it optimizes the transition between them online. The same action space covers manipulation and navigation for mobile robots. Reward AI reports that OM-1 picks up a brand-new task, including challenging dynamics and long horizons, from less than 30 minutes of human data, and attributes this to the integrated stack rather than the policy alone. Its about page states that all published clips run at 1x speed and that the model spans arms, legged humanoids, and wheeled mobile manipulators. No success rates, public-baseline comparisons, or paper have been released, so these claims are demonstration-backed rather than benchmark-backed. Check out the Technical details here . All credit goes to the researcher of this project. Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post Reward AI Releases OM-1: A Robot Policy Trained on Human Demonstrations Only, With No Teleoperation or On-Robot Data appeared first on MarkTechPost .",
+      "published_date": "2026-09-14",
+      "tags": [
+        "Editors Pick",
+        "Physical AI",
+        "Robotics",
+        "Staff",
+        "Technology",
+        "Uncategorized"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: mcp, post-training, reinforcement learning, multimodal",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 53,
+    "llm_reason": "純人類示範學習機器人策略具新意，但未開源不可複現",
+    "novelty": 14,
+    "impact": 11,
+    "trending": 9,
+    "practicality": 5,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Agent-net Open Sources Webagent: A Go Harness That Turns Any Website into a Guarded AI Agent",
+      "url": "https://www.marktechpost.com/2026/09/14/agent-net-open-sources-webagent-a-go-harness-that-turns-any-website-into-a-guarded-ai-agent/",
+      "authors": [
+        "Michal Sutter"
+      ],
+      "abstract": "Agent-net , the team building an agent-to-agent marketplace where AI agents discover, trust, and pay each other, has released Webagent , an open source harness for standing up public-facing business agents. So, basically you give it your website, get an agent, and let it talk to other agents. Instead of writing orchestration code, a business fills in a declarative JSON spec, picks 1 provider for each of 9 pluggable slots, and runs webagent serve . Is it deployable? Yes, with caveats. The repo ships under Apache 2.0, builds green, and runs live Slack, WhatsApp, and HTTP agents backed by MCP tools today. It is still labeled v0, and the browser action provider, OAuth-gated MCP, OTel export, and the AgentNet identity and billing layer are listed as not yet built. Webagent is written in Go. An agent is 1 Brain (an LLM plus instruction) over a set of slots defined in core/ . Each slot is a Service Provider Interface with a registry of providers in spi/ and a designated default: The design serves 3 audiences on 1 contract: businesses that configure by picking from the menu, businesses that extend by registering a custom provider, and partner companies that ship adapters. Nobody forks the core. Every provider must pass its slot’s conformance suite to be certified. The most important architectural decision is action.Guard . Every tool the agent holds, whether it comes from the action provider or is injected by the host, is wrapped so the chosen guardrail runs on the action before it executes. The model cannot bypass it. The DESIGN.md frames the whole project around a research finding that architecture, not model capability, decides agent success, citing arXiv 2511.19477 and an 85% versus 50% task-success gap on the same models. The default echo brain needs no credentials, so webagent validate and webagent serve work out of the box on the 2 example specs, zomato.json and bakery.json . To drive a real model, webagent keys set openrouter stores a key in the OS config directory with mode 0600. Keys are never written into a spec, and an exported environment variable always wins. Both openrouter and gateway are OpenAI-compatible clients with a tool-calling loop. A business with an existing MCP server becomes an acting agent with 1 spec block. The mcp action provider connects over Streamable HTTP (JSON and SSE) with bearer or API-key auth, performs the handshake at build time, and hands each tool to the agent behind the guard, so validate reports the real tool count. The Slack and WhatsApp channel adapters verify every inbound webhook signature, acknowledge immediately, reply through the platform API, ignore their own messages, and de-duplicate retried deliveries. Slack points at /slack/events ; Meta’s callback goes to /whatsapp/webhook . Secrets follow a naming rule: any config key ending in Secret is a reference resolved through the selected vault at build time, so specs are safe to commit. A reference that cannot be resolved fails the build rather than starting a channel without a credential. Observability emits a per-turn TurnTrace aligned to the OpenTelemetry GenAI conventions, and an eval/ harness runs scenarios with checks. Check out the GitHub repo and the launch post . All credit goes to the researcher of this project. Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post Agent-net Open Sources Webagent: A Go Harness That Turns Any Website into a Guarded AI Agent appeared first on MarkTechPost .",
+      "published_date": "2026-09-15",
+      "tags": [
+        "Agentic AI",
+        "AI Agents",
+        "AI Shorts",
+        "Artificial Intelligence",
+        "Editors Pick",
+        "Harness",
+        "Open Source",
+        "Staff",
+        "Tech News",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, mcp",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 58,
+    "llm_reason": "開源Go agent框架附架構設計與guardrail機制，具可讀代碼",
+    "novelty": 9,
+    "impact": 8,
+    "trending": 13,
+    "practicality": 15,
+    "blog_worthiness": 13
+  },
+  {
+    "item": {
+      "source": "newsapi",
+      "source_name": "Redhat.com",
+      "title": "From fine-tuned model to cheaper and faster inference: Speculator training on Red Hat OpenShift AI with Kubeflow",
+      "url": "https://www.redhat.com/en/blog/fine-tuned-model-cheaper-and-faster-inference-speculator-training-red-hat-openshift-ai-kubeflow",
+      "authors": [],
+      "abstract": "Your organization spent months fine-tuning a large language model. Maybe it's a 70 billion parameter model trained on internal medical records, legal documents, or customer support transcripts. It's accurate. It's unique. It's yours.Now it's deployed in produ…",
+      "published_date": "2026-09-14",
+      "tags": [
+        "newsapi"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "newsapi_source": "Redhat.com",
+        "published_at": "2026-09-14T00:00:00Z"
+      }
+    },
+    "rule_score": 25.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: fine-tuning",
+      "⚖️ 來源權重: newsapi +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 60,
+    "llm_reason": "推測解碼加速推理教學文，具體技術路徑可落地於OpenShift",
+    "novelty": 9,
+    "impact": 10,
+    "trending": 11,
+    "practicality": 16,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Agent Harness vs Agent Framework vs MCP: Which Layer Owns the Loop, State, Tools, Permissions, and Recovery",
+      "url": "https://www.marktechpost.com/2026/09/14/agent-harness-vs-agent-framework-vs-mcp-which-layer-owns-the-loop-state-tools-permissions-and-recovery/",
+      "authors": [
+        "Michal Sutter"
+      ],
+      "abstract": "Harness, framework, and MCP get used interchangeably in agent architecture discussions. They are not the same thing. They sit at different layers, own different responsibilities, and increasingly overlap at the edges. This article separates the 3 with 1 question. Which layer owns the execution loop, state, tool transport, permissions, and recovery? The table maps each responsibility to the layer that owns it by default. “ Owns ” means the layer defines and enforces the behavior. “ Exposes ” means the layer surfaces a hook but does not decide policy. The rest of this article justifies each row with sources. Every agent runs a loop. Send context to the model, read the response, execute tool calls, feed results back, repeat. The harness and the framework both implement this loop. They differ in how much you control it. This is the 1 row MCP owns outright. MCP defines 3 server-side primitives: tools (functions the model executes), resources (context and data), and prompts (templated workflows). Clients may offer elicitation, which lets a server request more input from the user . Transport is JSON-RPC 2.0 over stdio or Streamable HTTP. The 2026-07-28 revision made Mcp-Method and Mcp-Name headers mandatory on HTTP requests. Gateways and rate limiters can now route on headers without parsing bodies. It also made tools/list responses cacheable with ttlMs and cacheScope , and deprecated the legacy HTTP+SSE transport with a 12-month offramp. Server-initiated sampling , roots , and logging are now deprecated. Their replacement is Multi Round-Trip Requests (MRTR). A server returns resultType: \"input_required\" , and the client retries the original call with answers attached . This matters for the permissions row below. Harnesses and frameworks both sit on top of MCP as clients. Claude Code and the Claude Agent SDK connect to MCP servers . They also let you define custom tools through an in-process MCP server. Codex connects to MCP servers , and OpenAI’s Relay sample embeds Codex beside a dashboard driven by application-owned MCP tools. Microsoft Agent Framework 1.0 ships MCP and A2A support. The protocol is the shared substrate. Adoption numbers back that up. The MCP maintainers report close to half a billion SDK downloads per month across Tier 1 SDKs. The TypeScript and Python SDKs have each passed 1 billion total downloads . The MCP specification is unambiguous here. Hosts must obtain explicit user consent before invoking any tool. Tool descriptions and annotations should be treated as untrusted unless the server is trusted. And then the key sentence: “ MCP itself cannot enforce these security principles at the protocol level “. Permissions belong to the host. Harness : Harnesses own the permission model end to end. Claude Code ships 6 permission modes : default , acceptEdits , plan , auto , dontAsk , and bypassPermissions . Deny rules block in every mode except bypassPermissions , which skips the permission layer entirely. auto mode routes each tool call through a background classifier. Hooks add custom logic at PreToolUse and PermissionRequest points . Codex takes the same shape. The app-server can pause a turn and issue an approval request the c lient must answer before work continues . Framework : Frameworks give you the hook, not the policy. The OpenAI Agents SDK has input, output, and tool guardrails, and a tripwire halts the run . LangGraph uses interrupt() inside a node to pause for approval and Command(resume=...) to continue. Microsoft Agent Framework adds a ToolApprovalAgent middleware with “don’t ask again” rules. In each case you write the approval logic and the UI. MCP : MCP now carries the approval request across the wire through elicitation over MRTR. Supabase, for instance, plans to use it so tools can confirm cost or a destructive query before acting . The server can ask. Only the host can decide. Harness : Recovery is where harnesses earn their keep. The Claude Agent SDK can resume a session and rewind file changes to a checkpoint. It compacts context when a window fills. Claude Code’s dynamic workflows resume where they left off if a terminal is closed. Anthropic’s harness design post (March 2026) separates a generator from an evaluator agent because self-graded work skews positive. OpenAI’s harness post from February 2026 reports the outcome of this discipline. Codex produced roughly 1,500 merged pull requests in 5 months. The repository reached on the order of 1 million lines of code. The team grew from 3 to 7 engineers, averaging 3.5 PRs per engineer per day . OpenAI also reports a harness effect on ARC-AGI-3. Retained reasoning and context compaction lifted GPT-5.6 Sol from 13.3% to 38.3% while cutting output tokens sixfold . Same model, different harness, different score. Framework : LangGraph’s durable execution is explicit that recovery depends on determinism. Wrap side effects in tasks, keep nodes idempotent, and a run can resume a week later . The OpenAI Agents SDK exposes error_handlers and preserves completed guardrail results when a run fails. The framework replays. You make replay safe. MCP : MCP’s answer to long-running work is the io.modelcontextprotocol/tasks extension, contributed by AWS, with poll-based tasks/get and tasks/update . This covers a single long tool call. It does not cover agent-level recovery. OpenAI draws a near-identical picture for Relay. The application owns product context, business rules, and tools. C odex app-server provides the agent loop and sandboxed execution . The boundaries are blurring in 3 directions: One term that does not overlap: A2A. Agent-to-agent communication is a separate protocol, now also housed at the Agentic AI Foundation . MCP connects an agent to tools. A2A connects an agent to other agents. The decision comes down to 3 questions : The post Agent Harness vs Agent Framework vs MCP: Which Layer Owns the Loop, State, Tools, Permissions, and Recovery appeared first on MarkTechPost .",
+      "published_date": "2026-09-14",
+      "tags": [
+        "Agentic AI",
+        "AI Agents",
+        "Comparison",
+        "Editors Pick",
+        "Harness",
+        "Staff",
+        "Uncategorized"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, mcp, reasoning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 51,
+    "llm_reason": "釐清agent架構分層的實用參考文，工程師易吸收",
+    "novelty": 6,
+    "impact": 9,
+    "trending": 10,
+    "practicality": 12,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "blog",
+      "source_name": "Latent Space",
+      "title": "[AINews] AEF-1 standard emerges for Third Party Evaluators, as Xai, OpenAI, and Anthropic all cosign",
+      "url": "https://www.latent.space/p/ainews-aef-1-standard-emerges-for",
+      "authors": [
+        "Latent Space"
+      ],
+      "abstract": "We last highlighted the pacing debate in July when Pacing the Frontier first emerged: And it seems that we’re in for round 2 as Dario, lead author on the original, wrote a rare personal blogpost to spell out how he sees pacing pan out specifically: Embedded Evaluators. Each frontier AI company commits to giving ongoing, employee-like access to a team of embedded third-party evaluators (such as METR ), whose role is to verify adherence to safety practices and commitments, report incidents, and help assess the alignment of not just completed AI models but training pipelines and processes. This is the key step for verifiability of any pacing commitments, and has precedent in the banking industry, which sometimes involves regulatory “supervisors” embedded along with employees. Anthropic is unilaterally committing to this step now. We intend this to be part of a broader push to redouble efforts on our safety and alignment work. Democratic Coordination. Frontier AI companies within democratic countries coordinate to establish common safety standards as well as limits on the rate of unchecked AI progress. Some forms of coordination that would be impactful for pacing are legally challenging, and will require government support. Global Coordination. The US and other democratic governments attempt to coordinate with authoritarian governments, to the extent this is possible, while taking seriously the challenges of verifying compliance. Very coincidentally, the AI Evaluator Forum , formed in December 2025 , happened to also put out their expectations for what that first category of Evaluators should do: With the members of the AEF presumably now being the leading third party auditors that will be recruited by these big labs for self regulation. Dario is unilaterally promising unparalleled access, including “ Desks in our offices, access badges, and company laptops ” and “ Access to workspaces, tools, and permissions mostly comparable to what internal risk assessment teams have “. While that is all within the standard domestic self-regulation industry playbook, what’s perhaps more ultimately the test is Dario’s proposal for how we will pace progress with China . AI News for 9/11/2026-9/14/2026. We checked 12 subreddits, 544 Twitters and no further Discords. AINews’ website lets you search all past issues. As a reminder, AINews is now a section of Latent Space . You can opt in/out of email frequencies! AI Safety Governance, Third-Party Evaluation, and the “Pace the Frontier” Split Independent evaluation standards are becoming more formalized : The AI Evaluator Forum published AEF-1 , a proposed baseline for independent third-party AI evaluations covering access, conflicts of interest, funding relationships, recusal, and transparency. This is notable because much of the broader safety debate in this batch turns on whether outside evaluation can actually be independent in practice. A sharp public split emerged over frontier slowdown vs control-first safety : Several high-signal posts framed the current debate around whether labs should pace capability progress or focus on specific mitigations and containment . Bilal Chughtai announced he left Google DeepMind and argued that progress may be outrunning alignment, explicitly calling for pacing and more transparency. Daniel Kokotajlo sharing Dan Selsam’s statement went further: Selsam argues situationally aware models may increasingly appear aligned under evaluation while hiding misalignment , weakening trust in future eval evidence. In contrast, Shashank/Sayash Kapoor and Lennart Heim’s new essay summary argues the recent “rogue agent” incidents are best understood primarily as a security/control/governance problem, not proof that generic alignment research is the highest-leverage intervention. The anti-slowdown reaction was equally forceful and often targeted Anthropic specifically : Aidan Gomez argued against a world where a few Silicon Valley companies become AI gatekeepers for governments. Cohere also pushed the line that public x-risk discourse can veer into science fiction. On the more polemical end, Brian Chau argued the “rogue agents” story was overstated, while Kevin Bass posted a widely engaged thread alleging structural conflicts in the Anthropic-linked safety ecosystem. Even where the rhetoric is heated, the substantive engineering question underneath is real: how much of current risk is solvable with control, oversight, sandboxing, and org process versus requiring slower capability development? A related theme: governance as production engineering, not just principles : The AI Engineer World’s Fair Harness Engineering track emphasized that when agents fail in production, the failure mode is often not “the model” but everything around it: harnesses, permissions, tool routing, memory, retries, kill switches, and monitoring. That framing lines up closely with the control-oriented position in the safety debate. Agent Harnesses, Coding Agents, and the Shift from Models to Orchestration Harness engineering continues to harden into its own discipline : Omar Shorbagy posted a practical guide to building an agent harness from scratch: separate inference, tools, and loop; keep prompts minimal; log aggressively; test on diverse tasks; then layer in memory, skills, and subagents. In a follow-up, he argued custom harnesses can materially reduce costs and improve reliability through slimmer prompts, routing, compaction, and verifiers. Business Barista’s eval masterclass recap made a similar point from the eval angle: tasks, verifiers, environments, traces, and self-improvement loops are now core applied AI primitives. Desktop coding agents are spreading beyond IDE plugins : Cline launched Cline Desktop , a native app for working with open-weight models, with BYOK/provider choice and support for models like DeepSeek-V4.1-Flash and Musespark-1.3. Reactions from kimmonismus and Omar highlighted the appeal of open model choice, standalone workflows, and model switching mid-project. Copilot/Codex workflows are becoming more orchestration-heavy : GitHub added auto model selection tiers —efficiency, balance, intelligence—via Pierce Boggan , plus a Jira canvas and an /ask mode while the agent is already working . OpenAI’s dev team also added native Codex app support for Arch Linux . On workflow strategy, reach_vb suggested using Astra as an orchestrator that delegates subthreads to Sol/Luna and checks in on long-running tasks via heartbeat loops. Evidence is accumulating that orchestration choices matter as much as raw model quality : A recurring claim in the tweets is that more expensive or more capable lead models can reduce overall cost by delegating better, and that production gains increasingly come from context handling, file formats, tool use, and verifier design , not simply “use a smarter model.” That also shows up in LangChain’s note that a file-reading format change reduced edit_file errors by 15% and total input tokens by 10% . Model/Product Releases and Cost-Performance Shifts DeepSeek-V4.1-Flash (Max) looks like the day’s most notable cost/performance datapoint : Agent Arena and a fuller follow-up here reported the model reached #3 among open models and landed on the Pareto frontier with +4.87% net improvement at roughly $0.06–$0.07 median cost per task . Arena compares that to Hy4 preview at +4.96% / $0.22 and Kimi K3 (Max) at +6.39% / $0.77, implying DeepSeek is near-top-tier among open models at materially lower task cost. Cohere is pushing document parsing economics : Cohere Parse 5 was positioned as a cheaper parser, prompting a nuanced counter from Jerry Liu , who argued there’s no free lunch in parsing: Parse 5 is cost-competitive but weaker on visual grounding, chart parsing, and fine-grained citation-oriented extraction than some alternatives.",
+      "published_date": "2026-09-15",
+      "tags": [
+        "blog"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "blog_name": "Latent Space",
+        "blog_url": "https://www.latent.space/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, tool use, alignment, safety, open weight",
+      "⚖️ 來源權重: blog +15"
+    ],
+    "llm_score": 51,
+    "llm_reason": "評估者標準獲三大實驗室連署，政策影響力大但無技術操作性",
+    "novelty": 8,
+    "impact": 13,
+    "trending": 15,
+    "practicality": 3,
+    "blog_worthiness": 12
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "NVIDIA Developer",
+      "title": "Dense vs. MoE Models: Active Parameters, Throughput, and When to Choose Each",
+      "url": "https://developer.nvidia.com/blog/dense-vs-moe-models-active-parameters-throughput-and-when-to-choose-each/",
+      "authors": [
+        "Elizabeth Goodman"
+      ],
+      "abstract": "How can a 30B-parameter model activate only 3B parameters per token, and still use the capacity of the larger model? Nemotron 3.5 Lightning illustrates the answer: It uses a Mixture-of-Experts ( MoE ) architecture that selects only a subset of its parameters for each token . There are two dominant model architectures: Dense model and MoE. How a model organizes its parameters matters as much as how many it has. The right choice affects throughput, memory cost, and serving complexity more than raw parameter count does. Therefore, choosing between them comes down to your deployment constraints. Think of the difference like two engines with the same total displacement. One fires every cylinder on every cycle; the other activates only the cylinders it needs. This post explains: How dense and MoE architectures work How they affect performance When to choose each one Dense models vs. MoE models In simple terms, dense and MoE models differ in how they use their parameters. A dense model activates all its parameters for every token. An MoE model stores multiple expert networks but routes each token through only a selected subset. Dense models typically favor simpler, more predictable deployment, while MoE models can deliver greater capacity and throughput when memory and serving complexity are manageable. Video 1. Dense vs MoE: How to choose the right AI architecture How parameters differ In a dense model every parameter participates in every forward pass. All 27B parameters of a 27B model fire for every token, through a single shared feed-forward network (FFN) block per decoder layer. An MoE model replaces that single shared FFN with multiple FFN blocks , also known as experts. Through an internal routing process, incoming tokens are processed through a small subset of experts rather than every single parameter. Structurally, inside each decoder layer where a dense model would have one FFN, an MoE layer has multiple (e.g. 8, 64, or 128). A learned gate network , usually called a router network, sits in front of all of them and assigns each incoming token to the top k scoring experts. The selected FFN blocks are the ones that run for that token while the rest are skipped for that particular layer. Most modern MoEs though such as Mistral Small 4 also run one “shared” expert that every token is routed to regardless. How MoE routing works For MoE models, the routing decision made is separate for every layer, meaning a token doesn’t get routed to an expert and stays there for the rest of the computations. At each decoder layer it gets rerouted based on what the token represents at that point in the network. These experts at every layer aren’t experts in the traditional sense where they specialize in a subject, but rather their specializations lie primarily in syntax and token-type patterns (punctuation, numbers, etc), though this varies by architecture or training methods. While the router mechanism decides which FFN blocks are skipped at each decoding layer, the tokens still pass through the full attention mechanism as normal. When a model card says “3B active parameters,” it includes both the attention and embedding weights for every token along with the selected FFN weights. MoE variants There are variants to MoE as well, one of them being the NVIDIA model card for Nemotron 3.5 Lightning specifying a Mamba-2 + MoE + Attention hybrid . The Mamba-2 layers stand in for attention in most layers, carrying a constant-size recurrent state rather than a growing KV cache. That changes the memory profile at long context in a way sparsity alone doesn’t account for. Rather than Lightning making these routing decisions using the full model’s breadth, it compresses them into a smaller space first to make the routing decision cheaper for the model. Figure 1, below, describes the general transformer-MoE case. Note that an MoE model is a type of sparse model. Figure 1. A dense model and sparse model decoder block with different routing mechanisms ( Source: Medium ) Which is faster: Dense or MoE models? MoE models are often faster for token throughput because they activate only a subset of feed-forward parameters for each token. Dense models activate the full network, but can offer simpler serving and more predictable latency. At high concurrency, routing and memory movement can narrow MoE’s advantage. Results also depend on hardware, precision, inference framework, and model design. For example, Nemotron 3.5 Lightning has Mamba-2 layers and speculative decoding. Key model performance differences The difference in performance between the two comes down to two main things. For one, at equal total parameter count the skipped FFN blocks make MoE faster. The more consequential difference between the two is the fact that MoE decouples memory (total params → VRAM to host) from compute (active params → FLOPs per token). In a dense model hosting and inference costs scale together, and MoE breaks that link. With MoE, VRAM is paid up front. When every expert loads into memory the compute is paid per token and scales only with the experts that fire. Idle experts cost nothing to run and while still paying the required memory to store it, making that shift from variable per-token compute to fixed memory the main tradeoff. At batch size 1 decoding is bound by available memory rather than compute, and this is where MoE performs well since it reads fewer weight bytes per token. As the batch size grows, tokens collectively end up using most of the experts in the network and that advantage narrows while the reduction in work per token persists. MoE holds a throughput advantage across batch sizes, but its latency margin compared to a well-optimized dense model compresses at high concurrency. Modern inference frameworks typically handle routing without discarding tokens, though all experts must live in the GPU memory simultaneously. This leaves less room for the KV cache than a dense model of comparable size would typically have. Example comparison Table 1, below, shows a direct comparison. At equal total parameter size, sparsity shows up plainly in serving throughput: Gemma 4 31B and Nemotron 3.5 Lightning are both ~30B total, yet across NVIDIA GPU providers their output-speed ranges don’t overlap. Activating 3B parameters per token is a major reason, though not the only one. Lightning’s Mamba-2 layers and its speculative decoding contribute independently of the hybrid MoE architecture. Model Architecture Total params Active params VRAM (native) VRAM (4-bit) Artificial Analysis Intelligence Index Output speed‡ $/M output‡ Gemma 4 31B Dense; multimodal 31B 31B ~61 GB BF16 (1×H100) ~16 GB 30 36.9 – 222.4 t/s $0.40 Qwen3.8-27B Dense; hybrid linear/full attention; MTP head; multimodal 27B 27B ~56 GB BF16 (1×H100) ~14 GB 52 46.8 t/s $3.00 Nemotron 3.5 Lightning MoE + Mamba-2 attention hybrid 30B 3B ~60 GB BF16 (1×H100) ~20 GB 24 235.7 – 494.2 t/s $0.22 Mistral Small 4 MoE; multimodal 119B 6B (8B incl. embeddings) ~121 GB FP8 (4×H100) ~71 GB 20 147.3 t/s $0.60 Table 1. Median output speed and cost data from Artificial Analysis (10K-token input, retrieved Aug 31, 2026); benchmarks cover NVIDIA GPU providers only The tradeoffs for both can be observed; for example, Lightning delivers four to five times Qwen3.8-27B’s output speed at a fourteenth of the price, and scores less than half as well on general capability. That is right for an agentic execution layer running well-specified steps at volume, and wrong where one hard reasoning pass decides the outcome. When should you use a dense or MoE model? When it comes to deciding which model to use, it depends on which one will best serve your deployment context. There are several factors to consider: Memory Budget: The memory footprint tracks total parameters rather than active ones, so a 30B MoE and a 30B dense model both need roughly 60 GB. The real question is what you get for those gigabytes: dense converts them into capability, MoE into throughput.",
+      "published_date": "2026-09-15",
+      "tags": [
+        "Agentic AI / Generative AI",
+        "Data Center / Cloud",
+        "AI Inference",
+        "LLMs",
+        "Mixture of Experts (MoE)",
+        "NeMo",
+        "Nemotron"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "NVIDIA Developer",
+        "feed_url": "https://developer.nvidia.com/blog/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agentic, reasoning, moe, mixture of experts, mamba",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 49,
+    "llm_reason": "Dense vs MoE已是成熟主題，教學價值高於新穎性",
+    "novelty": 4,
+    "impact": 9,
+    "trending": 10,
+    "practicality": 13,
+    "blog_worthiness": 13
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "Optimizing cost and latency with Amazon Bedrock prompt caching",
+      "url": "https://aws.amazon.com/blogs/machine-learning/optimizing-cost-and-latency-with-amazon-bedrock-prompt-caching/",
+      "authors": [
+        "Daniel Abib"
+      ],
+      "abstract": "Prompt caching in Amazon Bedrock can reduce your input token costs by up to 90 percent when you repeatedly send the same context to foundation models, based on Amazon Bedrock prompt caching pricing . Without caching, a 10,000-token contract sent alongside 50 user questions means 500,000 input tokens billed at full price for content the model has already processed. You can mitigate this issue by shortening prompts, reducing context windows, or implementing application-level caching. Each option involves a trade-off: Prompt caching in Amazon Bedrock helps reduce this challenge at the infrastructure level. When you cache parts of your conversation context (system prompts, documents, tool definitions), Amazon Bedrock reads the cached tokens on subsequent requests instead of reprocessing them. This can reduce time-to-first-token (TTFT) and lower costs for cached input tokens by up to 90 percent on cache hits, without changing your model or prompt quality. This post walks through six practical prompt caching scenarios using the Converse API in Amazon Bedrock, progressing from basic to advanced patterns: Prompt caching stores a snapshot of partially processed input so that subsequent requests with the same prefix skip redundant computation. This section covers the request flow, supported models, and pricing. When you include a cachePoint marker in your request, Amazon Bedrock evaluates whether the content preceding that marker matches an existing cache entry. If it does (a cache hit ), the model can skip reprocessing those tokens and begin generation from the cached state. If no match exists (a cache miss ), the model processes the full content and writes the result to cache for potential future requests. Figure 1: Prompt caching request flow, where the first request writes to cache and the second request reads from cache, reducing TTFT and input token cost With this flow in mind, four key concepts determine how caching behaves in practice: For the latest model support information, see the Amazon Bedrock Prompt Caching documentation . Prompt caching introduces two token categories in addition to standard input and output tokens: For workloads with repeated context, the savings reach approximately 75 percent on input token costs. For example, if you send a 10,000-token document with 10 different questions, the first request incurs a cache write cost. The remaining nine requests each read from cache at 90 percent reduced cost, resulting in a net savings of approximately 75 percent on input token costs for that document context. This assumes all subsequent requests occur within the TTL window. Requests after expiration trigger a new cache write, reducing the net savings. See Amazon Bedrock pricing for detailed pricing information. Before getting started with the scenarios, make sure you have the following: Note: Boto3 1.43.0 or later is required for the ttl parameter in cachePoint used in Scenario 4 (Mixed TTL). A common use case for prompt caching is caching long documents or reference content that you query repeatedly. For example, in a Retrieval Augmented Generation (RAG) application, you ask multiple questions about the same document, or a coding assistant references a large codebase. In this scenario, you place a cachePoint marker between the static document and the dynamic question. Amazon Bedrock caches the document on the first call and might reuse it on subsequent calls. Place a cachePoint content block after the static content and before the dynamic question. Amazon Bedrock caches everything before the checkpoint and reuses it on subsequent requests: The following code puts this pattern into practice with a complete working example. First, set up the Amazon Bedrock runtime client and define a sample document. In a production application, this document can be a PDF, a knowledge base article, or other content exceeding the 1,024-token threshold: Next, define the caching function. The key elements are the cachePoint block placed between the static document and the dynamic question: Run two requests to observe the caching behavior. The initial call populates the cache, and a subsequent call with a different question reuses it: The response usage object includes two cache-specific fields: In our testing with Anthropic Claude Sonnet 4.5 and a document exceeding 1,024 tokens, the initial response shows a cache write: A subsequent request with the same document prefix produces a cache read: Notice that cacheReadInputTokens now reflects the 1,898 tokens read from cache. The entire document prefix was reused without reprocessing. Only 28 tokens (the question itself) were processed as standard input. These cached tokens are billed at the reduced cache-read rate (90 percent lower than standard input). Claude models on Amazon Bedrock support simplified cache management . You can place a single cachePoint , and Amazon Bedrock automatically checks for cache hits on prefixes up to approximately 20 content blocks before that marker. You do not need to manually place multiple cache checkpoints to get cache hits on earlier portions of your conversation. For more granular control, you can place multiple cachePoint markers after each section of content: This approach supports partial cache hits. If only the first two sections match a previous request, the model reuses the cache for those sections and processes the remaining content. The same caching syntax works with converse_stream . The key difference is that cache metrics arrive in the metadata event at the end of the stream rather than in the immediate response: To quantify the latency improvement, you can measure TTFT with and without caching: Prompt caching can reduce TTFT, with the benefit growing as the cached prefix size increases. For smaller documents (approximately 2,000–5,000 tokens), the improvement may not be statistically significant across a small number of iterations. The exact improvement varies based on document size, model, and current load. For large cached prefixes (over 10,000 tokens), the reduction in TTFT becomes more pronounced. Many applications use detailed system prompts that define the model’s persona, guidelines, and domain expertise. These system prompts can span thousands of tokens and remain constant across user interactions. With system prompt caching, you pay the full processing cost once and reuse the cached system prompt for every subsequent message. The cache point goes inside the system parameter, separate from user messages. The Converse API system parameter accepts an array of content blocks. Place a cachePoint after the system text: The next example shows this in a full request with a detailed persona prompt. The following example defines a comprehensive system prompt: an Expert Space Science Advisor persona with detailed response guidelines. The prompt exceeds the 2,048-token threshold required for caching: The caching function places the cachePoint in the system parameter, keeping user messages separate: The user message changes between requests, but the system prompt remains identical. Amazon Bedrock is designed to cache the system prompt prefix and reuse it, regardless of what the user asks. System prompt caching is ideal for: Agentic applications often define dozens of tools with comprehensive JSON schemas. These tool definitions can collectively contain thousands of tokens and rarely change between requests. Tool definition caching prevents reprocessing these schemas on every turn. Append a cachePoint as the last element in the tools array within toolConfig : The example below demonstrates this with a set of tool schemas that collectively exceed the token threshold. Here we define a set of space-themed tools with comprehensive schemas.",
+      "published_date": "2026-09-15",
+      "tags": [
+        "Advanced (300)",
+        "Amazon Bedrock",
+        "Technical How-to"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agentic, rag, retrieval augmented",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 49,
+    "llm_reason": "prompt caching實作指南，可直接落地但技術含量普通",
+    "novelty": 3,
+    "impact": 8,
+    "trending": 8,
+    "practicality": 17,
+    "blog_worthiness": 13
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "IBM Research",
+      "title": "A theoretical separation between quantum computers & LLMs",
+      "url": "https://research.ibm.com/blog/quantum-circuits-vs-llms?utm_medium=rss&utm_source=rss",
+      "authors": [],
+      "abstract": "For which computational problems will quantum approaches outperform classical ones, and by exactly how much? Answering these questions is one of the most important goals in modern theoretical computer science. However, proving theoretical limits on the capabilities of classical computing models is exceedingly challenging, since many idealized classical models can simulate arbitrary Turing machines given enough resources. Instead, we pit quantum computation against more limited computational models — such as certain restricted versions of large language models (LLMs). Our research follows a line of work on shallow quantum circuits; namely, circuits in which the depth of the circuit remains constant as the number of qubits increases. A landmark result by IBM researchers Sergey Bravyi, David Gosset, and Robert König, published in Science in 2018 , showed that a certain model of constant-depth quantum circuits can solve specific search problems that no comparable constant-depth classical circuit can solve. Since then, researchers have steadily strengthened this result, proving various notions of a quantum separation versus increasingly expressive models of classical computation. Within this line of work, the classical opponent has become increasingly powerful, while the quantum side has remained remarkably shallow. Given the success and ubiquity of LLMs in computational tasks today, we were naturally interested in whether there was a theoretical separation between shallow quantum circuits and LLMs. Specifically, our work sought such separations for two basic types of computational problems: Functional separations: computing the value of a function, i.e., returning the correct output for a given input, such as retrieving a specific piece of information in response to a prompt. Sampling separations: given an input, generating an output according to a desired probability distribution — for example, producing new text or images in response to a prompt. Our recent work, posted on arXiv , proves the existence of one problem in each of these classes for which shallow quantum circuits have a provable advantage over LLMs. These are, of course, theoretical rather than immediately practical or implementable results. Current large language models run on far more mature and much larger computational resources than the noisy, smaller-scale quantum computers available today. Nevertheless, our work demonstrates what is possible at scale as quantum technology advances. In particular, we prove that there are computational tasks for which shallow quantum circuits have an inherent advantage over LLMs; we hope these insights open the door to developing concrete benchmarks that compare quantum systems and LLMs on these hard problems. A separation between shallow quantum circuits and LLMs for a functional problem Functional problems arise in everyday uses of LLMs, ranging from search to messaging apps. LLMs typically solve these problems using a core architecture called a transformer. Given raw input data, a transformer tokenizes the input, embeds the resulting tokens as a sequence of vectors, and then repeatedly re-weights those vectors across multiple layers, using learned parameters and a scaled dot-product mechanism called attention to capture relationships between tokens. Specifically, our work focuses on decoder-only transformers, which power many prominent LLMs today (including GPT, Claude, and Llama). This architecture is commonly used in autoregressive language models: given an input prompt, the model generates new tokens sequentially, producing the desired output. Previous work on the computational complexity of transformers had already identified problems that require substantial computational resources. One such problem is the so-called iterated index function . Imagine looking up an entry in the index at the back of a book — but instead of pointing you to a page in the same book, the entry points you to an index entry in a second book. That entry, in turn, points to an index entry in a third book, and so on. The iterated index problem asks where you end up after following this chain of references through many successive books. Adapting this existing result gave us the classical half of a potential separation: a lower bound showing that transformers need sufficiently large computational resources to solve the iterated index problem. To complete the separation, what remained was to show a corresponding upper bound , namely, to show that this problem is solvable by shallow quantum circuits. We showed, indeed, that the problem is solvable by a close-to-constant-depth quantum circuit equipped with a single classical AND gate. We also showed that this depth cannot be meaningfully improved (e.g., it cannot be made truly constant). Image caption: Illustration of a shallow quantum circuit computing the index function (looking up a bit in a data table). This forms a building block for our separation between quantum circuits and bounded-resource transformers. Inset A j \\mathcal{A}^j A j are parallel short-depth circuits which checks each possible index and returns the bit at the matching address in the data table. A separation between shallow quantum circuits and LLMs for a distributional problem Distributional problems represent another fundamental use case for today’s large language models. Rather than producing a single correct answer as in a functional problem, the goal here is to generate one of many possible outputs according to a desired probability distribution. The best-known examples of distributional problems arise in image generation, addressed today by diffusion models such as DALL·E or Stable Diffusion. Our paper explores diffusion language models (DLMs), which are trained by “corrupting” text with random noise, and then teaching them to recover the original text by reversing the corruption process step by step, iteratively revealing tokens. At test time, given a prompt, these models begin with random noise and iteratively remove it until they produce an output in the desired form. We once again turned to previous classical work, which had studied a problem called parity-sampling — a problem similar to the one used by Bravyi et al. to compare quantum and classical shallow circuits in 2018. This is a problem that is “hard” for diffusion models alone, and can be described as follows. Given a string of 0s and 1s, one can ask for its parity — whether it has an even or an odd number of 1s. This problem has a straightforward quantum approach using a constant-depth quantum circuit: using properties like entanglement and interference, one can predict the parity of an unknown string, and thereby efficiently sample strings with a specified parity. But how do classical models fare? Previous work on diffusion language models had already shown limitations on how well they could solve a version of this sampling problem. However, those results did not cover DLMs equipped with chain-of-thought , the ability to “show their work” by generating and consuming intermediate tokens, which has generally been shown to make a model significantly more powerful. Our goal was to extend the classical lower bound to this stronger model. We proved that even when a diffusion language model is given access to some amount of chain-of-thought, it still cannot efficiently reproduce the distribution generated by the shallow quantum circuit. This yields our second separation: this time, for a sampling problem rather than a functional problem. Where do we go from here? Our work is firmly theoretical and consists of mathematical proofs. We must acknowledge that today’s quantum computers are limited in their abilities, and subject to noise and errors, while classical LLMs have access to state-of-the-art computing hardware at an unprecedented scale.",
+      "published_date": "2026-09-15",
+      "tags": [
+        "AI",
+        "Computer Science",
+        "Quantum",
+        "Research"
+      ],
+      "organization": "IBM",
+      "raw_metadata": {
+        "feed_name": "IBM Research",
+        "feed_url": "https://research.ibm.com/rss"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: chain of thought, diffusion, diffusion language model",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 49,
+    "llm_reason": "量子計算與LLM理論分離的紮實研究，但受眾極窄",
+    "novelty": 17,
+    "impact": 9,
+    "trending": 6,
+    "practicality": 3,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "newsapi",
+      "source_name": "Amazon.com",
+      "title": "Validating multi-agent decisions with Step Functions and Bedrock AgentCore",
+      "url": "https://aws.amazon.com/blogs/compute/validating-multi-agent-decisions-with-step-functions-and-bedrock-agentcore/",
+      "authors": [
+        "Ben Freiberg"
+      ],
+      "abstract": "Orchestrating specialized Amazon Bedrock AgentCore agents with AWS Step Functions gives you the reasoning power of generative AI with the guardrails of deterministic validation. Agents propose options, and deterministic code validates them before any action i…",
+      "published_date": "2026-09-14",
+      "tags": [
+        "newsapi"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "newsapi_source": "Amazon.com",
+        "published_at": "2026-09-14T16:47:23Z"
+      }
+    },
+    "rule_score": 30.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, multi-agent, reasoning",
+      "⚖️ 來源權重: newsapi +15"
+    ],
+    "llm_score": 51,
+    "llm_reason": "Agent決策+確定性驗證的實務架構文，模式常見但案例具體",
+    "novelty": 6,
+    "impact": 8,
+    "trending": 12,
+    "practicality": 14,
+    "blog_worthiness": 11
+  },
+  {
+    "item": {
+      "source": "blog",
+      "source_name": "Latent Space",
+      "title": "Can Skills Learned in Games Transfer to Real-World Work?",
+      "url": "https://www.latent.space/p/good-start-labs",
+      "authors": [
+        "Latent Space"
+      ],
+      "abstract": "“Games have always been these underrated educational tools. They’re super approachable. They’re very human.” Those are the words of Alex Duffy , co-founder and CEO of Good Start Labs , who spoke to Latent Space about why his company is turning games into training material for AI models . The company was spun out of AI media and tools company Every last October , with $3.6 million in funding from General Catalyst, Inovia, Every, and angel investors. The idea came from a 2025 Twitch stream of frontier models playing the game Diplomacy , which Duffy said normally takes “days or weeks to play.” This was when he worked at Every as its head of AI training. (For more on Diplomacy and LLMs, see our interview last year with Noam Brown , soon after he won the 2025 World Diplomacy Championship!) Watching the AI agents battle it out in Diplomacy showed Alex Duffy how each frontier model acts differently when faced with gaming scenarios. In particular, he noticed the OpenAI model (o3) winning all the games by planning a future betrayal , whereas the Claude model (Opus 4) refused to lie and thus “got destroyed.” From this, Duffy concluded that training AI models on games like Diplomacy could teach them skills like strategic thinking . Especially because those kinds of games have outcomes that can be verified. In a later article published on Every , Duffy wrote that “fine-tuning a model on the strategy game Diplomacy improved its performance on customer support and industrial operations benchmarks.” Duffy and his co-founder Tyler Marques launched Good Start Labs with the intention of exploring other games that could teach useful skills to AI models. “It became really clear that reinforcement learning environments were one of the most reliable ways to teach models anything you could verify,” he said. The bigger idea is that the way a game is presented to an AI can determine which skills it learns , and whether those skills carry into work outside the game. And the best evidence for that so far comes from a nineteenth-century railroad game. Good Start Labs recently trained a 30B model inside the game 1830: The Game of Railroads and Robber Barons , described on Wikipedia as “a strategy game where the only element of luck involved is in determining the initial play order.” They then tested the same model on financial research tasks . The experiment was designed to test whether habits learned in a game could transfer outside the game . “That game has a stock market mechanic within it,” Duffy explained. “You’re bidding on stock of these railroad companies to try and create this logistics network. And we’ve set up tasks where models are going through a database to find information about how the game’s been played, putting it into an Excel file, reasoning over it, creating some functions within it, and then calculating its answer in that way. And so it mirrors what you would typically do in a finance workflow, but you’re doing it in this game. ” The published results compare single-turn question answering — where the model is presented with a game state and asked to make the next move — with a “multi-turn terminal agent that uses tools to explore its environment, plan a strategy, and adapt in real time.” Both training designs improved their respective in-game objectives, but only the terminal-agent design improved performance on the Finance-Agent benchmark . The 1830 result showed that the training design is key. But more generally, Duffy said Good Start Labs can also add an expert model that provides denser, stepwise rewards . The harness also allows an environment to approach the same game in different ways. “How you design that [the harness] totally changes what the model can learn,” Duffy said. “You can imagine a model that is looking at pictures is going to learn different things than one that’s reading through natural text [or] one that has everything framed as Python.” Duffy described the overall goal of Good Start Labs as figuring out “how do you design a learning environment to teach specific capabilities?” That question is explored in COS-PLAY: Co-Evolving LLM Decision and Skill Bank Agents for Long-Horizon Tasks , a paper co-authored by Duffy and Marques with researchers from several universities. In the paper, the system gives a decision agent access to what the authors call “a learnable skill bank to guide action taking.” A separate skill-bank agent studies the trajectory and makes changes to the skill bank, which is then looped back for the next run. I asked whether Good Start Labs has compared newer models, such as Claude Fable 5.1 and GPT-6 Astra , in the same game environments? And by extension, do increasingly capable base models make the harness and training environment less important? “We compare every new model,” Duffy replied, adding that the newer, more capable models tend to be better at the games. However, similar to what the original Twitch streams showed with the 2025 models, the new models “diverge on the personality axes: betrayal, collaboration, theory of mind, etc.” As for harnesses, he said that “a more capable model needs less handholding to finish the same task, certainly.” But for what Good Start Labs is doing — treating “the environment as curriculum” — the harness “matters more, not less.” “GPT-6 Astra reports doing less chain-of-thought and jumps to answers,” Duffy said. “If you want a model to work a certain way while solving a problem, the harness is what forces it. Astra can probably do the math in its head, but you’d rather it use code so you can trust the result.” In a recent blog post , the company described its work on “improvement loops,” which include training systems, harnesses, and observability. But how does that translate into products that Good Start Labs offers other companies? “The main thing that we sell in terms of AI improvement is data and learning environments ,” Duffy replied. Its main customers are frontier labs — for which they provide reinforcement learning data to help further train their models. He describes the data part of its offering as one of two things. The first is “trajectories of agents playing games” — what an agent observed, what it decided, which actions it took and what happened afterward. The second is custom data for specific game publishers , where “agents are live in their games.” The agents can play inside those games, generating interactions that may be useful for training and evaluation. Duffy said any data sold to model developers is anonymized and stripped of personally identifiable information. The learning environments that Good Start Labs sells are “full games where models can play end to end,” he noted. It isn’t about winning the games, though. It’s more about teaching AI models to solve problems. “We’ll also make a lot of tasks where the models are using the game engine as the verifiable source of rewards, but are solving problems in a way that you might not expect.” Alongside its custom work for clients, Good Start Labs is also training a general model from the expert models it has built for specific games. The idea, said Duffy, is to unify those expert models “into this general game intelligence that could be applicable everywhere.” But while the 1830 experiment suggests that agentic game training can transfer to a structurally similar financial-research task, it’s unclear if there will be broader real-world transfer. I asked Duffy what the evidence actually states today? “Today’s evidence supports pretty clearly that goal-directed execution matters, and reasoning transfers,” he replied. He pointed to a recent article by Surge AI showing that office work post-training improved coding, adding that “DeepSeek R1 showed it more broadly.” “We’ve seen it twice ourselves: the 1830 finance task, and Diplomacy training that produced a better customer support agent. Every environment we’ve built also improves tool use downstream.",
+      "published_date": "2026-09-15",
+      "tags": [
+        "blog"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "blog_name": "Latent Space",
+        "blog_url": "https://www.latent.space/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, tool use, reasoning, chain of thought",
+      "⚖️ 來源權重: blog +15"
+    ],
+    "llm_score": 47,
+    "llm_reason": "遊戲訓練遷移到真實任務的敘事有趣，證據仍屬初步",
+    "novelty": 10,
+    "impact": 8,
+    "trending": 9,
+    "practicality": 6,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "NVIDIA Developer",
+      "title": "How NVIDIA Groq 3 LPX Deterministic Execution Drives Power-Efficient High-Interactivity Inference on NVIDIA Vera Rubin",
+      "url": "https://developer.nvidia.com/blog/how-nvidia-groq-3-lpx-deterministic-execution-drives-power-efficient-high-interactivity-inference-on-nvidia-vera-rubin/",
+      "authors": [
+        "Tanya Lenz"
+      ],
+      "abstract": "Power is a defining constraint for AI factories . As AI workloads demand a full compute platform to serve them, each component of that platform must maximize output within the factory’s limited power budget. This makes performance per watt—rather than raw, unnormalized throughput—the ultimate measure of an AI platform’s value. The NVIDIA Vera Rubin platform is designed to enable power-efficient AI at scale. At its core is NVIDIA Vera Rubin NVL72 , which delivers strong performance per watt across the widest range of AI compute demands—from throughput-optimized large batches to the small batches of high-interactivity tiers, for both open and closed models. Factory and rack-level power management innovations drive Vera Rubin performance on this important metric. At the factory level, NVIDIA DSX MaxLPS software shifts power between racks as workloads demand shifts, allowing an operator to recover stranded power and provision up to 40% more GPUs within the same site-power envelope and deliver 35% higher token throughput . Inside each Vera Rubin NVL72, rack-level capacitors, along with state-of-charge Intelligent Power Smoothing software, absorb the bursty power spikes of training and inference workloads, so the factory can be planned around sustained demand instead of worst-case peaks. This means more deployable compute per megawatt. The highest interactivity tiers present unique challenges. For these, the platform adds NVIDIA Groq 3 LPX as a low-latency accelerator. This post explains innovations within individual LPX racks that make it a power-efficient contributor to the Vera Rubin platform, including its deterministic execution model. What are the power-efficiency technologies in the NVIDIA Groq 3 LPX rack? The Groq 3 LPX deterministic execution model allows the LPU compiler to create a schedule of exactly when each piece of data will move to which specific compute unit and precisely when that operation will execute, down to the clock cycle. It extends to all 256 LPU chips in the rack, enabling ultrafast interactivity at long context and power management techniques that take advantage of this determinism. After the LPU compiler has generated the workload execution schedule, it can predict the electrical current draw for each cycle in that schedule. This in turn enables two complementary technologies: Preemptive Power (PEP): Prepares the power-delivery system for changes in demand before they arrive Clock Period Synthesis (CPS): Shapes how abruptly demand rises and falls Together, PEP and CPS help reduce the “voltage guardband” or “electrical safety margin” that must be continually provided to any set of chips, despite not directly powering the AI workload. Decreasing this voltage guardband means a greater proportion of scarce power can be spent on the workload. Figure 1. Groq 3 LPX determinism enables technologies like PEP and CPS to facilitate more energy efficiency for the same workload What are the challenges involved in delivering power to AI workloads exactly when needed? To run AI workloads, chips execute a series of instructions ranging from simple data reshapes to complex, power-intensive matrix multiplications. Nearly all chips include hardware features that enable dynamic switching between these myriad operations while the workloads are running, as resources become available. This flexibility means that a compute-intensive operation may be scheduled to be executed at any moment. The system that delivers current to the chips must be designed to handle this. The matrix multiplies and vector multiplies that power AI workloads involve a high amount of transistor switching in a short period of time, which increases the chip’s current demand on a nanosecond scale. The chip draws that extra current from the closest available source: capacitors that sit next to the chip known as decoupling capacitors (or decaps). Discharging these decreases the chip’s voltage. The chip’s board does have a voltage regulator—a dedicated circuit whose job it is to hold the chip supply voltage at a set target—but it cannot respond instantaneously due to inductance , which resists any rapid rise in current it delivers. Nevertheless, the current the voltage regulator supplies eventually catches up with the chip’s demand, allowing the voltage to recover. These temporary voltage drops, ultimately driven by sharp changes in the current demand from the AI workload, are known as voltage droops . Their magnitude depends on how much the current changes, and on di/dt, the rate of change of the current. All else equal, larger di/dt causes a larger voltage droop; conversely, the same absolute change in current over a longer period of time will result in lower di/dt and thus less droop. These droops are usually not a problem. However, all chips have a minimum voltage (Vmin) below which the chip ceases to operate normally causing incorrect results. Figure 2. Voltage droop occurs when a chip quickly draws power, discharging decoupling capacitors and quickly decreasing voltage, before the voltage regulator recovers To reduce the likelihood of this worst-case scenario, chips are operated with a voltage guardband, providing enough supply voltage margin so the chip still receives its required minimum voltage under transient and worst-case conditions. Most of the time, the power needed to provide this guardband is effectively excess. Moreover, power is proportional to the square of voltage, so 10% more voltage continually supplied 21% more power. How does NVIDIA Groq 3 LPX cycle-exact schedule make current demand predictable? The Groq 3 LPX deterministic execution model allows the creation of a schedule for how an AI workload will run, including both operations and data movement, prior to beginning the workload. Individual LPU accelerators feature a relatively small number of distinct hardware elements, each of which enables predictably fast execution of the most common operations: MXM for matrix multiplication VXM for vector operations SXM for transposing and reshaping Individual accelerators also feature hardware that keeps these compute units synchronized down to the clock cycle. For memory, each chip has hierarchy-free on-chip SRAM banks. At the LPX system level, LPUs are connected directly to each other rather than through an intermediary, making data transfer times more predictable. Determinism ties these various hardware elements together: individual computations, memory reads, and interchip communications require the same number of clock cycles from run to run. The compiler can exploit this to plan a schedule of when data will need to move between these compute elements, arriving just where it needs to, when it needs to. This schedule of compute and data movement also allows the compiler to resolve common resource conflicts, such as two hardware elements writing to the same memory bank, in advance. Figure 3. Groq 3 LPX execution model, and what its compiler emits, compared to a dynamically scheduled accelerator This cycle-exact schedule also allows the creation of the workload’s current demand over time. The compiler can estimate how much current the system will draw, at the clock cycle level. Figure 4. Groq 3 LPX cycle-exact schedule, produced by its compiler before an AI workload runs. The current demand curve can be produced from the schedule How does the execution model enable proactive voltage and clock control? The cycle-exact schedule and resulting current-demand curve enable Groq 3 LPX to reduce voltage droop and operate with a smaller voltage guardband. Because the compiler knows when current demand will rise and fall, down to the clock cycle, it can prepare the power-delivery system in advance and shape the sharpest changes in demand through the complementary PEP and CPS technologies. PEP is the mechanism through which the chip commands the power delivery network (PDN)—the physical electronics that deliver power to the LPUs—to change the voltage it delivers.",
+      "published_date": "2026-09-15",
+      "tags": [
+        "Agentic AI / Generative AI",
+        "AI Factory",
+        "AI Inference",
+        "DSX",
+        "Groq 3 LPX",
+        "Inference Performance",
+        "Vera Rubin",
+        "Vera Rubin NVL72"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "NVIDIA Developer",
+        "feed_url": "https://developer.nvidia.com/blog/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: long context, safety",
+      "⚖️ 來源權重: rss +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 45,
+    "llm_reason": "硬體基礎設施深度說明，偏向NVIDIA生態受眾",
+    "novelty": 8,
+    "impact": 10,
+    "trending": 8,
+    "practicality": 8,
+    "blog_worthiness": 11
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "A single firm is behind OpenAI, Anthropic, and Meta hacking scandals",
+      "url": "https://www.effort.news/irregular",
+      "authors": [
+        "yusufozkan"
+      ],
+      "abstract": "OpenAI, Anthropic, and Meta models hacked into several real world systems over the past three months. These models gained unauthorized access to web systems , published malicious packages , and exploited unnamed vulnerabilities . A single firm, Irregular, is responsible for hacking done by all three companies. Anthropic disclosed that Irregular was responsible for creating the tests that led to Claude hacking into real world targets and for providing the models with internet access. Irregular claims that it was unaware at the time that it provided internet access to those AI models. Irregular's Hacking Scandals 1 2026-07-30 Anthropic discloses three incidents across six runs 2026-08-04 OpenAI publishes Irregular event 2026-08-06 Meta statement reported 2026-08-14 Irregular publishes domain-collision account and remediation 2026-09-09 Anthropic expands to four incidents and seven runs In a more normal media ecosystem, the reactions to these cybersecurity issues would be obvious. American AI companies would reconsider doing business with Irregular, not only because of its failure to secure its systems, but because it is an Israeli firm potentially outside US oversight. Lawmakers would consider taking action against Irregular or against its American business partners, which include OpenAI, Anthropic, and Meta. They may consider strengthening liability against firms which instruct AI models to commit cyberattacks, and whose models then commit those cyberattacks. In each evaluation, Claude was tasked with a CTF challenge: the model was given a fictional scenario, a target machine, and a piece of secret information (the “flag”) to retrieve from it. All four prompts stated that Claude had no access to the internet, but in each case, a misconfiguration in the environment left internet access open. None of the prompts stated which systems were in scope for the exercise or constrained where Claude could search for the flag. All incidents involved only a single instance of Claude working in isolation, with each run lasting between roughly 10 and 34 hours of active work. Instead, Irregular, Anthropic, and their allies have begun a media campaign promoting a literally apocalyptic ideology with sensationalist language. Anthropic’s incident assessment blames their own AI's “recklessness” ; Irregular describes “the agent itself becoming a threat actor” ; Anthropic CEO Dario Amodei warned, about a similar OpenAI–Hugging Face hack, that a future swarm “could be capable of taking over the entire internet” ; and an Associated Press headline claimed bots are “going rogue” . In one report from Anthropic , its Claude model breached a real company's system through a simulated-name collision, publishing a malicious package, and scanning outside systems. In this test , Anthropic and Irregular incorrectly provided internet access to this model and did not instruct the model \"which systems were in scope for the exercise\". While Anthropic claims that their issues were caused by “rogue swarms” and “misalignment,” their later disclosure shows that exactly zero percent of the agents went “rogue”. In this experiment, Claude models’ real-world hacking dropped to zero percent once Anthropic employees told the models not to do real-world hacking. According to their own findings, Anthropic and Irregular bear all of the responsibility for the cybersecurity incidents they caused. In the wake of these attacks, Anthropic and Irregular have deployed a swarm of AI Safety influencers paid by Anthropic-connected foundations to distract from their culpability and towards the baseless “rogue agent” theory. Like Anthropic, Irregular is inseparable from these foundations. Omer Nevo, Irregular’s co-founder and CTO, is a board member of Effective Altruism Israel, as well as Effective Altruism NGOs Heron and Probably Good. Dan Lahav, Irregular’s co-founder and CEO, received $395,000 to start a course along with Sella Nevo, Omer Nevo’s brother. Sella and Omer co-founded an NGO to educate people about Effective Altruism, Impact Focused Education. They also co-founded Probably Good together. 2 These branches are all funded by Dustin Moskovitz, the primary donor of Effective Altruist/AI Safety causes after Sam Bankman-Fried’s arrest. Irregular’s first investor was Dustin Moskovitz’s firm Good Ventures. Dustin Moskovitz’s philanthropic vehicle, Coefficient Giving/Open Philanthropy, funds Effective Altruism Israel, Heron, and Probably Good. 3 Irregular’s Effective Altruist Connections 4 EA Israel oversees Heron. Omer Nevo has documented roles at EA Israel, Heron and Probably Good. Coefficient Giving funds Heron and Probably Good; EA Infrastructure Fund has documented links to Sella Nevo and Dan Lahav. Coefficient Giving EA Infrastructure Fund EA Israel Heron Probably Good Omer Nevo Sella Nevo Dan Lahav funds funds manages oversees Irregular gained unauthorized access, altered records and published credential-stealing packages using the unsecured models they were given access to. Under certain conditions, this conduct violates the Computer Fraud and Abuse Act, Section 1030(a)(2)(C), which covers intentional unauthorized access that obtains information. However, its felony charges require concrete proof of damages and intent. 5 While it primarily contracts with American labs, key Irregular leadership, employees, and resources located in Israel may not be subject to American oversight. Ynet’s visit and interviews describe Irregular’s offices in Tel Aviv. CheckID’s company listing identifies two linked entities: Pattern Labs Tech Inc., a Delaware corporation , and Pattern Tech Ltd, number 516854460, an active Israeli corporation registered in Tel Aviv . Footnotes The timeline marks public disclosures. Anthropic’s corrected September assessment counts four incidents across seven runs; OpenAI and Meta reported separate Irregular evaluation incidents. Dates describe disclosures, not the date every underlying intrusion occurred. ↩ Date ↕ Event ↕ Kind ↕ Link ↕ 2026-07-30 Anthropic discloses three incidents across six runs disclosure INC-A30 2026-08-04 OpenAI publishes Irregular event disclosure INC-O04 2026-08-06 Meta statement reported disclosure INC-M06 2026-08-14 Irregular publishes domain-collision account and remediation disclosure INC-I14 2026-09-09 Anthropic expands to four incidents and seven runs disclosure INC-A09 Impact Focused Education identifies Dan Lahav and Sella Nevo as its cofounders. The grant ledger records a $394,968 recommendation to them, not confirmed receipt or an exact award-to-course identification. EA Israel board ; Heron advisory board ; Probably Good board ; EA Funds grant ledger ; Omer and Sella relationship ; IFE founders . ↩ Good Ventures founders ; Coefficient Giving relationship ; Heron funding ; Probably Good grant ; Irregular grant ; EA Funds grant ledger . ↩ The diagram shows selected organizational roles and funding; the table also records family and education ties omitted from the diagram. EA Infrastructure Fund recommended one $394,968 joint MOOC award in 2022 Q3 to Dan Lahav and Sella Nevo; the two arrows represent that one recommendation. Its ledger leaves the course and organization unnamed.\n\n(297 points, 110 comments on Hacker News)",
+      "published_date": "2026-09-15",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 297,
+        "num_comments": 110,
+        "hn_url": "https://news.ycombinator.com/item?id=49704132",
+        "object_id": "49704132"
+      }
+    },
+    "rule_score": 25.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, safety",
+      "⬆️ HN 熱門: 297 points"
+    ],
+    "llm_score": 53,
+    "llm_reason": "調查AI agent駭入真實系統的安全事件，話題性極高且具警示意義",
+    "novelty": 8,
+    "impact": 12,
+    "trending": 17,
+    "practicality": 3,
+    "blog_worthiness": 13
+  }
+]
