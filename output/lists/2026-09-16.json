@@ -1,0 +1,720 @@
+{
+  "date": "2026-09-16",
+  "github": [
+    {
+      "title": "TencentCloud/Octop",
+      "slug": "tencentcloud-octop",
+      "url": "https://github.com/TencentCloud/Octop",
+      "abstract": "A smarter, self-hosted AI assistant — multi-user, multi-agent. Highlights · Overview · Core Technology · Features · Roadmap · Quick Start · Contents English · 中文 Octop is an open-source, self-hosted AI assistant. It's not just a tool — it's a digital life form that can operate in parallel. Through its multi-agent architecture, it builds an intelligent environment that is both independent and collaborative for teams, families, and individuals. Best of all, it runs entirely on your machine — the fully self-hosted design means privacy is never a compromise, while single-process startup makes the powerful web console, CLI, and IM integrations readily accessible. Chat through the Web Dashboard, Feishu, DingTalk, QQ, Discord, WeCom, or programmatic HTTP/SSE/WebSocket. Extend capabilities with the expert library , Connectors (OAuth + MCP), and ACP integration for IDE workflows. ✨ Highlights Feature Description 👥 Multi-user expert team One admin, shared household; built-in expert library — switch specialists per scenario 🎭 MBTI personas 16 personality templates plus an interactive quiz — give each agent a distinct character 🔒 Security built-in JWT multi-user isolation, tool approval, shell command guardrails, and PII redaction — data stays local 🔌 Connector ecosystem Tencent suite (Docs, Weibo trends, News, …); OAuth and MCP gateway extend resource boundaries 💾 Pluggable backends Local disk, Docker containers, PostgreSQL, or COS/S3 — AI operates inside isolated boundaries 🧠 Portable memory Powered by harness-memory; memory migrates with the workspace 📚 Knowledge base RAG over your documents; semantic retrieval grounds agent answers in your private corpus 🧩 Plugins Extend Octop with third-party plugins; bundled plugins are seeded and toggled on demand ↔️ ACP bidirectional octop acp for IDE/terminal AI; delegate to OpenCode / Claude Code with permission gates 💻 Terminal AI+ Interactive shell in the browser — AI-assisted command execution and troubleshooting 🌐 Browser AI+ Headless Chromium sessions for web automation, screenshots, and remote browsing 🖥️ Remote desktop Live screen and input from the dashboard on Linux, Windows, and macOS — remote office work and GUI apps; one-click isolated desktop on headless Linux 🏠 Self-hosted Dashboard, CLI, IM channels, and cron in one octop run — all data under ~/.octop/ 📌 Overview Octop is a self-hosted AI assistant platform for households and small teams. It runs a single process that serves a web dashboard, a CLI, IM channels (Feishu, DingTalk, QQ, Discord, WeCom, and more), and cron automation — all sharing one control-plane database under ~/.octop/ (SQLite by default; PostgreSQL optional). Octop's design goal: keep every conversation, workspace, and credential on your own machine, while giving each user a personal team of specialized agents they can switch between per task. 🐾 What can you do with Octop Personal assistant — let a dedicated agent write weekly reports, organize notes, and manage your schedule; memory persists with the workspace. Family sharing — one admin account, the whole household; assign different agents and experts per member. Team helper — multiple agents collaborate in parallel, bridging Feishu / DingTalk / WeCom to route tasks into group chats. Developer boost — delegate coding tasks to OpenCode / Claude Code via ACP, or troubleshoot from the terminal with AI assistance. Web automation — use Browser AI+ to fill forms, capture screenshots, and gather public info. Scheduled tasks — configure cron in natural language so the agent pushes or runs jobs on time every day. 🧠 Core Technology Layer Technology Language Python 3.12+ Web framework FastAPI + uvicorn Agent runtime harness-agent Gateway harness-gateway Control plane DB SQLite (WAL, default) or PostgreSQL (optional) Frontend React 18 + TypeScript + Vite + Ant Design Scheduling APScheduler ACP agent-client-protocol Build / quality hatchling · ruff · mypy · pytest Octop is built on the Harness stack — a set of focused runtimes that Octop composes into one process: harness-agent — Agent runtime: model routing, tools, skills, and conversation checkpointing. harness-gateway — multi-platform IM channel bridge that normalizes incoming messages into a single processing pipeline. harness-memory — hierarchical recall with full-text search, so an agent's memory travels with its workspace. harness-browser — CDP-based browser automation with persistent profiles for web tasks. Instead of an external queue or message broker, Octop routes every surface — Web UI, IM, and cron — through one in-process HarnessProcessor . The result is a single, restart-safe process whose entire state is rebuilt from the control-plane database on boot (local SQLite by default; PostgreSQL optional). 🤔 Features Server & auth Multi-user JWT authentication with admin role First-run setup wizard ( octop init ) Interactive API docs at /api/docs (off by default — set \"enable_api_docs\": true in config.json to enable) Agents Multiple agents per user; each has its own workspace, providers, channels, and cron 16 MBTI persona templates + custom system prompt Expert library scanned at boot ( infra/agents/experts/library/ ) Workspace backends: local disk, COS, S3, and other remote stores Channels & automation IM channels: Feishu, DingTalk, QQ, Discord, WeCom, and more Proactive cron jobs with natural-language and slash-command triggers Unified message processing across Web UI, IM, and cron surfaces Surfaces Web dashboard — chat, agents, connectors, channels, cron, settings CLI — octop run , octop chat , octop acp , admin commands HTTP/SSE/WebSocket API — full programmatic access Knowledge & plugins Knowledge base — RAG over your documents; upload files and let semantic retrieval ground agent answers in your private corpus Plugins — install and manage third-party plugins ( octop plugin ); bundled plugins are seeded and toggled on demand from the dashboard ACP (Agent Client Protocol) Octop supports ACP in two directions: Inbound — external tools use your Octop agent octop acp --agent main # stdio ACP server for Zed, OpenCode, … Outbound — Octop delegates to external coding agents Dashboard → ACP ( /acp ): configure runners (global per user) Enable acp_runner per agent, then delegate in chat Built-in outbound runners include OpenCode, CodeBuddy, Claude Code, and Codex. Full setup: docs/acp.md . 🧭 Roadmap Here are our mid-to-long term plans: Shared resource pool — a central pool of skills and sub-agents that any user can drop into a new expert without rebuilding from scratch. Expert sharing — publish your experts to other users in the same deployment, so good configurations are reused instead of recreated. Browser & terminal polishing — browser skill recording (capture a workflow and replay it as a skill) and a more capable terminal AI assistant. AgentTeams — let one coordinator autonomously schedule and orchestrate multiple experts to tackle multi-step tasks. Self-evolution — automatically distill everyday conversations into reusable skills, so the assistant grows with you. PC / mobile clients — native desktop and mobile apps alongside the web dashboard and IM channels. This roadmap may shift as the community grows; treat it as indicative only. 🚀 Quick Start Prerequisites macOS / Linux / Windows No pre-installed Python required — the installer uses uv to provision Python 3.12 in an isolated venv under ~/.octop/ A modern multi-core CPU with a few GB of RAM for the process plus model/embedding caches; enough disk for the database, agent workspaces, and document corpora 1. Install macOS / Linux — one-line installer (recommended): curl -fsSL https://finnie-1258344699.cos.ap-guangzhou.myqcloud.com/octop/install.sh | bash Windows (PowerShell) : irm https: // finnie-1258344699.cos.ap-guangzhou.myqcloud.com / octop / install.ps1 | iex Windows (cmd) — download and run, or from a cloned repo: curl -fsSL https://finnie-1258344699.cos.ap-guangzhou.myqcloud.com/octop/install.bat -o install.bat\ninstall.",
+      "stars_today": 419,
+      "language": "Python"
+    },
+    {
+      "title": "koala73/worldmonitor",
+      "slug": "koala73-worldmonitor",
+      "url": "https://github.com/koala73/worldmonitor",
+      "abstract": "World Monitor 簡體中文 | 日本語 Real-time global intelligence dashboard — AI-powered news aggregation, geopolitical monitoring, and infrastructure tracking in a unified situational awareness interface. Documentation · Releases · Contributing What It Does Curated news feeds across global and regional categories, AI-synthesized into briefs Dual map engine — 3D globe (globe.gl) and WebGL flat map (deck.gl) with a shared map-layer catalog Panel inventory — concrete panel implementations across specialized variants Cross-stream correlation — military, economic, disaster, and escalation signal convergence Country Instability Index (CII) — live CII v8 scores, bands, and approximate 24-hour movement for 31 Tier-1 countries Finance radar — stock exchanges, commodities, crypto, and a market composite Local AI — run everything with Ollama, no API keys required Site variants from a single codebase (world, tech, finance, commodity, happy, energy) Native desktop app (Tauri 2) for macOS, Windows, and Linux Multilingual UI with native-language feeds and RTL support For the full feature list, architecture, data sources, and algorithms, see the documentation . Support Status All site variants and desktop binaries are built from a single codebase and ship from the same release process. The table below clarifies maintenance status so you know which surfaces are safe to depend on. Surface Status Notes worldmonitor.app , tech. , finance. , commodity. , happy. , energy. Stable Public deployments built from this repo, actively maintained Desktop binaries (Windows / macOS Apple Silicon / macOS Intel / Linux AppImage) Stable One Tauri binary for every variant — install World Monitor and switch to tech, finance, commodity, energy, or happy in-app. There is deliberately no per-variant download Issues filed against any of the above are triaged from the same backlog — see the issues board for currently-open work. Quick Start git clone https://github.com/koala73/worldmonitor.git cd worldmonitor\nnpm install\nnpm run dev Open localhost:3000 (override the port with DEV_PORT in .env.local ). The app runs with no environment variables. Feature-specific data sources may require credentials. See .env.example for the full list. For variant-specific development: npm run dev:tech # tech.worldmonitor.app npm run dev:finance # finance.worldmonitor.app npm run dev:commodity # commodity.worldmonitor.app npm run dev:happy # happy.worldmonitor.app npm run dev:energy # energy.worldmonitor.app See the self-hosting guide for deployment options (Vercel, Docker, static). Tech Stack Category Technologies Frontend Vanilla TypeScript, Vite, globe.gl + Three.js, deck.gl + MapLibre GL Desktop Tauri 2 (Rust) with Node.js sidecar AI/ML Ollama / Groq / OpenRouter, Transformers.js (browser-side) API Contracts Protocol Buffers and sebuf HTTP annotations Deployment Vercel Edge Functions, Railway relay, Tauri, PWA Caching Redis (Upstash), 3-tier cache, CDN, service worker Full stack details in the architecture docs . Programmatic Access World Monitor is built for agents and scripts as well as browsers: MCP server — https://worldmonitor.app/mcp (Streamable HTTP). Public tools/list ; tools/call authenticates with a X-WorldMonitor-Key header or OAuth.\nThe server also publishes its Agent Skills through the draft io.modelcontextprotocol/skills extension ( skills/list , skills/get , and skill://… resource reads). REST API — base https://api.worldmonitor.app , described by the OpenAPI spec . CLI — the official worldmonitor npm package (source in cli/ ): npx worldmonitor tools # run ad-hoc — list every MCP tool (no key needed) npm install -g worldmonitor # or install the `worldmonitor` (alias `wm`) command worldmonitor risk IR --api-key wm_xxx SDKs — official zero-dependency client libraries mirroring the CLI: Python worldmonitor-sdk (source in sdk/python/ ), Ruby worldmonitor ( sdk/ruby/ ), Go github.com/koala73/worldmonitor/sdk/go ( sdk/go/ ). Guide: worldmonitor.app/docs/sdks . Agent discovery files: llms.txt · agent-skills manifest · api-catalog . Get an API key at worldmonitor.app/pro . Flight Data Flight data provided graciously by Wingbits , the most advanced ADS-B flight data solution. Data Sources WorldMonitor aggregates attributed upstream sources across geopolitics, finance, energy, climate, aviation, cyber, military, infrastructure, and news intelligence. Curated feeds and freshness-tracked source groups are published in the full data sources catalog , with provider, feed-tier, license-posture, and collection-method details. Contributing Contributions welcome! See CONTRIBUTING.md for guidelines. npm run typecheck # Type checking npm run build:full # Production build License AGPL-3.0-only for the source code. Commercial use is permitted under the AGPL when you comply with its copyleft and source-availability terms. Use Case Allowed? Personal / research / educational Yes, under AGPL-3.0-only Self-hosted instance Yes, under AGPL-3.0-only Fork and modify Yes, share source under AGPL-3.0-only when required Commercial use / SaaS Yes, under AGPL-3.0-only when you comply with AGPL obligations Private-source proprietary use or official branding rights Separate commercial or trademark permission needed See LICENSE for the full code license and docs/license.mdx for a plain-language summary. Commercial licensing is available as an alternative option for teams that need non-AGPL terms. Copyright (C) 2024-2026 Elie Habib. All rights reserved. Author Elie Habib — GitHub Contributors Security Acknowledgments We thank the following researchers for responsibly disclosing security issues: Cody Richard — Disclosed three security findings covering IPC command exposure, renderer-to-sidecar trust boundary analysis, and fetch patch credential injection architecture (2026) See our Security Policy for responsible disclosure guidelines. worldmonitor.app · docs.worldmonitor.app · finance.worldmonitor.app · commodity.worldmonitor.app Star History",
+      "stars_today": 251,
+      "language": "TypeScript"
+    },
+    {
+      "title": "n8n-io/n8n",
+      "slug": "n8n-io-n8n",
+      "url": "https://github.com/n8n-io/n8n",
+      "abstract": "n8n – The Platform for AI Agents and Workflow Automation Fair-code platform to build and deploy AI agents and workflows. Combine a visual canvas with custom code, run it self-hosted or in the cloud , and connect to 1500+ integrations. AI automation you can trust with real work, from prototype to production. Key Capabilities AI-Native Automation Platform : Build and operationalize AI workflows and multi-step agents using your own data, models, and tools Model Flexibility, No Lock-In : Connect to OpenAI, Anthropic, Google, or open-source models and switch providers without changing your architecture From Prototype to Production : Design multi-step AI workflows with logic, tool use, human approvals, and full observability Code When You Need It : Combine visual building with JavaScript, Python, and npm packages for advanced AI workflows Enterprise-Ready AI : Self-host or deploy securely with role-based access, audit trails, and support for sensitive data Leverage What Already Exists : 1500+ integrations and 9,000+ workflow templates to connect AI with your existing systems Quick Start Try n8n instantly with our install script (requires Docker ): curl -fsSL https://get.n8n.io | sh Or deploy manually with Docker : docker volume create n8n_data\ndocker run -it --rm --name n8n -p 5678:5678 -v n8n_data:/home/node/.n8n docker.n8n.io/n8nio/n8n Access the editor at http://localhost:5678 Resources 📚 Documentation 🔧 1500+ Integrations 💡 Example Workflows 🤖 AI & LangChain Guide 👥 Community Forum 📖 Community Tutorials Support Need help? Our community forum is the place to get support and connect with other users: community.n8n.io License n8n is fair-code distributed under the Sustainable Use License and n8n Enterprise License . Source Available : Always visible source code Self-Hostable : Deploy anywhere Extensible : Add your own nodes and functionality Enterprise Licenses available for additional features and support. Additional information about the license model can be found in the docs . Contributing Found a bug 🐛 or have a feature idea ✨? Check our Contributing Guide for a setup guide & best practices. Join the Team Want to shape the future of automation? Check out our job posts and join our team! What does n8n mean? Short answer: It means \"nodemation\" and is pronounced as n-eight-n. Long answer: \"I get that question quite often (more often than I expected) so I decided it is probably best to answer it here. While looking for a good name for the project with a free domain I realized very quickly that all the good ones I could think of were already taken. So, in the end, I chose nodemation. 'node-' in the sense that it uses a Node-View and that it uses Node.js and '-mation' for 'automation' which is what the project is supposed to help with. However, I did not like how long the name was and I could not imagine writing something that long every time in the CLI. That is when I then ended up on 'n8n'.\" - Jan Oberhauser, Founder and CEO, n8n.io",
+      "stars_today": 167,
+      "language": "TypeScript"
+    },
+    {
+      "title": "anthropics/claude-code",
+      "slug": "anthropics-claude-code",
+      "url": "https://github.com/anthropics/claude-code",
+      "abstract": "Claude Code Claude Code is an agentic coding tool that lives in your terminal, understands your codebase, and helps you code faster by executing routine tasks, explaining complex code, and handling git workflows -- all through natural language commands. Use it in your terminal, IDE, or tag @claude on Github. Learn more in the official documentation . Get started Note Installation via npm is deprecated. Use one of the recommended methods below. For more installation options, uninstall steps, and troubleshooting, see the setup documentation . Install Claude Code: MacOS/Linux (Recommended): curl -fsSL https://claude.ai/install.sh | bash Homebrew (MacOS/Linux): brew install --cask claude-code Windows (Recommended): irm https: // claude.ai / install.ps1 | iex WinGet (Windows): winget install Anthropic.ClaudeCode NPM (Deprecated): npm install -g @anthropic-ai/claude-code Navigate to your project directory and run claude . Plugins This repository includes several Claude Code plugins that extend functionality with custom commands and agents. See the plugins directory for detailed documentation on available plugins. Reporting Bugs We welcome your feedback. Use the /bug command to report issues directly within Claude Code, or file a GitHub issue . Connect on Discord Join the Claude Developers Discord to connect with other developers using Claude Code. Get help, share feedback, and discuss your projects with the community. Data collection, usage, and retention When you use Claude Code, we collect feedback, which includes usage data (such as code acceptance or rejections), associated conversation data, and user feedback submitted via the /bug command. How we use your data See our data usage policies . Privacy safeguards We have implemented several safeguards to protect your data, including limited retention periods for sensitive information, restricted access to user session data, and clear policies against using feedback for model training. For full details, please review our Commercial Terms of Service and Privacy Policy .",
+      "stars_today": 155,
+      "language": "TypeScript"
+    },
+    {
+      "title": "MakazhanAlpamys/Soup",
+      "slug": "makazhanalpamys-soup",
+      "url": "https://github.com/MakazhanAlpamys/Soup",
+      "abstract": "🌍 English | Türkçe Soup Fine-tune and post-train LLMs in one command. No SSH, no config hell. Website · Quick Start · Web UI · Config · Docs · Commands · Models · Discord · Telegram · Product Hunt Soup turns the pain of LLM fine-tuning into a simple workflow. One config, one command, done. pip install \" soup-cli[train] \" # add [train] to fine-tune; bare `soup-cli` is the light CLI soup init --template chat\nsoup train Fine-tune an 8B model on a 4 GB laptop GPU. Layer streaming keeps the frozen base out of\nVRAM and feeds it to the GPU one decoder layer at a time. Measured on an RTX 3050 Laptop 4 GB:\nLlama-3.1-8B-Instruct + NF4 at 119.6 tok/s, 3.32 GB peak — bit-exact against a normal\nresident run, and reproduced independently on an H100 at 113.00 tok/s in the same 3.32 GB.\n(The tok/s figure was measured on v0.72.2, before the v0.73.0 correctness repair that cost\n−4.8% at 32B; it has not been re-run on a 4 GB card since.) Opt-in ( stream_layers: true )\nand still BETA — how it works · all measurements · paper · check it yourself on a free Colab T4 (caps the process to\n4 GB, then asserts a streamed model is bit-identical to a normal one) Llama-3.1-8B-Instruct + NF4, LoRA, batch 1, seq 512 on an RTX 3050 Laptop 4 GB — 3.32 GB peak, 119.6 tok/s . Full video (90s) Why Soup? Training LLMs is still painful. Even experienced teams spend 30-50% of their time fighting\ninfrastructure instead of improving models. Soup fixes that. Zero SSH. Never SSH into a broken GPU box again. One config. A simple YAML file is all you need. Auto everything. Batch size, GPU detection, quantization — handled. Works locally. Train on your own GPU with QLoRA. No cloud required. What's New v0.75.0 — the same soup.yaml trained a different recipe on MLX than on transformers,\nsilently. Six training options were validated, documented, accepted — and read by nothing\non that backend. All 60 pull requests in this release came from outside the maintainer ,\nby 22 people. Breaking: an unknown config key now refuses the load. v0.74 warned and named this\nrelease as the deadline. A typo like quantizaton , or a key that only exists on a newer\nSoup, used to be dropped while the run proceeded with the setting not applied; it now\nfails on the CLI (exit 1) and in the API ( ValueError ), naming the field you probably\nmeant. The detector applies the root-level lora: remap the schema has honoured\nsince v0.40.1, so that spelling is accepted, not refused; the two soup fetch examples files using it moved to the canonical training.lora . Every recipe and template loads\nclean, key names are escaped before they reach the terminal, and the scan is bounded. MLX honours the config it accepted. train_on_responses_only , warmup_ratio / scheduler / weight_decay / optimizer , max_grad_norm , gradient_accumulation_steps and gradient_checkpointing were each validated and then dropped on backend: mlx . Only\n8 of the 32 optimizer names have an MLX equivalent; the other 24 are refused by name\ninstead of silently becoming AdamW. MLX also drives the live dashboard, the tracker and soup ui , and soup doctor --config lists the settings a backend does not read. Validation loss existed nowhere. It was computed on every backend and thrown away:\nno metrics column, no event field, nothing on the panel. It is now recorded, streamed\nand displayed. Breaking: grpo_variant: gspo is the published sequence-level objective (arXiv:2507.18071), replacing a column-centering heuristic in which a padding token also\nshifted the gradient of every row sharing its column. Existing gspo configs will not\nreproduce prior runs. Web UI read endpoints and SSE require auth , with short-lived single-use tickets\ninstead of a token in a query string; --public no longer serves /docs and /openapi.json to the LAN; and a training subprocess no longer hangs when nothing\nreads its output. torch>=2.6.0 closes v0.74.0's known limitation: at 2.5.1 trl>=0.29 could not\nimport and every preference trainer was dead. Also fixed: training.loraplus_lr_ratio crashed every run that set it, and packing: true raised on TRL 0.29. Python 3.10–3.12 only. On 3.13+, pip used to resolve untested PyTorch wheels that\ncrash in the native extension before Soup runs at all. Older highlights live on the GitHub Releases page. Quick Start 1. Install Soup is a command-line application, so the cleanest install gives it its own\nenvironment and puts soup on your PATH : # Light core: CLI + config + data tools, no PyTorch pipx install soup-cli\nuv tool install soup-cli # same idea, if you already use uv # Add the training stack (torch, transformers, peft, trl, datasets, …) pipx install \" soup-cli[train] \" # Everything (train + serve + ui + data) in one shot pipx install \" soup-cli[all] \" # Or from GitHub (latest dev) pipx install \" git+https://github.com/MakazhanAlpamys/Soup.git \" Already inside a virtualenv, a Colab notebook, or a Docker image? Use pip directly, with the same names and extras: pip install soup-cli\npip install \" soup-cli[train] \" pip install \" soup-cli[all] \" pip install git+https://github.com/MakazhanAlpamys/Soup.git Use pip rather than pipx if you also want to import soup_cli from your own\ncode, since pipx deliberately isolates the application from everything else. The full extras table ( fast , mlx , serve , eval , ui , vision , audio , …) lives in docs/models.md . error: externally-managed-environment ? That is PEP 668 , not a Soup problem. Debian 12,\nUbuntu 23.04 and later stop pip from writing into the system Python, because apt manages those files too. pipx and uv tool sidestep it by giving Soup\nits own environment, which is why they are listed first above. python3 -m venv .venv && source .venv/bin/activate then plain pip works just as well. Double quotes, not single. \"soup-cli[train]\" is the only spelling that works in every\nshell — cmd.exe , PowerShell, bash and zsh. If you copied 'soup-cli[train]' from an older\ntutorial and pip rejected it, that is the reason: why, and the exact error . soup init , soup data … , and the other data/inspection commands work on the light install.\nFine-tuning ( soup train ) needs the [train] extra. 2. Create a config soup init # interactive wizard soup init --template chat # or start from a template Templates: chat , code , tool-calling , medical , reasoning , vision , kto , orpo , simpo , ipo , bco , rlhf , pretrain , moe , longcontext , embedding , audio . 3. Train, test, ship soup train --config soup.yaml # LoRA, quantization, batching — all handled soup chat  --model ./output # talk to your model soup push  --model ./output --repo you/my-model\n\nsoup merge  --adapter ./output # merge LoRA into the base soup export --model ./output --format gguf --quant q4_k_m # GGUF for Ollama / llama.cpp More export targets (ONNX, TensorRT, AWQ, GPTQ, BitNet) and deployment options live in docs/serving-and-export.md . Web UI Prefer a browser? soup ui serves a local dashboard for experiments,\ntraining setup, live metrics, dataset exploration and model chat. pip install \" soup-cli[ui] \" soup ui # Opens http://127.0.0.1:7860 Web UI documentation Configuration A complete soup.yaml : base : meta-llama/Llama-3.1-8B-Instruct task : sft # backend: unsloth  # 2-5x faster, pip install \"soup-cli[fast]\" data : train : ./data/train.jsonl format : alpaca val_split : 0.1 training : epochs : 3 lr : 2e-5 batch_size : auto lora : r : 64 alpha : 16 quantization : 4bit output : ./output config/schema.py is the single source of truth for every field. Advanced data, training,\nand PEFT options are documented under Documentation . Unknown config keys are rejected since v0.75. A key no model declares — a typo\nlike quantizaton , or a field that only exists on a newer Soup — used to validate\nclean and be discarded, so the run proceeded with the setting simply not applied.\nv0.74 reported it at load with the field you probably meant; from v0.75 the same\nconfig fails to load, so fix or remove the key rather than relying on it being\nignored. See Unknown config keys .",
+      "stars_today": 119,
+      "language": "Python"
+    },
+    {
+      "title": "supabase/supabase",
+      "slug": "supabase-supabase",
+      "url": "https://github.com/supabase/supabase",
+      "abstract": "Supabase Supabase is the Postgres development platform. We're building the features of Firebase using enterprise-grade open source tools. Hosted Postgres Database. Docs Authentication and Authorization. Docs Auto-generated APIs. REST. Docs GraphQL. Docs Realtime subscriptions. Docs Functions. Database Functions. Docs Edge Functions Docs File Storage. Docs AI + Vector/Embeddings Toolkit. Docs Dashboard Watch \"releases\" of this repo to get notified of major updates. Documentation For full documentation, visit supabase.com/docs To see how to Contribute, visit Getting Started Community & Support Community Forum . Best for: help with building, discussion about database best practices. GitHub Issues . Best for: bugs and errors you encounter using Supabase. Email Support . Best for: problems with your database or infrastructure. Discord . Best for: sharing your applications and hanging out with the community. How it works Supabase is a combination of open source tools. We’re building the features of Firebase using enterprise-grade, open source products. If the tools and communities exist, with an MIT, Apache 2, or equivalent open license, we will use and support that tool. If the tool doesn't exist, we build and open source it ourselves. Supabase is not a 1-to-1 mapping of Firebase. Our aim is to give developers a Firebase-like developer experience using open source tools. Architecture Supabase is a hosted platform . You can sign up and start using Supabase without installing anything.\nYou can also self-host and develop locally . Postgres is an object-relational database system with over 30 years of active development that has earned it a strong reputation for reliability, feature robustness, and performance. Realtime is an Elixir server that allows you to listen to PostgreSQL inserts, updates, and deletes using websockets. Realtime polls Postgres' built-in replication functionality for database changes, converts changes to JSON, then broadcasts the JSON over websockets to authorized clients. PostgREST is a web server that turns your PostgreSQL database directly into a RESTful API. GoTrue is a JWT-based authentication API that simplifies user sign-ups, logins, and session management in your applications. Storage a RESTful API for managing files in S3, with Postgres handling permissions. pg_graphql a PostgreSQL extension that exposes a GraphQL API. postgres-meta is a RESTful API for managing your Postgres, allowing you to fetch tables, add roles, and run queries, etc. Envoy is a cloud-native, high-performance edge and service proxy. Client libraries Our approach for client libraries is modular. Each sub-library is a standalone implementation for a single external system. This is one of the ways we support existing tools. Language Client Feature-Clients (bundled in Supabase client) Supabase PostgREST GoTrue Realtime Storage Functions ⚡️ Official ⚡️ JavaScript (TypeScript) supabase-js postgrest-js auth-js realtime-js storage-js functions-js Flutter supabase-flutter postgrest supabase_auth supabase_realtime supabase_storage supabase_functions Swift supabase-swift postgrest-swift auth-swift realtime-swift storage-swift functions-swift Python supabase-py postgrest-py gotrue-py realtime-py storage-py functions-py 💚 Community 💚 C# supabase-csharp postgrest-csharp gotrue-csharp realtime-csharp storage-csharp functions-csharp Go - postgrest-go gotrue-go - storage-go functions-go Java - - gotrue-java - storage-java - Kotlin supabase-kt postgrest-kt auth-kt realtime-kt storage-kt functions-kt Ruby supabase-rb postgrest-rb - - - - Rust - postgrest-rs - - - - Godot Engine (GDScript) supabase-gdscript - - - - - Badges [ ![ Made with Supabase ] ( https://supabase.com/badge-made-with-supabase.svg )] ( https://supabase.com ) < a href =\" https://supabase.com \" > </ a > [ ![ Made with Supabase ] ( https://supabase.com/badge-made-with-supabase-dark.svg )] ( https://supabase.com ) < a href =\" https://supabase.com \" > </ a > Translations Arabic | العربية Albanian / Shqip Bangla / বাংলা Bulgarian / Български Catalan / Català Croatian / Hrvatski Czech / čeština Danish / Dansk Dutch / Nederlands English Estonian / eesti keel Finnish / Suomalainen French / Français German / Deutsch Greek / Ελληνικά Gujarati / ગુજરાતી Hebrew / עברית Hindi / हिंदी Hungarian / Magyar Nepali / नेपाली Indonesian / Bahasa Indonesia Italiano / Italian Japanese / 日本語 Korean / 한국어 Lithuanian / lietuvių Latvian / latviski Malay / Bahasa Malaysia Norwegian (Bokmål) / Norsk (Bokmål) Persian / فارسی Polish / Polski Portuguese / Português Portuguese (Brazilian) / Português Brasileiro Romanian / Română Russian / Pусский Serbian / Srpski Sinhala / සිංහල Slovak / slovenský Slovenian / Slovenščina Spanish / Español Simplified Chinese / 簡體中文 Swedish / Svenska Thai / ไทย Traditional Chinese / 繁體中文 Turkish / Türkçe Ukrainian / Українська Vietnamese / Tiếng Việt List of translations",
+      "stars_today": 118,
+      "language": "TypeScript"
+    },
+    {
+      "title": "cline/cline",
+      "slug": "cline-cline",
+      "url": "https://github.com/cline/cline",
+      "abstract": "Cline The open source coding agent in your IDE, terminal, and desktop. Docs Discord r/cline Feature Requests Join us! CLI Run Cline in your terminal.\nInteractive chat or fully headless\nfor CI/CD and scripting. npm i -g cline Learn more Desktop App Cline as a native app for macOS and Windows.\nRun agent sessions in any folder, schedule\nroutines, and manage models, plugins, and MCP servers. Download for macOS and Windows VS Code Extension AI coding assistant in your editor.\nCreate files, run commands, browse the web,\nand use tools with human-in-the-loop approval. Install from VS Marketplace JetBrains Plugin The same Cline experience in IntelliJ IDEA,\nPyCharm, WebStorm, GoLand, and the rest of\nthe JetBrains family. Install from JetBrains Marketplace SDK Build your own AI agents and integrations powered by the same engine that runs the CLI, desktop app, VS Code extension, and JetBrains plugin. Custom tools, multi-agent teams, connectors, scheduled automations, and more. npm install @cline/sdk Documentation Index Product Description Location CHANGELOG SDK Node.js programmatic agent API and extension exports. sdk/ CHANGELOG.md CLI Terminal UI, headless mode, shell commands, and CLI-specific flows. apps/cli/ CHANGELOG.md VS Code Extension The Marketplace extension and extension host integration. / (WIP migrating) CHANGELOG.md Desktop App Native macOS and Windows app (Tauri shell, Bun sidecar, Next.js UI). apps/examples/desktop-app/ CHANGELOG.md JetBrains Plugin JetBrains-hosted client that talks to the shared agent core. Currently we are not open-sourcing JetBrains plugins - Docs site Public documentation pages. docs/ - Edits Code Across Your Project Cline reads your project structure, understands the relationships between files, and makes coordinated changes across your codebase. It monitors linter and compiler errors as it works, fixing issues like missing imports, type mismatches, and syntax errors before you even see them. In VS Code and JetBrains, every edit shows up as a diff you can review, modify, or revert. All changes are tracked with checkpoints, so you can easily undo the agent's work. Runs Bash Commands Cline executes commands directly in your terminal and watches the output in real time. Install packages, run build scripts, execute tests, deploy applications, manage databases. For long-running processes like dev servers, Cline continues working in the background and reacts to new output as it appears, catching compile errors, test failures, and server crashes as they happen. Plan and Act Toggle between Plan mode and Act mode. In Plan mode, Cline explores your codebase, asks clarifying questions, and lays out a strategy. Once you're aligned, switch to Act mode and Cline executes the plan. Every file edit and terminal command requires your approval, so you stay in control of what actually changes. Or toggle auto-approve and let Cline run autonomously. Rules and Skills Define project-specific rules in .clinerules files that guide how Cline works in your codebase: coding standards, architecture conventions, deployment procedures, testing requirements. Rules are picked up automatically by the CLI, VS Code extension, and JetBrains plugin. Use skills to let the model load specific rules when needed. Works With Every Model Cline is not locked to a single AI provider. Use whichever model fits your workflow: Provider Models Anthropic Claude Opus, Sonnet, Haiku OpenAI GPT series models Google Gemini series models OpenRouter 200+ models from any provider Vercel AI Gateway Route to many providers through one gateway AWS Bedrock Claude, Llama, and more Azure / GCP Vertex All hosted models Cerebras / Groq Fast inference models Ollama / LM Studio Run local models on your machine Any OpenAI-compatible API Self-hosted or third-party endpoints Extend With Plugins or MCP Servers Extend Cline's capabilities with plugins. Using the SDK, register tools and lifecycle hooks programmatically through the plugin system for logging, auditing, policy enforcement, or adding domain-specific capabilities. Simple plugin example below. import { Agent , createTool } from \"@cline/sdk\" const deployTool = createTool ( { name : \"deploy\" , description : \"Deploy the current branch to staging.\" , inputSchema : { type : \"object\" , properties : { env : { type : \"string\" } } , required : [ \"env\" ] } , execute : async ( input ) => { // your deployment logic } , } ) const agent = new Agent ( { tools : [ deployTool ] , /* ... */ } ) ...or use MCPs to connect to databases, query APIs, manage cloud infrastructure, and interact with external systems. Use community-built servers or ask Cline to create custom tools on the fly. In the CLI, manage servers with cline mcp . Multi-Agent Teams Coordinate multiple agents working together on complex tasks. A coordinator agent breaks the work into subtasks and delegates to specialist agents, each with their own tools and context. Team state persists across sessions so you can pick up where you left off. cline --team-name auth-sprint \" Plan and implement user authentication with tests \" Scheduled Agents Run agents on cron schedules for recurring automations. Daily PR summaries, weekly dependency checks, codebase health reports. Schedules persist across restarts and run independently of any terminal session. cline schedule create \" PR summary \" \\\n  --cron \" 0 9 * * MON-FRI \" \\\n  --prompt \" List all open PRs and their review status \" \\\n  --workspace /path/to/repo Connect to Slack, Telegram, Discord, and More Chat with your agent from any messaging platform: Telegram, Slack, Discord, Google Chat, WhatsApp, and Linear. Each conversation thread maps to an agent session with full context. Set up access control to restrict who can interact with your agent. # Connect to Telegram cline connect telegram -k $BOT_TOKEN # Connect to Slack through webhook cline connect slack --bot-token $SLACK_TOKEN --signing-secret $SECRET --base-url $URL # Connect to Slack using socket mode cline connect slack --bot-token $SLACK_TOKEN --app-token $SLACK_APP_TOKEN Headless CLI for CI/CD Run Cline with zero interaction for scripting and automation. Pipe input, get JSON output, chain commands, integrate into CI/CD pipelines. cline \" Run tests and fix any failures \" git diff origin/main | cline \" Review these changes for issues \" cline --json \" List all TODO comments \" | jq -r ' select(.type == \"agent_event\" and .event.text) | .event.text ' Contributing Start with the Contributing Guide . Join our Discord and head to the #contributors channel to connect with other contributors. Check our careers page for full-time roles. License Apache 2.0 © 2026 Cline Bot Inc.",
+      "stars_today": 102,
+      "language": "TypeScript"
+    },
+    {
+      "title": "openobserve/openobserve",
+      "slug": "openobserve-openobserve",
+      "url": "https://github.com/openobserve/openobserve",
+      "abstract": "Open source Datadog alternative for logs, metrics, traces, and frontend monitoring. Modern observability platform: 10x easier, 140x lower storage cost, high performance, petabyte scale. Cloud · Documentation · Slack · Quickstart OpenObserve (O2) is a cloud-native observability platform for logs, metrics, traces, analytics, Real User Monitoring (RUM), and AI/LLM observability. It's a cost-effective alternative to Datadog, Splunk, and Elasticsearch for teams that need full observability without the complexity or cost — with Parquet columnar storage and an S3-native design that cuts storage costs by up to 140x . Table of Contents Why OpenObserve? Quick Start Product Tour Architecture Comparisons Production Ready Security & Compliance Enterprise Edition Community & Support Contributing FAQ License SBOM Why OpenObserve? A single platform for all of your observability signals. Here's why teams choose OpenObserve: Benefit Description 140x lower storage cost Parquet columnar storage + S3-native architecture dramatically reduce costs vs Elasticsearch Single binary deployment Up and running in under 2 minutes — no complex cluster setup required OpenTelemetry native Built on the OpenTelemetry standard — no vendor lock-in Unified platform Logs, metrics, traces, RUM, dashboards, alerts, and incidents in one tool High performance Better query performance than Elasticsearch on a quarter of the hardware SQL + PromQL Query logs and traces with SQL, metrics with SQL or PromQL — no proprietary query language Built in Rust Memory-safe, high-performance, single binary Cost comparison: OpenObserve vs Elasticsearch Quick Start OpenObserve Cloud (fastest way) Get started in minutes without managing infrastructure. The free tier includes up to 50 GB/day of ingestion. Get Started Free → 🐳 Docker docker run -d \\\n      --name openobserve \\\n      -v $PWD /data:/data \\\n      -p 5080:5080 \\\n      -e ZO_ROOT_USER_EMAIL= \" root@example.com \" \\\n      -e ZO_ROOT_USER_PASSWORD= \" Complexpass#123 \" \\\n      public.ecr.aws/zinclabs/openobserve:latest Then open http://localhost:5080 and log in with the credentials above. For other installation methods, see the quickstart documentation . For clustered deployments, see the High Availability deployment guide . Product Tour OpenObserve ships with a powerful, unified web UI for every signal — logs, traces, metrics, dashboards, RUM, alerts, incidents, pipelines, and AI observability. 🏠 Unified Overview A single home for your workspace — active incidents, service health (error rate, latency, requests), anomalies, and recent events at a glance. 📊 Logs Centralized log management with full-text search, SQL queries, quick filters, and a visual query builder. Instantly search across all your logs, build dashboards from log data, and set up alerts — all on Parquet columnar storage for 140x lower storage cost than Elasticsearch. Read more → 🔍 Distributed Tracing Powered by OpenTelemetry, tracing helps you follow requests across services and pinpoint performance bottlenecks. Explore the full request flow with waterfalls, flame graphs, and Gantt charts; click any span to drill into the trace. Read more → 🕸️ Service Graph Visualize service-to-service dependencies and request flow across your system, with per-edge request counts and health-based coloring (healthy, degraded, warning, critical) to spot problem hotspots at a glance. 📈 Metrics Explore metrics from your infrastructure and applications, then query them with SQL or PromQL. Browse thousands of metrics with faceted filters, preview them inline, combine multiple queries with formulae, and visualize the results with 19+ chart types. Read more → 📉 Dashboards Build custom dashboards from any signal with 19+ built-in chart types and 200+ visualization variations, a drag-and-drop panel builder, template variables, and geo maps. Read more → 👀 Frontend Monitoring (RUM) Real User Monitoring with Core Web Vitals, error tracking, performance analytics, and full session replay — so you can see exactly what your users experience. Read more → 🔔 Alerts Get notified when something unusual happens on any signal — logs, metrics, or traces. Define thresholds, scheduled or real-time alerts, and notification channels, with alert history and anomaly detection to catch issues early. Read more → 🚨 Incidents Correlate related alerts into incidents and track them through their lifecycle — open, acknowledged, and resolved — with severity and dimension context for faster response. 🔀 Pipelines Enrich, redact, reduce, or normalize data at ingest time with a visual editor. Build stream-processing flows — including logs-to-metrics conversion — from source, transform (VRL functions and conditions), and destination nodes. No external tools required. Read more → 🤖 AI Observability Monitor your GenAI and LLM applications: track cost, tokens, latency percentiles, and error rates across models, with agent graphs, session traces, and evaluation/quality scoring. ✨ O2 AI Assistant An in-product assistant that writes your SQL, VRL, and PromQL and walks you through logs, traces, metrics, and incidents — turning natural-language questions into queries, dashboards, and alerts. For the full feature list, see the documentation . Architecture OpenObserve achieves 140x lower storage costs and high performance through a modern, cloud-native architecture: Parquet columnar storage — efficient compression and fast analytical queries S3-native design — inexpensive object storage with intelligent caching Built in Rust — memory-safe, high-performance, single binary Partitioning, indexing, and smart caching — reduces search space by up to 99% for most queries Native multi-tenancy — organizations and streams as first-class concepts with complete data isolation Stateless architecture — rapid scaling and low RPO/RTO for disaster recovery Scale & Deployment Thousands of concurrent users can query a single cluster simultaneously Single binary scales to terabytes — unique in the observability space High Availability mode scales to petabytes for the most demanding workloads Multi-region deployments with cluster federation via Super Cluster architecture (Enterprise) Federated search across regions and clusters (Enterprise) High Availability & Disaster Recovery Deploy in High Availability mode with clustering for mission-critical workloads requiring maximum uptime. OpenObserve's stateless architecture with S3-backed storage enables very low Recovery Point Objective (RPO) and Recovery Time Objective (RTO): stateless nodes restart rapidly, and durability is guaranteed by S3's 99.999999999% (11 nines). Read the architecture documentation → · Read the enterprise deployment guide → Comparisons OpenObserve vs Datadog Aspect OpenObserve Datadog Deployment Self-hosted or Cloud SaaS only Pricing model Per-GB (free up to 50 GB/day) Per-host + per-GB Open source Yes (AGPL-3.",
+      "stars_today": 100,
+      "language": "TypeScript"
+    },
+    {
+      "title": "google/skills",
+      "slug": "google-skills",
+      "url": "https://github.com/google/skills",
+      "abstract": "Agent Skills This repository contains Agent Skills for Google\nproducts and technologies, including Google Cloud . Installation npx skills add google/skills From the npx install command, you can select the specific skills from this\nrepo to install. Available Skills Getting started with Google Cloud Authenticating to Google Cloud Google Cloud Recipe: Foundation Builder Onboarding to Google Cloud Multi-product solution skills Google Cloud solution-architecture workflow Agent Gateway multi-agent security Agentic analytics across cloud providers and data types Borderless open data lakehouse agentic AI system Build and deploy AI agents on Google Cloud Data science workflow with AI agents solution Dynamic Hybrid Search using AlloyDB Google Skill Finder Live bidirectional multimodal streaming agentic AI solution Migrate AI Workloads to GKE Inference RAG for enterprise search using GKE and AlloyDB Secure n-tier serverless web application with strict private application tiers AI/ML Agent Platform Alert Configuration Agent Platform Endpoint Management Agent Platform Eval Flywheel Skill Agent Platform GenAI Inference Skill Agent Platform Model Garden Deploy Skill Agent Platform Model Registry Management Agent Platform Model Tuning Agent Platform Prompt Management Agent Platform RAG Engine Management Agent Platform Troubleshooting Agent Platform Tuning Management BigQuery AI & ML Gemini API in Agent Platform Gemini Enterprise Agent Platform - Managed Agents API Skill Gemini Interactions API Skill Genkit Dart Genkit Go Genkit JS Genkit Python LiveAPI Service Skill Migrating from Gemini API in AI Studio to Agent Platform Skill Registry Infrastructure Designing and Deploying GCP Infrastructure with Application Design Center GKE AI/ML Inference GKE Alert Configuration GKE App Onboarding GKE Backup & Disaster Recovery GKE Basics & Critical Gotchas GKE Batch & HPC Workloads GKE Cluster Autoscaler GKE Cluster Creation GKE ComputeClasses GKE Golden Base Image Discovery Expert GKE Golden Path Configuration GKE JobSet Interruption Troubleshooting GKE Manifest Generation Skill GKE Multi-Tenancy GKE Networking GKE Node NotReady Troubleshooting Skill GKE Productionize Skill GKE Reliability GKE Service Networking Skill GKE Storage GKE TPU Dynamic Slices Monitoring & Management GKE Upgrades & Maintenance GKE Workload Scaling GKE Workload Troubleshooting Skill Google Cloud Filestore Auditing Skill Google Cloud Filestore Autoscale Google Cloud Filestore NFS File Browser Google Cloud global external Application Load Balancer Configuration Skill Google Cloud Networking Observability Expert Google Cloud Storage Basics Google Cloud Storage Bucket Architect Google Cloud Storage FUSE Databases and analytics AlloyDB Basics BigFrames (BigQuery DataFrame) basics BigQuery Asset Impact Analysis BigQuery Basics Bigtable Basics Cloud SQL Basics Data Lineage Summary dbt Snowflake to BigQuery Translator GCP Managed Airflow DAG Authoring Guide Google Cloud Database Onboarding Skill Managed Service for Apache Airflow (formerly Cloud Composer) DAG troubleshooting guide Managed Service for Apache Airflow (formerly Cloud Composer) Migration Guide Spanner Basics Developer tools Developer Device Platform gcloud CLI Skill for AI Agents Google Agents CLI Onboarding Google Cloud Build Basics Google Developer Knowledge Management tools Cloud Monitoring Chart Generation Skill ( cloud-monitoring-chart-generation ) Cloud Monitoring ListTimeSeries Request Generator Cloud Monitoring PromQL Generator Configuring Cloud Logging Configuring Cross-Project Logging Generate Logging Query Language queries GKE Cost Analysis GKE Cost Optimization GKE Observability GKE TPU Metrics Monitoring Guide Handle Disruption on GPUs and TPUs Troubleshooting Metric Selection (Service Query & Local Keyword Filtering) SLO Alert Configuration Setup Wizard TPU Connection Failure and VBAR OOM Troubleshooting Workload Manager Basics Well-Architected Framework Google Cloud Well-Architected Framework skill for the Cost Optimization pillar Google Cloud Well-Architected Framework skill for the Operational Excellence pillar Google Cloud Well-Architected Framework skill for the Performance Optimization pillar Google Cloud Well-Architected Framework skill for the Reliability pillar Google Cloud Well-Architected Framework skill for the Security pillar Google Cloud Well-Architected Framework skill for the Sustainability pillar Security and identity DPoP Adoption & Identity Security Architecture GKE Platform Security GKE Workload Identity Federation Troubleshooting Skill GKE Workload Security Google Cloud IAM Access Troubleshooter & Remediation Orchestrator Google Cloud Security Command Center Query Skill Google SecOps Case Management Skill for AI Agents Google SecOps Detection Engineering Skill Google SecOps Incident & Entity Investigation Skill Google SecOps Security Alert Triage Specialist Google SecOps Threat Hunting Skill IAM Helper for Policy Management IAM Policy Simulator (v1 Allow) Privileged Access Manager (PAM) SecOps Detection Coverage Skill Web and app hosting Cloud Run Alert Configuration Cloud Run Basics Firebase Basics Advertising AI Migration Agent Instructions for the Google Mobile Ads SDK Data Manager API Audience Ingestion Data Manager API Event Ingestion Data Manager API Setup Google Ads API Account Performance Diagnostics Skill Google Ads API MCP Server Installation Google Ads API Quickstart Google Mobile Ads SDK - Banner Ads Google Mobile Ads SDK - Install Google Mobile Ads SDK - Interstitial Ads Google Mobile Ads SDK - Rewarded Ads IMA DAI SDK IMA SDK client-side Validate Google Mobile Ads SDK Integration Others Getting Started with Google Analytics Admin API Getting Started with Google Analytics Data API Additional Google skills Advanced Google Cloud Storage Skills Agent Development Kit (ADK) Skills Android Skills Dart Skills Firestore Skills Flutter Skills Google Maps Platform Skills Plugins This repo also bundles Google product plugins (Skills + MCP servers) for agent harnesses. Agent harness Install Claude Code claude plugin marketplace add google/skills , then claude plugin install <plugin>@google-plugins Codex codex plugin marketplace add google/skills , then install from the /plugins browser Antigravity CLI agy plugin install https://github.com/google/skills/<plugin-path> Support If you need help or encounter issues with these skills, search for existing\nissues or open a new one in the GitHub Issue Tracker . Contributing We welcome contributions to improve our skills. You can help by: Reporting bugs or inaccuracies in\nthe skill Markdown files. Suggesting new skills to add to this repository (for example, Google\ntechnologies or recipes) by filing a feature request. License You are free to copy, modify, and distribute these skills under the terms of the\nApache 2.0 license. See the LICENSE file for details.",
+      "stars_today": 81,
+      "language": "Python"
+    },
+    {
+      "title": "facebook/astryx",
+      "slug": "facebook-astryx",
+      "url": "https://github.com/facebook/astryx",
+      "abstract": "Astryx An open source design system that's fully customizable and built for how we build now: by people and the agents working alongside them. Currently in Beta · Built on React 19+ and StyleX Docs · Storybook · Sandbox · Contributing · Discord Overview Astryx is an open source design system that grew inside Meta over the last eight years, where it became the most-used and largest design system in the company — powering 13,000+ apps and shaped by the engineers, designers, and product teams who depend on it every day. It ships 150+ accessible components, brand-level theming, dark mode, ready-to-ship templates, and a CLI as one cohesive system. You import pre-built CSS and use typed React components — no build plugin, no styling library to adopt — and both people and AI assistants build with the same tooling. What makes Astryx different: Open internals. Components are built to be composed at any level, not locked behind a closed top-level API. The building blocks you'd reach for are exported directly, and when you need to go deeper, swizzle ejects a component's full source into your project to own. No styling lock-in. Astryx authors its styles with StyleX, but that's invisible to consumers. Override with className using Tailwind, CSS modules, or plain CSS — whatever your project already uses. Customize without wrapping. A theme is a set of CSS custom property overrides, so a designer can make Astryx unmistakably theirs without forking or wrapping component source. Built for people and agents. The API, docs, and CLI are designed together so a person and an AI assistant build the same way, from the same reference. Getting Started Astryx requires React 19 or later ( react and react-dom are peer dependencies of @astryxdesign/core ). Install Astryx, a theme, and its peer dependencies: # npm npm install @astryxdesign/core @astryxdesign/theme-neutral @stylexjs/stylex\nnpm install -D @astryxdesign/cli # pnpm pnpm add @astryxdesign/core @astryxdesign/theme-neutral @stylexjs/stylex\npnpm add -D @astryxdesign/cli # yarn yarn add @astryxdesign/core @astryxdesign/theme-neutral @stylexjs/stylex\nyarn add -D @astryxdesign/cli The simplest setup is a few CSS imports plus a theme provider — no build plugin, no PostCSS or Babel config. See the @astryxdesign/core README for the full guide (Next.js, Tailwind, Vite, and CDN). For reliable CLI access, add a script to your package.json : \"scripts\" : { \"astryx\" : \" node node_modules/@astryxdesign/cli/clients/cli/bin/astryx.mjs \" } Then use it as npm run astryx -- component --list . This avoids path errors when AI assistants or new developers invoke the CLI directly. Packages Package Description README @astryxdesign/core Components, theme system, and utilities README @astryxdesign/cli CLI tooling: component docs, templates, scaffolding, themes, and codemods README @astryxdesign/build Build plugins for StyleX source builds README @astryxdesign/theme-* Seven ready-made, fully customizable themes (neutral, butter, chocolate, matcha, stone, gothic, y2k) README @astryxdesign/lab (experimental components) is used internally for Storybook and the sandbox and is not published to npm. @astryxdesign/vega (Vega/Vega-Lite chart wrapper) and @astryxdesign/charts (chart components) are published to npm only under the @canary dist-tag — there is no stable release yet. Principles These are the promises Astryx makes to the people building on it. Guidance over enforcement. Components give you capability rather than guardrails that fight you. Design opinions live in docs and examples — if you pass a value, the component renders it. Strong, documented conventions. Every component follows the same naming, prop, and composition rules, and every one is thoroughly documented — so once you've learned a few, the rest feel familiar, and both people and AI can predict how an unfamiliar component behaves. One system for humans and AI. The API, conventions, docs, and CLI are designed together so people and AI assistants build the same way. Every change that made Astryx easier for AI made it easier for people too. Earned by measurement. We test conventions rather than assert them, hold the results loosely, and revisit them when a new situation proves them wrong. Architecture Foundations The building blocks for visually cohesive and accessible interfaces: typography, color, layout, and accessibility. Components A library of 150+ reusable UI building blocks with full TypeScript support. Patterns Battle-tested design solutions for common interactions and workflows: table pages, detail page layouts, form wizards, navigation patterns, data entry flows. Project Structure Directory Purpose apps/ Example apps, the docsite, and Storybook packages/ Published packages: core, cli, build, themes internal/ Internal tooling: test utilities, eslint plugin, vibe tests Contributing We welcome contributions! See CONTRIBUTING.md for the full guide. Questions, or want a hand with a PR? Come find us in Discord . Our conventions and review rubrics live in the Contributing wiki —\nincluding API Conventions , Design Conventions ,\nthe Component Lifecycle ,\nand the Contributing Templates and Blog Review rubrics. Read the relevant one before opening a PR. Quick start for contributors: this repo uses Node 22+ on an active LTS line and pnpm 11 . Install pnpm directly, or enable Corepack once so the pinned pnpm version\ninstalls automatically: corepack enable pnpm install If corepack is missing, install pnpm directly or install Corepack manually;\nsee the troubleshooting notes in CONTRIBUTING.md . License MIT",
+      "stars_today": 47,
+      "language": "TypeScript"
+    }
+  ],
+  "papers": {
+    "hf": [
+      {
+        "title": "Continual Learning Mechanisms Compose for Long-Horizon Memorization",
+        "slug": "continual-learning-mechanisms-compose-for-long-horizon",
+        "url": "https://huggingface.co/papers/2609.06986",
+        "abstract": "Composing complementary continual learning mechanisms substantially improves long-horizon memorization in language models by combining data, function, and weight anchors with merged low-rank updates.",
+        "upvotes": 287,
+        "arxiv_id": "2609.06986",
+        "authors": []
+      },
+      {
+        "title": "AI for Games in the Foundation Model Era",
+        "slug": "ai-for-games-in-the-foundation-model-era",
+        "url": "https://huggingface.co/papers/2609.16679",
+        "abstract": "Foundation models, alongside advances in learned game-world models, are reshaping AI across the game lifecycle. Beyond playing games, recent systems model players and game dynamics, support design and development, adapt player-facing experiences at runtime, and evaluate resulting artifacts. Yet these directions have evolved largely separately, obscuring which capabilities transfer across settings and which remain tied to particular games, engines, interfaces, or player populations. We organize the literature into six roles according to the immediate use of AI output: playing and acting; modeling players and games; designing games; building and maintaining games; generating and adapting at runtime; and testing and evaluating games. For each role, we examine what structure is supplied by the game or workflow, what AI learns or produces, which capabilities and artifacts transfer across settings and roles, and what evidence supports the claims. We identify cross-role connections: trajectories train world models, learned environments provide experience for agents, design specifications drive executable implementations, and play or testing feedback guides revision. However, control schemes, rules, engine interfaces, state representations, and player contexts often remain setting-specific, so downstream claims require validation in the target setting. Evaluation is most standardized for bounded game playing and selected learned environments, while persistent state in learned worlds, repeated software revision, validated player modeling, sustained runtime adaptation, and representative automated testing remain less established. The central challenge is to reuse or transfer outputs and capabilities across roles while re-establishing evidence for effectiveness in the game-specific contexts where they are used.",
+        "upvotes": 105,
+        "arxiv_id": "2609.16679",
+        "authors": []
+      },
+      {
+        "title": "StepAudio 3 Realtime Technical Report",
+        "slug": "stepaudio-3-realtime-technical-report",
+        "url": "https://huggingface.co/papers/2609.14005",
+        "abstract": "Realtime spoken interaction demands deep reasoning, prompt responses, and fluid turn-taking. We present StepAudio 3 Realtime, an audio-language foundation model organized around a continuous listen-converse-think-act loop. Deep Perception captures rich acoustic cues to interpret user intent, while Seamless Duplex models synchronized audio streams to handle pauses, backchannels, and interruptions naturally. Crucially, we resolve the tension between deep deliberation and latency via Think-While-Speaking, executing private reasoning in parallel with spoken delivery. In reasoning mode, StepAudio 3 reaches a 73.0 macro average on StepAudioChat. With Think-While-Speaking, it achieves dialogue and reasoning performance comparable to dedicated reasoning models while speaking in real time. Furthermore, an integrated Voice Agent handles asynchronous tool execution without disrupting the dialogue flow. StepAudio 3 Realtime achieves top-tier performance across key dimensions: an exceptional 90.6 on the MMSU benchmark, 98.9 Overall on the Artificial Analysis Full-Duplex Bench, and a 56.0% macro task-success rate on τ-Voice.",
+        "upvotes": 89,
+        "arxiv_id": "2609.14005",
+        "authors": []
+      },
+      {
+        "title": "StepAudio 3 Music Technical Report",
+        "slug": "stepaudio-3-music-technical-report",
+        "url": "https://huggingface.co/papers/2609.16034",
+        "abstract": "We introduce StepAudio 3 Music, a large-scale, long-form music generation model that supports explicit musical planning and open-domain text-controlled generation. The StepAudio Music Tokenizer represents audio as a 50-Hz stream from a 65536-entry single codebook, using semantically informed self-supervised and multi-task training to preserve musical structure and reconstruction-relevant information. A flow-matching diffusion Transformer (DiT) predicts continuous StepAudio VAE latents, which our VAE decoder converts into 48-kHz audio. This discrete-continuous design is guided by comparisons of single-codebook VQ, Semantic and Acoustic RVQ, and different DiT configurations. For explicit planning, a Mixture-of-Experts autoregressive model uses ABC notation to produce an intermediate arrangement plan (ABC-CoT) before predicting music tokens, making harmony, rhythm, and melodic structure part of the generation context. A progressive training curriculum and supervised fine-tuning support song and instrumental generation, accompaniment generation from dry vocals, and cover-song synthesis for up to 5 minutes and 30 seconds. With reinforcement learning via direct preference optimization (DPO), the final model achieves the highest AudioBox Content Enjoyment, Content Usefulness, and Production Quality scores and the highest MuQ-MuLan similarity among the evaluated systems, with competitive SongBench results. On the preliminary Artificial Analysis Music Arena Vocals leaderboard, it obtains a Quality Elo of 1105, behind only Suno V5.5 and Mureka and ahead of Suno V5, MiniMax models, and other systems. Audio demonstrations are available at https://stepaudiollm.github.io/step-audio-3-music.",
+        "upvotes": 69,
+        "arxiv_id": "2609.16034",
+        "authors": []
+      },
+      {
+        "title": "ScienceBuddy: Recursive-in-Recursive Self-Improvement for Interactive Scientific Agents",
+        "slug": "sciencebuddy-recursive-in-recursive-self-improvement-for",
+        "url": "https://huggingface.co/papers/2609.17523",
+        "abstract": "We introduce and release ScienceBuddy, an interactive scientific research workspace that brings continually improving scientific agents into researchers' everyday workflows. ScienceBuddy supports researchers in carrying out scientific tasks while transforming their requests, feedback, and execution evidence into tasks and evaluation rubrics for continual learning. At its core is recursive-in-recursive self-improvement, a paradigm that couples harness evolution with model reinforcement learning: the inner recursion improves the harness with the model fixed, while the outer recursion trains the model under the improved harness. Harness evolution shapes training experience, and model learning creates new opportunities for harness adaptation. We present case studies of researcher interaction, harness refinement, and model learning, with the benchmark cases spanning four scientific task families. By releasing ScienceBuddy as a research product, we make this paradigm available to the scientific community and take a step toward discovery intelligence: scientific AI that advances through sustained collaboration with researchers and evolves alongside the research it supports. Website: http://science-buddy.io",
+        "upvotes": 17,
+        "arxiv_id": "2609.17523",
+        "authors": []
+      },
+      {
+        "title": "HarnessVLN: Unifying Training-Free Embodied Navigation through an Agent Harness",
+        "slug": "harnessvln-unifying-training-free-embodied-navigation",
+        "url": "https://huggingface.co/papers/2609.15195",
+        "abstract": "Embodied navigation requires agents to interpret visual observations, accumulate spatial knowledge, and execute actions to follow instructions or locate objects. Training-based methods face generalization challenges, while training-free methods exploit multimodal large language models (MLLMs) but often lack mechanisms to reconcile proposed actions with spatial evidence, task progress, and execution failures. We present HarnessVLN, a zero-shot, training-free framework whose Agent Harness coordinates perception, retrieval, grounding, navigation, recovery, and termination through a unified tool interface. The Harness validates planner proposals against spatial evidence, geometric feasibility, and subgoal consistency, incorporating structured tool feedback into subsequent decisions. Hierarchical event memory tracks task progress and execution history, while a persistent Spatiotemporal Graph maintains reusable spatial evidence and failure annotations for verification and recovery. A replaceable Navigation Executor converts validated targets into executable motions, allowing the same Harness protocol to support instruction-following and object-goal navigation. HarnessVLN achieves success rates of 60.8%, 53.9%, 76.0%, and 59.3% on R2R, RxR, HM3D-v2, and HM3D-OVON, respectively, surpassing prior training-free SOTA results. Humanoid deployment further demonstrates its applicability to both tasks in real-world environments. The project page is: https://harnessvln.netlify.app/.",
+        "upvotes": 13,
+        "arxiv_id": "2609.15195",
+        "authors": []
+      },
+      {
+        "title": "FLAT: Resampling Image and Text into 1D Flexible-Length Aligned Transmodal Tokens for Retrieval and Generation",
+        "slug": "flat-resampling-image-and-text-into-1d-flexible-length",
+        "url": "https://huggingface.co/papers/2609.16591",
+        "abstract": "Traditional multimodal representation learning and generation are two stages: a contrastive or self-supervised visual encoder is trained first, followed by a separate downstream generative model. This setup bottlenecks generative performance behind frozen embeddings. To bridge this gap, we revisit joint multimodal representation learning and generation to produce linearly interpolatable embeddings that are directly consumable by generative decoders. We present FLAT (Flexible-Length Aligned Transmodal representations), a representation pre-training framework that jointly optimizes a shared multimodal encoder alongside downstream text-to-image (T2I) and image-to-text (I2T) decoders. By combining contrastive alignment with bidirectional cross-modal generative objectives, FLAT ensures its representations function as both discriminative semantic descriptors and generative conditions. Architecturally, FLAT maps visual and textual inputs into a unified continuous 1D sequence space, applying nested dropout over prefix-K tokens to enable dynamic output lengths. A single pre-training stage allows FLAT to perform cross-modal retrieval and generation across variable prefix K, achieving a T2I GenEval score of 71.1. Task-specific fine-tuning aligns model performance with state-of-the-art baselines: 83.1 GenEval on T2I generation; 40.5 BLEU-4 and 138.6 CIDEr on MS-COCO image captioning; and Recall@5 scores of 86.8 (I2T) / 75.8 (T2I) on MS-COCO alongside 98.3 (I2T) / 93.6 (T2I) on Flickr30K. Finally, qualitative evaluations demonstrate that FLAT representations natively support linear interpolation, latent space arithmetic, and zero-shot composed retrieval.",
+        "upvotes": 12,
+        "arxiv_id": "2609.16591",
+        "authors": []
+      },
+      {
+        "title": "Another Blueprint In The Wall: How to Ask Frontier AI Like a Kid?",
+        "slug": "another-blueprint-in-the-wall-how-to-ask-frontier-ai-like-a",
+        "url": "https://huggingface.co/papers/2609.14803",
+        "abstract": "This paper reports experiments across six frontier model types from OpenAI, Anthropic, xAI, and Google DeepMind. Ten independent sessions per model type used the same three stage prompt sequence, progressing from architectural preference to a full ASCII backbone. Under the school audience framing, responses repeatedly converged on a shared architectural pattern built around persistent latent state, adaptive computation, memory, specialist routing, verification, stopping control, and delayed decoding. Most runs remained close to this common structure, while a small number developed markedly greater engineering specificity. The audience framing appears to be an important condition of this effect. In additional control runs that removed the school framing while retaining the architectural request, responses became substantially more heterogeneous and failed to reproduce the same stable motif convergence. One observation is particularly striking. GPT-5.6 Sol produced an unusually elaborate successor architecture whose organization closely overlaps with the architecture independently sketched by GPT-6 Astra. Because the prompts explicitly ask each model to imagine an architectural future, this resemblance raises a testable question: whether the overlap reflects exposure to related architectural concepts, a shared learned design prior, or independent convergence toward similar computational principles. The paper uses the term epistemic jailbreak for the accompanying loss of discipline in technical provenance as requested specificity increases. The experiments establish a repeatable behavioral pattern and do not authenticate proprietary implementation claims. What we leave to the community is a harder question: are these models independently imagining the same architectural future, or do such motifs somehow propagate between model families?",
+        "upvotes": 6,
+        "arxiv_id": "2609.14803",
+        "authors": []
+      },
+      {
+        "title": "Modality-Autoregressive World-Action Models",
+        "slug": "modality-autoregressive-world-action-models",
+        "url": "https://huggingface.co/papers/2609.17524",
+        "abstract": "World-action models (WAMs) jointly model future observations and actions, typically predicting the future as RGB images. Other visual modalities such as depth, pretrained visual features, and point tracks can more efficiently capture geometric, semantic, and motion features. However, how best to combine these modalities within WAMs remains an open question. We introduce ModAR, the first WAM to autoregressively denoise multiple future modalities before predicting actions. This allows each prediction to condition on previously generated modalities. We train from scratch to systematically study how training-data mixtures, predicted modalities, and WAM formulations affect performance. In our evaluations, WAMs benefit from predicting point tracks, DINO features, and depth maps, while additionally predicting future RGB does not provide a consistent benefit. We also find that ModAR's sequential generation outperforms existing WAM formulations, with the highest average success rate at all evaluated data scales. We also fine-tune the video-model-initialized WAM Flex-π on the same data; ModAR achieves a slightly higher observed average success rate (75% vs. 72%) while using approximately 20times fewer training FLOPs and no pretraining. On three real-world bimanual tasks, ModAR outperforms baselines and improves with human videos.",
+        "upvotes": 5,
+        "arxiv_id": "2609.17524",
+        "authors": []
+      },
+      {
+        "title": "ModularRSI: Modular and Generalizable Recursive Harness Self-Improvement",
+        "slug": "modularrsi-modular-and-generalizable-recursive-harness-self",
+        "url": "https://huggingface.co/papers/2609.14857",
+        "abstract": "Recent work extends recursive self-improvement (RSI) to agent harnesses for long-horizon coding and terminal tasks, enabling agents to improve execution mechanisms from experience. However, generalizable harness RSI remains challenging. First, evolving harnesses on evaluation benchmarks or their subsets makes it difficult to distinguish reusable improvements from benchmark-specific adaptation. Second, single-trajectory updates can conflate systematic harness deficiencies with instance-specific reasoning and solution details, producing modifications that transfer poorly to unseen tasks. Third, localizing recurring behavioral deficiencies within monolithic harnesses is difficult, while whole-harness optimization can entangle unrelated mechanisms and complicate attribution and validation. We propose ModularRSI, a benchmark-disjoint, contrastive, and modular framework for generalizable harness evolution. ModularRSI contrasts successful and failed trajectories for the same task and aggregates evidence across tasks to identify recurring behavioral deficiencies. It decomposes the evolvable harness into five functional modules: Agent Loop, Tool Use, Observation Management, Context Management, and Task Completion Detection. Each module evolves independently within a restricted modification scope, followed by an integration stage that combines the evolved modules into a unified harness and resolves potential conflicts. To support benchmark-disjoint evolution, we curate 2,000 executable evolution tasks from external sources that are disjoint from downstream evaluation benchmarks. Experiments on TB2.0 and SWE-Bench Verified show consistent improvements on unseen in-domain and cross-domain tasks, with the evolved harness also transferring across different foundation models.",
+        "upvotes": 4,
+        "arxiv_id": "2609.14857",
+        "authors": []
+      }
+    ],
+    "others": [
+      {
+        "title": "Analysing Structures of Silence in AI-mediated Public Spheres",
+        "slug": "analysing-structures-of-silence-in-ai-mediated-public",
+        "url": "https://www.semanticscholar.org/paper/e36e0f1a90ed6c2109677085a66b8fc4812796a0",
+        "abstract": "Analysing Structures of Silence in AI-mediated Public Spheres. Philosophy & Technology",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-16",
+        "authors": [
+          "Ejvind Hansen"
+        ]
+      },
+      {
+        "title": "Psychological barriers and pedagogical implications of artificial intelligence-induced anxiety among English lecturers in higher education",
+        "slug": "psychological-barriers-and-pedagogical-implications-of",
+        "url": "https://www.semanticscholar.org/paper/d731eb93917c822eb8587a95fd8a03b9298cb5b4",
+        "abstract": "Psychological barriers and pedagogical implications of artificial intelligence-induced anxiety among English lecturers in higher education. Discover Education",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-16",
+        "authors": [
+          "Elham Zahedkazemi",
+          "Reza Khany",
+          "Leila Shoja"
+        ]
+      },
+      {
+        "title": "Evolving digital skill demands before and after generative AI: a global network analysis via upwork data",
+        "slug": "evolving-digital-skill-demands-before-and-after-generative",
+        "url": "https://www.semanticscholar.org/paper/b8c17367e8ca6f859ede0e7ac4adaeb5b8ef730d",
+        "abstract": "Evolving digital skill demands before and after generative AI: a global network analysis via upwork data. Data mining and knowledge discovery",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-16",
+        "authors": [
+          "Kenan Menguc"
+        ]
+      },
+      {
+        "title": "Early evidence for a multi-agent AI simulator for clinical reasoning practice: performance, consistency, and challenges",
+        "slug": "early-evidence-for-a-multi-agent-ai-simulator-for-clinical",
+        "url": "https://www.semanticscholar.org/paper/83d176554774cb1e6237e3ed11841d6a271320fb",
+        "abstract": "Early evidence for a multi-agent AI simulator for clinical reasoning practice: performance, consistency, and challenges. Diagnosis",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-16",
+        "authors": [
+          "Mathew Kelleher",
+          "C. Zhou",
+          "Danielle E. Weber",
+          "Seth Overla",
+          "James Bowen",
+          "J. Generoso",
+          "Wei-Bing Zheng",
+          "Sally A. Santen",
+          "Laurah Turner"
+        ]
+      },
+      {
+        "title": "Adaptive versus non-adaptive sampling for Gaussian-RBF surrogates: a replicated benchmark across analytical and differential-equation models",
+        "slug": "adaptive-versus-non-adaptive-sampling-for-gaussian-rbf",
+        "url": "https://www.semanticscholar.org/paper/81d11b898cca83de2bd22d0864ab3ad9ec20f344",
+        "abstract": "Adaptive sampling extends a nested design point by point, but repeated\nsurrogate fitting and acquisition search are justified only when they improve prediction\nor reduce expensive model evaluations. This paper presents a controlled, replicated\ncomparison of nine sampling strategies within a fixed Gaussian radial-basis-function\n(RBF) pipeline and examines when sequential acquisition is justified.\nNine strategies—Random, Latin-hypercube sampling (LHS), scrambled Halton, sequential maximin, P-greedy, a nearest-neighbour leave-one-out (NN-LOO) proxy, a\nβ-NN-LOO/P proxy, and RBF criteria in the spirit of MEPE and EIGF—are compared\non seven analytical and differential-equation problem/QoI combinations: the smooth\nanalytic Branin function; a steady heat problem with a discontinuous conductivity\n(Heat); an advection-dominated Graetz problem with a boundary layer (Graetz); and\na two-species reaction–diffusion system with two (2S-RD-2P) or four (2S-RD-4P) active parameters, each with a reaction-ODE functional ψ1 and a reaction–diffusion state\nfunctional ψ2. Thirty design replications use a common 2000-point validation design. Supported endpoint improvements in the original adaptive-versus-static comparison require\nagreement between Holm-adjusted permutation and paired Wilcoxon analyses; tolerance\nperformance combines attainment probability with the conditional first evaluated budget.\nNo strategy dominates within the tested suite and budgets. Geometry-retaining\nadaptive criteria improve Heat, Graetz and both four-parameter 2S-RD QoIs, whereas\nLHS remains effective on both two-parameter QoIs. Sequential maximin is best by\nendpoint median on Branin and 2S-RD-4P/ψ2, second on 2S-RD-4P/ψ1, but eighth\non Graetz, so response-informed sampling does not uniformly dominate strong nested\ngeometry. Heat accuracy changes materially over εscore ∈ {0.5, 1, 2}, and fitting the\nphysical rather than logarithmic Heat target worsens every compared method’s physicalscale endpoint median. At Nc = 4000 the four-dimensional candidate pool is much\ncoarser than its two-dimensional counterpart; quadrupling the 2S-RD-4P pool gives\nsmall, non-systematic endpoint shifts but less stable detailed rankings. The resulting\ndecision map is a scoped benchmark-based guide; its sensitivity to the scoring parameter,\nfitted-target scale and finite candidate pool is stated explicitly.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-16",
+        "authors": [
+          "O. M. Shchepanchuk",
+          "M. Shcherbatyy"
+        ]
+      },
+      {
+        "title": "Agentic AI in educational environments and its association with social and motivational pathways to learning performance",
+        "slug": "agentic-ai-in-educational-environments-and-its-association",
+        "url": "https://www.semanticscholar.org/paper/7a7307f49a10c35396c8598d50ec12aefbcfc52e",
+        "abstract": "Agentic AI in educational environments and its association with social and motivational pathways to learning performance. Discover Education",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-16",
+        "authors": [
+          "Dhanya Pramod",
+          "K. Patil"
+        ]
+      },
+      {
+        "title": "Human-AI Interaction: Evaluating LLM Reasoning on Digital Logic Circuits and the Perception-Correctness Gap",
+        "slug": "human-ai-interaction-evaluating-llm-reasoning-on-digital",
+        "url": "https://www.semanticscholar.org/paper/6462d0eef47566faabe79045a1f1be0d02603b67",
+        "abstract": "Human-AI Interaction: Evaluating LLM Reasoning on Digital Logic Circuits and the Perception-Correctness Gap. SN Computer Science",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-16",
+        "authors": [
+          "Yogeswar Reddy Thota",
+          "Setareh Rafatirad",
+          "Homayoun Houman",
+          "Tooraj Nikoubin"
+        ]
+      },
+      {
+        "title": "SE4SC-LLM: an LLM-Augmented symbolic execution framework for smart contracts",
+        "slug": "se4sc-llm-an-llm-augmented-symbolic-execution-framework-for",
+        "url": "https://www.semanticscholar.org/paper/62d29bf058ab81182b9e5a6d6a472b752567a9e0",
+        "abstract": "SE4SC-LLM: an LLM-Augmented symbolic execution framework for smart contracts. International Conference on Automated Software Engineering",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-16",
+        "authors": [
+          "Tian-Huan Miao",
+          "Yang Liu"
+        ]
+      },
+      {
+        "title": "The SkySentience conceptual framework for accountable drone decision support in public safety",
+        "slug": "the-skysentience-conceptual-framework-for-accountable-drone",
+        "url": "https://www.semanticscholar.org/paper/4e78b0421c2d24c8a07bb8b980c314e4336e3f32",
+        "abstract": "The SkySentience conceptual framework for accountable drone decision support in public safety. Discover Informatics",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-16",
+        "authors": [
+          "Swarnamouli Majumdar",
+          "Anjali Awasthi"
+        ]
+      },
+      {
+        "title": "A multi-site benchmarking framework for scalable extraction of geriatric care constructs from electronic health records",
+        "slug": "a-multi-site-benchmarking-framework-for-scalable-extraction",
+        "url": "https://www.semanticscholar.org/paper/4e0176b140aee01c4f4e651fe777feeccd071bd0",
+        "abstract": "A multi-site benchmarking framework for scalable extraction of geriatric care constructs from electronic health records. npj Health Systems",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-16",
+        "authors": [
+          "Sun-Yang Fu",
+          "Min Ji Kwak",
+          "J. Ahn",
+          "Qiu-Hao Lu",
+          "Zhi-Yi Yue",
+          "Nan Wang",
+          "Hui-Peng Liu",
+          "Grace Giles",
+          "Alexa Cumming",
+          "Keziah Thomas",
+          "Shreyans V. Sanghvi",
+          "Jiang Jun",
+          "Ming Huang",
+          "Xiaoyang Ruan",
+          "Andrew Wen",
+          "Liwei Wang",
+          "Erin L. Hommel",
+          "Yan-Shan Wang",
+          "Li-Chao Sun",
+          "Hui-Wen Xu",
+          "C. Park",
+          "J. S. St. Sauver",
+          "J. Wefel",
+          "N. Rianon",
+          "Dae Hyun Kim",
+          "Hong-Fang Liu"
+        ]
+      },
+      {
+        "title": "Genolator enables protein function interpretation using a multimodal large language model fusing genomic and structural interpretation with natural language interaction",
+        "slug": "genolator-enables-protein-function-interpretation-using-a",
+        "url": "https://www.semanticscholar.org/paper/14aec92b5b399786e20814e7a6db0c1e6a9a66c2",
+        "abstract": "Genolator enables protein function interpretation using a multimodal large language model fusing genomic and structural interpretation with natural language interaction. Genome Biology",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-16",
+        "authors": [
+          "M. Danner",
+          "Tanhim Islam",
+          "M. Begemann",
+          "Florian Kraft",
+          "M. Elbracht",
+          "I. Kurth",
+          "J. Krause"
+        ]
+      },
+      {
+        "title": "A system dynamics approach to sustainable monetization in digital platforms: balancing advertising and user retention in mobile gaming",
+        "slug": "a-system-dynamics-approach-to-sustainable-monetization-in",
+        "url": "https://www.semanticscholar.org/paper/108cd3f50d30b0d6fcd3ee31110cd87ccbbcc5d7",
+        "abstract": "A system dynamics approach to sustainable monetization in digital platforms: balancing advertising and user retention in mobile gaming. Future Business Journal",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-16",
+        "authors": [
+          "Mostafa Jafari",
+          "Mahshidsadat Makki",
+          "Mohammadreza Parsanejad"
+        ]
+      },
+      {
+        "title": "Large Language Models im Umfeld der maschinellen Übersetzung. Eine Analyse des Potenzials von ChatGPT-4o zum Pre-Editing in der Wirtschaftsübersetzung",
+        "slug": "large-language-models-im-umfeld-der-maschinellen-übersetzung",
+        "url": "https://www.semanticscholar.org/paper/072006e7001805450a03acdedd22dbcf55bb104c",
+        "abstract": "Large Language Models im Umfeld der maschinellen Übersetzung. Eine Analyse des Potenzials von ChatGPT-4o zum Pre-Editing in der Wirtschaftsübersetzung.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-16",
+        "authors": [
+          "Olga Rogler"
+        ]
+      },
+      {
+        "title": "Agentic Societies Need a Social Harness",
+        "slug": "agentic-societies-need-a-social-harness",
+        "url": "http://arxiv.org/abs/2609.17527v1",
+        "abstract": "An agentic society is a collection of AI agents that coordinate autonomously across trust boundaries, on behalf of different principals whose objectives may only partially align. We show experimentally that in agentic societies even honest, competent agents often fail to reach satisfactory outcomes with existing harnesses and messaging primitives, and that faulty or malicious agents can stall collaboration, influence outcomes, and pursue other harmful goals by exploiting vulnerabilities in communication (``speech''). We argue that agentic societies need a \\emph{social harness} for inter-agent interactions, in addition to each agent's \\emph{personal harness}, which manages its private context and communication with its principal. We propose a layered architecture for social harnesses which (i) prevents classes of failures outright, (ii) enables agents to detect invalid messages at runtime, and (iii) supports post-facto investigation and consequences, and highlight directions for future research to realize these capabilities.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-09-15",
+        "authors": [
+          "Tapan Chugh",
+          "Vidushi Singh",
+          "Krish Jain",
+          "Arvind Krishnamurthy",
+          "Ratul Mahajan"
+        ]
+      },
+      {
+        "title": "When Should LLMs Abstain? Chain-of-Self-Questioning for Selective Risk Control",
+        "slug": "when-should-llms-abstain-chain-of-self-questioning-for",
+        "url": "http://arxiv.org/abs/2609.17516v1",
+        "abstract": "Large language models can produce fluent answers when their factual support is weak. This paper introduces Chain-of-Self-Questioning (CoSQ), a prompt-only framework that makes answer commitment conditional on an explicit assessment of the information required to answer a question. We evaluate three CoSQ variants under seventeen conditions on the 817-item TruthfulQA multiple-choice validation set using eleven open-weight and hosted model families. In the final balanced-option protocol, Grounded-CoSQ at τ=0.90 reduces the mean unconditional wrong-commitment rate from 13.1% under chain-of-thought prompting to 8.9%, a 32.1% relative reduction, while increasing answered accuracy from 86.9% to 89.7% and answering 87.6% of questions. Both improvements hold for all eleven models and at every evaluated threshold. Critical-CoSQ and Adaptive-CoSQ provide neighboring operating points with 88.6% and 86.5% coverage, respectively, while remaining more reliable than the baseline. A secondary Natural Questions Short-Answer evaluation provides convergent open-form evidence. These findings show that self-assessment can support explicit, tunable answer-or-abstain decisions when an unsupported commitment is more costly than referral or review.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-09-15",
+        "authors": [
+          "Ali Şenol"
+        ]
+      },
+      {
+        "title": "What Breaks Under Pruning in Smart Homes, and When? Evaluating LLM Degradation Across Architectures and Task Complexity",
+        "slug": "what-breaks-under-pruning-in-smart-homes-and-when-evaluating",
+        "url": "http://arxiv.org/abs/2609.17515v1",
+        "abstract": "Pruning can reduce the deployment cost of large language models (LLMs), but its impact on context-grounded tool calling remains poorly understood. We systematically study pruning-induced degradation in smart-home tool calling across four LLMs spanning dense Transformer, dense hybrid, and mixture-of-experts (MoE) architectures, together with depth, width, hybrid, and expert pruning methods. After post-pruning supervised fine-tuning (SFT), we evaluate more than 19,500 instances from three smart-home datasets. Beyond aggregate task accuracy, we characterize degradation along two dimensions: action components (i.e., operation, device, argument, and value) and task complexity. Our results show that dense models have narrow safe pruning regions followed by sharp degradation, while MoE models tolerate substantially more pruning. Pruning degrades grounded specificity before schema-level intent, and aggressive dense pruning can induce systematic over-refusal. These findings highlight the importance of evaluating pruning beyond aggregate accuracy when selecting pruned LLMs for reliable tool execution.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-09-15",
+        "authors": [
+          "Congjing Zhang",
+          "Vashishtha Patil",
+          "Henning Lange",
+          "Usman Aleem"
+        ]
+      },
+      {
+        "title": "LACE: Layer-Wise Compression for Dynamic Frame Rate Codecs",
+        "slug": "lace-layer-wise-compression-for-dynamic-frame-rate-codecs",
+        "url": "http://arxiv.org/abs/2609.17509v1",
+        "abstract": "Neural audio codecs are a key component in speech language modeling. However, their high frame rates lead to long sequence lengths, increasing computational costs. Dynamic frame rate codecs mitigate this by reducing the effective frame rate using a compression step to merge multiple frames together. However, most prior methods either operate on single-codebook codecs or apply a single compression step before multi-layer quantization. This forces all quantization layers to share the same segmentation boundaries, despite the residual embeddings at different quantization layers exhibiting different rates of change over time. We propose LACE (Layer-Adaptive Codec Encoding), a dynamic frame rate codec that applies an independent compression step at each quantization layer, enabling layer-specific segmentation boundaries. To use LACE tokens in downstream text-to-speech (TTS), we further introduce union alignment and boundary anchor mechanisms to make durations consistent across layers while preserving compression benefits. Experiments on LibriTTS show that LACE offers a better rate-quality tradeoff than prior dynamic frame rate methods on the reconstruction task and improves TTS inference efficiency while maintaining competitive synthesis quality. Our code is released as part of the ESPnet3 codec recipe.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-09-15",
+        "authors": [
+          "Thanapat Trachu",
+          "Samuele Cornell",
+          "William Chen",
+          "Shinji Watanabe"
+        ]
+      },
+      {
+        "title": "ENCP: Episode-Normalized Conformal Prediction for Vision-and-Language Navigation",
+        "slug": "encp-episode-normalized-conformal-prediction-for-vision-and",
+        "url": "http://arxiv.org/abs/2609.17499v1",
+        "abstract": "Uncertainty estimation for Vision-Language-Navigation (VLN) models is a critical task since it can help identify ambiguous and unreliable predictions, enabling agents to make safer navigation decisions. As one of the most advanced uncertainty estimation frameworks, conformal prediction (CP) offers a promising approach for uncertainty estimation in VLN. However, given that VLN agent requires a sequence of steps, standard calibration in conformal prediction fails to provide coverage guarantee it promises over a dependent, variable-length VLN episode. To this end, we propose Episode-Normalized Conformal Prediction (ENCP), which rescales a nonconformity score by the policy's residual confidence and calibrates one maximum score per episode. Under exchangeable calibration and test episodes, this construction covers the ground truth at every step with probability at least $1 - α$, while allowing dependence among steps within an episode. Across four VLN policies and three nonconformity scores on R2R and REVERIE dataset, ENCP meets all reported empirical step-coverage targets on the seen-to-unseen evaluation. These results demonstrate that ENCP can provide model-agnostic uncertainty estimates, which might be useful for determining when a VLN agent should defer to a more capable predictor, including human assistance.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-09-15",
+        "authors": [
+          "Vicky Feliren",
+          "A. Taufiq Asyhari",
+          "Muhamad Risqi U. Saputra"
+        ]
+      },
+      {
+        "title": "Verifiable Social Reasoning for LLM Assistants",
+        "slug": "verifiable-social-reasoning-for-llm-assistants",
+        "url": "http://arxiv.org/abs/2609.17496v1",
+        "abstract": "LLM assistants are widely used for daily social advice, yet evaluating their social reasoning in such consultation settings remains challenging since (i) it requires setups where the assistant learns about social situations from subjective user narratives, and (ii) social properties, such as others' intentions, typically lack verifiable ground truth. To address these challenges, we introduce Fuse, a multi-agent simulation framework for studying user-mediated social reasoning. In Fuse, a target agent with a hidden motive interacts with other agents including one representing the user, who then consults the evaluated assistant to infer the target's motive, providing verifiable ground truth by construction. Simulation faithfulness is validated through a human study with 24k annotations. We apply Fuse to 12 LLMs and demonstrate its analytical utility by systematically isolating key factors, showing that (i) user mediation compounds the inherent difficulty of social reasoning; (ii) LLMs exhibit systematic sensitivity to biased user framing; (iii) models can require more details than humans need to reach a correct prediction; and (iv) longer conversations do not always improve performance despite providing opportunities for clarifying questions. We open-source Fuse and a dataset with 21k examples.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-09-15",
+        "authors": [
+          "Amir Taubenfeld",
+          "Zorik Gekhman",
+          "Avigail Grinstein-Dabush",
+          "Itay Laish",
+          "Ariel Goldstein",
+          "Marian Croak",
+          "Avinatan Hassidim",
+          "Yossi Matias",
+          "Amir Feder"
+        ]
+      },
+      {
+        "title": "FreqSpaNet: Frequency and Spatial Learning of SFPF for Physical Layer Hardware Integrity Detection",
+        "slug": "freqspanet-frequency-and-spatial-learning-of-sfpf-for",
+        "url": "http://arxiv.org/abs/2609.17491v1",
+        "abstract": "Unauthorized hardware replacement can preserve a wireless device's logical identity while altering its physical implementation, posing a challenge to hardware integrity verification. Spatio-frequency polarization fingerprints (SFPFs) capture device-dependent responses across multiple frequencies and directions, but their frequency and spatial dimensions exhibit different structural dependencies. We propose FreqSpaNet, an SFPF representation learning network for open set hardware anomaly detection. A frequency branch captures local variations among neighboring frequencies, while a geometry-aware spatial branch models directional relationships using angular information. The two representations are combined through adaptive fusion, and complementary pretraining further captures shared information while preserving the distinct characteristics of the frequency and spatial representations. Experiments show that FreqSpaNet achieves a mean AUROC of 96.31\\%, 9.05 points above the baseline. Results under seven hardware replacement scenarios further verify the effectiveness of FreqSpaNet.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-09-15",
+        "authors": [
+          "Xiaoxuan Huang",
+          "Jinlong Xu",
+          "YiZhe Wang",
+          "Meng Zhang",
+          "Xian Li",
+          "Yuying Bian"
+        ]
+      },
+      {
+        "title": "LimiX-2: A Contextual Mechanism Network Towards General Structured-Data Intelligence",
+        "slug": "limix-2-a-contextual-mechanism-network-towards-general",
+        "url": "http://arxiv.org/abs/2609.17488v1",
+        "abstract": "We introduce LimiX-2, a new model in the LimiX family, developed through model and data scaling guided by our previously established scaling laws. LimiX-2 adopts the Contextual Mechanism Networks (CMNs) paradigm and is pretrained with Context-Conditional Masked Modeling (CCMM). CMNs shifts the organizing principle of in-context learning from target-centric prediction to mechanism-oriented joint modeling. Rather than centering the network on the $p(y \\mid x, D_{\\mathrm{context}})$ objective of conventional tabular PFNs, it is designed around learning $p(x, y \\mid D_{\\mathrm{context}})$, a context-dependent representation of the joint structure underlying data generation. Pretraining uses synthetic datasets generated by structural causal models (SCMs) spanning diverse graph structures, functional mechanisms, and observation processes. Evaluations on TabArena, TALENT, and BCCO show that LimiX-2 outperforms current dataset-specific models and tabular foundation models. Beyond predictive performance, the CMN paradigm also promotes causal awareness in LimiX-2: its feature attention encodes direct causal relationships, enabling accurate causal skeleton recovery.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-09-15",
+        "authors": [
+          "Xingxuan Zhang",
+          "Gang Ren",
+          "Hao Yuan",
+          "Hao Zou",
+          "Hongze Tan",
+          "Hui Wang",
+          "Jianhao Song",
+          "Jiansheng Li",
+          "Jiayao Zhang",
+          "Jinghan Zhang",
+          "Kaifang Li",
+          "Lang Mo",
+          "Li Mao",
+          "Mingchao Hao",
+          "Nuo Xu",
+          "Rui Ding",
+          "Ruiji Zhang",
+          "Shuyang Li",
+          "Siyu Mei",
+          "Tianyang Zhang",
+          "Weiyang Mu",
+          "Yancheng Dong",
+          "Yongxian Wei",
+          "Yuan Xue",
+          "Yuanrui Wang",
+          "Yue He",
+          "Zijia Yang",
+          "Ziyun Li",
+          "Dongzhe Li",
+          "Fuqiang Wang",
+          "Jiandong Liu",
+          "Jiawei Chen",
+          "Jiaxin Du",
+          "Kaijie Cheng",
+          "Kehan Li",
+          "Lei Sun",
+          "Linjun Zhou",
+          "Ningbo Dai",
+          "Qi Wang",
+          "Renzhe Xu",
+          "Shaoxing Du",
+          "Shumeng Yang",
+          "Wang Lu",
+          "Wenjing Chu",
+          "Xiannan Huang",
+          "Xiaoyu Lin",
+          "Xing Ai",
+          "Xinyan Han",
+          "Xuanyue Li",
+          "Xuanyue Su",
+          "Xukun Zhang",
+          "Yan Lu",
+          "Yaxin Zhang",
+          "Yi Qin",
+          "Yifei Huang",
+          "Yihan Xu",
+          "Yongle Lv",
+          "Yuanyuan Jiang",
+          "Yushan Han",
+          "Peng Cui"
+        ]
+      },
+      {
+        "title": "Bridging the Gap Between Homogeneous and Heterogeneous Asynchronous Optimization Is Surprisingly Difficult",
+        "slug": "bridging-the-gap-between-homogeneous-and-heterogeneous",
+        "url": "http://arxiv.org/abs/2609.17483v1",
+        "abstract": "Modern large-scale machine learning tasks often require multiple workers, devices, CPUs, or GPUs to compute stochastic gradients in parallel and asynchronously to train model weights. Theoretical results typically distinguish between two settings: (i) the homogeneous setting, where all workers have access to the same data distribution, and (ii) the heterogeneous setting, where each worker operates on different data distributions. Known optimal time complexities in these settings reveal a significant gap, with far more pessimistic guarantees in the heterogeneous case. In this work, we investigate whether these pessimistic optimal time complexities can be overcome under different assumptions. Surprisingly, we show that improvement is provably impossible under widely used first- and second-order similarity assumptions for any randomized algorithm. We then turn to the interpolation regime and demonstrate that the weak interpolation assumption alone is also insufficient. Finally, we introduce a minimal combination of irreducible assumptions, strong interpolation and the local Polyak-Lojasiewicz condition, to derive a new time complexity bound that matches the dependence on worker computation times in the best-known result in the homogeneous setting, without requiring identical data distributions.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-09-15",
+        "authors": [
+          "Alexander Tyurin"
+        ]
+      },
+      {
+        "title": "Det-LIME: Detector-Aware, Multi-Instance Local Interpretable Model-Agnostic Explanations for Automated Marine Mammal Detection",
+        "slug": "det-lime-detector-aware-multi-instance-local-interpretable",
+        "url": "http://arxiv.org/abs/2609.17479v1",
+        "abstract": "Despite the rapid uptake of black-box object detectors in marine mammal research and monitoring, explainability techniques are rarely integrated into conservation workflows. Furthermore, most classification-oriented explainability tools are ill-suited to detection tasks involving imagery of social organisms or those with colonial life histories, as they ignore multiple detections within a scene and produce single-instance outputs that blur evidence across individuals. These methods also generate low-resolution, often biologically irrelevant visuals, limiting their utility for debugging, targeted data augmentation, and refined data collection.\n  We proposed Det-LIME, a detector-aware, multi-instance adaptation of Local Interpretable Model-Agnostic Explanations (LIME) that produced instance-specific, box-aligned explanations by combining per-detection weighting, a proximity kernel that emphasizes regions near each box, and Intersection-over-Union-based matching to track the same instance across perturbations. We evaluated Det-LIME on aerial drone imagery for harbor seal detection, with an additional seabird case study to assess generality, and compared it with vanilla LIME, Stabilized LIME, Deterministic LIME, and gradient-based attribution methods.\n  Using the Attribution Ratio and Max Saliency Hit Rate metrics, we showed that Det-LIME consistently improved multi-instance attribution. In practice, these higher-resolution, instance-aware explanations provide insight into model outputs and support post-processing, debugging, and actionable improvements in modeling and data collection or augmentation.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-09-15",
+        "authors": [
+          "Jiayi Zhou",
+          "David W. Johnston",
+          "Brinnae Bent"
+        ]
+      },
+      {
+        "title": "Bias-Induced Crossover in Absolute Capacity of Dense Associative Memory",
+        "slug": "bias-induced-crossover-in-absolute-capacity-of-dense",
+        "url": "http://arxiv.org/abs/2609.17477v1",
+        "abstract": "The absolute capacity of dense associative memory has mainly been analyzed for unbiased patterns. Here we examine the effect of bias in centered binary patterns under the Krotov-Hopfield single-site criterion $P_{\\mathrm{error}}=1/N$, where $P_{\\mathrm{error}}$ is the probability that a single-site flip lowers the energy of a stored pattern and $N$ is the number of neurons. Each pattern component takes $1-q$ with probability $q$ and $-q$ otherwise, where $0<q\\le1/2$. For polynomial interactions of order $n$, a signal-to-noise analysis gives an absolute capacity of order $N^{n-1}/\\ln N$ at $q=1/2$. For fixed $q<1/2$, however, the capacity is $O(N^{n/2})$ for even $n\\ge4$ and $O(N^{(n+1)/2})$ for odd $n\\ge5$. For $n=3$, both the unbiased and fixed-bias capacities remain $O(N^2/\\ln N)$. For $n\\ge4$, these different asymptotic forms imply a nonuniform large-$N$ limit near $q=1/2$. Asymptotic matching predicts a bias-induced crossover in the region $1-2q=O(\\ln N/N^{\\lfloor n/2\\rfloor-1})$. The crossover originates from a bias-dependent crosstalk mean that reduces the stability of sites carrying the more frequent value $-q$. Computer simulations are compared with the finite-size conditioned-Gaussian predictions. An activity-dependent control potential that cancels the conditional crosstalk mean restores the $N^{n-1}/\\ln N$ capacity for fixed $0<q<1/2$ within the conditioned-Gaussian approximation.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-09-15",
+        "authors": [
+          "Yuto Sakurai",
+          "Takeaki Shimokawa",
+          "Kazunori Iwata",
+          "Kazushi Mimura"
+        ]
+      },
+      {
+        "title": "JustFit: 200K-Token LLM Serving on a 24 GiB Laptop with Just-in-Time State Management",
+        "slug": "justfit-200k-token-llm-serving-on-a-24-gib-laptop-with-just",
+        "url": "http://arxiv.org/abs/2609.17475v1",
+        "abstract": "Capable open-weight models make local coding and reasoning attractive, but their context and execution state strain laptop memory. We present JustFit, an MLX-based inference runtime that combines KVExec for compressed KV execution, PhaseSwap for component residency, and StateTrans for state-preserving serving transitions. These mechanisms fuse reconstruction and coordinate just-in-time materialization and release, independently of model-weight quantization. In full-execution capacity tests on a 24 GiB M4 Pro MacBook running Qwen3.8-27B MXFP4, three independent runs complete 196,608 input and 16,384 output tokens, increasing completed single-request context from the mlx-vlm baseline's 30,720 positions to 212,992 (6.93x); a separate two-request run retains 229,376 positions in aggregate. In separate performance tests, a 32K-input, 64-output probe reaches 19.11 tokens/s, and a repeated 32K+6K workload has a median peak process footprint of 16,374 MiB. The integrated runtime answers 29 of 30 AIME 2026 problems correctly, showing how compact state and lifetime-aware execution expand local serving capacity while supporting extended generated reasoning.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-09-15",
+        "authors": [
+          "Yuhua Chen"
+        ]
+      },
+      {
+        "title": "Coupled Calibration and Learning: Mitigating Teacher Bias in LLM Distillation without Target-Domain Reward Feedback",
+        "slug": "coupled-calibration-and-learning-mitigating-teacher-bias-in",
+        "url": "http://arxiv.org/abs/2609.17474v1",
+        "abstract": "Large language model (LLM) distillation aims to transfer the capabilities of a powerful teacher to a smaller student. Direct imitation, however, can also transfer the teacher's systematic bias and errors. This challenge is particularly pronounced under covariate shift, when the teacher's reliability on target questions is uncertain and target-domain reward feedback is unavailable. We propose Coupled Calibration and Learning (CCL), an LLM distillation algorithm that couples teacher calibration with student updates through token-level branching, using reward feedback only on source questions. Each iteration calibrates the teacher using source feedback and then uses the calibrated teacher to train the student on target questions. The updated student, in turn, informs subsequent calibration. In an autoregressive policy framework, we prove that the output student's expected average Kullback-Leibler divergence to the oracle student converges to zero at a polynomial rate in the number of iterations. The oracle maximizes the true reference-regularized target reward within the student class, which need not represent the unrestricted optimal policy. Our analysis quantifies the progress of projected student gradient updates while controlling the error in teacher calibration. We further establish a separation from regularized direct matching: its error relative to the oracle student can remain bounded away from zero even when the teacher achieves higher regularized target reward than every student policy. These results demonstrate that LLM distillation can overcome persistent teacher bias and recover the optimal student through coupled calibration and learning, without target-domain reward feedback.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-09-15",
+        "authors": [
+          "Haichen Hu",
+          "Yuheng Zhang",
+          "David Simchi-Levi"
+        ]
+      },
+      {
+        "title": "Decomposition Buys Integrity, Not Yield",
+        "slug": "decomposition-buys-integrity-not-yield",
+        "url": "http://arxiv.org/abs/2609.17464v1",
+        "abstract": "Multi-agent systems split a task across a tree of agents and justify the split with folklore: smaller contexts, cleaner separation, parallelism. We ask what the split does to how much of what the leaves discover reaches the root. Model a decomposition as a tree in which an agent handed $b$ items keeps any one with probability $r(b)$. If $r(b)=1/b$, every tree delivers exactly one finding, for every task size and every shape; we verify this to $2.4 \\times 10^{-15}$ on 20,000 random irregular trees. If $r(b)=Cb^{-δ}$, a depth-$k$ tree over $N$ findings yields $C^k N^{1-δ}$: task size and architecture separate, and architecture contributes only $C \\le 1$ per level, so flat is optimal for yield and no arrangement of agents escapes the exponent $δ$. On 600 production deep-research traces $δ= 0.34$ [0.30, 0.38], by three identifications that do not share a failure mode. At a hop where item boundaries come from the tool rather than a text heuristic, and where $b=1$ occurs 550 times, $C = 0.571$ [0.527, 0.615] is observed rather than extrapolated, over 16,082 hops. A tier also costs alignment: on 1,012 annotated multi-agent traces one brief in sixteen goes off-target, giving $μ= 0.939$ and a per-tier penalty $Cμ= 0.536$. Depth is bought on two other axes. The root context is the only state that persists and the only one that cannot cheaply forget, and depth cuts its exposure from $N$ items to $N^{1/k}$. Depth is also cheaper: production flat agents bill as $N^{1.39}$, not the $N^2$ an append-only context predicts, and at equal spend two tiers overtake flat at 403 findings. Across every parameter we measured the model says 0.7% to 11.3% of production sessions are worth delegating, against 7.8% that do. A hazard model on 743,819 production tool calls finds that delegation does not respond to a filling context and is instead an opening move.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-09-15",
+        "authors": [
+          "Rong He"
+        ]
+      },
+      {
+        "title": "Tables Decoded: DELTA for Structure, TARQA for Understanding",
+        "slug": "tables-decoded-delta-for-structure-tarqa-for-understanding",
+        "url": "http://arxiv.org/abs/2609.17458v1",
+        "abstract": "Table understanding is a core task in document intelligence, encompassing two key subtasks: table reconstruction and table visual question answering (TabVQA). While recent approaches predominantly rely on vision- language models (VLMs) operating on table images, we propose a more scalable and effective alternative based on structured textual representations. These representations are easier to process, align more naturally with LLMs, and eliminate the need for language-specific visual encoders, making them particularly suitable for multilingual documents. We present DELTA, which separates physical structure recognition, logical structure recognition, and OCR to extract both layout and content accurately. DELTA outputs tables in Optimised Table Structure Language (OTSL), a compact and unified format that encodes cell arrangements and textual content. On table structure recognition (TSR), DELTA achieves TEDS- Structure scores comparable with state-of-the-art methods across FinTabNet, PubTabNet, and PubTables-1M. We further establish its robustness on non-English tables through our curated Hindi benchmark, TORQUE. Building on this, we introduce TARQA, an LLM fine-tuned on OTSL sequences. Our approach yields gains of 9.3 p.p. on WTQ (TabQA) and 9.2 p.p. on FinTabNetQA (TabVQA), respectively. On TORQUE, our method ranks second among all VLMs and DELTA + LLM variants. We release our code, models, and benchmark at: https://github.com/Tihiitborg/Tables-Decoded",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-09-15",
+        "authors": [
+          "Jahanvi Rajput",
+          "Dhruv Kudale",
+          "Saikiran Kasturi",
+          "Utkarsh Verma",
+          "Ganesh Ramakrishnan"
+        ]
+      },
+      {
+        "title": "ORCA: Occlusion-Aware Refinement and Completion for Novel View Synthesis",
+        "slug": "orca-occlusion-aware-refinement-and-completion-for-novel",
+        "url": "http://arxiv.org/abs/2609.17450v1",
+        "abstract": "Novel-view synthesis from a single image is a fundamentally ambiguous problem. As the camera moves away from the input viewpoint, previously hidden regions become visible, exposing missing geometry and holes in the reconstructed scene. Existing methods often rely on generative models to complete such regions. However, many of these artifacts are small gaps near depth boundaries and do not require generating new scene content.\n  In order to eliminate expensive process of generating image we introduce ORCA, an occlusion-aware method for reconstructing and completing explorable 3D scenes from a single image. ORCA first introduces 3D structure into a Gaussian-anchor representation using monocular depth while preserving the original camera-ray correspondence. During scene exploration, missing regions are handled based on their size and structure. Small disocclusions are repaired using RGB-D information already available in the reconstruction, while generative inpainting is reserved for larger regions that cannot be reliably recovered from the scene. New Gaussian anchors are added and optimized locally without modifying the existing representation. By reducing unnecessary reliance on generative inpainting, ORCA limits generation-induced hallucinations and better preserves the content and structure of the original scene.\n  On DIV2K, ORCA improves novel-view quality over VistaDream across all reported metrics, increasing MUSIQ from 61.60 to 68.71 and CLIP-IQA from 0.474 to 0.574. These results show that many novel-view artifacts can be repaired effectively by reusing information already present in the reconstructed scene.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-09-15",
+        "authors": [
+          "Weronika Jakubowska",
+          "Maciej Zięba",
+          "Przemysław Spurek"
+        ]
+      },
+      {
+        "title": "BrainFocus: EEG-Guided ROI Selection for Efficient Vision-Language Models",
+        "slug": "brainfocus-eeg-guided-roi-selection-for-efficient-vision",
+        "url": "http://arxiv.org/abs/2609.17443v1",
+        "abstract": "Vision-language models (VLMs) achieve strong visual question answering (VQA) performance, but processing large cluttered images is computationally expensive when only a small region is relevant. Electroencephalography (EEG) signals, which capture human neural responses to visual stimuli, can provide a human-derived semantic cue about the region of interest (ROI). However, EEG-guided visual category decoding remains imperfect, making direct ROI routing unreliable. In this work, we propose BrainFocus, a reliable EEG-guided efficient VLM framework for VQA. An EEG classifier predicts a target category, and a YOLO detector localizes the matching ROI. The VLM receives the cropped ROI only when both predictions pass confidence thresholds; otherwise, it processes the full image. For evaluation, we build on EEG-ImageNet to construct a 40-class benchmark comprising generated cluttered images and real object-centric images, with target-ROI annotations and 600 English visual question-answer pairs. Across Qwen3.5-VL 2B, 4B, and 9B models, BrainFocus improves VQA accuracy by 4.14-9.87 percentage points (pp) on cluttered scenes while reducing input tokens and total tokens by 23.2%-39.4% and 23.2%-39.3%, and end-to-end floating-point operations (FLOPs) by 23.2%-39.5%. These results demonstrate that EEG can guide efficient VLM inference even when its semantic decoding is imperfect.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-09-15",
+        "authors": [
+          "Yihui Peng",
+          "Guorui Lu",
+          "Qinyu Chen"
+        ]
+      }
+    ]
+  }
+}
