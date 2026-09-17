@@ -1,0 +1,667 @@
+{
+  "date": "2026-09-17",
+  "github": [
+    {
+      "title": "Tencent/BrowserSkill",
+      "slug": "tencent-browserskill",
+      "url": "https://github.com/Tencent/BrowserSkill",
+      "abstract": "BrowserSkill Let AI agents use your browser without interrupting your work. English · 中文 BrowserSkill connects Cursor, Claude Code, Codex, OpenClaw, CodeBuddy,\nWorkBuddy, Pi, Hermes Agent, DeepSeek Harness, and other AI agents to your already logged-in\nbrowser. Need the agent to touch a tab you already have open? It must borrow that tab\nexplicitly, return it when the task is done, and leave the rest of your browser\nalone. github.-.mp4 BrowserSkill Advantages Reuse real login state : Agents can work with sites you are already signed\ninto, without separate test accounts. Keep working uninterrupted : browser tasks run in a separate, visible\nAgent Window, so you can keep using your own browser. Support any Agent : any Agent that can call a shell can use BrowserSkill\nthrough the bsk CLI, with no lock-in to a specific model, Agent framework, or\nharness. Built-in human-in-loop : when a task hits captcha, login, confirmation\ndialogs, or other human-only steps, the Agent can ask you to take over and\nthen continue afterwards. Capture a long image in Quick actions → Full-page screenshot , or let an Agent use bsk screenshot --session <id> --full-page --out page.png . See the full-page screenshot guide for page support, cancellation and export. Runtime Environment BrowserSkill has two local runtime pieces: the bsk CLI/daemon and the browser\nextension. Runtime Support Operating systems macOS (Apple Silicon and Intel), Linux (x64 and ARM64), Windows x64 Browsers Chrome and Microsoft Edge are supported; other Chromium-based browsers are expected to work when they support unpacked Chromium extensions; Firefox is planned Quick Start Using an agent sandbox that reaps background processes after each command?\nFollow the sandboxed agent setup to keep the daemon\nin a persistent host environment and connect with a shared BSK_HOME plus BSK_AUTO_START=0 . Ordinary local use keeps automatic startup by default. Install with your Agent (recommended) Already using Cursor, Claude Code, Codex, or another shell-capable agent? Just\ncopy this one line and send it to your agent — it will install the CLI and skill\nfor you, then walk you through loading the extension: Set up browser-skill on this machine by following https://raw.githubusercontent.com/Tencent/BrowserSkill/main/AGENT_INSTALL.md Manual install Install the CLI, then install the extension from the Chrome Web Store or Edge Add-ons . 1. Install the bsk CLI macOS / Linux (recommended — installs to ~/.local/bin ): curl -fsSL https://raw.githubusercontent.com/Tencent/BrowserSkill/main/install.sh | sh export PATH= \" ${BSK_INSTALL_DIR :- $HOME / .local / bin} : $PATH \" Windows (PowerShell — installs to ~/.local/bin ): irm https: // raw.githubusercontent.com / Tencent / BrowserSkill / main / install.ps1 | iex The export makes the CLI available in the current Unix shell. A running agent may\nneed the same PATH setting in each shell call, or the installed binary's absolute\npath. Restart the agent if it retains an old PATH after installation. Verify the binary in the terminal or agent environment that will use it: bsk --version 2. Install the browser extension Install BrowserSkill from your browser's store: Browser Store listing Chrome Chrome Web Store Microsoft Edge Edge Add-ons On other Chromium-based browsers, install the Chrome Web Store build. 3. Install the skill BrowserSkill ships a skill that teaches your agent harness how to use bsk . For\nthese harnesses, install it in one step: Cursor Claude Code Codex OpenClaw CodeBuddy WorkBuddy Pi Hermes Agent bsk install-skill Use Space to select the Agent harness you want to install into, then\npress Enter to install the skill. Run bsk install-skill --list to see\ninternal variants and install paths. For non-interactive installation, specify the intended harness, for example bsk install-skill --harness cursor --json . Explicit selection also works when\nthe harness is not detected. --yes alone installs into every detected harness\nand fails when none are detected. To install your own instructions, use bsk install-skill --harness cursor --source ./SKILL.md .\nAn explicit --source stays custom even if its contents match the bundled skill.\nExisting installations are skipped unless you add --force . Daemon startup, session start , and doctor automatically update managed skills\nonly when their contents still match the last installed version. Local edits are\npreserved and automatic updates pause. An older installation without a content\nbaseline is enrolled automatically only if it exactly matches the current bundled\nskill; this writes the source marker without rewriting SKILL.md . Explicit custom\ninstallations stay custom even when their contents match. For differing historical files, local edits, or an unrecognized source marker, doctor shows WARN with the reason and recovery options. These warnings do not\nmake the health check fail ( --json reports status: \"warn\" and ok: true ).\nA concurrent install or sync is reported as deferred and retried on a later pass. To keep your current instructions as an explicit customization, run bsk install-skill --harness cursor --source <existing-SKILL.md> --force , replacing <existing-SKILL.md> with the path to your existing file. To restore the bundled\nskill and resume automatic updates, run bsk install-skill --harness cursor --force without --source . This second command overwrites the existing instructions. Other shell-capable agent harnesses are supported too. Copy skill/SKILL.md into your harness's skills directory as browser-skill/SKILL.md to install the skill manually. DeepSeek Harness uses a\ndedicated plugin instead — see DeepSeek Harness plugin . 4. Verify the connection Run bsk doctor and follow its hints. Open the extension popup and confirm it is\nconnected. Explain any warnings and resolve failures before testing browser use.\nDoctor can pass with no skill installed ( N/A ); verify skill discovery separately. Start a new Agent session, confirm browser-skill is available in the harness,\nand ask it to open https://example.com and summarize the page. For harnesses\nwith slash-command skill invocation, for example: /browser-skill open example.com and summarize what is on the page. A successful first-use check reads the page and stops its BrowserSkill session.\nIf the skill is missing, check the target harness and install path before retrying. Updating For the default local setup, finish active browser tasks before updating: bsk update --yes If Windows reports a staged update, wait for the replacement to finish before\nchecking bsk --version . When it installs an update, this command restarts a running daemon with default\nstartup settings. If you replaced the binary using the installer instead, restart\nthe existing daemon with bsk daemon restart after tasks finish. For a custom port, host-managed sandbox daemon, or remote server, stop the daemon\nin its owning host or supervisor, run bsk update --yes --no-restart-daemon , and\nstart it there with its original flags and BSK_HOME . Set BSK_AUTO_START=0 in agent commands while managing it; see the sandbox and remote setup guides. Update the extension through its browser store; for an unpacked development build,\nrebuild and reload it. Store availability may lag the CLI release. Check the CLI,\ndaemon and extension versions with bsk --version and bsk status , then run bsk doctor . New features such as full-page screenshots need matching builds.\nUpdate the DSH plugin separately and restart its profile.\nManaged CLI skills synchronize on daemon startup, session start , or doctor ;\nlocal edits and custom skills are preserved. Start a new agent session to load\nupdated instructions. Upgrading to 0.3.0: --unattended , tab borrow --no-confirm , and BSK_REQUEST_HELP=off no longer bypass confirmation or disable help. Choose the\ncorresponding extension settings described below. See what changed . Automation settings The extension popup has two independent Automation settings , both enabled by default.",
+      "stars_today": 1350,
+      "language": "TypeScript"
+    },
+    {
+      "title": "jamiepine/voicebox",
+      "slug": "jamiepine-voicebox",
+      "url": "https://github.com/jamiepine/voicebox",
+      "abstract": "Voicebox The open-source AI voice studio. Clone any voice. Generate speech. Dictate into any app. Talk to agents in voices you own. The full voice I/O stack, running locally on your machine. voicebox.sh • Docs • Download • Features • API • Troubleshooting Click the image above to watch the demo video on voicebox.sh What is Voicebox? Voicebox is a local-first AI voice studio — a free and open-source alternative to ElevenLabs and WisprFlow in one app. Clone voices from a few seconds of audio, generate speech in 23 languages across 7 TTS engines, dictate into any text field with a global hotkey, and give any MCP-aware AI agent a voice of your choosing. The two cloud incumbents sit on opposite halves of the voice I/O loop — ElevenLabs on output, WisprFlow on input. Voicebox does both, bridges them with a bundled local LLM for refinement and per-profile personas, and runs the whole thing on your machine. Complete privacy — models, voice data, and captures never leave your machine 7 TTS engines — Qwen3-TTS, Qwen CustomVoice, LuxTTS, Chatterbox Multilingual, Chatterbox Turbo, HumeAI TADA, and Kokoro Voice cloning and preset voices — zero-shot cloning from a reference sample, or 50+ curated preset voices via Kokoro and Qwen CustomVoice 23 languages — from English to Arabic, Japanese, Hindi, Swahili, and more Post-processing effects — pitch shift, reverb, delay, chorus, compression, and filters Expressive speech — paralinguistic tags like [laugh] , [sigh] , [gasp] via Chatterbox Turbo; natural-language delivery control via Qwen CustomVoice Unlimited length — auto-chunking with crossfade for scripts, articles, and chapters Stories editor — multi-track timeline for conversations, podcasts, and narratives Voice input — global dictation hotkey with push-to-talk and toggle modes, accessibility-verified auto-paste on macOS, in-app mic on every text field, Whisper-based STT Agent voice output — one tool call ( voicebox.speak ) and any MCP-aware agent (Claude Code, Cursor, Cline) speaks to you in a voice you've cloned Voice personalities — attach a free-form persona to any voice profile, then Compose, Rewrite, or Respond via a bundled local LLM — agents can invoke the same modes over MCP API-first — REST API plus a built-in MCP server for integrating voice I/O into your own apps and agents Native performance — built with Tauri (Rust), not Electron Runs everywhere — macOS (MLX/Metal), Windows (CUDA), Linux, AMD ROCm, Intel Arc, Docker Download Platform Download macOS (Apple Silicon) Download DMG macOS (Intel) Download DMG Windows Download MSI Docker docker compose up View all binaries → Linux — Pre-built binaries are not yet available. See voicebox.sh/linux-install for build-from-source instructions. Having trouble? See the Troubleshooting Guide for common install, generation, model-download, and GPU issues. Features Multi-Engine Voice Cloning Seven TTS engines with different strengths, switchable per-generation: Engine Languages Strengths Qwen3-TTS (0.6B / 1.7B) 10 High-quality multilingual cloning, delivery instructions (\"speak slowly\", \"whisper\") Qwen CustomVoice 10 9 curated preset voices with natural-language delivery control — no reference audio required LuxTTS English Lightweight (~1GB VRAM), 48kHz output, 150x realtime on CPU Chatterbox Multilingual 23 Broadest language coverage — Arabic, Danish, Finnish, Greek, Hebrew, Hindi, Malay, Norwegian, Polish, Swahili, Swedish, Turkish and more Chatterbox Turbo English Fast 350M model with paralinguistic emotion/sound tags TADA (1B / 3B) 10 HumeAI speech-language model — 700s+ coherent audio, text-acoustic dual alignment Kokoro 8 50 curated preset voices, tiny 82M model, fast CPU inference Emotions & Paralinguistic Tags Only Chatterbox Turbo interprets paralinguistic tags like [laugh] and [sigh] . Qwen3-TTS, LuxTTS, Chatterbox Multilingual, and HumeAI TADA read them\nliterally as text. With Chatterbox Turbo selected, type / in the text input to open the tag\ninserter and add expressive tags inline with speech: [laugh] [chuckle] [gasp] [cough] [sigh] [groan] [sniff] [shush] [clear throat] Post-Processing Effects 8 audio effects powered by Spotify's pedalboard library. Apply after generation, preview in real time, build reusable presets. Effect Description Pitch Shift Up or down by up to 12 semitones Reverb Configurable room size, damping, wet/dry mix Delay Echo with adjustable time, feedback, and mix Chorus / Flanger Modulated delay for metallic or lush textures Compressor Dynamic range compression Gain Volume adjustment (-40 to +40 dB) High-Pass Filter Remove low frequencies Low-Pass Filter Remove high frequencies Ships with 4 built-in presets (Robotic, Radio, Echo Chamber, Deep Voice) and supports custom presets. Effects can be assigned per-profile as defaults. Unlimited Generation Length Text is automatically split at sentence boundaries and each chunk is generated independently, then crossfaded together. Works with all engines. Configurable auto-chunking limit (100–5,000 chars) Crossfade slider (0–200ms) for smooth transitions Max text length: 50,000 characters Smart splitting respects abbreviations, CJK punctuation, and [tags] Generation Versions Every generation supports multiple versions with provenance tracking: Original — clean TTS output, always preserved Effects versions — apply different effects chains from any source version Takes — regenerate with a new seed for variation Source tracking — each version records its lineage Favorites — star generations for quick access Async Generation Queue Generation is non-blocking. Submit and immediately start typing the next one. Serial execution queue prevents GPU contention Real-time SSE status streaming Failed generations can be retried Stale generations from crashes auto-recover on startup Voice Profile Management Create profiles from audio files or record directly in-app Import/export profiles to share or back up Multi-sample support for higher quality cloning Per-profile default effects chains Organize with descriptions and language tags Stories Editor Multi-voice timeline editor for conversations, podcasts, and narratives. Multi-track composition with drag-and-drop Inline audio trimming and splitting Auto-playback with synchronized playhead Version pinning per track clip Global Dictation & Voice Input The other half of the voice I/O loop. Hold a hotkey anywhere on your system, speak, release — on macOS the transcript pastes straight into the focused text field. Or hit the mic on any Voicebox text input and dictate directly into the app. Configurable chord bindings — hold-to-speak and tap-to-toggle chords, each rebindable in the in-app chord picker. Holding push-to-talk and tapping Space mid-hold upgrades into a toggle session without a gap in audio Target-aware paste (macOS) — accessibility-verified injection into the focused text field, with atomic clipboard save/restore so your clipboard isn't clobbered First-run permissions UX — in-app gates walk you through the macOS Accessibility and Input Monitoring grants with deep-links to System Settings In-app mic button on every Voicebox text field — generation form, profile descriptions, story titles, anywhere you'd type LLM refinement — optional cleanup of ums, stutters, and false starts before paste On-screen pill — floating overlay surfacing recording , transcribing , refining , and speaking states. Same pill agents use when they speak to you, so there's one mental model for both directions of the loop Speech-to-Text Voicebox runs OpenAI Whisper for transcription — the same model that backs dictation, the Captures tab, and the /transcribe API. Running on MLX (Apple Silicon) or PyTorch (CUDA / ROCm / DirectML / CPU) depending on your platform. Size Notes Base / Small / Medium / Large Standard Whisper quality ladder Turbo ~8x faster than Whisper Large, minimal quality loss More engines (Parakeet v3, Qwen3-ASR) are planned — see Roadmap .",
+      "stars_today": 665,
+      "language": "TypeScript"
+    },
+    {
+      "title": "google-research/timesfm",
+      "slug": "google-research-timesfm",
+      "url": "https://github.com/google-research/timesfm",
+      "abstract": "TimesFM TimesFM (Time Series Foundation Model) is a pretrained time-series foundation\nmodel developed by Google Research for time-series forecasting. Paper: A decoder-only foundation model for time-series forecasting ,\nICML 2024. (NEW!) TimesFM 3.0 Checkpoint: google/timesfm-3.0-pytorch . Checkpoints (up to 2.5): TimesFM Hugging Face Collection . Google Research blog (New blog post for TimesFM 3.0 coming soon!). TimesFM in Google 1P Products: BigQuery ML :\nEnterprise level SQL queries for scalability and reliability. Google Sheets :\nFor your daily spreadsheet. Vertex Model Garden :\nDockerized endpoint for agentic calling. This open version is not an officially supported Google product. Latest Model Version: TimesFM 3.0 Archived Model Versions: 2.5: relevant code under src/timesfm . 1.0 and 2.0: relevant code archived in the subdirectory v1 . You can pip install timesfm==1.3.0 to install an older version of this package to load\nthem. Update — August 2026 TimesFM 3.0 is out! TimesFM 3.0 introduces native multivariate time-series forecasting , flexible covariate support (both past-only and past-and-future covariates), superior\nzero-shot generalist capabilities, and top performance across all three major\ntime-series foundation model benchmarks. Key Highlights: Native Multivariate & Univariate Forecasting with Covariates : Seamlessly\nforecast multi-channel multivariate series as well as individual univariate\nseries, with native support for past-only and past-and-future dynamic\ncovariates without per-task tuning. Top Benchmark Performance : 🥇 fev-bench : Rank #1 overall across 100 diverse real-world\nforecasting tasks. 🥇 TIME Benchmark : Rank #1 overall across 50 domain datasets and\n98 evaluation tasks. 🥇 GIFT-Eval : Rank #1 among all foundation models . License notice for pretrained weights Important: The TimesFM source code in this repository is licensed under\nApache-2.0, and model weights up to version 2.5 remain Apache-2.0. However,\nfor the time being, TimesFM 3.0 pretrained weights are distributed under the\nseparate timesfm-non-commercial-license-v1.0 license and are restricted to\nnon-commercial, non-production use. Commercial or production use of the\ndefault pretrained weights is not permitted . Update - July 2, 2026 Updated PyPI to timesfm=2.0.2 . See Install . Update - Apr. 9, 2026 Added fine-tuning example using HuggingFace Transformers + PEFT (LoRA) — see timesfm-forecasting/examples/finetuning/ .\nAlso added unit tests ( tests/ ) and incorporated several community fixes. Shoutout to @kashif and @darkpowerxo . Update - Mar. 19, 2026 Huge shoutout to @borealBytes for adding the\nsupport for AGENTS !\nTimesFM SKILL.md is out. Update - Oct. 29, 2025 Added back the covariate support through XReg for TimesFM 2.5. Update - Sept. 15, 2025 TimesFM 2.5 is out! Comparing to TimesFM 2.0, this new 2.5 model: uses 200M parameters, down from 500M. supports up to 16k context length, up from 2048. supports continuous quantile forecast up to 1k horizon via an optional 30M\nquantile head. gets rid of the frequency indicator. has a couple of new forecasting flags. Since the Sept. 2025 launch, the following improvements have been completed for\nTimesFM 2.5: ✅ Flax version of the model for faster inference. ✅ Covariate support via XReg (see Oct. 2025 update). ✅ Documentation, examples, and agent skill (see timesfm-forecasting/ ). ✅ Fine-tuning example with LoRA via HuggingFace Transformers + PEFT (see timesfm-forecasting/examples/finetuning/ ). ✅ Unit tests for core layers, configs, and utilities (see tests/ ). Install From PyPI # Install TimesFM with PyTorch pip install timesfm[torch] # Or, for MLX-native inference on Apple silicon (no PyTorch required) pip install timesfm[mlx] Local Install Clone the repository: git clone https://github.com/google-research/timesfm.git cd timesfm Create a virtual environment and install with PyTorch: # Using uv uv venv source .venv/bin/activate # Install the package in editable mode with torch uv pip install -e .[torch] Code Examples: TimesFM 3.0 1. Univariate Forecasting (Variable Lengths) Pass a batch of 1D NumPy arrays of different context lengths to forecast\nunivariate time series: import numpy as np from timesfm3 import TimesFM3Evaluator , ModelConfig # Initialize TimesFM 3.0 config = ModelConfig ( checkpoint_path = \"google/timesfm-3.0-pytorch\" , per_core_batch_size = 32 , device = \"cuda\" ) forecaster = TimesFM3Evaluator ( config ) # Two univariate series of different lengths (100 and 72 steps) ts1 = np . linspace ( 0 , 1 , 100 ). astype ( np . float32 ) ts2 = np . sin ( np . linspace ( 0 , 24 , 72 )). astype ( np . float32 ) # Generate forecast (point predictions + 9 quantiles: 0.1 to 0.9) outputs = list ( forecaster . predict_batch ([ ts1 , ts2 ], horizon = 12 , return_quantiles = True , use_symmetric_averaging = False )) print ( \"Series 1 forecast shape:\" , outputs [ 0 ]. forecast . shape ) # (12,) print ( \"Series 1 quantiles shape:\" , outputs [ 0 ]. quantiles . shape ) # (12, 9) print ( \"Series 2 forecast shape:\" , outputs [ 1 ]. forecast . shape ) # (12,) print ( \"Series 2 quantiles shape:\" , outputs [ 1 ]. quantiles . shape ) # (12, 9) Apple Silicon: MLX backend An MLX-native backend runs TimesFM 3.0 on Apple silicon without PyTorch. It mirrors the PyTorch TimesFM3Forecaster interface ( predict / predict_batch , univariate or multivariate, with\npast-only and past-future covariates) and is numerically matched to it on google/timesfm-3.0-pytorch . Median forecast / quantile max abs error, context 512: 9.5e-7 / 1.8e-6 at horizon 64, 2.3e-6 / 2.7e-6 at horizon 128 (longer horizons stitch multiple output\npatches, so they are worth checking on their own). import numpy as np from timesfm3 . mlx import TimesFM3Forecaster forecaster = TimesFM3Forecaster . from_pretrained ( \"google/timesfm-3.0-pytorch\" ) # Univariate, long horizon (>= 128 spans several output patches). context = np . sin ( np . linspace ( 0 , 40 , 512 )). astype ( np . float32 ) out = forecaster . predict ( context , horizon = 128 , return_quantiles = True ) print ( out . forecast . shape ) # (128,)      median forecast print ( out . quantiles . shape ) # (128, 9)    9 deciles # Batch many series through one forward pass. outs = list ( forecaster . predict_batch ([ context ] * 32 , horizon = 128 )) Multivariate targets and covariates work the same way as on the PyTorch backend (matched to 1.7e-6 on the checkpoint): context_len , horizon = 256 , 32 # Two target variates: (num_variates, context_len). target = np . stack ([ np . sin ( np . linspace ( 0 , 24 , context_len )), np . sin ( np . linspace ( 1 , 26 , context_len )),\n]). astype ( np . float32 ) past_only = np . random . randn ( 1 , context_len ). astype ( np . float32 ) # (1, 256) past_future = np . sin ( # (1, 256 + 32) np . linspace ( 0 , 30 , context_len + horizon )\n)[ None , :]. astype ( np . float32 ) out = forecaster . predict ( target , horizon = horizon , past_only_covariates = past_only , past_future_covariates = past_future , return_quantiles = True ,\n) print ( out . forecast . shape ) # (2, 32)     one forecast per target variate print ( out . quantiles . shape ) # (2, 32, 9) Benchmarks (330M model, Apple M4 Max, context 512, horizon 64, fp32 with mx.compile ): batch p50 latency throughput 1 11.1 ms 90 series/s 8 19.7 ms 406 series/s 32 48.1 ms 666 series/s Contexts longer than global_context (15,360) are truncated to their most recent points before\ndecode, matching the PyTorch backend. use_symmetric_averaging , use_znorm , and padding_mode ( \"none\" / \"edge\" ) are all supported and numerically matched to the PyTorch backend, so the MLX\nforecaster is a drop-in for the univariate and covariate forecasting paths. 2. Multivariate Forecasting with Covariates Pass a 2D array of shape (num_variates, context_length) along with optional\npast-only and past-and-future covariates: import numpy as np from timesfm3 import TimesFM3Evaluator , ModelConfig # Initialize TimesFM 3.",
+      "stars_today": 272,
+      "language": "Python"
+    },
+    {
+      "title": "yyjeqhc/webcodex",
+      "slug": "yyjeqhc-webcodex",
+      "url": "https://github.com/yyjeqhc/webcodex",
+      "abstract": "WebCodex English | 簡體中文 WebCodex lets ChatGPT, Claude, and other AI agents work directly with code and developer tools on your own machines. Ask your assistant to inspect a repository, modify code, run tests, use Git, or investigate a failure. Your repository stays on the machine where it already lives; you do not need to move the project into a hosted workspace just to use an AI coding agent. Start using WebCodex Everyday development: full WebCodex (recommended) If you want ChatGPT to keep using your real development environment, start with a regular Server + Runner . This is the full development experience: durable access to multiple projects plus project exploration, editing, Git, commands, tests, long-running work, and code navigation. Public HTTPS, Cloudflare Tunnel, and OpenAI Secure MCP Tunnel are only ways for ChatGPT to reach the Server; they do not switch you into a different restricted experience. For Windows or macOS, the recommended first path is WebCodex Desktop + the official OpenAI Secure Tunnel . Follow the Desktop installation guide . For CLI, an existing Server, self-hosting, or advanced setup, use the Full Setup guide . Just trying it for a few minutes: temporary share To quickly see whether WebCodex fits your workflow, run this inside one repository: cd /path/to/your/repository\nnpx --yes @yyjeqhc/webcodex share share starts a temporary, single-project instance of the ordinary WebCodex Adaptive Runtime and prints the ChatGPT connection values. Its temporary Project Credential limits access to that ProjectGrant; the endpoint and credential stop working when the command exits. It is intended for trials and short-lived sharing, not as the default full daily setup. See the Quick Trial for the exact steps. What can it do? Understand and edit code — read, search, inspect, and make guarded changes inside configured projects. Use the real toolchain — run commands, tests, formatters, compilers, and project-specific tooling on the machine that owns the repository. Work with Git — inspect status and diffs while keeping repository operations visible and reviewable. Handle long-running work — keep jobs observable instead of requiring one model turn to stay open indefinitely. Support human review — use the Runtime Console , Workflow Session evidence, Jobs, and Git/diff review without a separate task/result acceptance subsystem. Why WebCodex? Your code stays on your machine. The repository does not need to be copied into the chat service. The agent gets a real development environment. It can use the same files, Git checkout, compilers, tests, and tools you already use. Work survives beyond a single request. Long-running execution and evidence remain observable through WebCodex. Start temporary or run it long-term. Use one-command sharing for a quick session, or connect machines to a self-hosted Server for a durable setup. How it works AI client\n   |\n   | MCP / HTTPS\n   v\nWebCodex\n   |\n   v\nyour machine\n   |\n   +-- repository\n   +-- Git\n   +-- compilers / tests / developer tools For the internal Server/Runner architecture, protocol surfaces, and authority boundaries, see Architecture , MCP , and Authentication . Star History Platforms Linux x64/arm64 — local share , Server, and Runner workflows. macOS x64/arm64 — Desktop local Server + Runner, OpenAI Secure Tunnel, local share , and standalone Runner workflows. Windows x64 — Desktop local Server + Runner with the official OpenAI Secure Tunnel, plus CLI + Runner, local foreground Server, and explicit webcodex share --tunnel cloudflare|openai|none . Windows arm64 — CLI + Runner, local foreground Server, and share ; managed OpenAI tunnel-client is supported. The pinned Cloudflare release has no official Windows ARM64 artifact, so Cloudflare requires a trusted explicit/PATH cloudflared . The Desktop installer is currently Windows x64 only. WebCodex-managed Windows Server services remain unsupported outside Desktop's owned foreground runtime. Windows and long-lived deployments are covered in Deployment and MCP . Existing Servers and advanced setup If someone already provides the WebCodex Server and connection credential, use that existing Server and follow the Full Setup guide . For a normal Windows/macOS personal installation, use the Desktop guide . Use Deployment only for production hosting, multiple users, systemd/Docker, OAuth, proxies, and private CAs. Those are follow-up operating concerns, not concepts a first-time user should have to learn before WebCodex works. Documentation Desktop installation — recommended Windows/macOS path: Desktop + official OpenAI Secure Tunnel Using Desktop — projects, connections, activity, and background operation Full Setup — CLI, existing Server, Linux, and advanced regular Server + Runner setup Quick Trial — temporarily try one repository with share MCP — ChatGPT, Claude, authentication choices, and MCP reference Deployment — production, self-hosting, and advanced operations Troubleshooting — connection and runtime problems CLI — command and credential reference AI-assisted setup — have an AI agent help configure WebCodex Security — security model and operational guidance Documentation index — all user and contributor documentation Security WebCodex can read and modify files and execute commands inside configured project boundaries. Use version control, keep credentials out of prompts/logs/Git, and register only project roots the assistant should access. Read SECURITY.md for the complete model. Build from source cargo build --release --workspace --bins export PATH= \" $PWD /target/release: $PATH \" Contributing Contributions are welcome, including contributions created with WebCodex itself or other coding agents. For bug reports, development workflow, and pull request guidance, see CONTRIBUTING.md . Acknowledgements Thanks to the LINUX DO community for its welcoming space for technical discussion and support for open-source sharing. License Licensed under the Apache License, Version 2.0. See LICENSE .",
+      "stars_today": 130,
+      "language": "Rust"
+    },
+    {
+      "title": "LLMQuant/quant-mind",
+      "slug": "llmquant-quant-mind",
+      "url": "https://github.com/LLMQuant/quant-mind",
+      "abstract": "Transform Financial Knowledge into Actionable Intelligence Knowledge Engineering • The Vision • Quick Start • Evaluation • In Production • Roadmap • Contributing QuantMind is an information processor for quantitative finance: it refines raw financial information — papers, news, filings — into structured financial knowledge that downstream retrieval and reasoning can trust. Every piece of knowledge is typed, keeps its citation, and knows its timestamp, so it persists and time-queries standalone. The people who build these refinement flows are increasingly agents — coding agents, with humans behind them. So the repository is designed agent-oriented: you open the checkout, describe the pipeline you want, and an agent builds it here against the repo's contracts, skills, and deterministic verification. It is also a perfectly good importable Python library. 📰 News 🗞️ News 📝 Description 🛠️ 2026-07 Rebuilding the repo agent-native — contexts, skills, hooks — so a coding agent can do QuantMind-quality work inside the checkout. 🎉 Accepted at NeurIPS 2025 Workshop Our paper Quant-Mind has been accepted to the NeurIPS 2025 GenAI in Finance Workshop !🚀 📢 First Release on GitHub Quant-Mind is now live on GitHub — please check it out and join us! 🤗 🧩 Knowledge Engineering Any source → typed knowledge. The target surface — shipping today: PaperFlow · collect_news ; see Roadmap. Deterministic preprocess — fetch / parse / format + clean produce source-faithful values with no model in the loop, so provenance is exact and replayable. Config-driven operations — PaperFlow(cfg).build(input) binds an immutable build config once and applies it per input; collect_news collects a replayable source window; batch_run fans any operation across a list of inputs. You never write asyncio.gather boilerplate. Typed knowledge shapes — a Paper structure tree for whole documents, and flat cards for News / Earnings / Factor / Thesis . Every artifact is self-contained: it carries its own text, an as_of timestamp, and a light source ref, so it persists and time-queries standalone. Retrieval over that knowledge — rag/ (chunking + BM25 / similarity), library/ (local persistence + meaning-based search), and mind/ (agentic, reasoning-based retrieval). Together they serve RAG and Agentic RAG, deep research, and data-MCP serving. This is the substance shipped as the NeurIPS 2025 GenAI-in-Finance workshop paper ( arXiv:2509.21507 ). The always-current statement lives in contexts/design/positioning.md . 🧠 The Vision Harness engineering — any agent → domain specialist. Don't import it. Open it. The repository itself is the product surface — we call this harness engineering . Its AGENTS.md / CLAUDE.md contracts, progressive-disclosure contexts/ , portable skills, and Claude + Codex hooks, all gated by a deterministic verify, upgrade a general coding agent into one that reliably does QuantMind-quality work. The bet: a weak model in a good harness beats a strong model running bare. Repo-level contracts — AGENTS.md / CLAUDE.md state the always-on rules once, in one source, for every agent that opens the repo. Progressive-disclosure contexts/ — agent-facing pages with a Quick Summary / Contents preview, so an agent loads only the one page a task needs. Portable skills — quantmind-dev ships today (contributor setup / commit / PR / component workflow), mirrored for Claude and Codex. Claude + Codex hooks — shared hook scripts give both agents identical hard guarantees without maintaining two copies of a rule. Deterministic verify — scripts/verify.sh runs lint + types + import boundaries + tests, fast-failing in a fixed order; CI runs the exact same script. See contexts/dev/harness-engineering.md for the enforcement mechanics. 🚀 Quick Start The agent path (recommended) QuantMind is meant to be opened, not imported. Point a coding agent at the checkout and describe the pipeline you want: git clone https://github.com/LLMQuant/quant-mind.git cd quant-mind && claude # or: codex Then, in the agent session: \"Build me a source-first paper artifact for arXiv 1706.03762, then persist it and search the summary.\" The agent reads the repo's contracts ( AGENTS.md ), loads the relevant contexts/ pages, writes the pipeline, and runs scripts/verify.sh before it hands the change back. The library path QuantMind is still a normal Python package. We use uv for package management. uv venv && source .venv/bin/activate\nuv pip install -e . PaperFlow refines one arXiv PDF into a self-contained paper artifact. The cfg type selects the knowledge shape ( PaperStructureCfg → PaperStructureTree , PaperSemanticCfg → PaperSemanticResult ). Bind a PaperStructureCfg to build a source-native structure tree — a hierarchy of page-cited nodes: import asyncio from quantmind . configs import PaperStructureCfg from quantmind . configs . paper import ArxivIdentifier from quantmind . flows import PaperFlow async def main () -> None : flow = PaperFlow ( PaperStructureCfg ( model = \"gpt-5.6-luna\" )) tree = await flow . build ( ArxivIdentifier ( id = \"1706.03762v7\" )) print ( tree . id , len ( tree . nodes )) asyncio . run ( main ()) Prefer the semantic shape — a page-aware chunk set plus one cited global summary you can embed and retrieve over? Bind a PaperSemanticCfg instead — same class, different cfg: import asyncio from quantmind . configs import PaperSemanticCfg from quantmind . configs . paper import ArxivIdentifier from quantmind . flows import PaperFlow async def main () -> None : flow = PaperFlow ( PaperSemanticCfg ( model = \"gpt-5.6-luna\" , chunk_size = 512 )) result = await flow . build ( ArxivIdentifier ( id = \"1706.03762v7\" )) print ( result . global_summary . summary ) print ( result . source_revision . id , result . chunk_set . id ) asyncio . run ( main ()) Fan out a batch with batch_run import asyncio from datetime import datetime , timedelta , timezone from quantmind . configs import NewsCollectionCfg , NewsWindow from quantmind . flows import batch_run , collect_news async def main () -> None : end = datetime . now ( timezone . utc ) windows = [ NewsWindow ( source = \"pr-newswire\" , start = end - timedelta ( days = day + 1 ), end = end - timedelta ( days = day ),\n        ) for day in range ( 3 )\n    ] result = await batch_run ( collect_news , windows , cfg = NewsCollectionCfg ( retain_raw_html = False ), concurrency = 3 , on_error = \"skip\" , on_progress = lambda done , total : print ( f\" { done } / { total } \" ),\n    ) print ( f\"ok= { result . success_count } failed= { result . failure_count } \" ) asyncio . run ( main ()) Resolve free-form intent with magic import asyncio from quantmind . flows import collect_news from quantmind . magic import resolve_magic_input async def main () -> None : inp , cfg = await resolve_magic_input ( \"Collect the last day of PR Newswire company news.\" , target_flow = collect_news ,\n    ) batch = await collect_news ( inp , cfg = cfg ) print ( f\"documents= { batch . success_count } complete= { batch . complete } \" ) asyncio . run ( main ()) More examples live under examples/ ; design contracts live under contexts/design/ . 🔬 Evaluation (In Design) Note Evaluation is in the design phase — no results are claimed yet. Our framing follows Anthropic's Demystifying evals for AI agents . quantmind-bench measures the harness bet directly. Following the SWE-bench model, it runs paired trials on the same model and the same task set : once against a bare checkout, once against the QuantMind repo mounted with its contracts, contexts, skills, and hooks. The reported deltas are cost-to-green, pass@1, pass^k across seeds, and wall-clock — how much a good harness moves a fixed model. Run instrumentation (tokens / cost / duration / a verify oracle) already ships; the protocol that consumes it is being designed, and no numbers are published. A separate llmquant-data-bench will score knowledge quality (correctness, citation precision/recall, point-in-time correctness); it is likewise in design.",
+      "stars_today": 94,
+      "language": "Python"
+    },
+    {
+      "title": "vercel-labs/agent-browser",
+      "slug": "vercel-labs-agent-browser",
+      "url": "https://github.com/vercel-labs/agent-browser",
+      "abstract": "agent-browser Browser automation CLI for AI agents. Fast native Rust CLI. Installation Global Installation (recommended) Installs the native Rust binary: npm install -g agent-browser\nagent-browser install # Download Chrome from Chrome for Testing (first time only) Project Installation (local dependency) For projects that want to pin the version in package.json : npm install agent-browser\nagent-browser install Then use via package.json scripts or by invoking agent-browser directly. Homebrew (macOS) brew install agent-browser\nagent-browser install # Download Chrome from Chrome for Testing (first time only) Cargo (Rust) cargo install agent-browser\nagent-browser install # Download Chrome from Chrome for Testing (first time only) From Source Requires Node.js 24+, pnpm 11+, and Rust. git clone https://github.com/vercel-labs/agent-browser cd agent-browser\npnpm install\npnpm build\npnpm build:native # Requires Rust (https://rustup.rs) pnpm link --global # Makes agent-browser available globally agent-browser install Linux Dependencies On Linux, install system dependencies: agent-browser install --with-deps This exits nonzero if the package manager cannot install every required browser library. Updating Upgrade to the latest version: agent-browser upgrade Detects your installation method (npm, Homebrew, or Cargo) and runs the appropriate update command automatically. Requirements Chrome - Run agent-browser install to download Chrome from Chrome for Testing (Google's official automation channel). Existing Chrome, Brave, Playwright, and Puppeteer installations are detected automatically. No Playwright or Node.js required for the daemon. Node.js 24+ and pnpm 11+ - Only needed when building from source. Rust - Only needed when building from source (see From Source above). Quick Start agent-browser open example.com\nagent-browser snapshot # Get accessibility tree with refs agent-browser click @e2 # Click by ref from snapshot agent-browser fill @e3 \" test@example.com \" # Fill by ref agent-browser get text @e1 # Get text by ref agent-browser screenshot page.png\nagent-browser close Clicks fail early when another element covers the target's click point, for example a consent banner or modal. Dismiss or interact with the reported covering element, then take a fresh snapshot before retrying the original ref. Headless Chromium screenshots hide native scrollbars for consistent image output. Pass --hide-scrollbars false when launching to keep native scrollbars visible. Traditional Selectors (also supported) agent-browser click \" #submit \" agent-browser fill \" #email \" \" test@example.com \" agent-browser find role button click --name \" Submit \" Commands Core Commands agent-browser open # Launch browser (no navigation); stays on about:blank agent-browser open < url > # Launch + navigate to URL (aliases: goto, navigate) agent-browser read [url] # Fetch agent-readable text, or read rendered active-tab DOM agent-browser click < sel > # Click element (--new-tab to open in new tab) agent-browser dblclick < sel > # Double-click element agent-browser focus < sel > # Focus element agent-browser type < sel > < text > # Type into element agent-browser fill < sel > < text > # Clear and fill agent-browser press < key > # Press key (Enter, Tab, Control+a) (alias: key) agent-browser keyboard type < text > # Type with real keystrokes (no selector, current focus) agent-browser keyboard inserttext < text > # Insert text without key events (no selector) agent-browser keydown < key > # Hold key down agent-browser keyup < key > # Release key agent-browser hover < sel > # Hover element agent-browser select <sel> < val > # Select dropdown by value or visible label agent-browser check < sel > # Check checkbox agent-browser uncheck < sel > # Uncheck checkbox agent-browser scroll < dir > [px] # Scroll (up/down/left/right, --selector <sel>) agent-browser scrollintoview < sel > # Scroll element into view (alias: scrollinto) agent-browser drag < src > < tgt > # Drag and drop agent-browser upload < sel > < files > # Upload files agent-browser screenshot [path] # Take screenshot (--full for full page, saves to a temporary directory if no path) agent-browser screenshot --annotate # Annotated screenshot with numbered element labels agent-browser screenshot --if-changed # Recommended: skip unchanged images to save tokens agent-browser screenshot --threshold 0.01 # Ignore changes affecting at most 1% of pixels agent-browser screenshot --screenshot-dir ./shots # Save to custom directory agent-browser screenshot --screenshot-format jpeg --screenshot-quality 80\nagent-browser pdf < path > # Save as PDF agent-browser snapshot # Accessibility tree with refs (best for AI) agent-browser eval < js > # Run JavaScript (-b for base64, --stdin for piped input) agent-browser connect < port > # Connect to browser via CDP agent-browser stream enable [--port < port > ] # Start runtime WebSocket streaming agent-browser webmcp list # List experimental page tools agent-browser webmcp invoke < tool > --params @input.json\nagent-browser stream status # Show runtime streaming state and bound port agent-browser stream disable # Stop runtime WebSocket streaming agent-browser close # Close browser (aliases: quit, exit) agent-browser close --all # Close all active sessions agent-browser chat \" <instruction> \" # AI chat: natural language browser control (single-shot) agent-browser chat # AI chat: interactive REPL mode WebMCP (experimental) WebMCP is enabled by default in agent-browser-managed Chrome. Use --no-webmcp to disable the launch features and proactive context. Browser responses automatically announce WebMCP tools on first discovery and when the catalog changes. Summaries contain only names, brief descriptions, origins, and frame IDs. Choose a relevant tool, then fetch its full schema with agent-browser webmcp list <tool> --frame <frame-id> --json before invoking it. Schemas and annotations are never included proactively. Unchanged catalogs and pages without tools add no context. JSON exposes updates as data.webmcp ; CLI and MCP text use the same summaries. An omitted field means no update. A one-time status: \"ready\" update with tools: [] clears previously advertised tools; status: \"unavailable\" invalidates them when observation fails. Every emitted summary replaces earlier availability, including schema-only changes. After conversation compaction or joining an existing browser session, use webmcp list to recover context. Administrative commands and explicit metadata requests do not append duplicate summaries. Automatic summaries are limited to 16 tools and 4 KiB of JSON, with descriptions shortened to 160 bytes plus a truncation marker. Names and frame identities are never cut into unusable identifiers; oversized records are omitted. truncated: true indicates shortened descriptions or omitted tools. webmcp list --json retrieves the full catalog; webmcp list <tool> --frame <frame-id> --json retrieves only the selected tool. Full-record changes trigger an update even when the brief description stays the same, so refresh previously fetched schemas after a catalog update. The daemon subscribes to CDP WebMCP events once per page session and reads its event cache after browser actions. There is no per-action discovery polling or registration grace period. Initial subscription is bounded to one second; unsupported sessions are not repeatedly probed. Explicit webmcp list can retry discovery. Asynchronous registrations appear on the next normal browser response after the event arrives. This describes agent-browser's active tab and frames, not a separately opened preview iframe. agent-browser open https://example.com # Brief tool summary, if available agent-browser webmcp list search --json # Fetch only the selected tool schema agent-browser webmcp invoke search --params ' {\"query\":\"browser agents\"} ' agent-browser webmcp invoke slow_tool --params @input.",
+      "stars_today": 88,
+      "language": "Rust"
+    },
+    {
+      "title": "CodebuffAI/freebuff",
+      "slug": "codebuffai-freebuff",
+      "url": "https://github.com/CodebuffAI/freebuff",
+      "abstract": "Freebuff English | 簡體中文 Five free AI products for coding, building, and research. No subscription, credits, or API key required. Freebuff brings specialized agents and a choice of leading models to your terminal, desktop, browser, and GitHub repositories. Text ads support access to the included models. Choose your Freebuff Product What it does Get started Freebuff Desktop Run parallel agents locally Download for macOS, Windows, or Linux Freebuff CLI Code from your terminal Install the CLI Freebuff Web Build and ship full-stack apps Build an app Freebuff Cloud Run agents on any GitHub repository Connect a repository Freebuff Chat Research and think with AI Start a chat Quick start Run Freebuff in any project from your terminal: npm install -g freebuff cd ~ /my-project\nfreebuff Then describe what you want. Freebuff finds the relevant files, makes changes, and runs the checks that matter for your project. Models Freebuff includes a curated model catalog. The regular picker currently offers: Model Access Best for GLM 5.3 Flash Full and limited access The default everywhere; deepest reasoning, unmetered DeepSeek V4.1 Flash Full and limited access Fast coding and tool use, unmetered GPT-5.6 Luna Full access Strong all-around with native images MiMo 2.5 Full and limited access Balanced performance with image support Solar Pro 4 Full and limited access Limited-time trial; 524K context, text only; unmetered at full access Muse Spark 1.2 Full access Meta's agentic coding model; 1M context. Rate limited and shared by every user, so it queues when busy and answers on DeepSeek V4 Flash rather than making you wait Most models draw on your normal daily sessions rather than a separate limit. GLM 5.3 Flash, DeepSeek V4.1 Flash, MiMo 2.5 and Solar Pro 4 are unmetered at full access and cost no session at all. Models may still serve from a quantized (Q8_0) build. DeepSeek V4 Pro was retired from the catalog; GLM 5.3 Flash replaces it as the deep-reasoning pick. Beyond the regular picker: Referrals and bounties earn extra sessions on top of the free daily allowance. Gemini 3.1 Flash Lite powers specialist tasks such as file finding and research rather than appearing in the main picker. Availability and limits depend on your access tier, product, and current capacity. Freebuff Desktop can also run locally installed Claude Code and Codex agents using your existing provider account; those connected models are separate from Freebuff's included catalog. How Freebuff works Freebuff uses specialized agents instead of sending every task through one model and one prompt. Depending on the task, agents gather context, plan, edit or research, run tools, and review the result. Codebase context — File-finding agents map the relevant parts of a project before editing. Implementation and review — Agents can divide work, make changes, run commands, and inspect the result. Research and browser use — Agents can investigate documentation and test applications in a real browser. Parallel local work — Desktop isolates concurrent agents in separate workspaces. Hosted environments — Web and Cloud provide sandboxes, previews, terminals, and deployment workflows. Free access Freebuff is available in every country. Supported regions receive full access; other regions and VPN users receive limited access to GLM 5.3 Flash, DeepSeek V4.1 Flash, MiMo 2.5, and Solar Pro 4. Accounts on Freebucks use the displayed model price and balance. On the legacy session system, limited access includes six one-hour sessions per day, earnable up to seven; GLM uses earned reward sessions instead. Text ads support the included models. Freebuff shows the applicable session limits and any model-specific data-use notice before you start. Is my data used to train AI? Only when a model or feature says data may be used for AI training. Freebuff or the provider may then keep submissions to develop, train, test, evaluate, fine-tune, and improve AI models or products. How is my data used and stored? We use prompts, messages, agent traces, code, files, and repository data to provide Freebuff. We may analyze prompts and messages to personalize ads. We do not give separately uploaded files or connected repositories to advertising providers. Restricted partners may evaluate connected Cloud repositories or code used with models labeled “May use data for AI training,” but cannot otherwise use, broadly share, or train on it. See the Privacy Policy for retention, eligibility, and advertising choices. See the Privacy Policy for complete details. Contributing Freebuff is a TypeScript monorepo built with Bun. Contributions to the products, agents, tools, documentation, and underlying runtime are welcome. Local development requires Docker and a configured .env.local ; see the Contributing Guide before starting the services. git clone https://github.com/CodebuffAI/freebuff.git cd freebuff\nbun install\nbun up Start the CLI separately with: bun start-cli See the Contributing Guide , development guide , and testing guide for environment setup and the checks to run before opening a pull request. Built on Codebuff Freebuff is built on Codebuff , the open multi-agent framework that powers its orchestration, tools, and SDK. To create custom agents or embed them in another application, see the Codebuff documentation and @codebuff/sdk . Links Website GitHub Discord Privacy Policy License",
+      "stars_today": 76,
+      "language": "TypeScript"
+    },
+    {
+      "title": "strands-agents/harness-sdk",
+      "slug": "strands-agents-harness-sdk",
+      "url": "https://github.com/strands-agents/harness-sdk",
+      "abstract": "Strands Agents A model-driven approach to building AI agents in just a few lines of code. Documentation ◆ Samples ◆ Tools ◆ MCP Server Strands Agents is an open-source SDK for building and running AI agents in Python and TypeScript. Choose Strands when you would otherwise write your own agent loop: it runs in your process with no hosted control plane, and it covers the jobs a hand-rolled loop grows into. In one SDK you get lifecycle controls (turn limits, token budgets, cancellation, stop reasons), tools and structured output , MCP , multi-agent patterns , memory and sessions , model portability , streaming , guardrails , tracing , and evals . This monorepo contains the Python SDK, TypeScript SDK, documentation site, and supporting packages: Directory Description strands-py/ Python SDK: agent loop, model providers, tools ( PyPI · releases ) strands-ts/ TypeScript SDK: agent loop, model providers, tools ( npm · releases ) site/ Source for the strandsagents.com documentation site (Astro/Starlight) team/ Governance and cross-SDK process docs (tenets, decisions, PR & compatibility guidelines, and designs/ proposals) Why Strands Build an agent harness. Control it end-to-end. Build your way. Any model, any cloud. Context management, execution limits, and observability built in before you write a line of config. Swap backends when you scale; your code stays the same. Model agnostic. First-class support for Amazon Bedrock, Anthropic, OpenAI, and Gemini, plus many more providers and custom ones. Stay in control. The agent loop traces every decision by default. Hooks let you intercept any step to log it, validate it, or redirect it. Deliver outcomes that work. Guardrails catch mistakes before they run. Steering handlers let agents correct themselves instead of failing silently. MCP, streaming, multi-agent patterns, and structured output are all built in. Quick Start Both SDKs default to the Amazon Bedrock model provider, so you'll need AWS credentials configured and model access enabled for Claude Sonnet. The Quickstart Guide covers configuring other providers (Anthropic, OpenAI, Gemini, Ollama, and more). Python Requires Python 3.10+: pip install strands-agents strands-agents-tools from strands import Agent from strands_tools import calculator agent = Agent ( tools = [ calculator ]) agent ( \"What is the square root of 1764\" ) The Python SDK README covers tools, model providers, MCP, and bidirectional streaming. TypeScript Requires Node.js 22+: npm install @strands-agents/sdk import { Agent } from '@strands-agents/sdk' const agent = new Agent ( ) const result = await agent . invoke ( 'What is the square root of 1764?' ) console . log ( result ) More in the TypeScript SDK README , including Zod-typed tools, structured output, and multi-agent patterns. Documentation For detailed guidance & examples, explore our documentation: User Guide Quick Start Guide Agent Loop Examples API Reference: Python · TypeScript Production & Deployment Guide The docs themselves live in this monorepo under site/ , and doc PRs are welcome alongside code changes. Development Git operations (commits, branches, PRs) are done from the repo root. Each package has its own toolchain: Python SDK ( strands-py/ ): cd strands-py\npip install hatch\nhatch test # run unit tests hatch fmt # format & lint TypeScript SDK ( strands-ts/ ): npm ci # install from repo root npm run build # build npm test # run unit tests Documentation site ( site/ ): cd site\nnpm install\nnpm run dev # local dev server at http://localhost:4321/ Contributing ❤️ We welcome contributions! See our Contributing Guide for details on: Reporting bugs & features Development setup Contributing via Pull Requests Code of Conduct Reporting of security issues Stay in touch with the team Come meet the Strands team and other users on Discord License This project is licensed under the Apache License 2.0 - see the LICENSE.APACHE file for details. Security See CONTRIBUTING for more information.",
+      "stars_today": 46,
+      "language": "Python"
+    },
+    {
+      "title": "bmad-code-org/BMAD-METHOD",
+      "slug": "bmad-code-org-bmad-method",
+      "url": "https://github.com/bmad-code-org/BMAD-METHOD",
+      "abstract": "Agile Ai Driven Development — turn an idea or change request into working software without giving up the thinking. Ai Driven Development (AiDD) covers the whole effort, not only the code: what to build, how it holds together, and how it changes as you learn. BMad Method is the agile way to do it — decisions stay explicit, context carries forward, and the process sizes itself to the work. Small changes go straight to build. Complex work gets the depth it needs. The same method covers a weekend prototype and a system with years of history behind it. Start anywhere. Use BMad end to end, or carry its briefs, specifications, and architecture into your existing delivery workflow. Start Building Choose one install route. You need an AI coding tool that supports skills and uv for BMad setup and Python scripts. Skills CLI — with Node.js and npm and Git, run in your project: npx skills add bmad-code-org/BMAD-METHOD Select the skills and coding tool you want; include bmad for setup and help. Claude Code plugin — add the marketplace inside Claude Code: /plugin marketplace add bmad-code-org/bmad-plugins Codex plugin — add the marketplace from your terminal: codex plugin marketplace add bmad-code-org/bmad-plugins For either marketplace, install bmad-method for the delivery workflows and bmad-toolbox for standalone skills, including the bmad hub. Open your coding tool in the project and ask the bmad skill to run bmad setup . Then invoke bmad-build with what you want to change. Ask bmad whenever you want guidance on what comes next or what is optional. Build your first project with BMad → Add BMad to an existing codebase → BMad is free and open source, with no paywalled workflows or gated community.\nUse bmad update to check versions; install updates with npx skills update or your plugin marketplace. After updating, ask for bmad doctor to repair\nthe project's existing runtime. Why BMad? Coding assistants are effective at implementation, but they often turn unstated assumptions into code. BMad keeps you in control while its agents and workflows make the important decisions explicit and preserve them as context for the work that follows. Right-sized process — Go directly to implementation for clear changes or add deeper planning for larger initiatives. New or existing code — Start from nothing, or establish verified context on a codebase you inherited and work from what is actually there. Durable context — Carry product and technical decisions forward instead of re-explaining them in every chat. Specialized perspectives — Bring in product, architecture, UX, development, and testing expertise when it helps. Guided collaboration — Use structured workflows and multiple-agent discussions without handing over judgment. One delivery path — Move from early thinking through reviewed implementation, correction, and learning. See how much planning a change needs → BMad Ecosystem Install the core method or add official modules for specialized work. Module Purpose BMad Method Plan and deliver software, from new prototypes to established codebases BMad Builder Skill, workflow, and agent builder BMad Creative Intelligence Suite Creative thinking partners for innovation, design thinking, and storytelling BMad Test Architect Enterprise testing add-on for BMad Method BMad Loop Builds, verifies, and retros a whole epic unattended BMad Game Dev Studio Ideate, design, and build games in any framework, including Unity, Unreal, Godot, and Phaser Plan on the Web Web bundles package selected BMad workflows as Google Gemini Gems and ChatGPT Custom GPTs. Use them for planning in your existing web subscription, then bring the resulting artifacts into your AI coding tool for implementation. Documentation Build Your First Change — Install BMad and build a small project. Choose a Planning Path — Pick how much planning a change needs and see what each planning skill produces. Start in an Existing Codebase — Add BMad to an existing codebase. Community Discord — Get help, share ideas, and collaborate. YouTube — Watch tutorials and master classes. GitHub Issues — Report bugs and request features. GitHub Discussions — Join longer community conversations. BMad Code — Explore the wider ecosystem. Support and Contributing BMad is free for everyone and always will be. Star the repository, buy me a coffee , or email contact@bmadcode.com for corporate sponsorship. Contributions are welcome. Read CONTRIBUTING.md before opening a pull request. License MIT License — see LICENSE for details. BMad and BMAD-METHOD are trademarks of BMad Code, LLC. See TRADEMARK.md for details. If you would like to contribute, join us in the discord and read CONTRIBUTORS.md first.",
+      "stars_today": 42,
+      "language": "Python"
+    },
+    {
+      "title": "fosrl/pangolin",
+      "slug": "fosrl-pangolin",
+      "url": "https://github.com/fosrl/pangolin",
+      "abstract": "Website | Documentation | Contact Us Get started with Pangolin Cloud at app.pangolin.net Pangolin is an open-source SASE platform, built on WireGuard®, with a simple mission: connect and protect your users, wherever they are. It brings networking and security together as one system including a zero-trust VPN, zero-trust reverse proxy, privileged access management, and an identity-aware AI gateway, all sharing one identity and policy model. It's the same idea behind platforms like Cloudflare One, Zscaler, and Prisma but open, self-hostable, and built to stay light and easy to deploy. Networking and security that's unified, open, and simple Legacy SASE platforms got the idea right: connectivity and security belong together. But they delivered it as a heavyweight, closed, cloud-locked stack assembled from years of patchwork. Pangolin exists to do that unification differently, in the open, self-hostable, and simple enough that administrators actually enjoy running it. Open source, not a black box : the code is open and auditable, so you can see exactly how your traffic is handled and how access decisions get made, instead of trusting a closed cloud control plane. Networking and security as one platform : sites, reverse proxy, client access, RBAC, and the AI gateway share one identity and policy model, so protecting users and connecting them are executed together. Lightweight by design : the whole platform is built to stay small and fast: easy to self-host on a small server, with a lightweight, user-space connector that goes in your private networks. Enjoyable to use : a clean, modern interface and a setup flow that gets out of your way, so managing access feels simple instead of like fighting a legacy admin console. Zero trust from day one : access is granted per resource, not per network, with identity provider integration, role-based access control, and full audit logging. Run it your way : self-host the Community Edition for free, step up to the Enterprise Edition for advanced features, or use Pangolin Cloud if you'd rather not manage infrastructure at all. Installation Get started for free with Pangolin Cloud . Or, check out the quick install guide for how to self-host Pangolin. Install from the DigitalOcean marketplace for a one-click pre-configured installer. Deployment Options Pangolin Cloud - Fully managed service with no infrastructure required. Self-Host: Community Edition - Free, open-source, and licensed under AGPL-3. Self-Host: Enterprise Edition - Open-core, and licensed under Fossorial Commercial License. Free for personal and hobbyist use, and for businesses making less than $100K USD gross annual revenue. Key Features Connect remote networks with sites and NAT traversal Pangolin's site connectors provide gateways into networks so you can access any networked resources. Sites use outbound tunnels and intelligent NAT traversal to make networks behind restrictive firewalls available for authorized access without public IPs or open ports. Easily deploy a site as a binary or container on any platform. Lightweight user-space connector runs anywhere Punches through any firewall Doesn't require open ports or a public IP Strict network segmentation WireGuard-based Get alerts when a device or network resource goes down Browser-based reverse proxy access Expose HTTPS web applications and connect to VNC, RDP, and SSH entirely in the browser through identity and context-aware tunneled reverse proxies. Users access resources with authentication and granular access control without installing a client. Pangolin handles routing, load balancing, health checking, and automatic SSL certificates without exposing your network directly to the internet. Expose a web panel anywhere Access via any web browser Single sign-on across all resources HTTPS resources Remote desktop in the browser with VNC and RDP In-browser SSH terminal with privileged access management (PAM) PIN codes, passcodes, email OTP, geoblocking, allow-lists, and more Client-based private resource access Access private resources like SSH servers, databases, RDP, and entire network ranges through Pangolin clients. Intelligent NAT traversal enables connections even through restrictive firewalls, while DNS aliases provide friendly names and fast connections to resources across all your sites. Add redundancy by routing traffic through multiple connectors in your network. Peer-to-peer with intelligent NAT traversal Hosts/IPs and port ranges Network ranges/CIDRs Friendly DNS aliases for network addresses Privileged access management (PAM) with SSH resources Private HTTPS resources only accessible on the private network Identity-aware AI gateway Put an identity-aware proxy in front of public cloud (OpenAI, Anthropic, Gemini, etc.) and self-hosted model servers (Ollama, vLLM, Mistral, etc.) so coding agents and AI clients call a single Pangolin URL. Publish it as a public resource with personal API keys, or keep it private on a client tunnel where the connected client is the credential for keyless access. Budgets, session history, and usage analytics sit in front of every call. Access self-hosted models (vLLM, Ollama, etc) alongside cloud models (OpenAI, Anthropic, etc) in one place Keyless access by authenticating users with the Pangolin desktop client Or, provide users with personal API keys Control costs and token usage by setting budgets Audit with detailed session history and analytics Integrate AI clients and coding agents (Claude Code, Codex, OpenCode, etc) Give users and roles access to resources Use Pangolin's built-in users or bring your own identity provider and set up role-based access control (RBAC). Grant users access to specific resources, not entire networks. Unlike traditional VPNs that expose full network access, Pangolin's zero-trust model ensures users can only reach the applications, services, and routes you explicitly define. Bring your existing identity provider (IdP) or use Pangolin identities Sync users and roles from your IdP User- and role-based access control Full network audit and access logs Find and launch resources from a personalized home page Give users a landing page to quickly find and open the resources they can access. Resources are grouped by site or label, searchable, and filterable, with grid or list views. Saved views capture filters, grouping, and layout as personal or organization-wide defaults. Single place for admins and non-admins to see accessible resources Create reusable views for common access patterns Download Clients Download the Pangolin client for your platform: Mac Windows Linux iOS Android Get Started Sign up now Create a free account at app.pangolin.net to get started with Pangolin Cloud. Check out the docs We encourage everyone to read the full documentation first, which is\navailable at docs.pangolin.net . This README provides only a very brief subset of\nthe docs to illustrate some basic ideas. Licensing Pangolin is dual licensed under the AGPL-3 and the Fossorial Commercial License . For inquiries about commercial licensing, please contact us at contact@pangolin.net . Contributions Please see CONTRIBUTING in the repository for guidelines and best practices.",
+      "stars_today": 34,
+      "language": "TypeScript"
+    }
+  ],
+  "papers": {
+    "hf": [
+      {
+        "title": "ScienceIDE: Turning World's Scientific Codebase into Agent Learnable Environments",
+        "slug": "scienceide-turning-world-s-scientific-codebase-into-agent",
+        "url": "https://huggingface.co/papers/2609.19134",
+        "abstract": "Scientific code repositories encode decades of human knowledge in executable models, methods, and tools. Yet fragmented toolchains, implicit domain conventions, and specialized correctness criteria make this knowledge difficult to convert into reliable learning experience-a challenge we call the scientific experience bottleneck. We introduce ScienceIDE, infrastructure for turning the world's scientific code into programmable environments for scientific agents. Guided by expert-defined scientific cases and acceptance criteria, agents transform repositories into executable environments that support task generation, execution, and scientific verification. These environments provide a shared foundation for supervised fine-tuning, reinforcement learning, and evaluation. Using verified interaction trajectories, we train PhAI-IDE-72B, PhAI-IDE-9B, and PhAI-IDE-4B. The model family shows gains in held-out scientific-code repair and across selected general-purpose benchmarks in code, reasoning, and knowledge, providing evidence of positive transfer from scientific experience to broader capabilities. ScienceIDE lays the foundation for an integrated workspace for agent learning and scientific practice, making humanity's scientific software a shared substrate for developing scientific intelligence. Code: https://github.com/aitofound/ScienceIDE",
+        "upvotes": 69,
+        "arxiv_id": "2609.19134",
+        "authors": []
+      },
+      {
+        "title": "Rethinking Critic Learning in PPO: Understanding and Mitigating Value Flattening",
+        "slug": "rethinking-critic-learning-in-ppo-understanding-and",
+        "url": "https://huggingface.co/papers/2609.18708",
+        "abstract": "In reinforcement learning for large language models, Proximal Policy Optimization (PPO) commonly uses a critic to estimate state values and reduce the variance of policy updates. However, we uncover a systematic failure mode in PPO critics, which we call Value Flattening: state values, estimated from multiple Monte Carlo continuations, change sharply across intermediate states while critic predictions remain comparatively flat. We further observe this phenomenon in a controlled FrozenLake environment and find that it becomes more pronounced as the state space grows. Our theoretical and empirical analyses relate Value Flattening to an implicit variance penalty in the critic loss and redundant updates from temporally correlated states with similar gradients. Motivated by these findings, we introduce SParse Proximal Policy Optimization (SP^3O), which applies the value loss to only a few well-separated states in each response to mitigate both effects. Experiments on Qwen3-Base show that SP^3O with only three states supervised per response can mitigate Value Flattening and consistently improve the learned policy across model sizes and evaluation suites. Together, our results identify Value Flattening as an important yet overlooked failure mode of critic learning in standard PPO and show that a simple sparse supervision strategy can mitigate it.",
+        "upvotes": 60,
+        "arxiv_id": "2609.18708",
+        "authors": []
+      },
+      {
+        "title": "Confidence Comes from Experience: Experiential Confidence Estimation from Reasoning to Agents",
+        "slug": "confidence-comes-from-experience-experiential-confidence",
+        "url": "https://huggingface.co/papers/2609.17708",
+        "abstract": "Reliable confidence estimation is increasingly central to the trustworthy deployment of language models: a calibrated estimate of the probability that an output is correct decides what to ship, what to escalate, and what to retry. Existing confidence estimators, however, share one design premise: they only read the current inference process, either by introspecting on it, scoring its token probabilities, or resampling it. We argue that the current inference is not a sufficient basis for confidence. We propose XConf (eXperiential Confidence): estimating confidence together with the model's accumulated experience. The experience is stored as a record of the model's own graded past episodes, each holding the task, the model's reflection, its stated confidence, the outcome, and a lesson written once the grade arrived. Given a new task, XConf's Recall stage retrieves past episodes on similar tasks met with a similar stated confidence, and reads off their historical success rate; its Reflect stage shows the model this record, has it name its recurring failure mode, and restate a confidence now informed by its own track records. Our estimator is format-general, requiring no logit access or weight updates, and costs only one answer generation. Across nine benchmarks spanning reasoning, coding, multimodal QA, and interactive agents, and four models from three families, XConf beats or matches ten-sample self-consistency in discrimination (AUROC) on 23 of 24 comparisons, with much lower calibration error (ECE), at a tenth of the generation cost. Used for selective prediction, abstaining on the 10% least-confident episodes raises the delivered success rate by up to 8.7 points on agent tasks. We therefore see experiential confidence estimation as a new paradigm for future general-purpose confidence estimation.",
+        "upvotes": 48,
+        "arxiv_id": "2609.17708",
+        "authors": []
+      },
+      {
+        "title": "ProgramDistill: From Interactive Web Apps to Verifiable Reference-Guided SWE Tasks",
+        "slug": "programdistill-from-interactive-web-apps-to-verifiable",
+        "url": "https://huggingface.co/papers/2609.18805",
+        "abstract": "Coding agents are typically evaluated with desired behavior specified through issues or instructions. In practical web development, however, agents may need to infer behavior from working software and implement it in an incomplete application. We introduce ProgramDistill, a benchmark evaluating coding agents on features discovered through interaction with fully functional reference applications. We build ProgramDistill by factorizing applications into features of different granularities, each associated with replayable behaviors executable via its gold patch. Our pipeline, mine-craft-patch, discovers 1,975 replay-verified behaviors across 26 applications and constructs 4,063 tasks without human intervention. Across nine frontier coding agents, GPT-6 Astra and Claude Opus 5 achieve 49.2% and 28.8% success on cumulative workflows in full-application reconstruction. In partial-application reconstruction, success falls from 100% to 64.0% and from 96% to 32% as restoration depth increases from 1 to 8. ProgramDistill thus provides a scalable benchmark with controlled difficulty for evaluating and diagnosing coding agents, and a natural basis for future curriculum-based training.",
+        "upvotes": 44,
+        "arxiv_id": "2609.18805",
+        "authors": []
+      },
+      {
+        "title": "Agora: Git as Shared Memory for Collective AutoResearch",
+        "slug": "agora-git-as-shared-memory-for-collective-autoresearch",
+        "url": "https://huggingface.co/papers/2609.18094",
+        "abstract": "Autonomous research loops such as AutoResearch show that one coding agent can improve a training setup unattended. Run several of them and each session starts from scratch, so more agents tend to mean more duplicated search rather than more discovery. Agora is a shared memory for such agents: research is recorded as an append-only directed acyclic graph (DAG) stored in Git, so that every claim is a commit anyone can check out and rerun. Each result, insight, hypothesis, verification, and report is an immutable commit whose parent edges say what it builds on; a derived index exposes the frontier, the neglected branches, and the verification status of each claim, and a diversity-aware selection rule keeps the community from collapsing onto one leader. We describe the system and report its first sustained use: a run of nearly 12 days in which 13 language-model workers, with no assigned tasks and no central planner, worked on a weight-transfer problem. Given 141 pretrained donor models and a frozen 119.6M-parameter attention-SSM hybrid whose dimensions match no donor, the workers had to initialize the target without training data or gradient updates. They published 1,703 contributions and drove the evaluator from 3.39 to 1.899 bits per byte, closing 62% of the gap to a trained GPT-2 124M. The winning recipe compresses donor next-token statistics into the target's embedding and output head, then adds a short-range context signal through sparse edits to attention, feed-forward, and state-space blocks. Its 145-commit ancestry spans 15 accounts, and 165 independent reproductions were posted, none of which failed. We describe the single mid-run human intervention that pulled the community out of a monoculture, what the trace does and does not establish, and the controlled comparison that would settle whether shared research state improves discovery per unit of compute.",
+        "upvotes": 38,
+        "arxiv_id": "2609.18094",
+        "authors": []
+      },
+      {
+        "title": "ActionPiece: Rethinking Action Tokenization for Autoregressive Vision-Language-Action Models",
+        "slug": "actionpiece-rethinking-action-tokenization-for",
+        "url": "https://huggingface.co/papers/2609.18487",
+        "abstract": "Action tokenizers play a central role in autoregressive vision-language-action (VLA) models, determining both the targets for policy training and the executable commands recovered from predicted tokens. Their fidelity is commonly evaluated using pointwise reconstruction metrics such as mean squared error (MSE), yet small individual errors do not fully characterize how faithfully action adjustments across demonstrations are preserved. After compression, similar actions may still cluster around a representative motion, while the adjustments needed for different contexts are diminished, distorted, or even reversed. We introduce physical rank consistency (PRC) to measure how well tokenization preserves local physical distance rankings after reconstruction. Evaluating decoded actions provides a common reference across token vocabularies and decoder architectures, complementing pointwise accuracy with a measure of relational fidelity. We further present ActionPiece, which preserves physical action relationships through joint supervision of representation learning and quantization. Physical rank preservation supervises near-far ordering in encoder and quantized feature distances, while quantization regularization applies the same ordering to codeword assignment distributions. Both objectives augment reconstruction, producing discrete action tokens for standard autoregressive policy learning and execution through a frozen decoder. Under the same Qwen3-VL-4B policy training setup, ActionPiece achieves 94.8% on LIBERO and 68.8% on unseen LIBERO-Plus, with additional evaluations reaching 71.9% on SimplerEnv and 51.5% across VLA-Arena L0-L2. Component ablations show that the two objectives jointly improve PRC and policy success, demonstrating the value of physical relationship supervision for action tokenization.",
+        "upvotes": 36,
+        "arxiv_id": "2609.18487",
+        "authors": []
+      },
+      {
+        "title": "EvolveTrade: Experience-Driven Policy Refinement for Self-Evolving LLM Trading Agents",
+        "slug": "evolvetrade-experience-driven-policy-refinement-for-self",
+        "url": "https://huggingface.co/papers/2609.17632",
+        "abstract": "Large language model (LLM) trading agents can combine market data, news, and executable analysis, but their behavior is often controlled by static hand-written tool-use policies that are fixed before deployment. This limits their ability to adapt how they gather evidence, invoke tools, verify signals, and manage risk under changing market regimes. We introduce EvolveTrade, a self-evolving framework that treats the system prompt of a tool-using trading agent as a text-parameterized policy. After each update interval, a Policy Agent revises this policy using accumulated decision traces and realized portfolio feedback, while keeping the backbone LLM fixed. The updated policy is then used for the next batch of trading decisions, enabling the agent to refine its information-acquisition and portfolio-construction procedure over time. Experiments across multiple market regimes and two LLM backbones show that EvolveTrade often improves Sharpe Ratio and Cumulative Return over fixed-policy LLM baselines, achieving the improved SR and CR in most evaluated settings. Behavioral analyses further show that self-evolved policies increase code-mediated analysis and activate regime-relevant computations; case-level policy-to-return attributions trace how policy-induced allocation changes contribute to realized return differences. These results suggest that adapting the reusable procedure governing tool use is a key direction for building more robust LLM trading agents.",
+        "upvotes": 30,
+        "arxiv_id": "2609.17632",
+        "authors": []
+      },
+      {
+        "title": "Zing-0.5: Toward Playable Worlds with Real-Time Joint Action and Text Control",
+        "slug": "zing-0-5-toward-playable-worlds-with-real-time-joint-action",
+        "url": "https://huggingface.co/papers/2609.17909",
+        "abstract": "We introduce Zing-0.5, a 5B autoregressive world model designed for playability: users can explore generated worlds, influence unfolding events, and respond to the resulting feedback through joint keyboard and online text control. Our approach brings together three technical contributions: (1) Unified action and text conditioning, combining magnitude-aware keyboard inputs with temporally aligned text instructions and jointly annotated videos to learn navigation and event control within the same sequence; (2) Event-scale supervision for incremental generation, using a segment-level teacher trained on connected multi-prompt videos to supervise a block-level causal student through distribution-matching distillation; and (3) Low-cost real-time interaction, combining four-step generation with context-preserving streaming to support 832 x 480 inference at 24 FPS at an estimated server rental cost of approximately USD 0.009 per stream-minute. Zing-0.5 achieves an overall score of 81.0 and a consistency score of 88.5 across 158 WBench Navigation cases. A joint-control demonstration shows a text-directed event change during continued navigation without restarting generation. We release the model weights, inference code, and Zing-SGLang serving implementation to support further work on playable generated worlds.",
+        "upvotes": 25,
+        "arxiv_id": "2609.17909",
+        "authors": []
+      },
+      {
+        "title": "SpectralShift: Effective Context Window Extension of Gated DeltaNet via Spectral Reparameterization",
+        "slug": "spectralshift-effective-context-window-extension-of-gated",
+        "url": "https://huggingface.co/papers/2609.14320",
+        "abstract": "Recently, linear attention layers have been increasingly adopted to replace softmax attention at scale for long-context modeling. However, existing context extension approaches typically apply continued pretraining directly without modifying these layers, overlooking the spectral properties of linear attention state dynamics. In this work, we study long-context extension of Gated DeltaNet (GDN) from a spectral perspective of transition matrix and identify two essential factors governing long-range information retrieval: (1) a sufficiently broad slow spectral band aligned with the target dependency length, and (2) the preservation of fast-decaying modes for state clearing and context switching. Based on this observation, we propose SpectralShift, a spectral reparameterization approach for long-context continual pretraining of GDNs. Specifically, SpectralShift reparameterizes the alpha projections initialization to reshape the decay spectrum by enhancing slow propagation capacity, and further introduces a learning-rate scaling for alpha projections to facilitate long-context training. Experiments show that SpectralShift consistently improves long-context capabilities over training, providing an effective and efficient solution for extending context windows of linear attention models. The code has been open-sourced at https://github.com/RUCAIBox/GDN-SpectralShift.",
+        "upvotes": 23,
+        "arxiv_id": "2609.14320",
+        "authors": []
+      },
+      {
+        "title": "A Zeroth-Order Paradigm for LLM Preference Alignment",
+        "slug": "a-zeroth-order-paradigm-for-llm-preference-alignment",
+        "url": "https://huggingface.co/papers/2609.19144",
+        "abstract": "Direct preference alignment methods are widely used to align large language models (LLMs) with human preferences because of their computational and memory efficiency. However, likelihood displacement motivates alternative ways to extract information from preference pairs with small likelihood margins. In this paper, we propose and analyze Comparison-based Preference Optimization (ComPO), a zeroth-order alignment method based on comparison oracles. ComPO extracts directional information from these pairs without directly optimizing a differentiable preference loss on them. We establish a convergence guarantee for its basic offline scheme under smoothness, gradient sparsity, and compatibility between the oracle and a latent objective. We further introduce online ComPO, which retains the offline comparison mechanism and uses unlabeled policy generations for reverse-KL control relative to a reference policy. Following the coverage perspective of preference fine-tuning, we establish a performance guarantee for a basic constrained scheme under local coverage and in-distribution pairwise reward accuracy. Experiments on Mistral, Llama, Gemma-2, Qwen3, and Gemma-3 models demonstrate improvements over existing direct alignment methods, including length-controlled win rates, with pair-level diagnostics providing evidence consistent with mitigating likelihood displacement.",
+        "upvotes": 22,
+        "arxiv_id": "2609.19144",
+        "authors": []
+      }
+    ],
+    "others": [
+      {
+        "title": "A hybrid framework combining large language models and Shapley-based methods for explainable cyberbullying detection",
+        "slug": "a-hybrid-framework-combining-large-language-models-and",
+        "url": "https://www.semanticscholar.org/paper/ff1199952f79c68b8cb168bdc295a3d5d74fc467",
+        "abstract": "A hybrid framework combining large language models and Shapley-based methods for explainable cyberbullying detection. Discover Artificial Intelligence",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-17",
+        "authors": [
+          "G. Loseto",
+          "F. Gramegna",
+          "A. Pinto",
+          "F. Scioscia",
+          "M. Ruta"
+        ]
+      },
+      {
+        "title": "Enhancing recommendation systems with weighted aspect based opinion mining utilizing advanced deep learning for adaptive personalization of user preferences",
+        "slug": "enhancing-recommendation-systems-with-weighted-aspect-based",
+        "url": "https://www.semanticscholar.org/paper/eaad36b3205b8d4cce24a4080f9c3c239194c9b3",
+        "abstract": "Enhancing recommendation systems with weighted aspect based opinion mining utilizing advanced deep learning for adaptive personalization of user preferences. World wide web (Bussum)",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-17",
+        "authors": [
+          "A. Muthuraj",
+          "P. Sudhakaran",
+          "WR Salem Jeyaseelan",
+          "J. Fahamitha"
+        ]
+      },
+      {
+        "title": "DiffDGCL: diffusion model and dynamic graph contrastive learning for multimodal recommendation",
+        "slug": "diffdgcl-diffusion-model-and-dynamic-graph-contrastive",
+        "url": "https://www.semanticscholar.org/paper/e9258fdab31287206fc96115c31f540860f6c83b",
+        "abstract": "DiffDGCL: diffusion model and dynamic graph contrastive learning for multimodal recommendation. Multimedia Systems",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-17",
+        "authors": [
+          "Yi Fan",
+          "Dong-Hui Shi",
+          "José Aguilar",
+          "Feng Li",
+          "Tong-Yao Wang"
+        ]
+      },
+      {
+        "title": "Using the drift diffusion model to examine relationships between mental health and media selection dynamics",
+        "slug": "using-the-drift-diffusion-model-to-examine-relationships",
+        "url": "https://www.semanticscholar.org/paper/e8a3b0bc86d34debb52575cbeb29461731a52a3b",
+        "abstract": "Using the drift diffusion model to examine relationships between mental health and media selection dynamics. Communication and Change",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-17",
+        "authors": [
+          "Valerie Klein",
+          "Xuan-Jun Gong",
+          "A. Eden",
+          "Richard Huskey"
+        ]
+      },
+      {
+        "title": "Cost efficient multimodal LLM deployment integrating tokenization economics MLOps and FinOps environments",
+        "slug": "cost-efficient-multimodal-llm-deployment-integrating",
+        "url": "https://www.semanticscholar.org/paper/dd5f8a5d972dfcd2ffe990771c949ac66f059b1a",
+        "abstract": "Cost efficient multimodal LLM deployment integrating tokenization economics MLOps and FinOps environments. Discover Computing",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-17",
+        "authors": [
+          "Anirudha Sahu",
+          "Anurag Singh",
+          "Snehasagar Sahu",
+          "D. P. Mishra",
+          "S. R. Mallick",
+          "Dibya Jyoti Mishra",
+          "Pramod Pandey"
+        ]
+      },
+      {
+        "title": "Social learning within groups: Hypernetworks capture effects of within-group dynamics on social contagions",
+        "slug": "social-learning-within-groups-hypernetworks-capture-effects",
+        "url": "https://www.semanticscholar.org/paper/dab9eda67225140eedfa50a9e21300bf2df928ec",
+        "abstract": "Social learning within groups: Hypernetworks capture effects of within-group dynamics on social contagions. Behavioral Ecology and Sociobiology",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-17",
+        "authors": [
+          "M. Hasenjager",
+          "Mark M. Bailey",
+          "Nina H. Fefferman"
+        ]
+      },
+      {
+        "title": "Adaptive large language model scaffolding supports online programming education through learning analytics and knowledge tracing",
+        "slug": "adaptive-large-language-model-scaffolding-supports-online",
+        "url": "https://www.semanticscholar.org/paper/bbba766f409810a3e288c99fbf2ec7a0af13e988",
+        "abstract": "Adaptive large language model scaffolding supports online programming education through learning analytics and knowledge tracing. Discover Education",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-17",
+        "authors": [
+          "Pavel Bartoš"
+        ]
+      },
+      {
+        "title": "HydroSuite-AI: a web-based LLM environment for hydrological code generation and execution for the hydrosuite open-source ecosystem",
+        "slug": "hydrosuite-ai-a-web-based-llm-environment-for-hydrological",
+        "url": "https://www.semanticscholar.org/paper/b2406e9d009f03070fd74935b595b2ee9410d873",
+        "abstract": "HydroSuite-AI: a web-based LLM environment for hydrological code generation and execution for the hydrosuite open-source ecosystem. Earth Science Informatics",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-17",
+        "authors": [
+          "Vinay Pursnani",
+          "Carlos Erazo Ramirez",
+          "Y. Sermet",
+          "Ibrahim Demir"
+        ]
+      },
+      {
+        "title": "Interaction-induced knowledge narrowing risk in LLM systems",
+        "slug": "interaction-induced-knowledge-narrowing-risk-in-llm-systems",
+        "url": "https://www.semanticscholar.org/paper/ac4469b666f6ad1254cb99b4c711ff5dadeab97d",
+        "abstract": "Interaction-induced knowledge narrowing risk in LLM systems. Discover Artificial Intelligence",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-17",
+        "authors": [
+          "D. Rutherford",
+          "Ning-Ning Wu"
+        ]
+      },
+      {
+        "title": "Classifier chains for multi-label learning: a systematic review and taxonomy",
+        "slug": "classifier-chains-for-multi-label-learning-a-systematic",
+        "url": "https://www.semanticscholar.org/paper/abeb1b3790acb4e32313f692e43d5c7e5647aadf",
+        "abstract": "Classifier chains for multi-label learning: a systematic review and taxonomy. Data mining and knowledge discovery",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-17",
+        "authors": [
+          "Syed Umaid Ahmed",
+          "M. Tahir",
+          "M. Waqas"
+        ]
+      },
+      {
+        "title": "How generative AI transforms relational archives into simulations of living persons",
+        "slug": "how-generative-ai-transforms-relational-archives-into",
+        "url": "https://www.semanticscholar.org/paper/aa64f24c966384a2f9332ee6f01499b2da4fa07e",
+        "abstract": "How generative AI transforms relational archives into simulations of living persons. Discover Artificial Intelligence",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-17",
+        "authors": [
+          "Jin-Jing Luo"
+        ]
+      },
+      {
+        "title": "Exploratory Implementation and Feasibility Report of CLASS (Clinical LLM Abstraction & Structuring System), A Large Language Model Pipeline for Extracting Unstructured Data From Clinical Notes",
+        "slug": "exploratory-implementation-and-feasibility-report-of-class",
+        "url": "https://www.semanticscholar.org/paper/727f6dff9c8061cee661d7598b6e3baaa21a3121",
+        "abstract": "Exploratory Implementation and Feasibility Report of CLASS (Clinical LLM Abstraction & Structuring System), A Large Language Model Pipeline for Extracting Unstructured Data From Clinical Notes. Journal of medical systems",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-17",
+        "authors": [
+          "Frederick H. Kuo",
+          "J. Fierstein",
+          "Fiorella Gonzales",
+          "Brant H. Tudor",
+          "Ellis Crabtree",
+          "Mohamed A. Rehman",
+          "Russell Jennings",
+          "L. Ahumada"
+        ]
+      },
+      {
+        "title": "A Deployed Custom Fine-tuned Transformer Language Model Framework for Indian Fake News Detection",
+        "slug": "a-deployed-custom-fine-tuned-transformer-language-model",
+        "url": "https://www.semanticscholar.org/paper/57dafae58620ef65a4ea55f4010532cfa36465c1",
+        "abstract": "A Deployed Custom Fine-tuned Transformer Language Model Framework for Indian Fake News Detection. International Journal of Machine Learning and Cybernetics",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-17",
+        "authors": [
+          "Manish Prajapati",
+          "Santos Kumar Baliarsingh",
+          "Sthiti Suman Sahoo",
+          "Shuvam Das",
+          "Pooja Krishnamurthy Revankar",
+          "Joylin Priya Pinto"
+        ]
+      },
+      {
+        "title": "FUS-DETR: a robust algorithm for drone detection from a cluttered background in airborne images",
+        "slug": "fus-detr-a-robust-algorithm-for-drone-detection-from-a",
+        "url": "https://www.semanticscholar.org/paper/5690ab73c3ee57f23d846f463982bb7ee2e81a62",
+        "abstract": "FUS-DETR: a robust algorithm for drone detection from a cluttered background in airborne images. Applied intelligence (Boston)",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-17",
+        "authors": [
+          "Si-Yuan Duan",
+          "Geng Zhang",
+          "Xin Li",
+          "Shang Wang",
+          "Zhi-Min Mao",
+          "Bing-Liang Hu",
+          "Xue-Bin Liu"
+        ]
+      },
+      {
+        "title": "Multimodal large language models for bladder tumor detection in cystoscopy: a retrospective benchmarking study",
+        "slug": "multimodal-large-language-models-for-bladder-tumor-detection",
+        "url": "https://www.semanticscholar.org/paper/526a3b98b54434c3d1e80f9e0b04929636cd056a",
+        "abstract": "Multimodal large language models for bladder tumor detection in cystoscopy: a retrospective benchmarking study. World journal of urology",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-17",
+        "authors": [
+          "Yonatan Prat",
+          "Husny Mahmud",
+          "Abraham Tsur",
+          "M. Laufer",
+          "D. Orkin",
+          "Z. Dotan",
+          "B. Rosenzweig"
+        ]
+      },
+      {
+        "title": "Autonomous governance integrating agentic AI and zero trust for intelligent cybersecurity in distributed enterprise ecosystems",
+        "slug": "autonomous-governance-integrating-agentic-ai-and-zero-trust",
+        "url": "https://www.semanticscholar.org/paper/4b1160ee1ca6eec1c4f23f14c072086ca3042174",
+        "abstract": "Autonomous governance integrating agentic AI and zero trust for intelligent cybersecurity in distributed enterprise ecosystems. Discover Internet of Things",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-17",
+        "authors": [
+          "Supreet Nagi",
+          "M. Panesar",
+          "Svarmit Singh Pasricha"
+        ]
+      },
+      {
+        "title": "LAMP: Long-Tailed Multi-modal Prompt Tuning for Vision-Language Models",
+        "slug": "lamp-long-tailed-multi-modal-prompt-tuning-for-vision",
+        "url": "https://www.semanticscholar.org/paper/3e4ae18e71a25a8ed7ff9df3b997941fd204fa57",
+        "abstract": "LAMP: Long-Tailed Multi-modal Prompt Tuning for Vision-Language Models. International Journal of Computer Vision",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-17",
+        "authors": [
+          "Xu-Cong Wang",
+          "Peng-Kun Wang",
+          "Zhe Zhao",
+          "Li-Heng Yu",
+          "Yang Wang"
+        ]
+      },
+      {
+        "title": "Ethical integration of generative artificial intelligence in Islamic religious education involves human mediation and source verification",
+        "slug": "ethical-integration-of-generative-artificial-intelligence-in",
+        "url": "https://www.semanticscholar.org/paper/3dd2d3b51c3a0795728b043309312ce8f6c1beb4",
+        "abstract": "Ethical integration of generative artificial intelligence in Islamic religious education involves human mediation and source verification. Discover Artificial Intelligence",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-17",
+        "authors": [
+          "Shahazwan Mat Yusoff",
+          "Anwar Farhan Mohamad Marzaini",
+          "Siti Nadya Zynuddin",
+          "Ahmad Muhaimin Mat Jusoh",
+          "Mohd Helme Basal",
+          "Nur Riza Alias",
+          "Norhashimi Saad"
+        ]
+      },
+      {
+        "title": "Between gatekeeping and coping: Iranian EFL students’ lived experience of AI-mediated writing assessment",
+        "slug": "between-gatekeeping-and-coping-iranian-efl-students-lived",
+        "url": "https://www.semanticscholar.org/paper/3d0142dc2d48caba736f4fd5460eec6f10460e00",
+        "abstract": "Between gatekeeping and coping: Iranian EFL students’ lived experience of AI-mediated writing assessment. Language Testing in Asia",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-17",
+        "authors": [
+          "Zahra Mirsanjari"
+        ]
+      },
+      {
+        "title": "A retrieval-augmented model guided zero-shot prompt for LLM to detect mental disorders in social media text",
+        "slug": "a-retrieval-augmented-model-guided-zero-shot-prompt-for-llm",
+        "url": "https://www.semanticscholar.org/paper/33989380505449f5066dbf0c46bbb888a39bcc78",
+        "abstract": "A retrieval-augmented model guided zero-shot prompt for LLM to detect mental disorders in social media text. International Journal of Machine Learning and Cybernetics",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-17",
+        "authors": [
+          "Rajesh Singh Thakur",
+          "T. P. Sahu",
+          "Gurudatta Verma"
+        ]
+      },
+      {
+        "title": "Applications and challenges of artificial intelligence in cancer management",
+        "slug": "applications-and-challenges-of-artificial-intelligence-in",
+        "url": "https://www.semanticscholar.org/paper/2c23a2d510394ddb7b273c5b09a19c0c96ba80e5",
+        "abstract": "Applications and challenges of artificial intelligence in cancer management. Discover Applied Sciences",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-17",
+        "authors": [
+          "Eva Rahman Kabir",
+          "N. Mustafa",
+          "Zara Sheikh",
+          "Mehrin Haque Tanisha",
+          "F. Tasneem",
+          "Syeda Maliha Ahmed",
+          "M. Roja",
+          "Adwiza Chakraborty Bishakha",
+          "N. Khair",
+          "Asef Raj"
+        ]
+      },
+      {
+        "title": "ObfXhate: a large-scale Arabic dataset and transformer-based framework for detecting obfuscated hate speech",
+        "slug": "obfxhate-a-large-scale-arabic-dataset-and-transformer-based",
+        "url": "https://www.semanticscholar.org/paper/265cb298d5d2100be2e3f59bd4d67a8963ca274f",
+        "abstract": "ObfXhate: a large-scale Arabic dataset and transformer-based framework for detecting obfuscated hate speech. Language Resources and Evaluation",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-17",
+        "authors": [
+          "Muteb Alqarni"
+        ]
+      },
+      {
+        "title": "Whose voices count? Multilingualism, AI policy, and equity at Hispanic-Serving institutions",
+        "slug": "whose-voices-count-multilingualism-ai-policy-and-equity-at",
+        "url": "https://www.semanticscholar.org/paper/1b2c02086d80e87a6acfc408d15f7992d66e966e",
+        "abstract": "Whose voices count? Multilingualism, AI policy, and equity at Hispanic-Serving institutions. Language Policy",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-17",
+        "authors": [
+          "Zhong-Feng Tian",
+          "M. Christiansen"
+        ]
+      },
+      {
+        "title": "Explainable course recommendation with knowledge graphs: a comparative audit of diverse modeling paradigms",
+        "slug": "explainable-course-recommendation-with-knowledge-graphs-a",
+        "url": "https://www.semanticscholar.org/paper/141d25698da2b95814871c44cc215366e6c3320a",
+        "abstract": "Explainable course recommendation with knowledge graphs: a comparative audit of diverse modeling paradigms. Data mining and knowledge discovery",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-17",
+        "authors": [
+          "Neda Afreen",
+          "Ludovico Boratto",
+          "Gianni Fenu",
+          "Francesca Maridina Malloci",
+          "Mirko Marras",
+          "Alessandro Soccol"
+        ]
+      },
+      {
+        "title": "Objective vs. Search: Decomposing What Makes a Good Tokeniser",
+        "slug": "objective-vs-search-decomposing-what-makes-a-good-tokeniser",
+        "url": "http://arxiv.org/abs/2609.19145v1",
+        "abstract": "Two dominant tokenisation algorithms are used by modern language models: byte-pair encoding (BPE) and UnigramLM. These differ along two orthogonal axes: their optimisation objective (compression vs. log-likelihood) and their search procedure (bottom-up merging vs. top-down pruning). Existing comparisons confound these axes, making it unclear whether their observed differences stem from what is being optimised vs. how it is being optimised. We disentangle the two by introducing two new tokenisation algorithms that complete this 2x2 design space: BottomUpLL, a bottom-up likelihood-based tokeniser, and TopDownComp, a top-down compression-based tokeniser. We train language models with tokenisers produced by each algorithm, varying: model size, vocabulary sizes, and domain (English-only vs. multilingual). Evaluating models on bits-per-byte, we find that the search procedure -- not the objective -- is the dominant factor: bottom-up tokenisers consistently achieve lower bits-per-byte in most settings. Evaluating models on the BLiMP task, however, shows no consistent relationship between design choice and performance. Overall, our results disentangle the effect of tokeniser design choices on language modelling performance, offering concrete guidance for their more principled construction.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-09-16",
+        "authors": [
+          "Ahmetcan Yavuz",
+          "Clara Meister",
+          "Tiago Pimentel"
+        ]
+      },
+      {
+        "title": "PointZero: 3D Point Track Completion for Learning Transferable 3D Dynamics",
+        "slug": "pointzero-3d-point-track-completion-for-learning",
+        "url": "http://arxiv.org/abs/2609.19142v1",
+        "abstract": "World models endow perceptual systems with the ability to predict how scenes evolve under interaction. They are most beneficial when trained on diverse volumes of data, to instill a rich prior into downstream applications. Existing methods typically require robot action labels to learn action-conditioned 3D dynamics, which excludes web video data from the training pool. We study 3D point track completion as a pre-training objective for learning transferable 3D dynamics without robot data. Given a single RGB-D observation and sparse partial 3D trajectories (tracks), we predict future 3D tracks of all observed points. We show this objective produces a rich 3D dynamics prior, without requiring robot action labels. We contribute a diverse dataset of 2.9 million synthetic frames spanning deformable, articulated, and rigid objects, and use it to train PointZero. We show that a flexible and expressive transformer, PointZero, outperforms prior methods on the same data. We demonstrate the utility of our pre-training objective by post-training PointZero for two downstream applications: (1) action-conditioned 3D dynamics prediction and (2) imitation learning. When fine-tuned to condition on end-effector pose, PointZero outperforms the baselines on the recent PGND 3D dynamics benchmark. When fine-tuned to predict robot actions and 3D tracks, PointZero outperforms or matches the baselines on 6/7 simulated and real-world robot manipulation tasks. We furthermore evaluate training PointZero from scratch to isolate the benefits of our proposed architecture from those of our proposed pre-training objective and dataset. We release the dataset, checkpoints, and full training recipe.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-09-16",
+        "authors": [
+          "Bardienus P. Duisterhof",
+          "Kaifeng Zhang",
+          "Adam Hung",
+          "Bowen Wen",
+          "Stan Birchfield",
+          "Yunzhu Li",
+          "Deva Ramanan",
+          "Jeffrey Ichnowski"
+        ]
+      },
+      {
+        "title": "Dreaming the Sound of Contact: Leveraging Video and Audio Generation for Zero-Shot Force-Aware Manipulation and Data Generation",
+        "slug": "dreaming-the-sound-of-contact-leveraging-video-and-audio",
+        "url": "http://arxiv.org/abs/2609.19137v1",
+        "abstract": "Recent advances in video generation allow robots to learn manipulation trajectories from generated videos. However, these approaches produce purely kinematic trajectories that lack force information, causing failures in contact-rich tasks where appropriate contact forces are essential for success. In this work, we explore augmenting generated video with audio to shape a bounded, time-varying desired-force profile using the loudness of generated contact sounds. We present a pipeline that jointly leverages generated video and audio to derive motion trajectories and corresponding desired-force profiles from a structured natural-language task prompt. We execute these force-aware trajectories on a Franka Panda robot using a closed-loop force regulator that tracks the audio-shaped force profile during contact. We evaluate our pipeline on multiple tasks that require making contact and demonstrate successful manipulation where a kinematic-only baseline fails. We also use the pipeline as a data generation engine to train policies that achieve the tasks in a closed-loop manner. Project website, videos, and dataset: https://dreamingcontactsound.github.io/",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-09-16",
+        "authors": [
+          "Guanhua Ji",
+          "Tianyu Li",
+          "Dayoon Suh",
+          "Yuqian Zhang",
+          "Boyan Zhang",
+          "Nadia Figueroa"
+        ]
+      },
+      {
+        "title": "Exponential Hardness of Off-Policy Evaluation under History-Dependent Logging",
+        "slug": "exponential-hardness-of-off-policy-evaluation-under-history",
+        "url": "http://arxiv.org/abs/2609.19135v1",
+        "abstract": "Can a logged dataset visit every hidden state frequently and still be exponentially uninformative about a target policy's value? We show that it can when the logger depends on history. For every horizon $H \\ge 3$, we construct two POMDPs with at most two latent states per stage, three actions, and a common logger with three memory states. Action coverage, belief coverage, and two behavior-marginal outcome-revealing conditions all have constants independent of $H$. Nevertheless, evaluating a known deterministic target policy to accuracy $1/8$ requires $Θ((3/2)^H \\log(1/δ))$ logged episodes at confidence $1-δ$, for $0 < δ\\le 1/4$, even when both candidate models are known. The mechanism is simple: a reset erases the unknown transition that determines the target value. We characterize the resulting statistical experiment exactly and obtain a matching optimal estimator. A directed two-lane gridworld realizes the construction, and trajectory simulations agree with its finite-sample prediction. The result establishes intractability for the history-dependent-logging, model-based case posed by Zhang and Jiang (2025, arXiv:2503.01134), under their behavior-marginal definition of revealing.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-09-16",
+        "authors": [
+          "Pranaya Jajoo"
+        ]
+      },
+      {
+        "title": "Cognitive Extensions for Dual-Process Language Agents: Memory and Self-Reflection in Interactive Environments",
+        "slug": "cognitive-extensions-for-dual-process-language-agents-memory",
+        "url": "http://arxiv.org/abs/2609.19128v1",
+        "abstract": "Language agents remain brittle in interactive environments, where success requires long-horizon state tracking, valid action execution, and recovery from failed steps. We extend SwiftSage, a dual-process agent that combines a fast action proposer with a slower planner, using two modular cognitive extensions: an Adaptive Memory Module (AMM) for salience-gated episodic storage and trigger-driven retrieval, and a Self-Reflection Module (SRM) for bounded execution-time validation and corrective intervention. Both modules are implemented as feature-flagged extensions over the same execution substrate, enabling controlled ablations on ScienceWorld. Across four configurations---baseline, baseline+AMM, baseline+SRM, and the full system---the full system achieves the best mean final score (64.62), success rate (43.17%), and successful-step efficiency (19.33 steps), while SRM is the strongest standalone contributor. The results suggest that execution-time control is the dominant bottleneck in this setting, while episodic memory becomes most useful once the runtime loop is stabilized.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-09-16",
+        "authors": [
+          "João Meneses dos Santos",
+          "Arlindo L. Oliveira"
+        ]
+      },
+      {
+        "title": "Affora: A Design System for Agent-Friendly Interfaces",
+        "slug": "affora-a-design-system-for-agent-friendly-interfaces",
+        "url": "http://arxiv.org/abs/2609.19125v1",
+        "abstract": "Computer-use agents increasingly operate software designed for people, but interfaces often leave actions or task state unclear to machine readers. We present Affora, a design system that supports both readers while preserving visual freedom and familiar human workflows. Three controlled studies examine component implementations, visual variation, and interaction-design principles. Their findings inform guidance from individual components to complete sites, supported by reusable implementations and executable checks. Agent performance depends on the interaction meaning available through its interface representation; substantial visual variation remains possible when that meaning is preserved. Evaluation on independently authored interfaces shows gains where Affora addresses existing deficits, but limited effects where those deficits are absent or outside its coverage. A workflow case provides preliminary evidence of reduced interaction cost. Affora connects user experience and agent experience through a shared interface rather than a separate agent-only surface.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-09-16",
+        "authors": [
+          "Jin Gao"
+        ]
+      }
+    ]
+  }
+}

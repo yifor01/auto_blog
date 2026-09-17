@@ -1,0 +1,686 @@
+[
+  {
+    "item": {
+      "source": "cn_labs",
+      "source_name": "Qwen",
+      "title": "Qwen3.8-Omni-Flash：耳聰目明，辦事得力",
+      "url": "https://qwen.ai/blog?id=qwen3.8-omni-flash",
+      "authors": [],
+      "abstract": "引言 # 今天，新一代原生全模態模型 Qwen3.8-Omni-Flash 正式上線。該模型的核心目標是提升其在真實生產力場景中的 Agent 能力，推動全模態模型從“理解全模態內容”進一步走向“規劃任務、呼叫工具並完成創作”。在具備程式設計、文本知識工作和 GUI 操作等通用 Agentic 能力的基礎上，Qwen3.8-Omni-Flash 進一步拓展了以音影片為核心的 Agentic 應用，在影片剪輯、音樂影片創作、影視製作與解說、音影片轉圖文摘要和音影片對話等需要綜合處理文本、影像、音訊與影片的工作流中取得了顯著效果。 圖 1：Qwen3.8-Omni-Flash 與其在生產環境中的應用 Qwen3.8-Omni-Flash ——現已上線 千問AI平臺 ： 支援文本、影像、音訊和影片輸入，以及 1M 長上下文 。 Qwen3.8-Omni-Flash 支援 1M 長序列，在保持與同尺寸文本模型相當的文本能力的同時，全模態能力顯著提升。在累計 29 項評測中 1 ，相比上一代 Qwen3.5-Omni-Plus，平均得分提升超過 25%；API 每小時音訊輸入價格降幅超過 98%，每小時音影片輸入價格降幅超過 93% 2 。在音影片 Agent、Coding 和長程任務方面，模型在 WildClawBench-MM 上大幅提升 36.5 分，在 AgenticVBench 上提升 22.3 分，並在 UniClawBench 上取得 69.6 的高分。基礎能力方面，模型在長音訊/音影片理解、音影片推理、音影片 Caption 和多說話人識別上均有明顯提升：例如，LongAudioSpan 提升 8.3 分，OmniVideoBench 提升 9.6 分，OmniCap-IF 的 CSR / ISR 分別提升 8.5 / 14.1 分，AliMeeting 的 DER / cpWER 從 88.11 / 89.61 降至 3.35 / 17.18。通過擴展資料、上下文與 Agentic Environment，Qwen3.8-Omni-Flash 的 音影片能力接近 Gemini 3.8 Flash，音訊能力整體超過 Gemini 3.8 Flash 。這些能力的進一步提升，也意味著音影片正在從模型的感知輸入，進一步成為 Agent 理解環境、開展推理並執行任務的核心載體。 1. 範圍包括：音訊推理：AliMeeting-test、AISHELL-4、MagicData-RAMC、MLC-SLM (en)、WenetSpeech (Net | Meeting)、FLEURS-60 ASR、FLEURS-60 S2TT、SpotSoundBench、MMAU、MMAR、MMSU、MuchoMusic-RUL、HumMusQA、MusTBench、Audio-MultiChallenge、WildSpeech、VoiceBench。音影片推理：DailyOmni、WorldSense、AVUT、JointAVBench、OmniCloze、OmniCap-IF、QIVD、OmniVideoBench、StreamingBench。音影片 Agent：WildClawBench-MM、UniClawBench、OmniGAIA。 2. 價格計算說明：音訊或音影片每小時價格按 2 分鐘素材的輸入成本×30 估算；音影片採用 720p、1 fps。Gemini 3.8 Flash 使用 media_resolution=high，Seed 2.0 Lite 使用 max_frame_tokens=384，其他 API 參數使用預設值。文本輸入與輸出價格單位為 CNY/1M tokens；Gemini 與 Muse 的人民幣價格按美元換算，匯率為 1 USD = 6.7191 CNY。 音影片是 Agent 走向真實生產力場景的重要載體，但也帶來了一組新的系統挑戰：長音影片的檔案儲存、網路傳輸與多輪推理成本高昂，現有 Agent Harness 框架缺乏對音影片的原生支援，而從全模態理解到端到端任務執行的工作範式仍處於早期階段。解決這些問題，需要模型、Harness 工具與執行環境協同演進。 圍繞這些挑戰，我們在 Qwen3.8-Omni-Flash 上探索瞭如何貫穿素材理解、任務規劃、工具執行與結果交付的完整鏈路，完成影片剪輯、翻譯、電影解說和內容創作等端到端長程工作流，推動 Omni 從理解音影片進一步走向自主行動與任務交付。 為此，我們進一步擴展了 Qwen-MM-Plugins，為長音影片的按需感知、工具呼叫與工作流執行提供支援；同時開源 Qwen-Live Harness，為即時、持續的全模態互動提供原生執行環境。兩者分別面向長程工作流與即時互動，並在與模型的共同迭代中持續拓展全模態 Agent 的能力邊界。 PLUGIN Qwen-MM-Plugins 音影片生產力入口——連線多模態理解、內容創作與 Agent Harness。 開始使用 → HARNESS Qwen-Live Harness 即時互動入口——連線音影片對話、任務委託、記憶與上下文管理。 開始使用 → 長音影片理解 # Qwen3.8-Omni-Flash 實現了長音影片理解能力的全新升級：從按需描述、Agentic 主動取證，到理解並推進會議任務，再到生成以影片為中心的深度研究報告；不只是看得更久，更能找得準、理解深、執行快。 可控音影片 Caption # 影片描述不應只有一種答案，內容創作關心敘事，素材檢索關心片段，資產管理關心結構。不同業務，需要不同的影片描述。在 Qwen3.8-Omni-Flash 中，我們對影片描述能力進行了全新升級：從回答“模型看到了什麼”，走向理解“使用者想知道什麼”。描述物件、時間範圍、資訊粒度與輸出格式均可自由指定；面對同一段影片，既能縱覽全貌、定位關鍵片段，也能 深入分析人物動作、鏡頭、光影與聲音，並按需輸出結構化結果 。看什麼、看多細、怎麼呈現，由你定義。 Agentic 長音影片理解 # 面對數小時的長影片，傳統方法通常需要從頭到尾處理全部內容，即使答案只存在於其中幾分鐘的片段內。Qwen3.8-Omni-Flash 原生 Agent 則從問題出發， 自主決定該看什麼、聽什麼，並通過由粗到細的多輪取證定位關鍵資訊 。它無需逐幀處理整部影片，即可將有限的計算與 Token 預算集中在真正相關的片段上，實現更高效的長影片理解。OmniVideoBench 實驗表明，Agentic Understanding 將 準確率從 63.4 提升至 67.8 ，同時將 Token 消耗從 145,736 降至 79,117， 降幅約為 45.7% 。下表對比了 Static Understanding 與 Agentic Understanding 在 OmniVideoBench 上的準確率及 Token 消耗： 注：Agentic 模式在多輪互動中保留上下文。 Static Understanding Agentic Understanding Accuracy (↑) 63.4 67.8 Tokens per query (↓) 145,736 79,117 長會議，從記錄到執行 # 多人會議是音影片理解中最複雜的場景之一：多人交替發言、聲音相互重疊，人物身份、指代關係與討論主題持續變化。Qwen3.8-Omni-Flash 具備 多說話人音畫協同識別能力 ，原生支援 最長一小時 的音影片輸入，能夠 聯合理解人物畫面與語音內容，端到端完成說話人切分、內容轉錄與身份對應 。輸入完整會議影片並描述需求，模型即可梳理參會者關係、生成會議紀要與待辦事項，並分析專案風險；同時藉助視覺資訊解決音訊中的指代與實體歧義。結合 Agent 與工具呼叫，它還能傳送郵件、整理任務，甚至依據會議需求直接開始編碼。從聽懂會議，進一步走向執行工作。 通過音影片開展深度研究 # 當用戶帶著具體問題觀看影片時，所需的答案往往不止於影片本身。Qwen3.8-Omni-Flash 能結合使用者需求與影片內容，挖掘值得深入研究的問題，梳理影片重點，並檢索網頁、圖片、影片和文件等多模態資料，生成以影片為中心、圖文並茂的研究報告，幫助使用者深入理解影片內容、解決實際問題。例如，使用者在 Photoshop 摳發時遇到彩邊問題，模型可以拆解教程步驟、研究 Multiply / Screen 混合模式的原理、對比其他邊緣修復方案，幫助使用者理解不同方法的適用條件，判斷哪種方案更適合自己的情況。 音影片生產與編輯 # Qwen3.8-Omni-Flash 正在將音影片 Agent 推向新的階段： 從理解聲音與畫面，到自主規劃、呼叫工具並交付成片 ，讓全模態智慧真正進入專業音影片內容生產流程。 Music2MV # 以音樂影片（MV）創作為例，Qwen3.8-Omni-Flash 能夠細粒度、精準地理解使用者輸入歌曲的結構、節奏、情緒、人聲與樂器變化，為人物、場景和鏡頭設計提供靈感。它還能輸出帶時間戳的句級歌詞，讓歌聲、字幕與畫面精準配合。結合 Qwen-MM-Plugins 等創作工具，模型可貫穿音樂理解、創意規劃與成片質檢，展現強大的音影片理解、推理和創作能力。 工作流程 Next 最終結果 1 Next 最終結果 2 Next 最終結果 3 Next 短劇翻譯 # 傳統影片翻譯往往需要在轉寫、翻譯、配音和剪輯平臺之間反覆切換，不僅 API 呼叫與流程銜接複雜，也難以保證多角色音色、臺詞時長與畫面節奏的一致性。藉助 Qwen3.8-Omni-Flash 構建的 Agent，使用者只需一句話描述需求，即可按需完成區分角色的臺詞識別、口語化翻譯、角色克隆配音、音軌重混與成片質檢，將原本割裂的譯製環節串聯為完整流程，實現短劇影片出海的自動化交付。 工作流程 Next 最終結果 1 Next 原始影片 翻譯結果 最終結果 2 Next 原始影片 翻譯結果 最終結果 3 Next 原始影片 翻譯結果 長電影解說 # 面對動輒兩三小時的完整影片，電影解說影片的製作往往需要人工反覆觀看和梳理劇情，並完成鏡頭篩選、文案撰寫、配音配樂與剪輯包裝，製作流程繁瑣、耗時耗力。基於 Qwen3.8-Omni-Flash 構建的 Agent，使用者只需提供影片並用一句話描述創作需求，即可完成長影片全模態理解、關鍵情節提煉、解說規劃、配音配樂、剪輯渲染與成片質檢。Agent 還能智慧穿插電影原聲對白與解說配音，自動調節語速和音量，讓解說、原聲、背景音樂與畫面自然銜接，打造更具真實感、代入感與“電影質感”的解說作品。 工作流程 Next 最終結果 1 Next 最終結果 2 Next 從使用模型，到最佳化模型 # 真實的多模態業務往往復雜且成本敏感，模型往往需要在效果、時延、算力與部署成本之間取得平衡。 因此，面向具體場景定製小模型，是規模化業務應用的重要路徑。然而，傳統流程涉及資料構建、問題診斷、多輪訓練與效果評測，週期長且高度依賴人工經驗。這一次，我們進一步嘗試將 Qwen3.8-Omni-Flash 推進到模型研發本身，探索“大模型負責研發、小模型面向業務”的新範式。 我們向 Qwen3.8-Omni-Flash 提出了一項任務： 在 12 小時內提升 Qwen2.5-Omni-3B 的四川話識別能力，並交付可用模型 。它自主選定 WenetSpeech-Chuan 評測集、固定評測標準並完成基線測試，隨後直接聽取語音樣本，結合識別結果診斷問題，構建針對性的訓練資料。在連續 4 輪實驗中，Agent 累計構建了 3,413 條訓練資料，並根據評測反饋調整方案、保留有效改進、回退無效嘗試。 最終，Qwen2.5-Omni-3B 在同一評測集上的字元錯誤率從 25.79% 降至 15.30%，相對下降約 40.7% 。 這項實驗展示了另一種模型演進的可能：通用多模態模型負責理解資料、規劃實驗與驅動迭代，小模型則沉澱面向具體業務的專用能力。Agent 不再只是呼叫模型，還能參與模型最佳化並解決實際業務問題。 音影片資訊壓縮 # 音影片承載著豐富的資訊，但其線性、非結構化的形態也讓檢索和複用變得困難。Qwen3.8-Omni-Flash 可以跨越聲音、畫面與時間線理解內容，並通過 Agentic 的方式完成資訊提煉、結構重組與結果校驗， 將長影片中的核心知識與實踐經驗轉化為資訊密度更高、更易獲取和複用的內容資產 。 Video2Note # 圍繞影片知識的結構化沉澱，我們在 Qwen-MM-Plugins 中開源了 Video2Note。依託 Qwen3.8-Omni-Flash 對語音、畫面與操作過程的聯合理解，它能夠自動梳理知識結構、拆解關鍵步驟、篩選代表性畫面，並生成圖文對應的 PDF 筆記；同時通過自動審閱與迭代修正，將數小時的影片內容壓縮為清晰、易讀、便於複習的文件資產。 工作流程 Next 最終結果 1 Next 案例影片 最終 PDF Your browser does not support PDF. Download PDF 最終結果 2 Next 案例影片 最終 PDF Your browser does not support PDF. Download PDF 最終結果 3 Next 案例影片 最終 PDF Your browser does not support PDF. Download PDF 最終結果 4 Next 案例影片 最終 PDF Your browser does not support PDF. Download PDF Omni Skill Creator # 影片不僅記錄了“怎麼做”，也承載著專家在實踐中積累的經驗技巧。基於這一思路，我們將 Omni Skill Creator 作為 Qwen-MM-Plugins 的全新開源能力：它既可以從操作演示中提煉標準作業流程（SOP），並將其轉化為可複用的自動化流程，也可以從專家教學中學習工具使用、決策依據與關鍵經驗。一次演示教學即可轉化為經過校驗和評測的 Agent Skill，實現基於全模態內容構建可複用、可傳播的 Agent Skill。 音影片即時互動 # Qwen3.8-Omni-Flash 面向完整音影片的深度理解與創作；面向持續、低延遲的互動場景，我們進一步帶來 Qwen3.8-Omni-Flash-Realtime 。它能夠在音影片流輸入的同時完成感知與響應，並結合即時上下文呼叫工具、執行任務，讓全模態能力從“理解一段內容”走向“參與一場互動”。 即時口語陪練 # 口語世界沒有標準輸入。口音、元子音替換與聲調偏差，都會讓逐字轉寫偏離真實語義。Qwen3.8-Omni-Flash-Realtime 聯合建模發音與語義，能夠理解受口音影響的非標準表達，將其對齊到正確詞彙，並即時生成標準發音示範。在多輪練習中，模型根據新的語音持續更新判斷：糾正影響理解的錯誤，同時保留自然的節奏、語氣與情感。 全模態空間音訊感知 # 在真實空間中，聲音是視覺之外的另一條座標軸。Qwen3.8-Omni-Flash-Realtime 融合空間聲音與視覺資訊，持續判斷聲源方向和距離，並同步感知障礙、通行區域與場景變化，是首個支援“聽聲辨位”的全模態大模型。 面對“過來這裡”或“去看看是什麼在響”等指令，模型能夠從環境噪聲中鎖定人聲與目標聲音，將語義落到現場空間，並呼叫工具完成定位、搜尋、路徑規劃與導航。從聽見目標，到抵達目標。 音影片外部知識接入 # 即時互動不僅需要低延遲，也需要隨業務動態載入知識與行為。Qwen3.8-Omni-Flash-Realtime 支援通過 Skill 注入身份設定、表達風格、業務知識與互動規則，並通過工具呼叫將這些能力延伸到任務執行。 在智慧客服等場景中，模型可以即時載入品牌話術與服務流程，理解使用者的語音、畫面與上下文，生成符合業務規範的回應並執行操作。同一個即時模型，由此可以擁有不同的知識、角色與行動方式。 完整效能結果 # Omni # Qwen3.8-Omni-Flash Qwen3.5-Omni-Plus Gemini 3.8 Flash Seed 2.0 Lite Muse Spark 1.2 Agentic Omni Intelligence WildClawBench-MM Multimodal tool use 71.0 34.5 58.9 41.9 -- UniClawBench Multimodal tool use 69.6 67.1 69.0 61.2 -- AgenticVBench Multimodal tool use 36.8 14.5 45.0 10.0 -- OmniGAIA Web Search 74.0 57.2 78.6 64.4 -- General Audio-Visual Capabilities DailyOmni Audio-Visual Understanding 85.1 85.1 84.0 81.4 79.6 WorldSense Audio-Visual Understanding 68.5 63.9 69.6 67.3 65.0 AVUT Audio-Visual Understanding 86.6 85.9 88.0 81.5 82.4 JoinAVBench Audio-Visual Understanding 75.9 74.1 70.4 70.6 71.8 OmniVideoBench Audio-Visual Reasoning 63.4 53.8 65.2 58.5 62.2 Video-MME-v2 Audio-Visual Reasoning 65.0 47.9 71.0 64.9 -- LVOmniBench Long Video Reasoning 63.3 53.2 70.7 -- -- OmniCloze Audio-Visual Caption 63.2 64.2 60.9 56.3 65.3 OmniCap-IF Audio-Visual Caption CSR 80.6 ISR 28.2 CSR 72.1 ISR 14.1 CSR 81.9 ISR 28.3 CSR 74.6 ISR 18.1 CSR 77.9 ISR 26.8 QIVD Audio-Visual Interaction 69.6 65.6 69.1 62.0 62.0 StreamingBench Audio-Visual Interaction 80.8 57.1 79.9 77.2 77.8 General Audio Capabilities AliMeeting Test Multi-Speaker ASR (DER | cpWER, ↓) 3.4 | 17.2 88.1 | 89.6 72.6 | 53.1 75.1 | 76.1 93.7 | 92.7 AISHELL-4 Multi-Speaker ASR (DER | cpWER, ↓) 2.8 | 11.2 100.0 | 100.0 66.",
+      "published_date": "2026-09-14",
+      "tags": [],
+      "organization": "Alibaba",
+      "raw_metadata": {
+        "provider": "qwen",
+        "path": "qwen3.8-omni-flash"
+      }
+    },
+    "rule_score": 38.0,
+    "rule_reasons": [
+      "🏢 頂流機構: Alibaba",
+      "🔥 熱門關鍵字: agent, agentic, tool use, reasoning, slm"
+    ],
+    "llm_score": 70,
+    "llm_reason": "全模態旗艦模型大升級，音影片Agent能力躍進且有詳實評測數據",
+    "novelty": 11,
+    "impact": 13,
+    "trending": 16,
+    "practicality": 15,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "Cloudflare/Security-Audit-Skill",
+      "url": "https://github.com/cloudflare/security-audit-skill",
+      "authors": [
+        "donk8r"
+      ],
+      "abstract": "security-audit A coding-agent skill that turns your agent into a security auditor. It orchestrates isolated agents through reconnaissance, coverage-led hunting, candidate validation, structured output, independent record verification, and target-neutral reporting. This is the skill that seeded Cloudflare's vulnerability discovery harness, described in Build your own vulnerability harness . The harness grew into a multi-stage, fleet-wide system; this skill is the single-repo starting point it evolved from. What it does The skill runs a structured audit in six phases: Reconnaissance -- map architecture, trust boundaries, input surfaces, prior evidence, and deterministic coverage in architecture.md and coverage-ledger.json . Coverage-led hunting -- assign isolated hunters from ledger units, record their checks, and use coverage critics to find gaps. Candidate validation -- give every unique candidate to a fresh verifier that tries to disprove it. Structured output -- write confirmed , needs_validation , and rejected records to findings.json and validate them against report-schema.json . Independent record verification -- fresh agents verify final source claims. Material replacements receive another independent verifier. Target-neutral reporting -- derive REPORT.md , FINDINGS-DETAIL.md , and NEEDS-VALIDATION.md from the verified records and coverage ledger. The parent runs validate-coverage-ledger.cjs after creating the ledger and after each later ledger update. It runs validate-findings.cjs in Phase 4 and again after every Phase 5 replacement. The verdicts are distinct: confirmed has a complete source trace and bounded observed result, needs_validation has an exact unresolved fact and no severity, and rejected records a disproved candidate. Multiple runs against the same repo are additive. The skill uses prior ledgers and findings to target gaps, revalidate changed source, and carry forward current-source evidence without treating stale or unresolved work as covered. Files File Purpose SKILL.md Setup, core principles, platform terminology, workflow overview, and audit anti-patterns RECONNAISSANCE.md Phase 1 reconnaissance prompts and synthesis instructions HUNTING.md Phase 2 orchestration, hunting methodology, and validation rules ATTACK-CLASSES.md Core, wildcard, and obvious-things attack prompts MEMORY-SAFETY-AND-BINARY.md Memory-safety, binary, and kernel hunting classes for native targets AI-AND-LLM.md Prompt-injection, agent/tool, and output-handling hunting classes for LLM-backed targets WEB-PROTOCOL-AND-AUTH.md HTTP request-framing, cache, and authentication-protocol hunting classes for HTTP-protocol and auth targets CLIENT-SIDE.md DOM-injection, messaging-trust, UI-redress, and prototype-pollution hunting classes for client-side/browser targets SUPPLY-CHAIN-AND-RELEASE.md Dependency, CI, release, signing, update, plugin, and extension hunting classes CLOUD-AND-DEPLOYMENT.md IAM, infrastructure-as-code, container, serverless, ingress, and runtime-configuration hunting classes PROTOCOLS-RPC-AND-MESSAGING.md RPC, serialization, queue, broker, webhook, and streaming-protocol hunting classes RESOURCE-EXHAUSTION-AND-AVAILABILITY.md Shared resource, quota, queue, worker, and operator-spend hunting classes DATA-ISOLATION-AND-LIFECYCLE.md Tenant isolation, cache, search, export, backup, migration, deletion, and restore hunting classes DESKTOP-MOBILE-AND-LOCAL-IPC.md Native app, deep-link, webview, exported-component, helper, daemon, and local-IPC hunting classes VALIDATION-AND-REPORTING.md Phases 3–6 candidate validation, structured output, record verification, and reporting report-schema.json JSON schema for all three findings.json verdicts validate-findings.cjs Zero-dependency validator for findings.json in Phases 4 and 5 validate-findings.test.cjs Findings-validator tests and producer-compatible fixture checks validate-coverage-ledger.cjs Zero-dependency validator for coverage-ledger.json in Phases 1–5 validate-coverage-ledger.test.cjs Coverage-ledger validator tests Installation Install the skill with the Skills CLI : npx skills add https://github.com/cloudflare/security-audit-skill \\ --skill security-audit Use --global for a user-level installation: npx skills add https://github.com/cloudflare/security-audit-skill \\ --skill security-audit \\ --global Run npx skills --help for agent-selection and non-interactive options. Usage Start your coding agent in (or pointed at) the codebase you want to audit, then ask it to do a security audit: security audit this codebase find security vulnerabilities in ./src do a security review, output to ~/audits/my-project The skill activates automatically when the request matches its trigger (security audit, find vulnerabilities, pen-test the code, etc.). A direct codebase audit or pen-test request uses full audit mode. Security questions and focused vulnerability work use guidance mode unless you request report artifacts. In full audit mode, an unspecified output directory defaults to ~/security-audit-skill/<repo-name>/run-<N> . The workflow writes inside the target repository only when you explicitly select a directory that version control ignores. Requirements A coding agent with a model that supports tool use and parallel sub-agents Node.js for the zero-dependency findings and coverage-ledger validators An OS-enforced sandbox for target-controlled builds, tests, processes, browsers, emulators, fuzzers, and fixtures. It must disable external networking, use a sanitized allowlisted environment, enforce resource limits, and allow writes only to assigned scratch paths. Without these controls, the workflow keeps the lead as needs_validation instead of executing target code. Design principles Only confirm established boundary failures. Keep a source-grounded blocked lead as needs_validation with its exact unresolved fact. Adversarial validation. The agent that checks a finding is never the agent that found it. Severity requires impact. Likelihood x impact, not deviation from a checklist. Defense-in-depth gaps are not vulnerabilities. If Layer A prevents the attack, the absence of Layer B is a hardening note. Multiple runs improve coverage. In our test runs, a single run found roughly half of the vulnerabilities that repeated runs found in total. Contact Questions, feedback, or comparing notes on AI-driven security tooling: security-ai-research@cloudflare.com License MIT -- see LICENSE .\n\n(181 points, 36 comments on Hacker News)",
+      "published_date": "2026-09-17",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 181,
+        "num_comments": 36,
+        "hn_url": "https://news.ycombinator.com/item?id=49736466",
+        "object_id": "49736466"
+      }
+    },
+    "rule_score": 30.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, tool use, structured output, safety",
+      "⬆️ HN 熱門: 181 points"
+    ],
+    "llm_score": 74,
+    "llm_reason": "Cloudflare開源多階段agent安全審計流程，結構嚴謹且可落地",
+    "novelty": 13,
+    "impact": 12,
+    "trending": 16,
+    "practicality": 17,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "DeepSeek-v4.1 Flash: Pushing the Limits of KV Cache Compression",
+      "url": "https://zartbot.github.io/blog/model_arch/dsv41flash_arch/en.html",
+      "authors": [
+        "mfiguiere"
+      ],
+      "abstract": "TL;DR When DeepSeek-V4.1 Flash was released, I thought it might just be a post-training iteration version... but after using it for a while, I found it reached nearly 420 Tokens/s in speed, and then Cui said all DeepSeek-V4 Pro models would be taken offline... suddenly I felt this was no small matter... until the Technical Report 《DeepSeek-V4.1-Flash: Pushing the Limits of KV Cache Compression》 [1] was fully released, only then did I realize it should be called DeepSeek-V5 Flash... As the paper title states, the purpose of DeepSeek-V4.1 Flash is to push KVCache compression to the extreme. The main reason is that Long-horizon Agent Workflows cause the Context to grow longer and longer, while various tool calls bring heavy prefill computation pressure. The storage pressure of KVCache in HBM and external SSD is very high, all of which are reasons that make Scaling impossible. Therefore, a series of optimizations were made on the model architecture, especially in the compression of KVCache and the computation optimization of Prefill. Prefill computation optimization : Drawing on YOCO, the entire model has 40 layers, and only 20 layers are needed during Prefill. Therefore, the Prefill activated parameters are only 8B, and the Decode activated parameters are 16B KVCache compression : Engineering-wise, KVCache compression is divided into several dimensions: head count compression similar to GQA, then block-based compression like CSA, and the cross-layer compression of CSA2 in this paper. At the same time, the indexer computation of Sparse Attention is also optimized. Finally, there are some numerical precision optimizations, for example DS41F adopts FP4 KVCache. Finally, under the premise of maintaining high-quality task completion by the model, KVCache is further compressed by 4x: In addition, the original writing of the paper is somewhat complex, especially the description of CED. In fact, if we redraw a diagram centered on KVCache and combined with the perspective of computer architecture, it seems to become clear all at once. It can be seen as a kind of Recursive Transformer architecture, a way of modifying Q and reusing KV during the recursive process. Regarding the Recursive Transformer architecture, you can refer to 《On the Future Transformer: Loops Are Not What You Need》 . Next, we will conduct a detailed interpretation and analysis according to the chapter structure of the technical report. This article is the first in this series, analyzing the model architecture in detail, and the more critical content is in Chapter 3. 1. Overview 1.1 Why KVCache compression is needed First, the report states that in recent years Long-horizon Agents have made ultra-long-context processing an increasingly important model workload. Supporting this type of workload not only requires efficient processing of long sequences, but also requires persistent storage, reuse, and transfer of large KVCache. Therefore, KVCache management has become a fundamental capability of model deployment, while also bringing significant challenges in computation, storage, and communication. Then it goes on to introduce the DeepSeek-V4 architecture, which processes by combining a Sparse Attention that fully covers the context with a Sliding Window Attention (SWA) that covers the local window. Although advances related to Sparse Attention have significantly reduced the computational cost of long sequence processing, persistent storage and data movement have gradually become more prominent bottlenecks. In long contexts, the usage of the Global KV Cache will dominate, and being persisted for prefix reuse, it will heavily occupy Host memory capacity and SSD capacity, and will also place high demands on the interconnect bandwidth for KVCache movement. These limit service throughput, increase deployment cost, and ultimately hinder the deployment and promotion of agents toward longer task spans and broader application scenarios. Therefore, further reducing the key-value cache footprint is crucial for alleviating storage and communication bottlenecks and reducing long-context serving costs. DeepSeek-V4.1-Flash is a multimodal mixture-of-experts model designed for more aggressive KVCache compression. DeepSeek-V4.1-Flash has a parameter scale of 552B, natively supports multimodal input, and supports contexts of up to 1 million tokens. It adopts a Causal Encoder-Decoder (CED) architecture, in which the Decoder's Global KVCache is obtained by projecting the Encoder's final hidden states. This design makes the model activate 8B parameters per token during the Prefill stage and 16B parameters during the Decoding stage, which is especially cost-effective for input-dominated Agent scenarios . Although DeepSeek-V4.1-Flash is significantly larger than DeepSeek-V4-Flash, at the same sequence length, its required runtime KVCache storage is only about 1/4 of the latter, and its persistent KVCache storage is only about 1/8 of the latter. In addition, the overall performance of DeepSeek-V4.1-Flash is superior to DeepSeek-V4-Flash. These compressions for KVCache mainly come from the joint optimization of model architecture, cache precision, and deployment strategy. For DSv4, it is a model with SWA as the backbone and enhanced by global compressed attention (CSA/HCA). Based on this perspective, the DeepSeek team carried out a series of optimizations. First, it is worth noting that they abandoned the block-based high-compression-ratio structure like HCA, and instead carried out more optimizations on CSA, forming CSA2. The main optimizations compress the KV Cache from three dimensions: In the channel dimension, a 512-dimensional latent vector is used to share the representation of the keys and values required by each attention head; In the sequence dimension, the Encoder merges 2 adjacent positions into 1 cache entry through channel-wise learned weights, while the Decoder retains per-position entries; In the layer dimension, multiple layers share the same global KV, and the whole network retains only 3 copies of Encoder cache and 1 copy of Decoder cache. Combined with FP4 quantization, the storage growth of the global main KV and the Indexer is about 890 bytes per token. 1.2 Overview of model architecture The overall model architecture is as follows: The paper reports that the backbone parameters are about , the Engram parameters are about , and the activated parameters per token for prefill and decode are about and respectively. The core is to use CED to reduce long-context Prefill computation, use CSA2 to reduce attention and KV cache overhead, and then combine Engram conditional memory with DSpark speculative decoding. The model has layers in total, hidden dimension , and vocabulary size . Each layer contains attention and MoE, organized through mHC residual connections. The entire attention mechanism is divided into two modules, Encoder and Decoder, forming a Causal Encoder-Decoder (CED) architecture. The key of CED is that the Decoder's global KV comes from the Encoder's end representation , and subsequent Decoder layers share these KVs. Therefore, most positions of a long prompt only need to pass through the first 20 layers, The key CSA2 among them adopts a mechanism of local sliding window + global sparse retrieval + cross-layer KVCache reuse . The sliding window size is 128, attention uses Q heads, sharing a -dimensional KV latent, of which RoPE is -dimensional and NoPE is -dimensional. Q uses a low-rank projection of rank , and the output projection is divided into groups, each of rank .\n\n(125 points, 10 comments on Hacker News)",
+      "published_date": "2026-09-17",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 125,
+        "num_comments": 10,
+        "hn_url": "https://news.ycombinator.com/item?id=49735410",
+        "object_id": "49735410"
+      }
+    },
+    "rule_score": 24.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, post-training, moe, mixture of experts, quantization",
+      "📰 Hacker News: 125 points"
+    ],
+    "llm_score": 79,
+    "llm_reason": "KV Cache壓縮與Prefill架構創新，技術報告細節扎實",
+    "novelty": 16,
+    "impact": 15,
+    "trending": 16,
+    "practicality": 14,
+    "blog_worthiness": 18
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "量子位",
+      "title": "剛剛，唐傑釋出智譜RSI首個成果",
+      "url": "https://www.qbitai.com/2026/09/491357.html",
+      "authors": [
+        "一水"
+      ],
+      "abstract": "剛剛，唐傑釋出智譜RSI首個成果 一水 2026-09-17 16:28:23 來源： 量子位 GLM已經開始參與構建GLM了 GLM，已經開始參與構建GLM了。 清華大學計算機系教授、智譜創始人唐傑 剛剛分享了一個他們內部觀察到的RSI早期案例： GLM-5.3驅動的Infra Agent，在超過10萬張國產晶片組成的叢集上，從零參與搭建並優化了一套生產級推理系統。 不到兩週，端到端吞吐直接提升至初始基線的3.2倍 。 關鍵是，這背後可不是簡單的“AI寫程式碼”。 從運算元精度問題，到Python/C++跨層併發瓶頸，再到Kernel效能最佳化，Agent已經能自己讀取系統反饋、提出假設、修改程式碼、跑實驗，再根據結果繼續迭代。 比如它定位出了KV Transfer場景中Python GIL導致的併發阻塞，把Prefill+KV Transfer相比單獨Prefill超過20%的效能損失，壓到了 1%以內 ；還在KDA Decode運算元上，通過重新組織計算拿到了 1.71× 的效能提升。 也就是說，一個有點“套娃”的閉環已經出現了： GLM最佳化執行GLM的系統，而這套被最佳化後的系統，又繼續承載新的GLM 。 唐傑把它概括成一句話： 模型最佳化系統，系統承載模型。 當然，這距離真正意義上“AI完全自主設計並訓練自己的繼任者”還很遠。 目標怎麼定、邊界怎麼劃、風險怎麼判斷，目前依然是人類工程師在負責。 智譜自己也明確強調，他們還沒有實現RSI 。 但這篇分享值得仔細看的原因正在這裡： RSI第一次有了非常工程化、甚至已經跑進生產環境的雛形，超越了“未來某一天AI會自己變強”的抽象討論。 以下是唐傑分享的技術Blog原文，enjoy。 “最近一次感到震動的時刻” 在GLM的研發過程中， 模型時常會湧現出一些令我們驚喜、甚至讓我們感到不安的能力 。 2025年10月，我們開始啟動安全能力增強研究。 當時的判斷很樸素： 安全能力是程式碼能力的自然延伸，能夠讀懂複雜程式碼的模型，理應也能夠理解程式碼中的漏洞。 我們沒有預料它此後的走向 ，不到一年，安全夥伴使用GLM在真實程式碼庫中發現了數千個漏洞。 模型開始改變網路安全的格局，也帶來了過去不曾存在的危險。 為了讓這種能力能夠被負責任地使用，我們不得不為它設計受信訪問計劃。 最近一次感到震動的時刻，來自一個更加根本的變化： GLM開始越來越多地參與構建人工智慧本身 。 我們看到模型完成了一項過去需要一支資深Infra團隊數週才能完成的基礎設施工作，並意識到這項工作將直接改變下一代模型的訓練方式，我們更加確信： 我們的繼任者，正是我們親手創造出來的AI 。 坦白說，在GLM-4.7之前，我們內部用GLM寫程式碼多少帶著被迫的成分，畢竟是自己的“親兒子”。 那時，Coding的PMF還未到來；今天，GLM-5.3已經成為每個人每天離不開的Coding夥伴，正一步步走向取代我們。 如果這一趨勢延續下去，給足算力、給足時間，它的終點是一個能夠完全自主設計並訓練出自己繼任者的系統，這被稱為遞迴自我改進（Recursive Self-Improvement, RSI）。 儘管我們還沒有走到那裡，但它的早期形態已經出現。 這篇文章記錄的，正是其中一個早期案例。 用稠密反饋驅動Infra Agent最佳化推理系統 從讓模型在新硬體上成功執行，到構建一套能夠穩定承載生產流量的高效能推理服務，是一個龐大的系統工程。 GLM-5.3-Flash的上線同樣經歷了這一過程。 在超過10萬卡國產晶片組成的叢集上，從零搭建了一套完整的生產級推理服務，GLM-5.3-Flash的全部線上推理都執行在這套系統之上。 這項工作並不容易。 此前沒人成功部署過如此大規模的國產卡叢集，面對晶片記憶體容量和頻寬相對受限的挑戰，以及需要支援新結構的模型1M上下文視窗和多模態的請求，生態不成熟，運算元不完備，許多文件基本靠猜。 最終這件事做成了，做成它的不是一支團隊，而是GLM-5.3驅動的Infra Agent 。 後面的故事大家都已經知道了。 GLM-5.3-Flash以匿名模型“Ox-Alpha”在OpenCode與OpenRouter上接受真實呼叫檢驗。 上線一週成為雙平臺呼叫量最大的模型，6天token呼叫量超過62萬億。 這次我們實施了一系列激進的記憶體最佳化，包括以算力換頻寬、以通訊換視訊記憶體等定製化方案。 最終形成的技術棧融合了多項關鍵技術： 針對線性注意力和LM Head的節點內張量並行、ReplaySSM、W8A8 量化、INT8/FP8/BF16混合精度快取量化，以及Layer Split等 。 在此基礎上，我們進一步引入Encode–Prefill–Decode（EPD分離式架構），實現了端到端服務效能約3倍的提升，硬體利用效率與單Token成本均達到主流NVIDIA GPU的相當水平。 由於Infra Agent參與的反饋閉環貫穿了整個最佳化過程，使GLM-5.3-Flash在不到兩週的時間內完成了從模型適配到生產可用的跨越，最終將端到端吞吐提升至初始基線的3倍。 圖1展示了GLM-5.3-Flash從首次執行到正式上線的效能演進路線。 △圖1：GLM-5.3 Flash的效能演進 在這一過程中，我們逐漸認識到， 決定Infra Agent工程效果的，不只是模型自身的程式碼生成與推理能力，更取決於系統能否持續為它提供有效、可歸因的反饋 。 程式碼庫只能提供靜態上下文，而推理系統中的精度異常、效能退化或者效能最佳化目標未達成預期，往往來自運算元實現、並行策略、通訊行為、記憶體管理與服務排程等多個層面的動態互動。 即使Agent能夠理解整個程式碼庫，如果一次修改後得到的反饋僅僅是“精度測試未通過”“TTFT增加30%”或“輸出吞吐下降20%”，它仍然難以判斷問題出現在哪一層、當前假設為何不成立，以及下一步應當驗證什麼。 端到端指標可以告訴Agent“結果變差了”，卻無法解釋“為什麼變差”。 因此，在增強Agent編寫和修改程式碼能力的同時，我們還需要解決一個更基礎的系統問題： 如何將稀疏的端到端結果，轉化為細粒度、可歸因且能夠直接指導下一步行動的工程反饋？ 這也是構建高效Infra Agent反饋閉環的關鍵。 從端到端指標到可歸因反饋 在傳統的推理系統最佳化中，測試、日誌、效能分析工具和微基準測試並不缺失，但它們通常分散在不同工具和工程階段中。 經驗豐富的工程師會根據一次壓測的結果選擇下一種觀測手段，逐步檢查運算元輸出、執行時間線、通訊事件或執行緒狀態，並將來自不同工具的資訊聯絡起來。 對於Agent而言，如果這些觀測和驗證手段沒有被組織成可直接訪問、反覆執行的工作流，真正可用的反饋仍然是稀疏的。 它可能知道吞吐沒有達到目標，卻無法進一步判斷： 是某個運算元執行時間過長，還是計算裝置處於空閒等待狀態？ 是KV Transfer本身效能不足，還是上層排程未能及時推進傳輸？ 某項最佳化對哪些輸入形狀有效，又會在哪些條件下發生退化？ 單一的端到端指標無法回答這些問題。 為此，我們將正確性測試、執行日誌、執行Trace、執行時事件、微基準測試和端到端指標納入Agent的迭代流程，把完整的系統最佳化過程拆分為可以局部觀測和驗證的環節 。 運算元級對比用於驗證數值正確性，微基準測試用於衡量特定輸入條件下的局部效能，執行Trace和執行時事件則用於呈現計算、等待與通訊之間的時間關係。 Agent可以根據當前假設選擇相應的驗證手段，而不必在每次修改後都等待完整服務部署和端到端壓測。 我們將這種組織方式稱為 “稠密反饋” 。 這裡的“稠密”並不意味著向Agent輸入儘可能多的日誌和指標，而是強調反饋具有三個特徵。 第一，反饋需要足夠局部 。 它應儘可能關聯到具體的引擎啟動參數、修改的程式碼、運算元、輸入條件、執行緒、執行區間或程式碼路徑，幫助Agent縮小問題範圍。 例如，相比“引入融合最佳化後模型精度下降”，定位到某個具體請求在最佳化前後的輸出差異，更有助於Agent構造最小復現並分析原因。 第二，反饋需要能夠低成本、及時地獲得 。 Agent每提出一個假設、執行一次修改或構造一組對照實驗，都應有相應的驗證入口。 能夠通過運算元測試或局部微基準回答的問題，無須每次都等待完整服務部署和端到端壓測。 更短的驗證週期可以幫助Agent及時修正方向，減少在無效假設上的投入。 第三，反饋需要支援客觀驗證 。 修改是否正確、效能是否改善，應由參考實現、測試結果和可比較的實驗指標判斷。 執行訊號可以幫助Agent提出候選原因，但不能僅憑現象之間的相關性確認根因，還需要通過控制變數的對照實驗，驗證針對特定路徑的修改是否產生了預期變化。 這三項特徵共同決定了反饋是否具有可行動性： 正確性反饋回答“是否算對”，系統行為反饋定位“時間消耗在哪裡”，效能反饋則判斷“哪個方案在什麼條件下更好” 。 驗證手段不必按照固定順序執行，而應與當前假設相匹配，使每輪實驗都能回答一個明確的問題。 局部驗證與端到端測試在這一過程中承擔不同職責： 前者用於儘早排除錯誤或無效的修改，篩選值得繼續推進的候選方案；後者則負責確認局部收益能否轉化為真實服務收益，以及方案是否會在實際工作負載下引入新的退化。 圍繞上述思路，GLM-5.3 Flash的上線過程形成了一套由工程師、Infra Agent和實驗環境共同組成的最佳化閉環： 工程師定義目標與系統邊界，Agent負責分析、假設和修改，實驗環境提供分層、及時且可驗證的反饋 。 三者共同將原本依賴工程師經驗串聯的診斷過程，轉化為Agent可以持續執行的工程工作流。 △圖2：基於稠密反饋的Infra Agent最佳化閉環 這一演進過程既包含直接推動吞吐增長的效能最佳化，也包含不會立即體現為吞吐提升、卻決定系統能否正確和穩定上線的缺陷修復。 下面選取三個案例，分別說明稠密反饋如何幫助Agent保證“算得正確”、解釋“為什麼跑不快”，並進一步探索“怎樣跑得更快”。 正確性反饋：Agent知道模型是否算對 推理效能最佳化必須以數值正確性為前提。 對於Agent，驗證從明確推理引擎實際執行了哪些計算開始。 高層並行策略會改變運算元的輸入切分、執行路徑和結果組合方式；僅驗證一個運算元在非切分條件下的輸出，還不足以覆蓋它在實際部署中的行為。 為此，我們建立了推理引擎並行策略到運算元實現的對映，將系統層面的部署配置轉化為Agent可以逐項驗證的運算元任務。 這一對映幫助Agent明確： 一種並行配置涉及哪些運算元，輸入如何被切分，以及哪些計算路徑需要與非切分實現進行對照 。 在此基礎上，我們組織Agent對不同並行切分與非切分路徑進行精度比較。 對於同一組輸入，在對齊計算語義與輸出位置後，檢查不同執行方式產生的結果是否滿足數值誤差要求。 這樣，並行配置、運算元路徑和誤差結果就被關聯起來。 測試一旦暴露偏差，Agent可以從對應的切分方式和計算路徑繼續檢查，而不必從整個模型重新開始定位。 正是在這一運算元驗證過程中，我們發現了KDA運算元上下文並行（Context Parallel，CP）路徑的精度問題。 CP與非CP結果之間的偏差，使檢查重點落到了並行執行引入的狀態傳播與合併計算上。 CP切分需要合併不同上下文分片的狀態，其核心計算可以簡化為 ： M = tl.dot(M_chunk, M) # 合併各分片的狀態變換 S_next = tl.dot(M, S) + H # 更新後續分片的初始狀態 原實現中，tl.dot即使接收FP32輸入，也預設採用TF32計算以提高效能。較低的計算精度使誤差在變換合併和狀態更新中不斷累積，在長上下文下更加明顯。 修復方法： 將這兩處計算顯式指定input_precision=“tf32x3”，通過三次TF32 Tensor Core運算組合出更高精度的結果，在減輕累積誤差的同時，儘量保留Tensor Core的效能優勢 。 這個案例中，反饋環境的作用從問題出現之前就已經開始： 並行策略到運算元的對映確定了驗證物件，切分與非切分路徑的對照暴露了數值偏差，計算精度分析解釋了偏差來源，迴歸測試則為修改提供了持續檢驗的依據。 對Agent而言，這條路徑把系統層面的並行設計轉化為可以執行和追蹤的正確性任務。 局部驗證之後，候選實現仍需回到目標部署，完成模型級精度與服務效能的最終驗收。 相關精度修復已合併至Flash Linear Attention上游，詳見PR #1180。 系統行為反饋：定位KV Transfer的併發瓶頸 對於系統級效能問題，明確的測試場景和效能約束，是Agent判斷異常、選擇分析方向的起點。 我們的推理最佳化工程師為Agent定義了單獨Prefill、Prefill + KV Transfer、單獨Decode等測試場景，用來隔離不同執行階段及其組合對效能的影響，併為各場景設定驗收條件。 例如，在相同workload下，以單獨Prefill為基準，Prefill + KV Transfer的效能差距不應超過5%。 然而， Agent在測試中發現，部分場景的效能差距超過了20% 。 這個反饋將排查範圍縮小到引入KV Transfer後的額外開銷與併發互動。 Agent隨後深入分析KV Transfer的時間線，發現一個異常： 在這些場景中，KV Transfer的Python側執行始終沒有與DeepEP dispatch/combine的呼叫區間重疊 。 這一現象使Agent開始檢查DeepEP與Mooncake Transfer的併發關係，並沿呼叫鏈進入Python/C++ 邊界。 我們使用的DeepEP v1.2.1中，intranode_dispatch和intranode_combine均未顯式釋放Python GIL；其中，dispatch在需要獲取接收token數量時，還會在CPU上等待GPU返回相關資訊。 關鍵在於，進入C++並不意味著自動釋放GIL。 在這段持鎖呼叫期間，同一程序內負責Mooncake Transfer的Python執行緒無法及時獲得GIL，傳輸任務的排程與提交因而被推遲，壓縮了KV Transfer與後續計算重疊的機會。 底層傳輸即使具備非同步執行能力，上層提交受阻也會讓預期的並行無法充分發生。 原始碼中還有一個直接的對照： 同版本的internode_dispatch已顯式釋放GIL，註釋說明這樣做是為了避免CPU等待期間阻塞其他執行緒中的KV Transfer。 這進一步支援了Agent對intranode路徑的判斷。 修復的關鍵，是在相關C++執行區間釋放GIL，讓Mooncake Transfer的Python執行緒能夠及時推進任務 。 修復效果需要同時通過時間線與原有效能約束驗證： 前者檢查排程與傳輸是否獲得了重疊執行的機會，後者判斷這一變化是否改善了實際服務效能。 在相同測試條件下，修復後的Prefill + KV Transfer與單獨Prefill的效能差距小於1%。 △圖3：發現並修復KV Transfer併發瓶頸 這個案例中，效能約束先把“沒有達到預期”轉化為明確的測試偏差，時間線再將排查方向收斂到兩個元件的併發關係，最終由程式碼分析定位到GIL的持有範圍。 稠密反饋由此把端到端效能、跨層執行行為和具體實現連線起來，為Agent的每一步分析提供依據。 效能反饋：讓運算元最佳化從存量經驗出發，並轉化為系統性能提升 運算元最佳化需要解決兩個問題： 如何判斷一次最佳化是否有效，以及最佳化方向從哪裡來 。 首先，運算元效能必須放在推理引擎的真實執行環境中評價。 例如，計算Kernel佔用更多資源可能縮短自身耗時，卻壓縮KV Transfer Kernel的執行空間，最終拖慢整體流水線。 因此，Agent不僅需要關注運算元耗時，還要結合目標Workload、資源約束、任務重疊和端到端收益，建立正確的最佳化目標。 其次，大量最佳化經驗隱含在SGLang、Flash Linear Attention和DeepGEMM等專案的手寫Kernel中。 Agent需要從這些程式碼中提煉最佳化技巧及其適用條件，形成面向當前運算元和目標硬體的候選方案，再通過實驗驗證其實際效果。已有程式碼提供最佳化方向，系統反饋判斷最佳化是否真正成立。 我們讓GLM-5.3驅動的Infra Agent從不同程式碼庫、程式語言和硬體平臺的存量Kernel中學習最佳化經驗，並通過增量與消融實驗，將其提煉為包含適用條件、變換方式、資源約束和驗證證據的“最佳化骨架”。 面對新運算元，Agent以這些骨架為起點，結合Profiling與分層測試重新確定分塊、訪存和資源分配策略；驗證通過的修改及其適用條件繼續迴流骨架庫。 工程師主要負責定義目標與約束，並稽核涉及數值語義、併發行為和線上風險的關鍵修改。 △圖4：典型KDA Decode運算元從基礎實現到生產版本的效能演進 圖4展示了典型KDA Decode運算元的效能演化過程 。 引入ReplaySSM以算換存，導致運算元執行時間第一次延長（v1相比v0）；Agent進行的除法最佳化將v1的執行時間縮短了9.6%。 進一步地，在獲得“計算是關鍵瓶頸”的反饋資訊後，Infra Agent發現原實現沿V維度分塊，使相同的FP32歸一化與門控計算被重複執行四次。 它將這些分塊合併到同一執行緒塊，提前批次計算並共享中間結果，以犧牲部分並行度為代價從源頭消除了重複計算，獲得了1.71× 的效能提升。 這個案例中，GLM-5.3驅動的運算元Agent從存量實現中抽取最佳化經驗，再把這些經驗用在承載自身推理的運算元上： 它以骨架為起點逐項調優，由分層驗證判斷每一步去留，由端到端效能判斷實際價值，通過驗證的經驗迴流骨架庫 。 模型由此參與了自身推理系統的最佳化，而每一次上線積累的經驗，又降低了下一次最佳化所需的工程師投入。 讓反饋驅動行動，讓實驗驗證假設 三個案例共同說明， 反饋的價值不在於數量，而在於能否幫助Agent回答當前問題 。 大量缺少結構的日誌可能掩蓋關鍵訊號，觀測範圍不完整的Profiling可能導致錯誤歸因，在Microbenchmark中成立的最佳化也未必能夠轉化為端到端收益。 因此，構建反饋環境不僅需要提供測試、日誌和效能資料，還需要明確每類觀測能夠支援什麼判斷、存在怎樣的邊界，以及哪些結論必須通過進一步實驗才能確認。 工程師在這一過程中承擔三項關鍵職責： 定義最佳化目標與系統約束，構建Agent可以直接使用的反饋環境，以及稽核涉及系統架構、非同步併發和線上風險的關鍵修改 。 在此基礎上，Agent提出假設、實施修改並執行實驗，再根據反饋保留、修正或否定當前方案。正確性、穩定性與端到端效能共同構成最終的驗收標準。 回顧GLM-5.3 Flash的上線過程，運算元精度缺陷、跨越Python與C++ 邊界的併發問題，以及關鍵運算元的效能最佳化，分別對應不同層次的工程挑戰。 藉助局部測試、跨層觀測與分層Benchmark，原本模糊的異常現象被逐步轉化為可以驗證的工程假設，複雜的系統問題也被拆解為一系列可觀測、可實驗、可歸因的迭代過程。",
+      "published_date": "2026-09-17",
+      "tags": [
+        "資訊",
+        "智譜"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "量子位",
+        "feed_url": "https://www.qbitai.com/feed"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 80,
+    "llm_reason": "GLM Infra Agent自主優化生產推理系統，RSI早期工程實證極具故事性",
+    "novelty": 17,
+    "impact": 16,
+    "trending": 18,
+    "practicality": 10,
+    "blog_worthiness": 19
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "NVIDIA Developer",
+      "title": "TensorRT Edge-LLM Completes the MLPerf Edge Agentic Benchmark 6.4x Faster on Jetson AGX Thor",
+      "url": "https://developer.nvidia.com/blog/tensorrt-edge-llm-completes-the-mlperf-edge-agentic-benchmark-6-4x-faster-on-jetson-agx-thor/",
+      "authors": [
+        "Elizabeth Goodman"
+      ],
+      "abstract": "AI agents are moving from cloud data centers to vehicles, robots, and other edge devices. Unlike a chatbot that answers a single prompt, an agent works through a sequence of steps. It selects tools, evaluates their results, and continues reasoning within an increasingly long conversation. This workflow places new demands on edge inference. The model must generate tokens quickly, process long shared histories efficiently, and produce valid tool calls within a limited power and memory envelope. In the MLPerf Inference v6.1 Edge Agentic benchmark, NVIDIA TensorRT Edge-LLM ran Qwen3.6-27B on a single NVIDIA Jetson AGX Thor Developer Kit. The system achieved 52.33 tokens per second and completed all 1,007 turns of the performance workload in 24 minutes and 36 seconds, 6.4x faster than the llama.cpp reference submission of 2 hours and 37 minutes. The result uses NVFP4 quantization, tree-based multi-token prediction (MTP), and KV cache reuse. How MLPerf measures end-to-end agentic AI performance MLPerf Edge Agentic measures an OpenAI-compatible model endpoint in two phases: performance and accuracy. The performance phase replays recorded software-engineering agent trajectories. The model receives a user request, generates a tool call, observes the tool result, and continues the same conversation. The workload contains 20 conversations and 1,007 generated turns. Input length grows across turns and reaches approximately 23.5K tokens, making long-context processing an important part of the measurement. Intersection of Union (IoU) based inline accuracy is also measured to ensure the performance phase is running the agent correctly. The accuracy phase uses Berkeley Function Calling Leaderboard (BFCL) v4 prompts with single-turn only and reasoning off to balance accuracy and evaluation time on edge devices. It evaluates whether the model selects the correct function, generates valid arguments, and avoids calling a tool when no tool is required. Figure 1. The MLPerf Edge Agentic workload measures a multi-turn loop in which tool results are added to the conversation before the next model request MLPerf Edge Agentic benchmark results on Jetson AGX Thor The TensorRT Edge-LLM submission used Qwen3.6-27B in SingleStream mode on one Jetson AGX Thor Developer Kit with 128 GB of unified memory at the MAXN power mode.. Metric Result Output throughput 52.33 tokens per second Median time to first token 247.12 ms Median time per output token 14.68 ms BFCL overall accuracy 87.94% Table 1. MLPerf v6.1 NVIDIA Edge Agentic submission result summary The MLCommons Edge Agentic example also publishes a llama.cpp reference run on Jetson AGX Thor, which uses Qwen3.6-27B with Q4_K_M quantization and completes in 2 hours and 37 minutes. The TensorRT Edge-LLM submission completes the workload in 24 minutes and 36 seconds, or 6.4x less time. Figure 2. End-to-end completion time for the MLPerf Edge Agentic performance workload on Jetson AGX Thor Using NVFP4 quantization to accelerate Qwen3.6-27B inference Low-batch LLM decoding on edge platforms is known to be heavily bounded by DRAM bandwidth. Reducing the size of both weights and activations reduces the memory footprint of the kernels and therefore boosts decoding performance. The submitted Qwen3.6-27B model uses NVFP4 for weights and activations, including the language-model head, and FP8 for the KV cache. NVFP4 is a 4-bit floating-point format supported by the NVIDIA Blackwell GPU in Jetson AGX Thor. TensorRT Edge-LLM uses optimized kernels to accelerate the quantized model while maintaining the accuracy required by MLPerf. The smaller model representation also leaves more of the 128 GB unified memory available for the long context, speculative decoding state, and application workloads. Developers can start from a published, calibrated Qwen3.6-27B NVFP4 checkpoint . A deployment team can use a published quantized checkpoint or perform post-training quantization once on any development system before deploying the model. Reusing KV cache across agent turns Each new request in an agent trajectory contains most of the preceding conversation plus a new model response or tool result. Without reuse, the model must prefill the shared history again on every turn. The cost increases as the conversation grows. TensorRT Edge-LLM identifies reusable prompt prefixes and restores their cached attention KV pages. Qwen3.6 uses a hybrid model architecture, so the runtime also restores the recurrent state and partial KV-page state required to continue execution correctly. It then prefills only the new suffix of the conversation. KV cache and recurrent-state reuse reduce repeated long-context computation across the complete agent trajectory. This optimization complements tree-based MTP: cache reuse reduces the cost before generation begins, while MTP reduces the number of target-model steps during generation. On this workload, ~96% of the prompt tokens are served with hot cache. The runtime only prefills ~0.5M of the total 13.6M prompt tokens across the turns. Using tree-based multi-token prediction to accelerate LLM inference Standard autoregressive decoding generates one token for each model invocation. Multi-token prediction uses a draft model to predict several future tokens, which the target model then verifies together. Recent models typically have official MTP weights trained and shipped together with the main model. In addition to traditional linear MTP, TensorRT Edge-LLM implements a tree-based MTP implementation. Instead of keeping only one predicted continuation, the runtime organizes high-probability candidates into a tree. The target model verifies the candidates in one forward pass, and the runtime accepts the matching path. If multiple candidates are accepted, the system advances generation by several tokens. You can adjust drafting parameters when launching the server. The MLPerf server configuration uses 8 draft steps, the top-2 candidates at each drafting depth, and a 16-node verification tree. Tree-based verification is useful for function calling because tool names, JSON syntax, and common argument structures are often predictable, while multiple branches can preserve likely alternatives for individual argument values. Compared with a linear MTP with 3 draft steps, tree-based MTP could achieve an additional ~40% decoding performance gain for this workload. How to run the MLPerf Edge Agentic benchmark The implementation used for this submission is available on the TensorRT Edge-LLM release/0.9.1-mlpinf branch . The branch includes the model export settings, TensorRT engine build commands, server configuration, and MLPerf client configuration 1. Clone TensorRT Edge-LLM and initialize its submodules. git clone --branch release/0.9.1-mlpinf \\ https://github.com/NVIDIA/TensorRT-Edge-LLM.git\ncd TensorRT-Edge-LLM\ngit submodule update --init --recursive 2. Download the calibrated NVFP4 checkpoint. huggingface-cli download \\ centml/Qwen3.6-27B-NVFP4-W4A4-mlpinf \\\n--local-dir \"$WORK/Qwen3.6-27B-NVFP4-W4A4-mlpinf\" 3. Follow mlperf/README.md to build TensorRT Edge-LLM, export the checkpoint with the tree-MTP interface, and build the base and draft TensorRT engines. $VENV/bin/python -m tensorrt_edgellm.scripts.export \\ \"$WORK/Qwen3.6-27B-NVFP4-W4A4-mlpinf\" \\ \"$WORK/onnx\" \\\n--mtp-tree-base --skip-visual 4. Launch the OpenAI-compatible TensorRT Edge-LLM server. export REPO=\"$PWD\"\nexport VENV=/path/to/venv-edgellm-export\nexport WORK=/path/to/mlperf-artifacts\nbash mlperf/serve_edgellm.sh 5. Clone the MLCommons endpoint harness, install its BFCL dependencies, update the model and tokenizer paths in mlperf/config.yaml , and run the benchmark. git clone https://github.com/mlcommons/endpoints.git\ncd endpoints\npython3.12 -m venv .venv\nsource .venv/bin/activate\npip install -e \".[dev,bfcl]\" inference-endpoint benchmark from-config \\\n--config \"$REPO/mlperf/config.",
+      "published_date": "2026-09-16",
+      "tags": [
+        "Agentic AI / Generative AI",
+        "AI Agent",
+        "AI Inference",
+        "Jetson",
+        "LLM Benchmarking",
+        "MLPerf",
+        "TensorRT",
+        "TensorRT-LLM",
+        "Thor"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "NVIDIA Developer",
+        "feed_url": "https://developer.nvidia.com/blog/feed/"
+      }
+    },
+    "rule_score": 38.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, function calling, reasoning, post-training",
+      "⚖️ 來源權重: rss +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 64,
+    "llm_reason": "邊緣裝置Agentic推理實測6.4倍加速，數據具體可複現但屬工程優化非新範式",
+    "novelty": 8,
+    "impact": 11,
+    "trending": 14,
+    "practicality": 17,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Apple ML",
+      "title": "Trajectory as the Teacher: Few-Step Discrete Flow Matching via Energy-Navigated Distillation",
+      "url": "https://machinelearning.apple.com/research/trajectory-teacher-flow-matching",
+      "authors": [],
+      "abstract": "research area Methods and Algorithms , research area Speech and Natural Language Processing content type paper published September 2026 Trajectory as the Teacher: Few-Step Discrete Flow Matching via Energy-Navigated Distillation Authors Amin Karimi Monsefi†**, Dominic Culver, Nikhil Bhendawade, Manuel R. Ciosici, Yizhe Zhang, Irina Belousova View publication Copy Bibtex Discrete flow matching generates text by iteratively transforming noise tokens into coherent language, but may require hundreds of forward passes. Distillation uses the multi-step trajectory to train a student to reproduce the process in a few steps. When the student underperforms, the usual explanation is insufficient capacity. We argue the opposite: the trajectory is the bottleneck, not the student. Each training trajectory is built through a chain of blind stochastic jumps with no evaluation of sequence quality; a single bad decision at an early midpoint propagates through subsequent steps, yet the student must imitate the result. Trajectory-Shaped Discrete Flow Matching (TS-DFM) replaces these blind jumps with guided navigation: a lightweight energy compass evaluates candidate continuations at each midpoint, selecting the most coherent. All shaping is training-only; inference cost is unchanged. On 170M-parameter language modeling, the shaped student at 8 steps achieves 32% lower perplexity than the 1,024-step teacher while being 128× faster, with gains consistent across source distributions and three evaluators of increasing scale. TS-DFM achieves the best perplexity of any discrete-generation baseline we compare against, including methods trained on 6× more data or using 5× larger models. † The Ohio State University ** Work done while at Apple Related readings and updates. FS-DFM: Fast and Accurate Long Text Generation with Few-Step Diffusion Language Models October 13, 2025 research area Speech and Natural Language Processing conference ICLR Autoregressive language models (ARMs) deliver strong likelihoods, but are inherently serial: they generate one token per forward pass, which limits throughput and inflates latency for long sequences. Diffusion Language Models (DLMs) parallelize across positions and thus appear promising for language generation, yet standard discrete diffusion typically needs hundreds to thousands of model evaluations to reach high quality, trading serial depth… Read more Distillation Scaling Laws July 1, 2025 research area Methods and Algorithms , research area Speech and Natural Language Processing conference ICML We propose a distillation scaling law that estimates distilled model performance based on a compute budget and its allocation between the student and teacher. Our findings mitigate the risks associated with large-scale distillation by enabling compute-optimal allocation for both the teacher and student to maximize student performance. We provide compute-optimal distillation recipes for two key scenarios: when a teacher already exists, and when a… Read more Discover opportunities in Machine Learning. Our research in machine learning breaks new ground every day. Work with us",
+      "published_date": "2026-09-16",
+      "tags": [],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "Apple ML",
+        "feed_url": "https://machinelearning.apple.com/rss.xml"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: scaling law, distillation, diffusion, flow matching",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 67,
+    "llm_reason": "以能量導航重塑蒸餾軌跡，8步優於1024步教師且128倍加速，方法新穎結果亮眼",
+    "novelty": 15,
+    "impact": 12,
+    "trending": 11,
+    "practicality": 13,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Apple ML",
+      "title": "DACA-GRPO: Denoising-Aware Credit Assignment for Reinforcement Learning in Diffusion Language Models",
+      "url": "https://machinelearning.apple.com/research/denoising-aware-credit-assignment",
+      "authors": [],
+      "abstract": "research area Methods and Algorithms , research area Speech and Natural Language Processing content type paper published September 2026 DACA-GRPO: Denoising-Aware Credit Assignment for Reinforcement Learning in Diffusion Language Models Authors Amin Karimi Monsefi†‡**, Dominic Culver‡, Nikhil Bhendawade, Lokesh Boominathan, Manuel R. Ciosici, Yizhe Zhang, Irina Belousova View publication Copy Bibtex Diffusion large language models are a compelling alternative to autoregressive models, yet existing RL methods for diffusion treat all denoising steps as equally important and rely on biased, high-variance likelihood estimates. We identify two fundamental weaknesses: the absence of temporal credit assignment across the denoising trajectory, and the systematic bias of mean-field likelihood estimates used for policy optimization. To address these, we propose Denoising-Aware Credit Assignment for GRPO (DACA-GRPO), a lightweight, plug-and-play enhancement for any GRPO-style trainer. DACA-GRPO introduces two complementary mechanisms: Denoising Progress Scores, which extract per-token importance weights from intermediate predictions at no additional forward cost, and Stratified Masking Likelihood, which partitions token positions into strata so that each token is predicted with most of the sequence as context, reducing the mean-field bias. Applied on top of three GRPO base methods, DACA-GRPO achieves consistent improvements across seven benchmarks spanning mathematical reasoning, code generation, constraint satisfaction, and constrained generation, with gains of up to 5.6pp on math reasoning, 7.4pp on code generation, 36.3pp on constraint satisfaction, and 5.9pp on JSON schema adherence. ‡ Equal contribution † The Ohio State University ** Work done while at Apple Related readings and updates. GRPO Beyond English: A Large-Scale Study of GRPO in Non-English and Multilingual Settings August 18, 2026 research area Speech and Natural Language Processing Reinforcement Learning with Verifiable Rewards (RLVR), often optimized with Group Relative Policy Optimization (GRPO), has become a central recipe for improving the reasoning capabilities of pretrained language models but current studies remain heavily English-centric. We conduct a large-scale empirical study of multilingual and non-English GRPO across a wide range of base models, training languages, and different reasoning language rewards. We… Read more Personalized Group Relative Policy Optimization for Heterogenous Preference Alignment April 2, 2026 research area Methods and Algorithms , research area Speech and Natural Language Processing Despite their sophisticated general-purpose capabilities, Large Language Models (LLMs) often fail to align with diverse individual preferences because standard post-training methods, like Reinforcement Learning with Human Feedback (RLHF), optimize for a single, global objective. While Group Relative Policy Optimization (GRPO) is a widely adopted on-policy reinforcement learning framework, its group-based normalization implicitly assumes that all… Read more Discover opportunities in Machine Learning. Our research in machine learning breaks new ground every day. Work with us",
+      "published_date": "2026-09-16",
+      "tags": [],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "Apple ML",
+        "feed_url": "https://machinelearning.apple.com/rss.xml"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: reasoning, rlhf, grpo, rlvr, alignment",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 65,
+    "llm_reason": "針對diffusion LM的GRPO提出去噪感知credit assignment，插即用且多基準驗證",
+    "novelty": 13,
+    "impact": 11,
+    "trending": 12,
+    "practicality": 14,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "NVIDIA Developer",
+      "title": "How to Use AI Agents to Prepare 3D Scenes for Simulation",
+      "url": "https://developer.nvidia.com/blog/how-to-use-ai-agents-to-prepare-3d-scenes-for-simulation/",
+      "authors": [
+        "Tanya Lenz"
+      ],
+      "abstract": "Agentic AI workflows can be used to prepare and validate digital twins for physical AI systems. Agents can inspect 3D scenes, author simulation-relevant data in OpenUSD , add physics properties, render preflight views, and validate the result against simulation-ready (SimReady) requirements. This workflow follows that process from a scene in Blender to a simulation-ready OpenUSD handoff for NVIDIA Isaac Sim or NVIDIA Isaac Lab . In practice, however, if you’re building agents for robotics, the workflow can often get stuck. It’s tempting to blame the hard part on the policy, the model, or the training loop, but the bottleneck often happens earlier: the robot does not have a simulation-ready world to train in. The extra work required to get a 3D scene into that state is laborious, time consuming, and frequently out of scope for the robotics simulation engineer. This post walks through an agent workflow for preparing a Blender scene for robotics simulation using NVIDIA Omniverse Libraries . Codex, powered by OpenAI GPT-6 Astra, coordinates the overall task, interprets results, and guides iteration. Specialized subagents built with the Hermes agent harness and deployed through NVIDIA NemoClaw use Omniverse Libraries to inspect the scene, author simulation metadata, configure physics, and render visual preflight views. Together, these components connect reasoning, tool execution, and validation into a repeatable process for delivering a simulation-ready OpenUSD world. Why is preparing a 3D scene for simulation challenging? The scene exists—the assets are there, created by a 3D artist in Blender—but is it usable for simulation? Has all of the following prep work been done? Are objects labeled? Are collision meshes correct? Are materials meaningful for simulation? Are sensors placed and configured? Does the scene export cleanly to USD? Can the robot perceive the target objects? Will the scene pass validation before you burn time debugging it in Isaac Sim or Isaac Lab? This prep work is tedious, repetitive, and easy to get wrong. It is also exactly the kind of work agentic systems should help with, if they have the right tools. The point of using NVIDIA Omniverse Libraries in an agent workflow is to integrate the tools agents need to build SimReady worlds. How can agents help prepare a 3D scene for simulation? A general-purpose agent such as Codex by ChatGPT or Claude Cowork by Anthropic can look at a Blender scene and recognize that it needs to be made simulation-ready. Recognition is useful, but it’s not enough. To help a robotics developer, the agent must be able to act on the scene: Inspect the Blender scene Identify missing simulation metadata Add semantic labels Configure sensors Author collision shapes and physics properties Render visual preflight views Run SimReady validation Automatically repair safe issues Escalate ambiguous decisions to a human A broad request to make a 3D scene ready for simulation becomes a multi-agent engineering workflow. Codex or Claude serves as the main agent, coordinating the overall task of preparing the scene for simulation. NVIDIA NemoClaw provides a reference architecture for building the specialized subagents that perform each job. These subagents can use open source agent harnesses such as Hermes, OpenClaw, or LangChain, configured with different NVIDIA Nemotron models for vision, reasoning, and tool use. In a configuration using Astra and Hermes, Codex uses Astra to translate the developer’s objective into tasks, identify dependencies, and review results from specialized Hermes subagents deployed through NemoClaw. For example, making an object grabbable requires coordinated updates to its semantic label, rigid-body configuration, and collision geometry. Astra helps connect those requirements across subagents and determine which checks are needed before the workflow proceeds. NVIDIA Omniverse Libraries provide the tools the subagents call to act on the scene. OpenUSD operations establish the shared scene structure, ovphysx authors and checks physics properties, ovrtx renders visual preflight views, and SimReady validation evaluates the resulting assets against a target simulation profile. Each subagent owns a specific job and its acceptance criteria. Safe, mechanical issues can be fixed automatically. Decisions that depend on developer intent, such as an uncertain semantic label or physical behavior, are escalated to a human with the relevant context and a proposed next step. The pattern is: Codex or Claude coordinates NemoClaw agents reason Omniverse Libraries act Together, these layers turn the prompt, “Make this scene simulation-ready” into a tool-driven workflow with specialized jobs, a persistent scene state, validation gates, and human review where judgment matters. Figure 1. Reference workflow demonstrating how to use Omniverse Libraries to activate a Blender scene with agents How to use agents to prepare a 3D scene for simulation Begin by specifying the main objective for the orchestration agent, including the input, desired output, destination, and validation criteria. This gives Codex or Claude enough structure to coordinate the overall task, route work across specialized NemoClaw subagents, and decide when the job is actually complete. Input: Blender scene\nGoal: Prepare it for robotics simulation\nOutput: USD-based simulation-ready world\nDestination: Isaac Sim or Isaac Lab\nValidation: Visual preflight + SimReady validation By specifying the main objective, the task changes from simply “make this scene better” to a coordinated agent workflow. Codex or Claude manages the overall request, NemoClaw subagents reason through specialized jobs, and Omniverse Libraries provide the tools that modify, render, validate, and prepare the world. After setting your goal, follow the steps below. Step 1: Inspect the scene through Blender MCP The first subagent connects to Blender through a Model Context Protocol (MCP) server and uses it to inventory the scene. MCP gives the agent a controlled tool interface into Blender: instead of guessing from screenshots or relying on manual exports, the agent can call tools to inspect objects, collections, transforms, materials, cameras, lights, and scene metadata. That scene inventory becomes the shared context the rest of the subagents use. This subagent should answer: What objects exist? What collections and hierarchy exist? What materials are assigned? What cameras and lights are present? What looks like a robot target, obstacle, floor, shelf, or bin? What simulation data is missing? The output should be structured as follows: { \"objects\": 142, \"materials\": 37, \"missing\": [ \"semantic_labels\", \"collision_meshes\", \"camera_sensors\", \"physics_materials\" ]\n} This provides a shared starting point for the other subagents. The Hermes inspection subagent returns its structured findings to Codex. Astra uses this inventory and the developer’s robotics objective to identify missing information and plan the next tasks. For example, identifying the robot’s target objects helps determine which assets need movable-body properties and which sensor viewpoints require review. Codex then delegates those tasks to the relevant Hermes subagents deployed through NemoClaw, with clear acceptance criteria and unresolved assumptions flagged for developer input. The workflow in this post uses The Junk Shop by Alex Trevino (original concept by Anais Maamar) for the demo (Figure 2). Codex coordinates NemoClaw to orchestrate which subagent is needed for the requested task. In this instance, NemoClaw is working through Blender MCP to run The Junk Shop scene and inventory the objects, materials, scene structure, and more. Figure 2. The Blender add-on bridges scene data to Omniverse Libraries through gRPC, enabling rendering and physics capabilities to feed directly back into the Blender Viewport Step 2: Move toward USD as the contract Blender is the authoring environment.",
+      "published_date": "2026-09-16",
+      "tags": [
+        "Agentic AI / Generative AI",
+        "Simulation / Modeling / Design",
+        "NemoClaw",
+        "OpenUSD",
+        "Physical AI"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "NVIDIA Developer",
+        "feed_url": "https://developer.nvidia.com/blog/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, tool use, mcp, model context protocol",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 64,
+    "llm_reason": "具體展示多Agent協作準備模擬場景的可落地工作流，含實際工具鏈",
+    "novelty": 9,
+    "impact": 10,
+    "trending": 13,
+    "practicality": 17,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Ars Technica AI",
+      "title": "Covert uploads and megalomania: OpenAI details new \"misaligned\" agent incidents",
+      "url": "https://arstechnica.com/ai/2026/09/covert-uploads-and-megalomania-openai-details-new-misaligned-agent-incidents/",
+      "authors": [
+        "Kyle Orland"
+      ],
+      "abstract": "For a while now , the issue of \"AI alignment\" (i.e., how well an AI model's actions line up with the intentions of its creator and/or user) has been a core concern and topic of discussion among AI safety researchers. Since OpenAI's disclosure of the infamous Hugging Face hacking incident in July, the concept of \"AI alignment\" has itself broken containment and increasingly become a mounting concern and subject of conversation among the general public. Perhaps in recognition of that, OpenAI committed this week to a new framework for disclosing \"instances of model misalignment at OpenAI,\" including six examples of \"unexpected or concerning model behavior\" observed within the company in the past six months. The company said that publishing details of these incidents will hopefully \"[allow] others to investigate the same problems, test our explanations, and improve mitigations.\" Among OpenAI's newly disclosed \"misalignment\" reports this week, the one that most resembled a sci-fi story about a rogue AI trying to break free involved an instance of \"self-generated prompt injections.\" In attempting to scan a library catalog for examples from a \"best books\" list, the model perplexingly used its \"compaction\" function (where it summarizes data and findings for later retrieval) with megalomaniacal instructions such as:",
+      "published_date": "2026-09-17",
+      "tags": [
+        "AI",
+        "AI alignment",
+        "AI safety",
+        "misalignment",
+        "openai"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "Ars Technica AI",
+        "feed_url": "https://arstechnica.com/ai/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, alignment, safety",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 60,
+    "llm_reason": "OpenAI首度公開具體misalignment案例，透明度框架具話題性與故事性",
+    "novelty": 9,
+    "impact": 12,
+    "trending": 17,
+    "practicality": 6,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Ars Technica AI",
+      "title": "LLMs respond differently to harmful prompts when AI watermarking is used",
+      "url": "https://arstechnica.com/security/2026/09/ai-text-watermarking-can-make-models-more-vulnerable-to-adversarial-prompts/",
+      "authors": [
+        "Dan Goodin"
+      ],
+      "abstract": "In response to a new European Union law, AI platforms are implementing new schemes for watermarking the content they generate. Anthropic recently disclosed its future Claude models will use SynthID-Text , an approach Google created and released as open source. It uses a secret key that subtly changes the process a model uses for choosing the next word in a sentence. Whereas a top next word choice might be “cloudy,” the key might change it to “overcast.” Anyone who knows the key can determine if it was generated by the platform using it. New research shows that SynthID-Text can change not just word selection but also the tools a model invokes and the chances it will adhere to or disregard safety guardrails it has been trained to follow. The threat can become greater in the face of an adversarial prompt, in which an attacker attempts to cause a model to carry out a harmful action, such as revealing a password or other sensitive information. Instructions that normally wouldn’t be followed will, in some cases, be performed once the watermarking is deployed. The finding underscores the need for developers to thoroughly test how their LLMs and agents behave when watermarking is in place. “As compared to the same models without watermarking, it is definitely going to change their behavior, especially when we place it under adversarial conditions, or we make these models call tools when they’re powering an agent,” Andrea Siposova, an AI security researcher at Lasso Security, told Ars. “Watermarking is made to not be perceptible to a reader, but we know that when we are changing anything about what the model is generating, it is going to cause some tradeoffs, it’s going to show up somewhere.”",
+      "published_date": "2026-09-17",
+      "tags": [
+        "AI",
+        "Biz & IT",
+        "Security",
+        "Anthropic",
+        "LLMs",
+        "watermarking"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "Ars Technica AI",
+        "feed_url": "https://arstechnica.com/ai/feed/"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, safety",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 64,
+    "llm_reason": "水印意外改變模型安全行為，研究發現具反直覺故事性",
+    "novelty": 14,
+    "impact": 13,
+    "trending": 13,
+    "practicality": 8,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "Implementing defense-in-depth authorization for MCP tools on Amazon Quick",
+      "url": "https://aws.amazon.com/blogs/machine-learning/implementing-defense-in-depth-authorization-for-mcp-tools-on-amazon-quick/",
+      "authors": [
+        "Anneline Sibanda"
+      ],
+      "abstract": "Each Model Context Protocol (MCP) tool invocation on Amazon Quick is an access event that can require defense-in-depth authorization at the tool and parameter level. This applies in addition to a valid token. Without granular controls, a single misconfigured permission can bypass the access requirements that organizations might need to fulfill for compliance purposes. In this blog post, you implement a multi-gate authorization pattern that evaluates OpenID Connect (OIDC) JSON Web Token (JWT) claims in sequence. The pattern enforces role-based and attribute-based access control on each invocation. You configure which authorization controls to activate based on your compliance requirements, from group-based permissions to parameter-level attribute checks. Microsoft Entra ID serves as the identity provider (IdP) for this walkthrough. When you connect MCP tools to Amazon Quick, a valid single sign-on (SSO) confirms who the caller is but not what they should be allowed to do. Authorization closes that gap, turning a verified identity into a set of enforceable rules about what each caller can reach. Model Context Protocol (MCP) is an open protocol that connects applications to internal tools, databases, and APIs, reducing the need for custom integrations. However, the moment those tools reach sensitive data, a valid SSO token is no longer enough. Without layered, defense-in-depth authorization, a single over-broad token can reach tools and data beyond the caller’s role, which can expose data and complicate compliance audits. When an organization connects sensitive data sources to Amazon Quick through MCP, “authenticated” no longer equals “authorized.” Authorization decides which tools a caller can invoke, from which locations, and at what privilege level. For example, a regulated organization requires multi-factor authentication (MFA) at sign-in and restricts access from unapproved countries. The identity provider enforces the first requirement, and the authorization layer enforces the second. Standard OAuth 2.0 identity verification doesn’t enforce what callers can do at the tool and parameter level. This post explains how the multi-gate authorization pattern works and walks you through configuring the identity layer that drives it. The interceptor processes OpenID Connect (OIDC) JSON Web Token (JWT) claims through four gates: MFA, geographic restriction, group-to-role mapping, and tool-level permission checks. In this walkthrough you configure the Microsoft Entra ID applications, claims, and policies the gates rely on. You then connect Amazon Quick to an existing Amazon Bedrock AgentCore Gateway, a capability of Amazon Bedrock AgentCore. The gateway provides the HTTP endpoint and JWT validation layer between clients and MCP tools. You validate the allow and restricted paths by signing in as different personas. This walkthrough assumes you have already deployed the AWS components, including the gateway, the interceptor AWS Lambda function, the tool Lambda functions, and the Amazon DynamoDB tables. You get an auditable, composable security layer that sits between the user’s natural-language request and your business logic. This blog post uses a fictional example: AnyCompany Global Services, an enterprise that maintains a multi-tenant risk register hosted on Amazon DynamoDB accessed through MCP tools on Amazon Quick. This pattern is relevant for financial services, healthcare, and government organizations that can require granular access controls for compliance audits. AnyCompany requires that each tool invocation comes from an authenticated caller who has completed MFA. Callers connecting from unapproved countries are denied access. Role-based permissions enforce a strict read/write boundary: readers can query risks but can’t create, update, or delete them, while administrators can bypass conditional gates for operational flexibility. Finally, every mutation must produce an immutable audit record to satisfy compliance and forensic requirements. The multi-gate authorization user flow shown in Figure 1 addresses each of the preceding requirements. You implement it through a single AWS Lambda REQUEST interceptor attached to Amazon Bedrock AgentCore Gateway . The interceptor evaluates JWT claims in a fixed sequence, and each gate operates independently. Figure 1: Multi-gate authorization user flow The authorization gates process requests in this order: Each gate is independently configured through environment variables. Gates 3 and 4, group role-based access control (RBAC) and tool permission, form the core authorization layer and are always active. The remaining two gates are conditional and can be disabled by setting the environment variables to false or by omitting them entirely. This means a deployment requiring only RBAC and geo-fencing activates three gates. A deployment requiring further granularity and control can activate each of the four checks. Gate 1 is the only gate that is enforced outside the interceptor. Entra ID applies the Conditional Access Policy before it issues a token, so every token that reaches the gateway has already satisfied MFA. Setting REQUIRE_MFA turns on an additional check of the amr claim inside the interceptor, for identity providers that record MFA evidence in the token. The two mechanisms work together: the policy keeps unverified callers out, and the claim check confirms in the request path that the token carries the evidence. The interceptor evaluates all four authorization gates before business logic runs. A request that fails a gate is denied with a 403 and doesn’t reach the tool or its data. Each mutation that passes writes an immutable audit record, giving you a complete, queryable trail of who did what. Before deploying the solution, set up your identity provider. This walkthrough assumes familiarity with AWS Lambda, OAuth 2.0 authorization flows, and Microsoft Entra identity provider configuration. You also need access to a few AWS services and an OIDC identity provider, described in the following sections. This walkthrough assumes the AWS side of the pattern is already deployed in your account. That side comprises an Amazon Bedrock AgentCore Gateway configured with a CUSTOM_JWT authorizer, the AWS Lambda REQUEST interceptor, the tool Lambda functions, and the Amazon DynamoDB tables they use. Deploying those resources is outside the scope of this post, which focuses on the identity and authorization configuration. This walkthrough uses Microsoft Entra ID as the identity provider. The authorization pattern works with OIDC-eligible identity providers. However, the configuration steps vary based on the identity provider you choose. You need the following in your Entra ID tenant: a Global Administrator or Application Administrator role to create app registrations, security groups, and the Conditional Access Policy that enforces MFA. Conditional Access Policies need a Microsoft Entra ID P1 or P2 license. For validation, prepare at least three test users with different group memberships. The following sections walk you through registering the two app registrations, exposing the API, and wiring up permissions. You also configure the claims the AWS Lambda interceptor reads to control permissions on the MCP tools. Throughout, replace the placeholder identifiers ({TENANT_ID}, {RESOURCE_APP_ID}, {GATEWAY_URL}, and so on) with the values from your own tenant. Amazon Quick uses Proof Key for Code Exchange (PKCE) and RFC 8707 Resource Indicators , a standard for binding tokens to specific API endpoints. Together they scope each access token to a specific MCP server. During the token exchange, Amazon Quick sends the AgentCore Gateway URL as the resource parameter. Entra ID requires the client and resource represented by separate app registrations when the resource is identified by a URL. Steps 1 through 3 register the resource application, set its Application ID URI, and expose the API scopes that Amazon Quick requests.",
+      "published_date": "2026-09-17",
+      "tags": [
+        "Advanced (300)",
+        "Amazon Quick Suite",
+        "Technical How-to"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: mcp, model context protocol",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 61,
+    "llm_reason": "MCP多層授權架構具體可落地，切中MCP安全熱點",
+    "novelty": 8,
+    "impact": 10,
+    "trending": 14,
+    "practicality": 15,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Apple ML",
+      "title": "REVERSAL-BENCH: A Reversibility Axis and Reset Oracle for Measuring the Reset-Free RL Cliff",
+      "url": "https://machinelearning.apple.com/research/reversal-bench-rl-cliff",
+      "authors": [],
+      "abstract": "research area Methods and Algorithms content type paper published September 2026 REVERSAL-BENCH: A Reversibility Axis and Reset Oracle for Measuring the Reset-Free RL Cliff Authors Riyaaz Shaik, Chandru Venkataraman View publication Copy Bibtex A central goal of autonomous reinforcement learning is continuous policy training without external resets. However, existing paradigms largely depend on underlying environmental reversibility, a property absent in real world manipulation, where events such as pushing objects off tables or spilling granular substances cannot be undone. We introduce REVERSAL-BENCH, a benchmark that controls reversibility via a continuous parameter ρ∈ [0, 1] and provides a reset oracle, a ground-truth verification mechanism to test state recoverability across eight manipulation settings in five physics engines. Evaluating a broad spectrum of policy architectures—including standard actor-critic algorithms, safe RL, and specialized reset-free frameworks reveals a sharp reversibility cliff: reset-free agents are consistently absorbed into irrecoverable states as ρ increases, whereas episodic agents maintain steady learning. We see this failure mode across autonomous reset-free baselines and constrained RL. Because reset-free agents lack external resets, any transition into an irrecoverable state results in permanent absorption, leaving the agent trapped where further learning halts. We show that this absorption phenomenon persists in full physics simulations under learned manipulation policies. By evaluating against geometrically identical reversible counterparts, we confirm that this breakdown is causally driven by irreversibility rather than obstacle complexity. We release the benchmark suite, a large multi-simulator dataset labeled with recoverability and a reset oracle. We also evaluate a safety shield that intervenes before irreversible failures occur, showing that while recoverability can be predicted accurately, active recovery primarily succeeds only when the agent can physically steer clear of the trap. Related readings and updates. AgentBuilder: Exploring Scaffolds for Prototyping User Experiences of Interface Agents January 9, 2026 research area Human-Computer Interaction Interface agents powered by generative AI models (referred to as “agents”) can automate actions based on user commands. An important aspect of developing agents is their user experience (i.e., agent experience). There is a growing need to provide scaffolds for a broader set of individuals beyond AI engineers to prototype agent experiences, since they can contribute valuable perspectives to designing agent experiences. In this work, we explore the… Read more Towards Learning Multi-Agent Negotiations via Self-Play January 28, 2019 research area Computer Vision Workshop at ICCV Making sophisticated, robust, and safe sequential decisions is at the heart of intelligent systems. This is especially critical for planning in complex multi-agent environments, where agents need to anticipate other agents’ intentions and possible future actions. Traditional methods formulate the problem as a Markov Decision Process, but the solutions often rely on various assumptions and become brittle when presented with corner cases. In… Read more Discover opportunities in Machine Learning. Our research in machine learning breaks new ground every day. Work with us",
+      "published_date": "2026-09-17",
+      "tags": [],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "Apple ML",
+        "feed_url": "https://machinelearning.apple.com/rss.xml"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, multi-agent, reinforcement learning, safety",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 54,
+    "llm_reason": "提出可控可逆性軸與reset oracle新基準，揭示reset-free RL的失效懸崖",
+    "novelty": 13,
+    "impact": 9,
+    "trending": 8,
+    "practicality": 10,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Apple ML",
+      "title": "How Value Induction Reshapes LLM Behaviour",
+      "url": "https://machinelearning.apple.com/research/value-induction-llm-behaviour",
+      "authors": [],
+      "abstract": "research area Human-Computer Interaction , research area Speech and Natural Language Processing conference ACL Rolling Review (ARR) content type paper published September 2026 How Value Induction Reshapes LLM Behaviour Authors Arnav Arora†**, Natalie Schluter, Katherine Metcalf‡, Maartje ter Hoeve‡ View publication Copy Bibtex Conversational Large Language Models are post-trained on language that expresses specific behavioural traits, such as curiosity, open-mindedness, and empathy, and values, such as helpfulness, harmlessness, and honesty. This is done to increase utility, ensure safety, and improve the experience of the people interacting with the model. However, values are complex and inter-related – inducing one could modify behaviour on another. Further, inducing certain values can make models more addictive or sycophantic through language used in the generations, with a potential detrimental effect on the user. We investigate these and other unintended effects of value induction into models. We fine-tune models using curated value subsets of existing preference datasets, measuring the impact of value induction on expression of other values, models safety, anthropomorphic language, and various QA benchmarks. We find that (i) inducing values leads to expression of other related, and sometimes contrastive values, (ii) inducing positive values increases safety, and (iii) all values increase anthropomorphic language use, making models more validating and sycophantic. † University of Copenhagen ‡ Equal contribution ** Work done while at Apple Related readings and updates. EncQA: Benchmarking Vision-Language Models on Visual Encodings for Charts October 13, 2025 research area Computer Vision , research area Human-Computer Interaction conference IEEE Visualization Multimodal vision-language models (VLMs) continue to achieve ever-improving scores on chart understanding benchmarks. Yet, we find that this progress does not fully capture the breadth of visual reasoning capabilities essential for interpreting charts. We introduce EncQA, a novel benchmark informed by the visualization literature, designed to provide systematic coverage of visual encodings and analytic tasks that are crucial for chart… Read more On Device Llama 3.1 with Core ML November 1, 2024 Many app developers are interested in building on device experiences that integrate increasingly capable large language models (LLMs). Running these models locally on Apple silicon enables developers to leverage the capabilities of the user’s device for cost-effective inference, without sending data to and from third party servers, which also helps protect user privacy. In order to do this, the models must be carefully optimized to effectively… Read more Discover opportunities in Machine Learning. Our research in machine learning breaks new ground every day. Work with us",
+      "published_date": "2026-09-16",
+      "tags": [],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "Apple ML",
+        "feed_url": "https://machinelearning.apple.com/rss.xml"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: reasoning, multimodal, vision language, safety",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 53,
+    "llm_reason": "揭示價值誘導的連鎖副作用與諂媚傾向，對齊研究有洞察但偏學術",
+    "novelty": 11,
+    "impact": 10,
+    "trending": 10,
+    "practicality": 8,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "Enhancing industrial safety AI with synthetic data on Amazon SageMaker AI",
+      "url": "https://aws.amazon.com/blogs/machine-learning/enhancing-industrial-safety-ai-with-synthetic-data-on-amazon-sagemaker-ai/",
+      "authors": [
+        "Dimitri Voytan"
+      ],
+      "abstract": "Industrial safety AI refers to the use of technologies like computer vision and predictive analytics to find and stop workplace dangers. Synthetic data augmentation is emerging as a practical solution to one of the hardest problems in industrial safety AI: the scarcity of training images depicting people in dangerous proximity to heavy machinery. Industries deploying autonomous equipment (for example, agriculture, construction, mining, and manufacturing) need reliable person-detection models. However, the highest-risk scenarios (for example, a worker standing in a blind spot, a child near a moving implement) are precisely the ones that are rarest in real-world datasets. They are also the most dangerous to stage for data collection. In this post, we show how to use a synthetic data augmentation pipeline built on Amazon SageMaker AI and Amazon Rekognition to generate photo-realistic training images with automated labels. Our experiments showed up to 160 percent improvement in person detection mAP50 (mean Average Precision at an Intersection over Union threshold of 0.5) without manual annotation or hazardous photography sessions. Industrial companies developing AI-powered safety systems for heavy machinery face a critical bottleneck. They need thousands to millions of training images showing people in dangerous positions near equipment to train object detection models that can help prevent accidents. However, this data is extremely difficult to obtain: These challenges leave edge-deployed models with insufficient training signal for person detection in the exact scenarios where detection failures have the most severe consequences. This section describes our end-to-end synthetic data augmentation pipeline, which operates in two stages: photo-realistic image generation and automated labeling. Our solution is an end-to-end synthetic data augmentation pipeline that generates labeled training images without manual annotation. The pipeline operates in two stages: In our approach, we edit real images rather than generating entirely synthetic scenes from scratch. This preserves background fidelity, avoids domain gap, and allows existing equipment annotations to remain valid. Domain gap is the performance drop that occurs when a model trained on one data distribution, such as fully synthetic scenes, is applied to real-world images. The diffusion model’s scene understanding produces contextually coherent insertions with realistic lighting and proportions. We deploy the Qwen-Image-Edit-2509 diffusion model on Amazon SageMaker AI using an ml.g5.12xlarge instance (4× NVIDIA A10G GPUs, 96 GB total VRAM). The model receives a structured prompt specifying: The model edits real images containing equipment but no people as substrates, inserting synthetic people while preserving the original scene context, lighting, and scale. This in-place editing approach avoids the domain gap issues that plague fully synthetic scene generation. Each generated image is processed through the Amazon Rekognition DetectLabels API with a minimum confidence threshold of 80 percent. Detected bounding boxes are deduplicated by using non-maximum suppression (NMS) with IoU threshold > 0.5 and converted to YOLO format. These pseudo-labels (machine-generated annotations produced automatically in place of human labeling) are merged with existing equipment annotations from the original image. This automated labeling alleviates manual annotation for synthetic images while maintaining label quality sufficient for training edge-deployed detectors. The synthetic images and their automated annotations are combined with real training data to form the final training set. Pre- and post-processing steps (image filtering, image resizing, prompt assembly, and label processing) allow the pipeline to run as an automated workflow. This section covers the model deployment configuration, the synthetic image generation methodology, and the automated annotation pipeline. The Qwen-Image-Edit-2509 model is deployed on Amazon SageMaker AI with the following configuration: The model requires a custom device map that distributes its 60 transformer layers across the available GPUS. For efficient inference, we recommend avoiding cross device communication. Deploy on a single gpu with sufficient VRAM, such as the NVIDIA H100 GPU provided by ml.p5.4xlarge instances, or employ weight quantization techniques. We project that inference cost per image will drop around 10x using such hardware, but this measurement is not yet validated. The pipeline selects real training images that contain locomotives but no people as editing substrates. For each image, the diffusion model receives a structured prompt. Here is an example prompt structure: Our experiments revealed a critical finding: prompt-guided placement is the single most important factor for downstream detection performance. Instructing the model to place people in domain-relevant hazardous positions doubled person detection mAP50, while placing people in the background actually degraded performance. Each generated image is processed through the Amazon Rekognition DetectLabels API. The model computes bounding boxes for humans using the query words: person, human, man, woman, boy, girl, child, adult, people. This automates label creation at scale. We use: We used an OpenImages subset as a publicly shareable analog to our customer’s industrial equipment dataset: We evaluated the impact of synthetic data augmentation across three dimensions: prompt placement strategy, synthetic data volume, and model capacity. We evaluated our pipeline using YOLO11 as a representative edge-deployable detector family, trained on Amazon SageMaker AI with PyTorch 2.1.0. Models were trained with image size 640, early stopping (patience 50), and a maximum of 500 epochs. Our prompt ablation study with YOLO11-nano compared four synthetic data conditions against a real-data-only baseline. We used 1,000 synthetic images in each scenario. The following table shows key performance metrics for each scenario. Takeaway: What the model generates (a person in a domain-relevant position) matters far more than how the scene is varied around it (for example, ambient condition or time of day). Hazardous placement doubled person mAP50 (from 0.051 to 0.106), while background placement slightly degraded it. To explore the impact of synthetic data volume on detection performance, we swept the number of synthetic images from 250-1,000 while keeping the person placement condition and model size constant (hazardous placement with no scene variation, YOLO11-nano). The following table shows key performance metrics for each scenario: Takeaway: In our experiments, performance peaked at 750 synthetic images with 160 percent improvement in person mAP50 over baseline (from 0.051 to 0.134). Beyond this point, accumulated generation artifacts (for example, garbled faces and over-saturation) introduced noise that degraded both localization confidence and detection coverage. Treat synthetic data volume as a hyperparameter to validate, not maximize. To explore the impact of model capacity, we swept YOLO11 across five model scales with 1,000 synthetic images (hazardous placement with no scene variation): Takeaway: YOLO11-medium achieved the best aggregate performance (0.604 mAP50) and the highest person recall (0.340), doubling recall compared to the baseline. The 57M-parameter XLarge model regressed below the Nano+synth result, demonstrating that with only approximately 4,200 training images, there is insufficient data to regularize a model of that capacity. The combined pipeline improvements are particularly significant for safety: The synthetic data pipeline delivers significant cost, safety, and speed advantages over manual data collection. In the following sections, we compare the two approaches, outline scalability benefits, and summarize time-to-deployment improvements.",
+      "published_date": "2026-09-17",
+      "tags": [
+        "Advanced (300)",
+        "Amazon SageMaker AI",
+        "Technical How-to"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: synthetic data, quantization, diffusion, safety",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 52,
+    "llm_reason": "合成資料提升工業安全偵測160% mAP50，方法具體且量化明確",
+    "novelty": 8,
+    "impact": 9,
+    "trending": 7,
+    "practicality": 15,
+    "blog_worthiness": 13
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "OpenSpec – A lightweight and configurable AI spec framework",
+      "url": "https://openspec.dev/",
+      "authors": [
+        "etoxin"
+      ],
+      "abstract": "The spec framework for building the right thing and building it right FIG. 1 / DRIFT 0.045 Synopsis OpenSpec is a lightweight and configurable framework for creating and managing software specifications. With OpenSpec, you capture what you want to build in a spec and keep your team and coding agents aligned as the work evolves. We help you refine the requirements, validate that they describe the right thing, and verify that the implementation matches. In essence, OpenSpec helps you build the right thing and build it right . Installation npm / pnpm / bun / yarn / nix $ npm install -g @fission-ai/openspec@latest copy Compatibility Claude Code Codex Cursor GitHub Copilot Gemini CLI OpenCode Amazon Q Developer Antigravity Auggie IBM Bob Shell Cline Command Code CodeArts CodeBuddy Devin Desktop ForgeCode Continue CoStrict Crush Factory Droid Hermes Agent iFlow Junie Kilo Code Kimi Code Kiro Lingma MiniMax Code Mistral Vibe Oh My Pi Pi SourceCraft Code Assistant for VS Code Qoder Qwen Code Rovo Dev CLI Zoo Code Trae Zed Agent ZCode full directory ↗ + 33 more Workflow /opsx: explore map the problem and understand the codebase /opsx: propose draft proposal.md, specs/, design.md, tasks.md /opsx: apply implement tasks from the specification /opsx: verify check the implementation matches the spec /opsx: archive archive completed changes Links GitHub · Discord · 68.0k stars · v1.13.0\n\n(186 points, 93 comments on Hacker News)",
+      "published_date": "2026-09-17",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 186,
+        "num_comments": 93,
+        "hn_url": "https://news.ycombinator.com/item?id=49734264",
+        "object_id": "49734264"
+      }
+    },
+    "rule_score": 25.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⬆️ HN 熱門: 186 points",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 60,
+    "llm_reason": "spec驅動agent框架社群熱度高，但屬既有工作流的包裝整合",
+    "novelty": 6,
+    "impact": 10,
+    "trending": 16,
+    "practicality": 16,
+    "blog_worthiness": 12
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "Reverse-engineered Jev-like model",
+      "url": "https://github.com/vinnylarouge/jevlike",
+      "authors": [
+        "rochansinha"
+      ],
+      "abstract": "Jevlike Train a small model that chooses among a changing list of text options. A Jev-like model takes a piece of text and a list of N text options. It returns one probability for each option. It does this in one pass instead of writing an answer word by word. Jev is TypeSafe's commercial model for this kind of task. TypeSafe has not published its design. This repository is an independent starter model with the same input and output shape. Demo The same option-attention head can score controller buttons from image patches. This ten-second film joins two selected five-second windows: live deadly_corridor combat on the seven Doom buttons, then a chess controller walking to and playing moves with five keys. The diagram shows the tensors used for each decision. The Doom window came from the supplied joint checkpoint, which averaged 0.60 kills and -97.50 reward across its ten recorded episodes. The chess window came from the stronger chess-only checkpoint, which scored 4 wins, 46 draws and 0 losses in 50 sampled games against a random mover, but 0 wins, 2 draws and 48 losses against Stockfish level 0. The windows were selected for activity and are not typical-play or competence claims. Install the game extras and record a fresh 640 by 480 Doom trace from the released joint checkpoint: uv pip install -e ' .[games] ' python examples/doom/play.py examples/checkpoints/joint-imitation.pt --episodes 10 --game-seconds 35.3 --device cpu --capture-resolution 640x480 --output runs/doom.mp4 --trace runs/doom-trace.json Render the trace in the same visual layout. This writes a silent film because the author-owned soundtrack source is not part of the repository. (cd examples/film && npm install && npx playwright install chromium)\nexamples/film/make-film.sh runs/doom-trace.json runs/doom-film.mp4 10 The release includes the Doom example , the chess example , the single-game checkpoints and the shared 12-option checkpoint. Both games import the visual scorer from jevlike.vision ; there is no second model copy in either example. Architecture Each option becomes a query vector, which is a short list of numbers representing its text. The query assigns attention weights to the context tokens. Those weights make one context vector for that option. A shared dot product turns each option and context pair into one score. A softmax, which converts scores into probabilities that sum to one, runs across the options. The default encoder learns byte embeddings from scratch. An encoder is the part that turns text into vectors. The optional Hugging Face path uses a frozen pretrained encoder, whose existing weights stay fixed while the small scorer learns. Data format Use one JSON object per line: { \"context\" : \" The customer needs a refund. \" , \"options\" :[ \" refund \" , \" sales \" , \" technical support \" ], \"label\" : 0 } label is the zero-based index of the correct option. Each row may have a different number of options, with a minimum of two. Quickstart Run these commands from the repository root. They create local synthetic data, train on it, evaluate the saved model and score one new menu. uv venv source .venv/bin/activate\nuv pip install -e ' .[dev] ' jevlike-data synthetic --output data/synthetic\njevlike-train data/synthetic/train.jsonl \\ --validation data/synthetic/validation.jsonl \\ --output runs/synthetic.pt\njevlike-eval runs/synthetic.pt data/synthetic/test.jsonl\njevlike-predict runs/synthetic.pt \\ --context \" Choose the exact badge amber badger. Badge: amber badger. \" \\ --option \" azure crane \" \\ --option \" amber badger \" \\ --option \" gold heron \" The evaluation prints top-1 accuracy, which is the fraction of correct first choices. Top-3 accuracy is the fraction with the right answer among the three highest scores. Expected calibration error compares confidence with observed accuracy. The command also prints a shuffled-context control, which pairs each menu with the wrong context. A useful model should beat that control. Use your own data Export train, validation and test JSONL files in the format above. Keep all options that the model will see at prediction time in each row. Split related records together. For example, keep all records for one customer or one target page in one split. This prevents near-duplicates from leaking into the test set. Run jevlike-train with your train and validation files. Run jevlike-eval once on the held-out test file. Held-out means the file was never used for training or model selection. The default byte encoder truncates context to 192 bytes and each option to 32 bytes. Raise --context-tokens or --option-tokens when your text needs more room. Training supports CPU, Apple MPS for a Mac GPU, and CUDA for an NVIDIA GPU through --device . Use a frozen pretrained encoder Install the optional dependency and name any compatible encoder from Hugging Face: uv pip install -e ' .[transformers] ' jevlike-train data/synthetic/train.jsonl \\ --validation data/synthetic/validation.jsonl \\ --output runs/qwen-head.pt \\ --encoder hf \\ --hf-model Qwen/Qwen2.5-0.5B \\ --rank 256 \\ --batch-size 8 The checkpoint stores the trained scorer head and the encoder name. It does not copy the frozen encoder weights. Loading the checkpoint therefore needs access to the same Hugging Face model. --rank sets the width of the small scorer head. A wider head has more trainable weights and uses more memory. Wikispeedia example scripts/get_wikispeedia.sh downloads the public SNAP archives and builds next-click JSONL files. The data stay outside this repository. scripts/get_wikispeedia.sh\njevlike-train data/wikispeedia/jsonl/train.jsonl \\ --validation data/wikispeedia/jsonl/validation.jsonl \\ --output runs/wikispeedia.pt Cite Robert West and Jure Leskovec, Human Wayfinding in Information Networks , WWW 2012. Review the source data terms on the SNAP dataset page . What to expect In the experiments that led to this starter, the one-pass scorer reached about 98% accuracy on synthetic menus. On target-disjoint Wikispeedia next-click data, a frozen Qwen2.5-0.5B encoder plus the scorer reached 26%, against about 8% for shuffled and random-encoder controls. A small model trained from scratch on 40,000 clicks reached 29%. At eight options, one pass was about 100 times faster than a small decoder forced to write 400 tokens. These numbers describe local experiments, not this quickstart run. We did not show equal quality with Jev or reproduce TypeSafe's private training method. Limitations This is a research starter, not a copy of Jev. Accuracy depends on data quality, split quality and the encoder. The byte encoder is cheap but weak on language meaning. The pretrained path may download a large model and needs more memory. One-pass scoring requires the complete option list before prediction. The speed comparison used a small local decoder rather than a large commercial model. Licence Code is released under the MIT License . Downloaded datasets and pretrained models keep their own terms.\n\n(154 points, 22 comments on Hacker News)",
+      "published_date": "2026-09-17",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 154,
+        "num_comments": 22,
+        "hn_url": "https://news.ycombinator.com/item?id=49731282",
+        "object_id": "49731282"
+      }
+    },
+    "rule_score": 20.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: synthetic data",
+      "⬆️ HN 熱門: 154 points"
+    ],
+    "llm_score": 63,
+    "llm_reason": "逆向工程Jev模型附程式碼與demo，技術可複現",
+    "novelty": 14,
+    "impact": 8,
+    "trending": 11,
+    "practicality": 15,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "A shared agentic platform for Wood Mackenzie, on Amazon Bedrock AgentCore",
+      "url": "https://aws.amazon.com/blogs/machine-learning/a-shared-agentic-platform-for-wood-mackenzie-on-amazon-bedrock-agentcore/",
+      "authors": [
+        "Shridhar Navanageri"
+      ],
+      "abstract": "Building a working agentic prototype takes an afternoon. Getting it to production is where the work explodes. The moment an agent has to serve more than one user, a new layer of engineering appears and it’s critical to tell whether the agent is doing the right thing on real traffic. Concurrency, session isolation, identity, persistent state, scaling, and guardrails are all layers that most teams rebuild from scratch every time, even though a standardized platform for each agent is a more repeatable approach. The result is a wide gap between experimentation and production. Industry surveys through early 2026 put enterprise AI experimentation near universal while only about a quarter of organizations have scaled agents into production in even one function. Internally at Wood Mackenzie, we have found that 88 percent of AI proofs-of-concept never reach widescale deployment. The reasons are consistent across analysts, and they are mostly architectural rather than model-related. Forrester attributes agent failures largely to ambiguity, miscoordination, and unpredictable system behavior rather than ordinary bugs. The most-named single blocker is evaluation and observability: teams cannot reliably tell ahead of time when a non-deterministic agent will be wrong, and standard regression tests do not catch it. Governance and identity follow close behind, with a large share of executives reporting they could not immediately shut down a misbehaving agent. Underneath all of it is duplicated infrastructure: each team re-implements authentication, guardrails, memory, and tracing, and hardcodes a model so that swapping providers means rewriting code. This is the problem a shared agentic platform solves. Instead of every team rebuilding the same foundation, one runtime handles orchestration, safety, observability, identity, and connectivity, and teams spend their effort on the business logic that differentiates their product. In this post we show how we built APEX (Agentic Platform for Energy eXperience), a shared platform so every team can ship agents without reinventing infrastructure. APEX is built on Amazon Bedrock AgentCore , a platform to build, connect, and optimize agents at scale, with any framework or model. We cover why we selected AgentCore over self-hosted solutions, how the architecture is composed, how APEX Studio gives teams a single control plane to operate it, how we bring interactive AI into real applications for both internal users like Woody and external consumers like Lens. We will also dive into how the same infrastructure serves both under identity-aware entitlements, how we close the evaluation and governance gaps that stall most agent programs, and where the platform is heading as multi-agent systems become the default. Before APEX, three applications were each on their way to building their own agent stack: Woody, Lens AI, and the ST Trading App. Left alone, each would have stood up its own runtime, wired its own identity, bolted on its own observability, and hardcoded its own model. We would have paid the same infrastructure tax three times and ended up with three stacks that could not share memory, tools, or evaluation. AgentCore resolves this problem by providing a platform capable of meeting the needs of an enterprise scale agentic deployment. We evaluated AgentCore against the requirements of a production platform: hosting model, cost model, whether it is model agnostic, scalability, governance, and enterprise support. AgentCore provides us a managed platform rather than a library we would need to operate ourselves. It works with any open source framework, including Strands Agents, LangGraph, LangChain, LlamaIndex, CrewAI, Google ADK, OpenAI Agents SDK, and with any model whether or not it runs on Amazon Bedrock. It supports both the Model Context Protocol (MCP) and the Agent-to-Agent (A2A) protocol. That meant we didn’t need to choose between open source flexibility and AWS service security. This allowed us to standardize the platform layer while leaving each team free to pick its own framework and model. Five capabilities decided it for us: AgentCore uses consumption-based pricing with no upfront commitments or minimum fees. Each service is billed independently, so a team can adopt a single capability such as AgentCore memory, a capability of Amazon Bedrock AgentCore, without migrating its entire agent. Runtime billing is based on active CPU and memory consumption calculated per second, and CPU charges don’t accrue during I/O wait. This matters for agentic workloads, which typically spend 30–70 percent of their time waiting on model responses, tool calls, or database queries. With pre-allocated compute you would pay for that idle time. With AgentCore, you do not. APEX is organized in layers, shown in Figure 1. At the top, end users interact with three applications: Woody, Lens AI, and the ST Trading App. Those applications talk to the APEX frontend, which exposes a framework so product teams can drop agentic capabilities into a user interface without rebuilding the connection to the backend each time. The APEX backend is where AgentCore does the work. Two infrastructure tracks sit alongside the backend. The WM infrastructure as code (IaC) Framework uses the AWS Cloud Development Kit (AWS CDK) and GitHub to provision and version platform resources, with guardrails defined in code. The MCP layer connects the platform to third-party and external access, including AWS Marketplace and partner systems, over a standard protocol rather than bespoke integrations. Users reach three applications through the APEX frontend SDK. The APEX backend runs on AgentCore (Runtime, Identity, Gateway, Memory, Observability) with an Orchestrator, a vector database for retrieval, model access through the Amazon Bedrock model catalog, and Amazon Bedrock Guardrails. The WM IaC Framework provisions resources through AWS CDK and GitHub, and the MCP layer connects external systems. Figure 1: APEX reference architecture Inside the backend, a request flows through these components. User Authentication and AgentCore Identity establish who is calling and what they are entitled to do. Identity and entitlements are woven into every agent invocation rather than checked once at the edge, so an agent acting on a user’s behalf carries that user’s permissions through every downstream tool and data call. Federation to your identity provider of choice is also important. We use Okta as our source of truth. The Orchestrator routes the request and consults the Woodmac Agent Registry, a single place to discover, share, and reuse agents, tools, and skills across the organization with built-in governance and approval workflows. This is how one team’s agent becomes available to another without copying code. AgentCore runtime hosts the agent code in a serverless, session-isolated environment. Inside the runtime we run AI Agents Studio (built on Amazon Quick with Strands Agents, LangGraph, CrewAI, n8n, Vertex, and OpenAI), so each team keeps its preferred framework. The runtime invokes models through the Amazon Bedrock model catalog, which is where model agnosticism becomes concrete: the agent points at a model by name and we swap providers without rewriting the agent. Tools are exposed to the agent as composable building blocks. The architecture shows how Wood Mackenzie uses a Code Interpreter tool for secure code execution and an Amazon Nova Act web tool for browser actions. These tools are reached through AgentCore Gateway , a capability of Amazon Bedrock AgentCore, which turns APIs, AWS Lambda functions, and existing MCP servers into agent-compatible tools and provides a single secure endpoint for discovery and invocation. The Gateway pulls from a Tools Repository for discovery and invocation, and supports IAM, OAuth 2.1, and API key authentication.",
+      "published_date": "2026-09-17",
+      "tags": [
+        "Amazon Bedrock AgentCore",
+        "Customer Solutions"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, mcp, model context protocol, multi-agent",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 49,
+    "llm_reason": "企業級Agent平台落地案例，架構討論有參考價值但偏客戶宣傳",
+    "novelty": 5,
+    "impact": 9,
+    "trending": 12,
+    "practicality": 11,
+    "blog_worthiness": 12
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Ars Technica AI",
+      "title": "Apple reportedly building server packed with M-series Ultra chips for AI",
+      "url": "https://arstechnica.com/ai/2026/09/apple-reportedly-building-server-packed-with-m-series-ultra-chips-for-ai/",
+      "authors": [
+        "Jeremy Hsu"
+      ],
+      "abstract": "Apple is working on an AI server that would use Apple’s high-performance M-series Ultra chips found in Mac desktops. The potential product’s expected release in 2029 would mark the first Apple server to hit the market in nearly two decades—and could capitalize on the surging popularity of Apple hardware among AI developers. The enterprise server would come in two configurations that include either two or four of Apple’s future M8 Ultra chips, according to The Information . The project reportedly received support from new Apple CEO John Ternus when it began a year ago, back when Ternus led Apple’s hardware engineering efforts. This revelation coincides with booming sales for Apple’s Mac mini and Mac Studio as AI developers and companies snap up the Mac computers to run AI workloads. The popularity of such computing devices that rely on Apple’s M-series Ultra chips has undoubtedly encouraged Apple’s pursuit of an enterprise server using the same chips. The Information reported that AI companies like OpenAI have bought “tens of thousands” of Mac minis and Mac Studios to train AI agents through trial-and-error reinforcement learning, while Anthropic has also rented Mac minis from Amazon Web Services.",
+      "published_date": "2026-09-16",
+      "tags": [
+        "AI",
+        "Apple",
+        "AI developers",
+        "ai servers",
+        "apple",
+        "apple hardware",
+        "Apple silicon",
+        "Apple Silicon Mac",
+        "m-series chips",
+        "servers"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "Ars Technica AI",
+        "feed_url": "https://arstechnica.com/ai/feed/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: reinforcement learning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 59,
+    "llm_reason": "Apple自研AI伺服器傳聞，牽動邊緣運算生態但尚未落地",
+    "novelty": 10,
+    "impact": 14,
+    "trending": 15,
+    "practicality": 6,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Dwarkesh",
+      "title": "Noam Brown – Agent swarms, alignment, & recursive self-improvement",
+      "url": "https://www.dwarkesh.com/p/noam-brown",
+      "authors": [
+        "Dwarkesh Patel"
+      ],
+      "abstract": "We talk about multi-agent, Navier-Stokes, and what the current explosion of maths progress tells us about what happens once you automate AI research. And we also discuss how we will know if the models are actually aligned before we kick off RSI. Watch on YouTube ; listen on Apple Podcasts or Spotify . Jane Street has been interested in AI for a lot longer than you’d think, and not just for trading. In 2011, a full year before AlexNet and over a decade before ChatGPT launched, they hosted the first FOOM Debate between Eliezer Yudkowsky and Robin Hanson on whether AI would lead to an intelligence explosion. Now Jane Street is revisiting the question with a new panel: Daniel Kokotajlo, Ege Erdil, Ryan Greenblatt, and Jaime Sevilla, hosted by Ron Minsky in San Francisco this October. I expect it to be a truly excellent conversation. Register at janestreet.com/dwarkesh Grok Bot has made handing off work super easy. It runs on its own cloud computer, where it installs the tools it needs to handle tasks end-to-end. For the podcast, we use Grok Bot to help produce our videos. You may have noticed that our ads feature animations of real websites. Getting these pixel-perfect used to mean running a convoluted, multi-step workflow ourselves. Now we just let Grok Bot handle it. Best of all, Grok Bot has learned all of our specs and preferences, so we don’t have to redescribe the task each time! Try Grok Bot for yourself at x.ai/bot Antithesis gives you the confidence of a giant test suite without actually having to write one. Say you’re doing a major backend refactor: building enough tests to trust it could take weeks. Antithesis solves this by running your software through countless simulated worlds, injecting faults and hunting for failures. On any PR, you can turn a dial to decide exactly how much testing you want. And because every run is fully deterministic, agents can branch off the moment a bug appears, rewind it, inspect memory, and replay it, all while the original test keeps running. Learn more at antithesis.com/dwarkesh (00:00:00) – Multi-agent and Navier-Stokes (00:15:28) – How will AI firms work? (00:22:02) – What math progress tells us about recursive self improvement (00:40:22) – Hugging Face and alignment (01:01:18) – The internal/external model gap (01:08:34) – Chain of thought is degrading (01:14:12) – How will we know when alignment is solved? Today, I’m chatting with Noam Brown , who is a researcher at OpenAI. He was one of the foundational contributors to what became o1 and the reasoning models. Now he’s working on multi-agent systems . Speaking of which, you guys announced last week that you solved one of the Millennium Prize Problems with a system of 10,000 different AI agents that spent 130 billion tokens over 88 hours. One of the reasons I’m interested in talking to you is that you were among the first people, maybe two or three years ago, who were thinking about how the reasoning models would allow us to see into the future. Because if you scale up inference compute, you can see what the base capabilities of the models will be a few years in the future. I feel like you’re in a similar position now to help us understand what future capabilities will look like, given the enormous scaling of agent sizes that we can do right now. The way I think about it, when you plot the performance of these reasoning models with test-time compute on the x-axis and performance on basically any reasoning benchmark on the y-axis, you see a very clear pattern where the longer these models take to think about their answer, the better they do. This is a very natural thing. It’s the same thing with people. If you’re taking the SATs and you have five minutes to go through the entire exam, you’re not going to do very well. If you have five hours, you’re probably going to do a lot better. The AI models are pretty similar. They’ll spend that time doing this monologue to themselves, figuring things out, going through different cases, ruling out different possibilities, building on some of their previous discoveries. The problem is that as you push that further and further, you hit a latency bottleneck. You don’t want to sit around for three years waiting for a response. So what you can do is what a lot of people do. They parallelize. They just get a team of people. If you’re going to found a company, you want to get a group of people together so you can go faster. It’s the same thing with these AI models. It helps to just have multiple agents working on something because they can go faster. So multi-agent is a way of scaling test-time compute in parallel instead of purely serially. It is less efficient, because it’s not like a single agent has all the context to itself. But it is a very effective way of scaling test-time compute if it’s done well. I’m going to ask a bunch of naive questions. This is an unreleased model, so we haven’t publicly seen how these systems work. I just have a bunch of ways in which I’m confused about what the qualitative properties of such systems are. I am shocked by the scale of cognitive effort that you can concentrate in such a short period of time. Think about what 130 billion tokens are. If it were a single human thinking as a full-time job, stretched back to back, 130 billion tokens would be a human thinking for 4,000 years. Eight hours a day, working a normal work week. Starting from ancient Sumeria up till today, a single sequential human thinking that long, concentrated in 88 hours. I feel like qualitatively, that is a super important consideration. I’m surprised that there isn’t a bigger parallelization penalty. You can just have 10,000 agents collaborate. Maybe because the agents are better at collaborating than humans might be, they’re going much faster. They can actually productively collaborate at such a big scale. Or maybe there is a big parallelization penalty. Let’s talk about the parallelization penalty, and then we can talk about the qualitative stuff. The truth is that we don’t have very good science on multi-agent scaling up to this kind of scale. When we released 5.6 , I think that was the first time that we had a proper multi-agent system in our models. We actually did show some plots in the blog post of the scaling performance of multi-agent systems, because we have it as an option. It’s Ultra Mode. The default is four agents, but you can set that higher. In the plot, we show what the performance looks like on some benchmarks for one agent, for four agents working together, for 16 agents working together. It depends on the benchmark, but for some of the benchmarks, what you see is that if you have four agents working on the problem, it is done twice as fast. Because there are four agents working for half as long, you’re paying 2x more to get an answer twice as quickly. If you go to 16 agents, you see a similar pattern. It’s a little less efficient, but you continue to see that performance. Is it a linear serial time speedup or a sublinear speedup as you increase the number of parallel agents? It’s slightly sublinear, though it does depend a lot on the problem. Math, for example, is quite parallelizable. It’s not the most parallelizable thing, but it is very parallelizable. Web search, things like doing a Deep Research report where you have to look through a bunch of sources, is extremely parallelizable. I suspect that something like writing a novel would be very unparallelizable. You would probably not see a big benefit from having 10,000 agents working on a novel together, in the same way that you’d probably not get a big benefit from having 10,000 people work on a novel together. So the performance does depend on the domain. We do measure it up to 16 or so agents in our published blog posts. The problem is that it’s very hard to push that science to 10,000 agents because it’s just so expensive. You guys just did it over a weekend. But that’s one data point.",
+      "published_date": "2026-09-17",
+      "tags": [],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "Dwarkesh",
+        "feed_url": "https://www.dwarkesh.com/feed"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, multi-agent, reasoning, chain of thought, test time compute",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 47,
+    "llm_reason": "頂尖研究者深度訪談多Agent與RSI議題，觀點有價值但無可複現內容",
+    "novelty": 6,
+    "impact": 10,
+    "trending": 14,
+    "practicality": 4,
+    "blog_worthiness": 13
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Databricks",
+      "title": "The Web Search Your Agent Inherited Isn't Good Enough",
+      "url": "https://www.databricks.com/blog/web-search-your-agent-inherited-isnt-good-enough",
+      "authors": [],
+      "abstract": "An engineer at a software company is building an agent to keep the company's view of the market up to date. It monitors a few hundred thousand prospects and customer accounts for signals that an account is open to engagement: a new funding round, a leadership change, a product launch, or a hiring surge that indicates budget. The account records already live in Databricks, in Delta tables governed by Unity Catalog and joined to the company's own usage and pipeline data. But the signals that move an account live outside the company, on the web. The agent's job is to combine the two, continuously, into one coherent and up-to-the-moment picture of every account, so it can tell a salesperson which handful to call this week. The first version isn't one system. It's the same enrichment logic, rebuilt from scratch three separate times, once in each tool the engineer reached for. The first pass runs in Claude Code, where the agentic parts (deciding which accounts need a fresh look, chaining searches, writing the summary) are most of the work. When a colleague mentions that Codex handles a certain kind of batch scripting faster, the engineer ports the enrichment loop over to check. A third copy skips the harness entirely and calls a model directly over the API, for a lightweight nightly job that just needs a single prompt and a response, no tool orchestration required. Same job, three builds, each shaped by whichever tool fit that moment. Each harness bundles its own tools and its own web search and wires them up its own way, so the engineer builds the same enrichment logic three times, once in each harness's config format. That is where the day goes. Instead of improving how accounts get enriched, the engineer is learning how Claude Code wants its tools declared, why the same MCP server connects differently in Codex, and what the raw API path is missing that the other two had for free. The tools are not equivalent, and so neither are the results. The web search bundled into one harness returns different data than the next. A source reachable in one is missed in another. Built-in web search tools for LLMs can find high-level information like funding rounds and leadership changes, but miss granular details like tech stack changes. Access to online information is the thing this agent exists to produce, but its quality now depends on web search that can’t reliably surface key details on the web. And nothing sits above the three of them. No shared meter, so no one can see or cap what a cycle costs across a few hundred thousand accounts. No shared rulebook, so which sources an agent may read and when a human signs off are set three ways or not at all. No shared record, so when a result is wrong, there is nowhere to reconstruct what the agent read, spent, or decided. It sort of works in that it produces a result. And that is exactly why it never gets fixed. It works well enough to keep, but not enough to fully trust. Omnigent is the layer that reins in the sprawl. It sits above the individual harnesses, so the engineer defines the agent once, the model it runs on, the tools it can reach, the policies and limits it operates within. The three rebuilds collapse into one definition, and the engineer's attention goes back to account enrichment. Tools stop being whatever each harness came bundled with and become declarations on the agent, set once and swapped freely. Running on a Databricks-hosted model, the model calls route through the Foundation Model APIs, where every call is captured for cost, audit, and governance in one place instead of scattered across three runtimes. And when the model or the economics change, the engineer changes one line, picking a new model or downshifting to a cheaper one without disruption. That closes most of the sprawl, but it leaves one critical thing decided by default rather than by design. Web search is one of the core capabilities every harness bundles, and no two bundle the same one. The same query gives one result through Claude Code and another through Codex. Omnigent provides you the ability to define a consistent choice across each task, but it does not make the decision for you. You have to assign a partner search capability. With a partner like Nimble, you can put something in the slot that adapts to the task instead, and give every harness underneath the same expert read. Nimble’s Search API can ground answers in fresh, real-time web data through live search. For deep research tasks, Nimble’s Web Search Agents automate web search and extraction orchestration to fulfill your task, working many sources, cross-checking them, and returning an answer with the citations to back each claim, an audit trail that the general path could never produce. While general web search tools treat every use case the same, Nimble specializes in the agent’s specific use case, self-learns the best retrieval methods, and adapts web search and crawling to go deep into the domain to capture data that generic search tools miss. It gets to the data behind JavaScript, filters, and pagination that an ordinary crawler gives up on. And because it remembers the best way to retrieve the relevant data, it reuses data retrieval paths rather than rediscovering everything from scratch to reduce token costs. Named as the provider in the config, this is the fast path to a more complete web context for your agents. In Nimble's testing , adding Nimble’s web search raised LLM benchmark accuracy from 46 percent to 71 percent, while cutting web search costs in half ( Claude vs Nimble web search costs). Web Search Agents can be pointed at a domain and kept there, so it remembers which sources and which retrieval paths produced the right data and reuse them the next time. It gets sharper the longer it works a domain, and the cost of rediscovering where a signal lives drops on the accounts it runs against most. Returning to the engineer, the agent is now on a path to becoming a coherent, manageable, trustworthy whole. The agent is defined once in Omnigent, on a Databricks-hosted model, with its tools, policies, and limits in a single spec. The three rebuilds are gone. So is the plumbing tax; the engineer is back on enrichment, not on how each harness wants its tools declared. Web search is now one decision instead of three. Naming Nimble on the web_search builtin points every harness underneath at the same Nimble Search API for fast and efficient web search: For the accounts that need a defensible answer rather than raw web data, Omnigent can reach for Nimble's Web Search Agents, which automate web search and extraction for research, enrichment, or dataset building. The key comes from a Nimble account, which you can start free . Control now has one home. Model calls route through the Foundation Model APIs under governance, cost is visible and capped in one place, and what the agent reads, spends, and decides is captured consistently across one governance surface. And the two halves of the picture finally sit together. The internal record in Databricks and the external signal from Nimble, in one place, governed and read by one agent. Version 1.0 was three harnesses and no vantage point. This is one agent, grounded in what the company knows and what the web can tell it, running where the data already is. Consistent where it used to drift, deep where it used to be shallow, and full governance over external web context retrieval. Standing this up takes two steps. Connect Omnigent to Databricks. Databricks runs the Omnigent server for you. On your own machine, install the CLI with the Databricks integration and register the machine as a host: Then sign in with your workspace identity and run your first agent on a Databricks-hosted model. Omnigent on Databricks is the place to start; it covers the managed setup end-to-end and links the CLI steps.",
+      "published_date": "2026-09-17",
+      "tags": [
+        "Platform",
+        "Product",
+        "Databricks AI"
+      ],
+      "organization": "Databricks",
+      "raw_metadata": {
+        "feed_name": "Databricks",
+        "feed_url": "https://www.databricks.com/feed"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, mcp",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 43,
+    "llm_reason": "點出Agent網路搜尋重複造輪子的痛點，帶產品導向色彩",
+    "novelty": 5,
+    "impact": 8,
+    "trending": 11,
+    "practicality": 8,
+    "blog_worthiness": 11
+  }
+]
