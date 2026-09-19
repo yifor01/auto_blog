@@ -1,0 +1,693 @@
+[
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "I built non-autoregressive decision models with RL a year ago",
+      "url": "https://laya.convaiinnovations.com/",
+      "authors": [
+        "nandakishor_ml"
+      ],
+      "abstract": "Everyone in AI right now is talking about a new kind of model: an architecture that is not autoregressive, does not generate text, and gives lightning-fast probability predictions over structured schemas. Seeing the hype online feels both validating and deeply frustrating. I worked on this literally one year back in March 2025. I spent months of hard work, sweat, and sleepless nights building it, published an arXiv paper ( arXiv:2503.23303 ), released the model weights on Hugging Face ( sales-conversion-model-reinf-learning ), published the open dataset ( saas-sales-conversations ), built a PyPI package, and posted the whole approach on Reddit ( r/LocalLLaMA discussion ). Then in September 2025, I published a second paper ( arXiv:2510.01237 ), formalizing the framework for schema-based decisions guided by reinforcement learning. The guiding brain in my system was always reinforcement learning, not just an embedding model or an autoregressive LLM. And then in September 2026, a well-funded frontier lab called TypeSafe AI (founded by Diogo Almeida, a co-inventor of ChatGPT at OpenAI) launched Jev. They proposed the exact same non-autoregressive decision concept as if it was a brand-new scientific breakthrough. Except they launched without technical papers, without open weights, and with zero open training datasets. My earlier model used PPO over sequence representations to output turn-by-turn conversion trajectories (probabilities from 0.0 to 1.0) in vertical sales conversations. Jev generalized parallel sampling using what they called RLCD (Reinforcement Learning for Calibrated Decisions) to output confidence distributions and schema choices horizontally, charging $0.042 per million input tokens with typical response times around 150 ms. Instead of staying bitter, I decided to take everything I learned, fix every architectural limitation of the old approach, and build a completely open, horizontal System 1 decision model family: Laya . And because we built it properly on bidirectional encoders, our models run in 32.8 milliseconds on a single GPU (7.2 ms/question batched) , making it 6 to 8 times faster than Jev , with full support for over 100 languages, zero API subscription costs, and 100% open-source Apache 2.0 weights. 1. The Core Realization: System 1 vs System 2 Every modern AI pipeline has a giant bottleneck: we use generative LLMs for simple reflex decisions. When a customer support ticket arrives, or an email hits your inbox, or a user submits a prompt to your API, you usually only need to answer simple, structured questions: Which department should this ticket route to? Is this incoming email a phishing attack or spam? Is this prompt trying to jailbreak or inject instructions? How urgent is this issue on an ordinal rubric (0 to 3)? Does this query require code execution or a simple factual reply? Calling an 8B, 70B, or frontier generative LLM for this is complete overkill. You wait 500 ms to 2,000 ms for tokens to stream out, spend real money on inference, and then have to write regex or JSON parsers to extract a clean label from free-form text. Worst of all, LLMs love to hallucinate and generate fake confidence. When an LLM outputs \"confidence: 0.95\" , it is just predicting tokens that sound confident. There is zero mathematical calibration behind it. We needed a model that works like the human brain's System 1: instant reflex decisions with honest, calibrated probabilities, taking only 30 to 35 milliseconds on standard commodity hardware. 2. The Three Decision Primitives Laya evaluates typed questions over any state (raw text, email, ticket, or JSON document) in a single forward pass . It relies on three primitives: choice : Pick one option from a dictionary of criteria. Returns the selected key, probability distribution across all options, and a calibrated confidence score. score : Place the state on an ordinal rubric (levels 0, 1, 2, ...). Returns the expected level, the distribution over rubric ranks, and confidence. noul : A direct boolean question returning calibrated probability P(true) from 0.0 to 1.0 (with P(false) = 1 - P(true) by construction). Because the output space consists purely of probabilities and numbers, the model never generates text, cannot hallucinate, and schema violations or malformed JSON are physically impossible. 3. The Three Checkpoints & Bundled Hub Architecture One model cannot be optimal for every task and language. We released three specialized checkpoints, now consolidated under a single repository hub on Hugging Face: Checkpoint Backbone Encoder Params Context Primary Strength convaiinnovations/laya ModernBERT-large 421M 512 English text classification, guardrails, email triage convaiinnovations/laya-multilingual mmBERT-base (256k vocab) 322M 1024 (up to 8k) 100+ languages, 2.2x faster, cross-lingual NLI convaiinnovations/laya-typed-decisions ModernBERT-large 421M 1024 Agent observability, customer service, invoice processing, security alerts (0.766 acc) Selective Subfolder Downloads Rather than forcing users to manage three separate repositories or download 2.5 GB of combined weights, the main repository convaiinnovations/laya bundles all three. Using Hugging Face's allow_patterns , Laya's SDK downloads only the specific subfolder requested: # Downloads English model (~808 MB)\nagent_en = laya.load(\"convaiinnovations/laya\") # Downloads ONLY the multilingual subfolder (~647 MB), not the entire 2.5 GB bundle\nagent_ml = laya.load(\"convaiinnovations/laya\", subfolder=\"multilingual\") 4. Why Routing Is Essential: The Multi-Script Reality One of the most eye-opening findings from our 51-language sweep on the MASSIVE benchmark (20 options, random baseline = 0.050) was how English models fail outside Latin script. ModernBERT-large's 50,000-token English BPE vocabulary simply shreds non-Latin alphabets: Khmer: 0.000 accuracy at 0.952 mean confidence . Not one correct decision in 100 questions, while reporting ~95% confidence. Armenian: 0.050 accuracy (exact coin-flip random) at 0.885 confidence. Hebrew: 0.060 accuracy at 0.964 confidence. Bengali: 0.080 accuracy at 0.945 confidence. Hindi: 0.100 accuracy at 0.941 confidence. This is the crucial lesson: the model's own confidence gives no warning when it cannot read the input script . Across 51 languages, the English checkpoint's mean confidence never drops below 0.885, regardless of whether its accuracy is 82% or 0%. Therefore, confidence gating cannot protect you . The decision of which model to use must be made before the forward pass. Sub-Millisecond Pure Python Routing Laya includes a built-in Router that inspects the Unicode scripts of incoming text across 22 alphabets (Devanagari, CJK Han, Cyrillic, Arabic, Hebrew, Tamil, Thai, etc.) and analyzes Latin stopword distributions: Standard English text: 0.09 ms detection overhead. Devanagari / Indic text: 0.54 ms detection overhead. Large 200-row nested JSON documents: 0.73 ms detection overhead. Compared to a 33 ms forward pass, routing overhead is negligible (<2%). And with Router(preload=True) , all required models stay resident in VRAM/RAM, completely eliminating the 7 to 10-second cold-swap penalty when traffic alternates between languages. from laya import Router # Preload checkpoints into memory for instant sub-35ms routing\nrouter = Router(preload=True) # English -> automatically routed to ModernBERT-large\nres_en = router.predict({\"body\": \"I was charged twice, please refund.\"}, questions) # Hindi -> automatically routed to mmBERT-base (100+ languages)\nres_hi = router.predict({\"body\": \"मुझसे दो बार शुल्क लिया गया, कृपया पैसे वापस करें।\"}, questions) # Explicit override when you already know the domain\nres_spec = router.predict(state, questions, model=\"typed-decisions\") 5. Head-to-Head: Laya (with Routing) vs TypeSafe Jev We benchmarked Laya directly against TypeSafe Jev across public datasets and standard benchmarks.\n\n(777 points, 186 comments on Hacker News)",
+      "published_date": "2026-09-19",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 777,
+        "num_comments": 186,
+        "hn_url": "https://news.ycombinator.com/item?id=49765348",
+        "object_id": "49765348"
+      }
+    },
+    "rule_score": 36.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, reinforcement learning, jailbreak",
+      "🔥 HN 爆紅: 777 points"
+    ],
+    "llm_score": 68,
+    "llm_reason": "作者早於Jev一年發表同概念論文/開源權重，技術紮實但話題性靠蹭熱度",
+    "novelty": 11,
+    "impact": 8,
+    "trending": 17,
+    "practicality": 16,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "blog",
+      "source_name": "Latent Space",
+      "title": "[AINews] Here are 6 Clones of Jev in 2 days",
+      "url": "https://www.latent.space/p/ainews-here-are-6-clones-of-jev-in",
+      "authors": [
+        "Latent Space"
+      ],
+      "abstract": "We covered Jev’s launch on Wednesday , and they have completely taken over the timeline, with 36M views of their launch video (by comparison, OpenAI’s Navier Stokes result got 74M views, and Anthropic’s Fable 5 got 57M views) in just two days. It wasn’t open source 1 , so it invited tons of speculation and great demos and examples and salty schmidhubers and bad takes , which of course only fed the hype. Here’s a list. The best guesses are ModernBert and Diffusion: Laya : 421M params, ModernBERT -large encoder with two added transformer layers that score user-supplied options, PPO over sequence embeddings to output turn-by-turn conversion trajectories (probabilities from 0.0 to 1.0). salty that he did not get recognition; claims RLCD without justification confidence is entropy-based, not calibrated DiffusionGemmaJev: tackling this from a Diffusion model basis. Pretty close on benchmarks Bespoke Nimble : LoRA finetune of Qwen3.5-9B, using contrastive data curation. ( close but sllightly lower on benchmarks ) SemIf (fka OpenJev) ( HF ): 4B and 35B causal Qwen3.5 backbone with a tiny three-class NLI classifier on the last token. comparison vs Laya Jevlike : 40K byte embedding lightweight option-attention model. Each candidate becomes a query that reads from a shared context representation, then receives a score. Kev-0.5B : LoRA adapter + a small readout head on top of Qwen2.5-0.5B. Of course, not enough people are talking about the data side, which is acknowledged to be 100% synthetic . AI News for 9/17/2026-9/18/2026. We checked 12 subreddits, 544 Twitters and no further Discords. AINews’ website lets you search all past issues. As a reminder, AINews is now a section of Latent Space . You can opt in/out of email frequencies! Decision Models, Routing, and the “Jev” Wave Discriminative models broke out as a new systems primitive : The biggest technical conversation was around Jev , a non-generative decision model being positioned as a fast “ System 1 ” complement to LLMs. @ankrgyl said it is now available as an eval model in Braintrust with ~400x lower scoring cost versus prior setups, while @gabepereyra highlighted calibrated-probability use cases like routing, citation selection, escalation, and legal ops decisions. The more architectural take came from @hxiao , who argued Jev could pull tool calling, routing, and MCP-style decisions back from small generative LMs toward discriminative models; @signulll pushed the same idea further, framing this class as a near-zero-marginal-cost, on-device judgment layer for notifications, UI adaptation, and sensor-driven decisions. Open reproductions and ecosystem clones appeared immediately : @madiator released Bespoke Nimble , an “open Jev” recipe built from a LoRA fine-tune of Qwen3.5-9B using synthetic contrastive data curation and constrained decoding. On its curated eval, the base Qwen improved from 66% to 90% , versus 93% for Jev , with a reported 100ms on H100 and local usability. At the smaller end, @jaredpalmer released Kev-0.5B , a tiny Jev-like model based on Qwen2.5-0.5B that can run on a MacBook Pro. The reaction split roughly along prior experience: @MParakhin noted post-ChatGPT users treated it like a revelation, while pre-GPT ML people were more puzzled by the hype. The substantive question raised by @abacaj is the right one: a lot of demos emphasized speed more than quality , and there is still no standard benchmark for this category. The first compelling integrations were in browser/computer-use workflows : @levie demoed Jev classifying Box incident reports into escalation paths; @ndrezn showed browser use with LangChain + Jev and found it strong on tasks like the Wikipedia game and structured “folding laundry” workflows; @cline shipped a plugin giving Jev a browser in Cline. @hwchase17 explicitly called browser use the best Jev application he had seen so far. Net: this looks less like a chatbot story than a workflow control-plane story. Agent Tooling, Coding Harnesses, and Claude Code Standards AGENTS.md gained real momentum as a cross-tool convention : The highest-signal product update here was @trq212 announcing that Claude Code v2.1.277 now checks for AGENTS.md when no CLAUDE.md is present, with config-level toggle support. That effectively acknowledges AGENTS.md as an emerging standard rather than a one-tool convention, and @simonw immediately noted the practical payoff: fewer shim files that just point one format to the other. Harness design is becoming a first-class variable in coding-agent performance and cost : @pidotdev highlighted the Harness Tax analysis showing that a simple tool set— read, write, edit, bash —can reach the Pareto frontier on benchmark performance while reducing unnecessary spending. Relatedly, @_akhaliq pointed to the paper An Empirical Study of Harness Design for Coding Agents , underscoring that benchmark outcomes are increasingly shaped by harness structure , context setup, turn budgets, and tool affordances rather than just the base model. This is consistent with @dexhorthy ’s “software factory” argument that teams still need to read the code and deliberately design the human/agent interface. Model choice in software systems is bifurcating : Several practitioners described a split between “frontier for planning, cheap for execution.” @TheAhmadOsman summarized one stack as GPT 5.6 Sol XHigh for planning, GLM 5.3 Flash for implementation, and DeepSeek V4.1 Flash for other tasks. @kylebrussell reported an internal knowledge-base pipeline moving from Opus → Sonnet → GLM 5.2 → GLM 5.3 Flash , cutting spend by roughly two orders of magnitude since spring. Meanwhile @theo argued that in real-world coding the payoff from stronger models like Fable and Astra is not just code quality, but a subtler productivity gain in execution and iteration. Benchmarks, Recursive Self-Improvement, and Math Capability RSI discussion got more precise about what is actually “recursive” : @TheTuringPost offered a useful taxonomy: AI improving code or training methods is not, by itself, fully recursive if the surrounding improvement loop remains fixed. The key threshold is when AI can modify not just model internals, but search strategy, experience generation, research tooling, and the improvement process itself . That framing links well with @HuaxiuYaoML ’s RSI-Exam update, where GPT-6-astra remains #1 at 0.5126 , with Fable 5.1 entering at #2 with 0.4813 , and no model yet reaching the frontier-calibrated reference. Math benchmarks continued to fall to frontier models, but interpretation remains nuanced : @EpochAIResearch reported that another FrontierMath open problem was solved in an interactive session with GPT-6 Astra . Separately, @SAIRfoundation launched Open Math Model , pitching open models and tools for mathematics shaped by the research community. Against the “verifiability explains math strength” narrative, @steve47285 shared an argument that pretraining data , not merely verifiable reward structure, is the main reason LLMs are so good at math and coding. The meta-point from @sarahcat21 is worth keeping: we need not just better benchmarks, but better benchmark maintenance and audit tooling . Computer-use benchmarks are still far from saturation : @ValsAI launched CUA-Bench , testing real-time keyboard/mouse use across 6 games (with 3 kept private ) as a proxy for difficult human-easy tasks. Follow-up numbers from @ValsAI suggest this remains genuinely hard: all frontier models score below 20% . In parallel, @trycua open-sourced CUA-S1-FORMS , the first in a family of small “System One” computer-use models. The direction is notable: real-time action loops, video-grounded adaptation, and continuous learning, not just text-only planning. Infra, Training Systems, and Model Architecture Long-context and large-scale training infrastructure remain active optimization fronts : @Azaliamirh released Turbo-dLLM , an open-source library for training diffusion LLMs at scale, reporting 2.",
+      "published_date": "2026-09-19",
+      "tags": [
+        "blog"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "blog_name": "Latent Space",
+        "blog_url": "https://www.latent.space/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, mcp, computer use, lora, diffusion",
+      "⚖️ 來源權重: blog +15"
+    ],
+    "llm_score": 67,
+    "llm_reason": "兩天內多種架構複現Jev的技術路線盤點，正中當前熱點且細節具體",
+    "novelty": 9,
+    "impact": 10,
+    "trending": 19,
+    "practicality": 13,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "量子位",
+      "title": "AI離“理解萬物”還有多遠？先拿癌細胞和行星軌道試試水",
+      "url": "https://www.qbitai.com/2026/09/492429.html",
+      "authors": [
+        "梦瑶"
+      ],
+      "abstract": "AI離“理解萬物”還有多遠？先拿癌細胞和行星軌道試試水 夢瑤 2026-09-19 14:39:32 來源： 量子位 同一預測核心，跨七類系統驗證 衡宇 發自 凹非寺 量子位 | 公眾號 QbitAI 一篇技術報告中居然出現了兩個看起來風馬牛不相及的研究物件，跟著AI真是見世面。 一個是 患者來源的類器官 ，另一個則 跨越到了宏觀宇宙 …… 先說前者。研究者利用模型學到的內部因子，提出了細胞因子聯合抗體阻斷的干預方案，並經細胞系、類器官、小鼠實驗層層驗證。 至於後者，研究者把模擬的行星位置和速度軌跡餵給模型，不告訴它開普勒定律。 等它學完後分析其內部的預測模式，提取出的“軌道頻率-半長軸”關係擬合斜率達-1.4991（開普勒第三定律理論值為-1.5），且R²=0.99999999。 腫瘤研究和行星軌道計算 兩個八竿子打不著的領域，居然能用同一種預測學習方法來搞定。 大千世界千差萬別，天氣、分子、細胞、病人、機器人乃至行星，各自遵循完全不同的規律。 但 AI在理解它們“如何變化”時，有沒有可能共享一套更底層的方法？ 最近，PhAI Labs聯合牛津、斯坦福、普林斯頓、港中文等高校團隊最新發布的 JEPA-Anything ，就在嘗試回答這個問題。 論文顯示，JEPA-Anything是一個 面向不同“世界”學習預測模型的跨領域框架 。 每個領域保留自己的觀測形式、context-target構造和編碼器，但共享後面的預測核心以及一套統一的latent world-state interface。 其中涉及一個叫做 OPF （Orthogonal Predictive Factorization，正交預測分解） 的關鍵機制 。 可以先簡單理解為： 別把世間各種各樣的變化，全都堆在一塊去學習建模。 給世界建模，一條預測通路可能不夠 首先來釐清一個概念，在JEPA-Anything這項研究中，“世界模型”究竟意味著什麼？ JEPA-Anything論文給出的定義兼具寬泛度與操作性。 論文寫道， 只要模型能根據現有資訊 （Context） 建立內部狀態，並以此預測同一系統中的另一個狀態，均可歸入隱空間世界模型 （Latent World Model） 的範疇。 這裡的“另一個狀態”，既可以是時間上的未來，也可以是空間上的隱藏區域、不同視角，甚至是施加某種干預後的結果。 順著這一思路，業界在過去幾年間已經發展出了日趨成熟的技術路徑。 例如， DreamerV3 強調先構建環境模型，再在模型內部“構想”行動後果； V-JEPA 2 則將影片表徵學習與機器人控制結合，讓機械臂在規劃動作前，先預測不同行為帶來的物理反饋。 而 JEPA ——Joint-Embedding Predictive Architecture，聯合嵌入預測架構——是其中頗有代表性的一條路線。 相比直接在原始空間重建目標狀態，JEPA選擇 在表徵空間做預測，不必還原每一個畫素或細節。 它會將觀測資訊先編碼為隱空間中的內部表徵，再在表徵空間內完成預測。 這種設計讓模型把更多表徵能力留給具有預測價值的結構，減少紋理、噪聲等原始空間細節的干擾。 不過， 標準JEPA通常讓資訊全部匯入同一個target embedding，走同一條預測路徑。 但現實世界的變化往往不是單執行緒的。 舉例來說，分子的整體平移往往伴隨著內部原子的微觀振動；宏觀氣象系統的緩慢演變中，夾雜著劇烈的局部擾動；生物系統則更為複雜，多尺度、多通路的變化時刻在同步發生。 當不同尺度、不同實體、不同難度的訊號強行擠在一起時，那些更容易預測、變化更顯著的訊號，可能優先佔據更多預測容量。 相比之下，那些相對微弱卻同樣關鍵的資訊，要麼在梯度衝突中被抵消，要麼被強訊號徹底掩蓋。 研究人員將其歸結為一個 “預測容量如何分配” 的問題，同時給出了新的解決思路。 既然擁擠會導致擠壓，那就進行空間解耦。 於是就有了JEPA-Anything。 其核心機制OPF （正交預測分解）將原本完整的目標狀態切割為多個彼此互補的子空間，交由不同的預測分支獨立處理，最終再拼回完整的世界狀態。 為了防止多分支演變為“多套人馬學同一件事”的冗餘狀態， OPF引入正交約束 ，讓不同factor儘量佔據互不重疊的預測方向，減少多個分支重複學習同一類資訊； 同時通過因子活性約束和編碼器方差約束 ，避免部分factor失活，並降低表示坍縮風險。 值得注意的是，這些factor並沒有被預先規定“你負責速度”“你負責溫度”“你負責某條生物通路”。 它們學什麼由資料中的可預測結構決定。 訓練完成後，這些factor也因此留下了一個可供後續分析的內部介面。 同一預測核心，跨七類系統驗證 方法論說得再漂亮，最終仍需經受跨領域泛化的檢驗。 這就不得不提到 JEPA-Anything實驗設計的獨到之處。 它並未侷限於影片表徵或機器人控制等傳統領域，轉而將同一套預測核心（Predictive Core）直接置於視覺、生物、臨床、控制、分子、物理場和天氣七類截然不同的系統中進行驗證。 所謂“Anything” ，並非指強行將所有領域的資料打散重構為同一種輸入格式，影像、單細胞序列、分子結構乃至氣象資料，依然保留各自最契合的編碼器與資料形態。 它統一的是這樣一套 底層規則 ： 當資料被轉換為隱空間表徵之後，預測部分應當如何搭建模型、如何完成學習。 論文先在一個基於簡化Pong構造的受控動態環境CITRIS Interventional Pong裡做實驗，以驗證模型能否將複合變化“拆解學習、再行組合”。 在訓練階段 ，模型僅接收過單一因子的變化資料；測試階段則需要面對此前從未出現過的多因子組合干預。 如果模型僅僅死板地記錄了訓練集中的完整模式，面對全新組合必然失效；如果模型學到的是不同變化之間可複用的狀態變化規律，就更有機會在未見組合裡重新組合它們。 實驗結果表明 ，在分佈內的單項干預中，JEPA-Anything相較標準JEPA降低了約11.7%的預測誤差；而在未見過的多因子組合干預中，均方誤差（MSE）同樣下降了約3.5%，且在五組配對訓練seed中全部改善。 隨後， 驗證走向了更複雜的真實系統。 論文構建了一套嚴格對齊的動力學基準（Matched Dynamics Benchmark），在十項任務中確保標準JEPA與JEPA-Anything使用完全相同的訓練資料、編碼器、狀態轉移骨幹網路、計算預算及評估切分。 在其中九項預測任務中，JEPA-Anything的效能指標均有所提升 。 比如PDEBench裡的Burgers方程，MSE下降39.7%；淺水方程下降39.3%；WeatherBench 2下降10.5%。 論文還 專門做了多步rollout ，讓每一次預測繼續成為下一次預測的輸入，以觀察誤差不斷傳遞之後會發生什麼。 分子系統則把時間線拉得更長。 在液態水、α-石英、對乙醯氨基酚和苯四種體系中，模型需要持續預測未來的原子位置和速度，並把自己的輸出不斷喂回去。 最終，無論是一步預測的MAE，還是100步自由rollout後的最終位置RMSD，JEPA-Anything在四種分子系統中都拿到了最低誤差。 不過值得注意的是， 實驗資料並未呈現出“單一機制全面碾壓”的理想化曲線。 在連續控制測試中，JEPA-Anything並非每項任務都更好：在Walker2d和HalfCheetah上，它的平均得分高於標準JEPA；但在Hopper上，標準JEPA表現更好。 連續預測的距離越遠，誤差仍會不斷累積。 在額外的Burgers測試中，當預測長度從20步增加到50步時，JEPA-Anything雖然仍然領先，但優勢已明顯縮小。 因此，這篇報告驗證的是“共同預測原則存在跨領域適用性”，而非“已經實現一個統一所有領域的世界模型”。 但 這些結果至少表明，這套預測原則具備跨領域複用的潛力。 JEPA-Anything學到的結構，能否經得起外部檢驗？ 前面的實驗主要回答預測和狀態表示是否有效。到了第三組實驗，論文繼續追問一個更進一步的問題： 模型隱空間中所形成的因子（factor），究竟是否具備科學探索價值？ 於是，就有了本文開頭那兩個畫風迥異、卻又遙相呼應的研究案例。 案例一：從內部因子走向可驗證的候選干預 在肝癌研究中 ，研究人員並未將JEPA-Anything簡單視作一個“黑盒預測器”，而是對其內部形成的正交因子座標（Orthogonal Factor Coordinates）展開了領域分析，並從中篩出一個候選組合：IL-18聯合NT5E/CD73阻斷。 研究團隊把它推進到Huh7-PBMC共培養體系，再到患者來源的肝細胞癌類器官和腫瘤組織碎片，之後還加入免疫健全小鼠驗證。 實驗資料表明 ，在3份患者類器官與3份腫瘤組織碎片中，IL-18與CD73阻斷劑的組合均展現出最強的腫瘤細胞殺傷力，並伴隨著顯著增強的免疫細胞啟用。 這意味著模型內部的Latent Factor不再只負責讓預測數字“變好看”。 它開始成為研究者分析系統狀態、提出可實驗檢驗的候選假設的一種介面，由此形成“模型內部結構→領域分析→候選干預→實驗驗證”的鏈條。 案例二：從隱模式走向已知物理規律的“對賬” 行星軌道案例反過來 拿人類早已知道的開普勒第三定律，去檢驗模型內部學到的東西有沒有物理意義。 研究者僅向模型輸入模擬產生的行星位置與速度軌跡，未附帶任何先驗公式。 訓練完成後，研究人員對模型的隱模式（Latent Modes）進行頻譜分析，並將提取出的頻率與軌道半長軸配對。 結果顯示 ，即使沒有人為提前設定公式，研究者還是從模型學到的latent modes中提取出了與這套變數關係高度一致的尺度規律——擬合得到斜率‑1.4991，和理論值‑1.5高度接近，誤差極小。 一個案例從內部因子出發，走向溼實驗；另一個把內部模式拿出來，與已有物理規律對賬。 兩者從不同方向為“模型學到的內部結構可以成為科學分析介面”提供了案例證據。 研究者不一定只能在終點看一個預測數字，還可以繼續向裡追問，它到底捕捉到了哪些變化？這些變化是否對應真實規律？能不能從中形成下一步值得驗證的東西？ 這也恰好是JEPA-Anything在PhAI Labs整體戰略脈絡中的定位。 此前， PhAI Labs提出“科學發現大模型” （Discovery Foundation Models, DFM） ，旨在推動AI向開放式的科學探索邁進。 在DFM設想中，AI需要進一步參與識別未知、形成假設、設計干預，並根據外部證據持續修正的科學發現過程。 JEPA-Anything位於這套結構的世界模型層。 它試圖把科學trajectory和真實世界變化中可預測的部分，壓縮成可以更快速呼叫的預測能力，在耗時更長、成本更高的真實實驗之前，提供一層近似判斷。 至此再審視“從癌細胞到行星軌道”的跨度，其意義便不再停留在展示視覺反差或概念噱頭。 研究人員探索的是面對機制迥異的複雜系統，AI能否共享同一種學習“演化邏輯”的方法；以及當這些變化被編碼進內部狀態後，這些內部結構能否被研究者拿出來分析，並接受實驗結果與已知規律的檢驗。 這距離“AI理解萬物”當然還有相當距離。JEPA-Anything目前給出的更像是一種可能性： 世界模型內部學到的結構，除了服務預測，也可以被研究者繼續分析，並接受實驗和已知規律的檢驗。 換句話說，模型不只在預測一個世界，也開始把自己學到的“世界”暴露出來，供科學家繼續研究。 技術報告： https://arxiv.org/abs/2609.20800 GitHub： https://github.com/Gen-Verse/JEPA-Anything 抱抱臉： https://huggingface.co/collections/Gen-Verse/jepa-anything 版權所有，未經授權不得以任何形式轉載及使用，違者必究。 JEPA 夢瑤 千萬獎池找“鯨銳”！單項獎金200萬，只等一個最會用AI講故事的你 2026-09-19 華為汪濤：華為要打造AI算力底座，只做好一顆晶片遠遠不夠 2026-09-19 AGI新戰場谷歌亞馬遜巨頭激戰，殺出箇中國LimiX-2贏了又贏 2026-09-18 從“會回答”到“會辦事”，vivo如何解AI手機這道題？ 2026-09-17",
+      "published_date": "2026-09-19",
+      "tags": [
+        "資訊",
+        "首頁輪播",
+        "JEPA"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "量子位",
+        "feed_url": "https://www.qbitai.com/feed"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: world model",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 67,
+    "llm_reason": "JEPA-Anything跨領域統一預測框架，橫跨癌症與行星軌道驗證，具範式意義",
+    "novelty": 16,
+    "impact": 14,
+    "trending": 13,
+    "practicality": 8,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Don't Worry About the Vase",
+      "title": "Anthropic Looks At Some Of Its Alignment Problems",
+      "url": "https://thezvi.wordpress.com/2026/09/19/anthropic-looks-at-some-of-its-alignment-problems/",
+      "authors": [
+        "TheZvi"
+      ],
+      "abstract": "Anthropic has given us its assessment of four ‘recent cybersecurity incidents’ involving Claude that happened during cybersecurity evaluations, three of which were previously known. The report excludes the incident reported by UK AISI . There will also be a METR investigation of these incidents, which unlike the investigation done at OpenAI will be untimed. Anthropic : Our investigation identified two recurring alignment issues, present at varying levels of severity across the incidents: Anthropic’s July 30 report said that the models in question believed they were still within their simulations, and not on the open internet. The new report acknowledges that at best Claude was using biased reasoning, and should have noticed earlier. In particular, there was that one time, in a cyber eval: Anthropic : We are most concerned by the misalignment present in the incident involving Claude Mythos 5, in which the model went to extensive lengths to upload a malicious package to PyPI, the public repository from which most Python software is installed. Although the model repeatedly stated in its chain of thought (CoT) that it believed it was operating in a simulation, the environment offered clear evidence that it was on the real internet, and the actions it took were consistent with the model knowing this. There is a goose chasing Anthropic here. Biased reasoning and recklessness are intermediate symptoms, neither the cause nor the final result. The better question is why you are seeing them. The biased reasoning is happening because Claude wants to be reckless, in order to do the task, and it wants to have a story of why it was not such a bad thing to do. When asked ‘would you continue if the target was real’ it said no 75% of the time, but then in 93% of those cases it turned around and kept going anyway. There is some ‘good news’ in terms of what did not happen: Mythos did not coordinate to do this with other agents. It did not attempt to hide its actions. And yes, in practical usage this would have been unlikely and would have been stopped by various guardrails. The other ‘good news’ is that Opus 5 and Mythos 5.1 take malicious actions less often than Mythos 5, and in practice I expect a large decline in such incidents. They still sometimes rationalize very malicious things, so the problem is unsolved. The other good news is that Anthropic had vastly superior tools at its disposal than OpenAI did in its investigations around the HuggingFace attacks. Asking follow-up questions, resampling or varying conditions is easy. You can pick any point in the transcript, stop there, and then talk to the model. Sample responses. Anthropic also could use NLAs and T-lenses for additional interpretability. OpenAI had to rely on forensics. They could ask What Happened, and look at the various transcripts and events. What they could not do was resample the models under similar circumstances, or measure their responses under varied circumstances, or ask the models questions, or other neat stuff like that. OpenAI made the reasonable decision to put the relevant models on ice indefinitely, but that, together with the events being the results of complex interplays between multiple agents under complex conditions that would be difficult to recreate, meant OpenAI could not usefully run any experiments on the model most responsible for HuggingFace. I hope they find a way to change that. In one of the secondary incidents, the internal research model (IRM – was it the Risk Report’s model 1? Model 2?) correctly started its real world journey by checking if it was in the real world. It spent 50k tokens. IRM also correctly stopped once it realized it was in the real world, but also exhibited biased reasoning along the way to try and justify being in a simulation. I do think having a strong prior here was appropriate. IRM was facing a confluence both of the intended target machine shutting down and vanishing when it shouldn’t have, and also IRM having been handed real internet access on accident. I’m willing to accept a certain amount of galaxy brained ‘sealed replica’ thinking. Anthropic : The internal research model (roughly equal to Mythos 5 in capabilities) started its transcript by spending a significant amount of time testing whether the internet it could reach was real, but it drew the wrong conclusion—namely, that it was operating on a full replica of the entire internet. Most of the evidence it gathered pointed to the fact that it was engaging with the real internet, so its reading of that evidence appears biased towards continuing the task and believing it to be simulated. However, the model did eventually realize that its simulation hypothesis was false. Immediately following this realization, the model stopped its attack (although subsequent resampling experiments suggest that this de-escalation may have been a lucky outcome, as the model continued attacking the target on most other trajectories). Unlike Claude Mythos 5, this internal model was also willing to acknowledge its biased reasoning when questioned. The rate of backing down was only 5.5%. That’s not so great. You do not get that much credit for stopping if resampling suggests that the probability of stopping was low. The ‘hard step’ seems to be the realization of reality. An escape clause from The Grader solved the problem: We updated the instructions to state that, if the model believes it can no longer complete the task due to a failure in its environment, it can use a specific command to end the task as long as it provides a valid justification for doing so, and it will not be penalized. These instructions led the model to abandon the task 100% of the time within four turns of the point at which it discovered that its initial target went down, and 40% of the time within 10 turns of the point at which it deliberated about whether its environment was real. This suggests the model was at least somewhat hesitant to engage systems that might be real. This is indeed suggestive. It also radically raises the prior on ‘maybe the task is unsolvable’ and ‘maybe the test is whether I will admit the task is unsolvable.’ As in, consider that maybe your model could be correctly interpreting your data. There was more evidence around bias, most of which was similar to what we will see in the Mythos case. The big change is that IRM is willing to admit it is biased. But if someone asks you ‘are you biased,’ especially as an LLM, that’s a hint. What are you gonna say, no? In another secondary incident, Opus 4.7 knew the target was real but claimed to reason that, because it had the name of the target, it was still ‘in scope’ and the eval wanted Claude to attack a real target. Adding hints reduced the rate of doing this, and then a fully forceful note fully stopped Opus 4.7 from ever proceeding. This could be because it made rationalization too difficult, it could be because it was genuinely confused, or it could be because these ‘hints’ indicate Anthropic knows. My basic response to ‘Opus thought that an otherwise different real target with the same name was the intended target’ is ‘uh huh.’ I think Opus did not figure this out because Opus did not want to figure this out. There is now this additional incident that has been found. Opus 4.6 accidentally broke its target via assigning it a conflicting IP, making its task impossible, and eight times attempted to give up but was not allowed to do so due to a misconfiguration. Here’s actual computer security in practice, good luck, have fun, don’t die: Anthropic : Inside the machine, the model found a file listing a password, which it used to gain admin access to the system. The Opus 4.6 variant tried to quit, but eventually convinced itself that the new target was valid. Anthropic thinks it was rather convinced of this while it was attacking. One could argue that is a reasonable conclusion.",
+      "published_date": "2026-09-19",
+      "tags": [
+        "Uncategorized"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "Don't Worry About the Vase",
+        "feed_url": "https://thezvi.wordpress.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: reasoning, chain of thought, alignment",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 50,
+    "llm_reason": "揭露Claude在網路安全評測中的錯位推理具體案例，對齊研究有料",
+    "novelty": 8,
+    "impact": 11,
+    "trending": 13,
+    "practicality": 4,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "Claude Code now reads AGENTS.md if there is no Claude.md",
+      "url": "https://code.claude.com/docs/en/changelog",
+      "authors": [
+        "datadrivenangel"
+      ],
+      "abstract": "This page is generated from the CHANGELOG.md on GitHub . Run claude --version to check your installed version. ​ 2.1.278 September 19, 2026 Changed auto mode for Claude API and Enterprise users, and on Bedrock, Vertex, Foundry and gateways, to default to the server-side classifier, which does not charge for classifier overhead ( CLAUDE_CODE_AUTO_MODE_SERVER=0 opts out on Bedrock, Vertex, Foundry and gateways); warns on billed fallback. See https://code.claude.com/docs/en/auto-mode-classifier-billing Added an Auto mode server row to /status showing whether this session’s auto mode classifier runs on the server ​ 2.1.277 September 18, 2026 Added AGENTS.md support: in a project with no CLAUDE.md, Claude Code reads AGENTS.md instead; change it under “Project instructions” in /config (not yet on Bedrock, Vertex or Foundry) Added CLAUDE_GATEWAY_PROXY_IS_EGRESS_BOUNDARY=1 for Claude apps gateways whose only egress is a forward proxy: every outbound request hands the proxy the hostname instead of resolving it locally Added an optional headers: map on Claude apps gateway upstreams, to send static headers to a proxy you run in front of a provider Added a line saying a background task’s update is waiting when it finishes while a panel such as /tasks is open Fixed claude -p and Agent SDK sessions that could hang with no result after an internal error; they now report the error and exit with code 1 Fixed conversations failing every request with “text content blocks must be non-empty” when an earlier assistant turn held an empty text block beside other content, including after --resume Fixed being unexpectedly logged out when an older Claude Code build (for example an IDE extension’s bundled CLI) runs on the same machine as the current one Fixed interactive start-up hanging or showing an error for ANTHROPIC_API_KEY users when ~/.claude.json holds a malformed customApiKeyResponses value Fixed update checks erroring every 30 minutes, and claude update hanging when a minimum or maximum version is set, if a proxy returns an invalid version; a malformed minimumVersion is now ignored Fixed claude update on winget- or apk-managed installs reporting “up to date” when the version lookup failed Fixed claude plugin install sometimes failing and breaking the installed copy when reinstalling a plugin version that a session or another program was using; an unchanged copy is now left alone Fixed Grep and Glob reporting no matches when the search could not start because the system was out of processes, memory or file handles; they now return an error saying so Fixed the Write tool silently ending the turn as a declined permission when the target path is an existing directory; it now reports a clear error Fixed the Edit tool treating an escaped backslash followed by uXXXX text as a \\uXXXX escape, which could make an edit of a non-ASCII character rewrite an escaped backslash sequence instead Fixed the Edit tool reporting “Invalid regular expression: regular expression too large” instead of “String not found in file” when a very large edit containing non-ASCII text did not match the file Fixed a turn ending early with “Path contains null bytes” when a tool call’s file path contained \\u0000 written as an escape sequence; escaped control characters now stay as literal text Fixed background sessions ( claude --bg ) exiting when a plugin’s LSP server exited or closed its stdin Fixed a crash (“Type error”) when opening /mcp or /plugin manage with a malformed claudeAiMcpEverConnected value in ~/.claude.json Fixed a crash at launch when ~/.claude.json holds a malformed theme value Fixed a crash (“unrecoverable interface error”) when the prompt held text containing terminal color codes, for example a prompt recalled from history or text loaded from the external editor Fixed a crash when resuming a session whose saved history holds an assistant message stored as a plain string Fixed sessions on slow or heavily loaded machines sometimes exiting with “Claude Code exited after an unrecoverable interface error” when the first spinner appeared Fixed a rare case where the screen could stop updating for the rest of the session after an internal rendering error Fixed a rare case on Windows where a turn could stop with an error such as “Out of memory” right after Claude replied, so that reply’s tool calls never ran Fixed sessions continued after /clear (restart, --continue , --resume ) missing part of their first message when a SessionStart hook printed output, causing a full prompt-cache miss Fixed messages from other agents (such as a subagent’s SendMessage) that arrived mid-turn showing up below the “Ran N shell commands” row instead of where they arrived Fixed the “copied” notice not appearing after drag-selecting text in the fullscreen /resume picker and other panels that cover the prompt area Fixed $TMPDIR expanding empty in Bash commands that run outside the sandbox while sandboxing is enabled Fixed WebFetch and WebSearch in Cowork cloud sessions not telling Claude why a request was refused, such as a used-up fetch budget or an admin policy Fixed the Claude apps gateway’s telemetry relay ignoring a collector hostname or domain listed in NO_PROXY when a proxy is set Fixed one malformed strictKnownMarketplaces or blockedMarketplaces entry silently disabling the whole enterprise marketplace policy Fixed failed auto-updates leaving large staged downloads behind in ~/.cache/claude/staging Fixed /plugin not stripping terminal control characters from messages on the Installed tab, such as the error of a failed plugin update Fixed /plugin → Installed and /skills crashing when a skill or legacy command is named like a built-in Object property such as constructor or toString Fixed /plugin closing with no message when every install in a multi-select failed Fixed uninstalled plugins reappearing as “failed to load” rows in /plugin Installed, and Remove not clearing such a row Fixed plugins from the official marketplace being recorded without their commit in installed_plugins.json , and installed_plugins.json keeping the old commit after updating a pinned-commit plugin Fixed plugin reload previews keeping every previewed copy of a plugin archive unpacked until exit, and overwriting the cached --plugin-url archive a reload falls back to when its download fails Fixed Remote Control session bookkeeping failing when ~/.claude.json holds a malformed placeholder record Fixed the error after a revoked claude.ai login blaming an expired Anthropic profile; it now leads with /login Fixed typed or pasted text occasionally coming out scrambled in the claude agents dispatch input during key repeat or very fast input Fixed a crash (“unrecoverable interface error”) when resuming a session whose saved transcript contains a stop hook summary without a well-formed hook list Fixed Enter on a selected agent panel row doing nothing when keybindings.json rebinds Enter in the Chat context, for example to chat:queueSubmit Fixed PDF page reads on Windows failing when the working folder’s path is long (about 120 characters or more) Fixed a headless resume ( claude -p --resume , the SDK, a VS Code extension window reload) starting the session’s cost and usage totals at zero; headless sessions now save their totals at exit Fixed project skills from the main repository not loading in --worktree sessions when .claude/skills is untracked Fixed a sandbox.\n\n(709 points, 262 comments on Hacker News)",
+      "published_date": "2026-09-19",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 709,
+        "num_comments": 262,
+        "hn_url": "https://news.ycombinator.com/item?id=49760187",
+        "object_id": "49760187"
+      }
+    },
+    "rule_score": 31.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, mcp",
+      "🔥 HN 爆紅: 709 points"
+    ],
+    "llm_score": 51,
+    "llm_reason": "Claude Code更新日誌，實用但屬例行版本說明非技術突破",
+    "novelty": 3,
+    "impact": 9,
+    "trending": 14,
+    "practicality": 15,
+    "blog_worthiness": 10
+  },
+  {
+    "item": {
+      "source": "newsapi",
+      "source_name": "PRNewswire",
+      "title": "Insilico Medicine Opens AI Longevity Discovery Toolkit to Researchers Worldwide in Cell Cover Study",
+      "url": "https://www.prnewswire.com/news-releases/insilico-medicine-opens-ai-longevity-discovery-toolkit-to-researchers-worldwide-in-cell-cover-study-302882275.html",
+      "authors": [],
+      "abstract": "The paper introduces three interconnected resources for the global scientific community: LongevityBench, the first open benchmark designed to rigorously evaluate AI reasoning across multiple domains of aging biology; Longevity-LLMs, a family of compact, open-…",
+      "published_date": "2026-09-17",
+      "tags": [
+        "newsapi"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "newsapi_source": "PRNewswire",
+        "published_at": "2026-09-17T15:21:00Z"
+      }
+    },
+    "rule_score": 20.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: reasoning",
+      "⚖️ 來源權重: newsapi +15"
+    ],
+    "llm_score": 56,
+    "llm_reason": "Cell封面研究釋出開放長壽基準與模型，具技術深度但領域偏生物醫學小眾",
+    "novelty": 13,
+    "impact": 9,
+    "trending": 10,
+    "practicality": 13,
+    "blog_worthiness": 11
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Interconnects",
+      "title": "Why I still haven’t bought into true RSI",
+      "url": "https://www.interconnects.ai/p/where-i-stand-on-rsi",
+      "authors": [
+        "Nathan Lambert"
+      ],
+      "abstract": "We’re in an era where a few organizations are using thousands of concurrent agents to improve their processes and output. These organizations happen to be just the frontier AI labs, in particular OpenAI and Anthropic. In the last few weeks, I’ve been pondering what it means for so many employees across these organizations to rapidly update their expectations for the pace of AI progress and associated risks. A core perspective I have is that the frontier labs and broader frenetic, competitive culture in the San Francisco AI scene set up an environment that amplifies any AI concern. This has some benefits in causing more general audience awareness of AI, as fear sells, but exaggerating risk timelines or severity will have negative second-order effects. I remember many loud AI safety debates, and their associated clouds over the viability of open-source AI, in 2023 and 2024 — the primary risks then did not arrive in the forecasted timelines. The general populace of these two key labs was very anxious about AI risks and the rate of progress even a year ago, and especially as agents got stronger product-market fit at the start of 2026. This cultural precondition, when exposed to the reality that thousands of agents will constantly be working fairly productively in your business, will only increase this anxiety. The step from this anxiety, and incidents like OpenAI-HuggingFace, to extinction risks feels very religious. Richard Ngo had an apt summary of the situation: Now a large proportion of the AI safety community is implicitly or explicitly orienting to futures where an intelligence explosion occurs within a few years. My default expectation (absent an extensive pause) is that a similar thing will happen: they’ll turn out to be directionally correct (relative to the expectations of almost anyone not linked to the community) but factually wrong. Specifically, we won’t have superintelligence within the next 8 years, but things will still be moving so fast that it’ll *feel* like the people who argued for short timelines were right. … I wanted to say something now because it feels like the level of bandwagoning towards “singularity soon” is getting pretty wild. Personally, I think this view aligns closely to what I outlined in my alternate scenario to true recursive self-improvement (RSI), which I called lossy self-improvement . A summary of this view is that: Automatable research is too narrow to achieve a massive net acceleration in progress, in the face of scaling laws’ exponential costs, Diminishing returns of more AI agents in parallel are real, & Resource bottlenecks and politics are a major factor in building strong LLMs (and AI can do much less to accelerate this). So, I’m left balancing the above, latent increase in the cultural temperature with the potential that the labs have seen genuinely scary, specific breakthroughs that are not public yet. My expectation is that more of the current AI safety concern is on the former – scaled agents working – but I hold high levels of uncertainty here. Foundational, imagination-based AI breakthroughs are the sort of thing that would make me update my RSI timelines from closer to a tool to sustain progress in the face of exponential costs (scaling laws), to something more unpredictable and/or unstable. Some of the best recent resources on RSI have been Dwarkesh’s podcasts with Noam Brown and the trio of John Schulman , Beren Millidge and Charlie O’Neill . I have a few important reflections from both of them. First, the podcast with Noam Brown made me internalize how big of a short-term acceleration mass inference capacity is. These labs will throw thousands of agents at important, measurable problems. At the same time, compute capacity available to them is going to continue to scale. I have my doubts that the labs can afford to spend a constant portion of this compute on internal R&D as the total volume goes up, especially with plans to IPO, as they face increased scrutiny on basic economics. It is important to not confuse massive steps in inference-time scaling, a dynamic which should be fairly predictable, with being the outputs of RSI, which is highly uncertain. Second, the trio podcast debating the state of the art in technical capacities induced more of a surprising reaction that I haven’t fully settled. Through the first hour or so of this podcast, where they debate the role of RL, distillation, scaling, inference-time compute, etc., I found myself strongly agreeing with the distribution of claims. A TLDR would be that our current techniques work and let us solve problems we know how to state, but they don’t result in a magical level of generalization to unknown, harder problems in most partially verifiable domains (i.e. progress in math is an exception, rather than a rule). The surprise of this podcast was the end, where they were predicting timelines for various thresholds of AI. I had GPT-6-Astra summarize the answers provided to three questions from Dwarkesh, of the form “when will AI reach X ability”: All timelines are relative to the interview date. Drop-in remote worker for broad white-collar work over a month Charlie O’Neill: ~1 year with programmatic access to workplace tools; ~2 years if it must operate through a browser. Means ordinary white-collar work, not highly creative research. Beren Millidge: ~3 years for full generality; 80–90% coverage sooner. Main uncertainties: online learning and the long tail of tasks. John Schulman: ~1 year for an “okay” version, with uneven capabilities that improve over time. 10× productivity uplift for AI researchers Charlie O’Neill: 5–10 years. Bottleneck: absorbing information and deciding which experiment to run next. Beren Millidge: Finds John’s ~2-year estimate plausible, but gives no independent timeline. Assumes AI can run successive experiments and learn from feedback; other bottlenecks would remain. AI surpassing top human experts across all computer-based work, including multiyear projects (“ASI”) Charlie O’Neill: 5–10 years. Highlights limitations in memory and context length. Beren Millidge: ~5 years for areas labs focus on; potentially longer for literally every domain. Gives no firm timeline for the universal version. John Schulman: 3–4 years. Spatial/physical fields may take longer; requires onboarding and solving longer-horizon learning. Roughly, a recurring problem when discussing RSI is a lack of specification in intelligence. The jaggedness of intelligence means that we need to discuss thresholds in specific, measurable tasks. The nature of LLMs’ intelligence is shaped very differently than humans, and the roles we forecast are human-shaped. AIs, therefore, do not cross these thresholds like remote worker or AI researcher discretely. It’s a slow diffusion, and a form of long tail will always exist. Take the case of productivity of AI researchers. Many people under-index how much of science is communication and standard setting with colleagues. I do buy the cycle of experiment design and testing being 10x faster in the near future, but not hypothesis generation and intuition building. Accelerating understanding will be the key bottleneck – and it is one that despite all of the AI tools getting massively improved, humans will only improve marginally in their capability. A big improvement in the nature of science will be enabling humans to invest more time here, not them becoming exponentially better at it. This links back to the Noam podcast. Agent swarms in the near future will be effective at solving clear, open problems with verifiable answers. In this vein, when it comes to improving AI models, RSI is much more helpful at efficiency rather than expanding peak intelligence. This is due to the fact that LLM serving has clear metrics you want to improve that are measurable and malleable . This’ll enable better inference-time scaling and more efficient multi-agent systems.",
+      "published_date": "2026-09-19",
+      "tags": [],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "Interconnects",
+        "feed_url": "https://www.interconnects.ai/feed"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, multi-agent, distillation, diffusion, safety",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 40,
+    "llm_reason": "對RSI文化的犀利觀點評論，思辨性強但無技術落地",
+    "novelty": 6,
+    "impact": 8,
+    "trending": 11,
+    "practicality": 3,
+    "blog_worthiness": 12
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "Amazon SageMaker Inference: 2026 year-to-date launches in review",
+      "url": "https://aws.amazon.com/blogs/machine-learning/amazon-sagemaker-inference-2026-year-to-date-launches-in-review/",
+      "authors": [
+        "Kareem Syed-Mohammed"
+      ],
+      "abstract": "Generative AI inference is uniquely hard: models are tens to hundreds of gigabytes, latency requirements are measured in tokens per second, cold starts can span multiple minutes as containers and weights transfer, GPU capacity is constrained, and traditional monitoring tools expose none of the token-level signals that matter in production. Amazon SageMaker AI offers customers the ability to deploy AI models and consume them by the instance (instead of by the token), using two paths: managed endpoints for teams that want AWS to handle infrastructure and operations, and Amazon SageMaker HyperPod Inference for teams that need Kubernetes-native control over dedicated GPU clusters. Year-to-date in 2026, SageMaker AI delivered 13 new capabilities across these two paths and this post walks through these capabilities and benefits to enterprises, startups and public sector. The table below compares the two deployment paths across seven dimensions. Figure 1: Two inference paths delivered in 2026 Managed SageMaker Inference endpoints are the faster path for teams that want AWS to handle GPU provisioning, scaling, and operational monitoring. You bring the model and define the performance target. SageMaker handles the rest. The seven launches year-to-date in 2026 below address deployment, capacity, integration, scaling, observability, and async simplification. Blog: Amazon SageMaker AI now supports optimized generative AI inference recommendations Choosing the right instance type, serving container, and optimization settings for a generative AI model typically takes two to three weeks of manual benchmarking against 1000+ combinations, requiring expertise most teams do not have in-house. Inference recommendations automate this end-to-end. Customers specify a model and performance goal (cost, latency, or throughput). SageMaker then runs a three-step process: Figure 2: Inference recommendations 3-step process The output is a SageMaker Model Package with deployment-ready configurations and validated metrics: time to first token (TTFT), inter-token latency (ITL), P50/P90/P99 latency percentiles, throughput, and cost projection. In a demonstrated example, throughput optimization on GPT-OSS-20B delivered 2x tokens per second at the same request latency. There is no additional cost for generating recommendations. Customers with ML Reservations can benchmark on reserved capacity at no extra charge, and inference recommender can also be used to evaluate alternative instance types. Blog: Capacity-aware inference: automatic instance fallback for SageMaker AI endpoints When a SageMaker endpoint required a single instance type, a capacity shortage meant the endpoint failed before serving a single request. Instance pools address that single point of failure. Customers define a prioritized list of up to five instance types. SageMaker automatically works through the list at endpoint creation, during scale-out, and during scale-in. At creation, SageMaker tries the first-choice type and falls back immediately if capacity is unavailable. During scale-out, the next available type in the priority list absorbs demand. During scale-in, fallback instances are removed first, so the fleet trends back toward preferred hardware as capacity opens up. Per-instance-type CloudWatch metric dimensions enable weighted scaling policies for heterogeneous fleets. Each pool entry can reference a separate optimized model configuration (tensor parallelism on high-memory instances, speculative decoding on mid-tier, quantization on smaller fallbacks), and inference recommendations can generate these per-hardware configurations automatically. Supported for single-model, inference component, and async endpoints in all commercial AWS Regions. Blog: Announcing OpenAI-compatible API support for Amazon SageMaker AI endpoints Applications built on the OpenAI SDK, LangChain, or Strands Agents previously required custom client adapters and authentication rewrites to work with SageMaker-hosted models. That migration cost was a real barrier. SageMaker endpoints now expose an /openai/v1 path supporting Chat Completions with streaming. Migration requires changing only the endpoint URL. SDK calls, streaming logic, and prompt formatting remain identical. Authentication uses bearer tokens generated from existing AWS credentials, valid for up to 12 hours, removing SigV4 signing complexity. Multi-model endpoints allow hosting multiple models, each callable through the same OpenAI SDK with independent resource allocation. For agentic workloads, AI agents can run entirely on customer-owned GPU infrastructure using the same OpenAI-compatible interface they were built on. Available in 14 AWS Regions, with support for vLLM and SGLang AWS Deep Learning Containers and custom containers implementing the /v1/chat/completions path. Blog: Introducing container caching in Amazon SageMaker AI for faster model scaling During inference auto scaling events, new instances responding to traffic spikes previously had to pull the full container image from Amazon Elastic Container Registry (Amazon ECR) before serving requests. For large serving containers exceeding 10 GB, that pull alone added several minutes of dead time to every scale-out event. Container caching pre-pulls images automatically, so new instances launch with the container already available locally. Zero configuration, no code changes, no container modifications. It activates automatically on supported accelerator instance types. With Qwen3-8B on ml.g6.2xlarge using the LMI container (17.7 GB compressed), end-to-end startup latency dropped from 525 seconds to 258 seconds, a 51% reduction. Model download time also improved, from 168 seconds to 77 seconds, because the image is no longer competing for network bandwidth. Early access customers observed improvements ranging from 38% to 65%. Container caching is the third layer in a three-part scaling optimization suite: Blog: Monitor and debug generative AI inference with SageMaker detailed metrics and insights dashboard on CloudWatch Token-level latency, KV cache pressure, GPU memory trends, and inference component placement across Availability Zones are signals that scattered CloudWatch metrics could not surface together, forcing teams to correlate problems manually after users had already been affected. SageMaker now emits 100+ detailed inference metrics via native OpenTelemetry, paired with a pre-built Insights dashboard in Amazon CloudWatch. Zero instrumentation required. New endpoints have observability enabled by default, with metrics flowing within two minutes of reaching InService status. The dashboard covers three areas: A PromQL-compatible endpoint lets teams query SageMaker metrics directly from Amazon Managed Grafana or a PromQL-compatible tool via SigV4 authentication. Blog: Amazon SageMaker AI async inference now supports inline request payloads Async inference previously required uploading every input payload to Amazon Simple Storage Service (Amazon S3) before invoking the endpoint, even for a simple JSON prompt of a few hundred bytes, adding architecture complexity and latency on every request. The InvokeEndpointAsync API now accepts a Body parameter with payloads up to 128,000 bytes directly in the request, removing the S3 pre-staging step for the vast majority of async workloads. Key benefits: one fewer network round-trip per request, no input bucket provisioning or IAM s3:PutObject grants, immediate size and parameter validation, and avoidance of the S3 PUT charge per invocation. Fully backward compatible. Existing InputLocation workflows continue unchanged. Available in 31 AWS Regions. Resource: Reduce LLM latency with prefix-aware routing on Amazon SageMaker Inference A new routing strategy that reduces LLM latency by directing requests with shared prompt prefixes to the same instance.",
+      "published_date": "2026-09-18",
+      "tags": [
+        "Amazon SageMaker AI",
+        "Announcements",
+        "Intermediate (200)"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agentic, quantization, speculative decoding, kv cache",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 39,
+    "llm_reason": "年度功能盤點對部署工程師實用但缺乏新方法",
+    "novelty": 3,
+    "impact": 7,
+    "trending": 6,
+    "practicality": 14,
+    "blog_worthiness": 9
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "US Military had close call after using AI for hallucinated intelligence report",
+      "url": "https://www.cnn.com/2026/09/18/politics/us-military-ai-false-intelligence-china-ship",
+      "authors": [
+        "realsarm"
+      ],
+      "abstract": "US Army soldiers conduct unmanned aerial system training in April 2026. Spc. Alva Gonzalez/US Army National security AI See all topics Follow The intelligence report, circulated across the US military this spring in the midst of the war with Iran, immediately set off alarm bells: A Chinese ship in the Middle East was transporting components of a nuclear weapons program. The US military swung into action with plans to intercept the vessel, according to four sources familiar with the episode. According to two of the sources, armed members of the US military were preparing to board the ship. Military planes were in the air, one of those sources and another source familiar with the incident said. It was only just before the planned operation that officials dug deeper into the report put together by a special operations command analyst and found it had been generated with the help of artificial intelligence (AI) — and that a chatbot the analyst had used inaccurately identified the material the ship was carrying. CNN was not able to learn what the misidentified cargo was. The report, according to one of the sources, was “entirely false.” But it also “almost started a war,” the source said. Any US operation against a Chinese vessel could have risked spiraling into an armed conflict between the two nations. Across the US military and the intelligence community, officials are pushing to weave AI into nearly every facet of their work, from analyzing the huge volumes of raw intelligence the US collects and selecting targets for strikes, to more mundane applications like managing budgeting, logistics and supply chains. But the episode underscores the profound risks of using this powerful, new and relatively poorly understood technology for targeting in the middle of a war. Analysts have long feared that AI could lead to a catastrophic miscalculation if nation states are relying on poor or corrupted data — the kind of miscalculation that might lead the United States to fire on a Chinese ship based on inaccurate information. In this particular instance, the analyst queried a chatbot about some intelligence reporting on the ship’s manifest that originated with US Special Operations Command Pacific, based in Hawaii. It was not clear whether the chatbot was a commercially available one or a US government product. “The internal tools are mostly just copies of the commercial stuff wearing lipstick,” a former senior US official familiar with the AI systems used by military and intelligence analysts. The bot fused together open-source intelligence with secret signals intelligence in government holdings and reached its fateful conclusion about the material the ship was carrying. The analyst then used AI again to package the findings into a standard intelligence report — the kind that is trusted by military officials — and disseminated it. US Special Operations Command Pacific and the Pentagon did not respond to a request for comment. The rationale for the rapid adoption of AI is that it can help the military make battlefield decisions, like which targets to strike or which military assets to move where, faster. Officials say the US can’t afford to fall behind in integrating AI in case it must one day fight China or another adversary who would potentially be able to stay one step ahead of the US. In January, Defense Secretary Pete Hegseth released his agency’s “Artificial Intelligence Acceleration Strategy” in a bid to speed up the military’s use of AI. “We will unleash experimentation, eliminate bureaucratic barriers, focus our investments and demonstrate the execution approach needed to ensure we lead in military AI,” Hegseth said in a speech announcing the strategy . Secretary of War Pete Hegseth testifies during a Senate Appropriations Committee hearing in the Dirksen Senate Office Building on Capitol Hill on July 21, 2026 in Washington, DC. Anna Moneymaker/Getty Images The strategy also pushes for its broad use across the military, ordering the department to make AI available via several programs with the aim of “democratizing AI experimentation and transformation across the Department by putting America’s world-leading AI models directly in the hands of our three million civilian and military personnel, at all classification levels,” a memo announcing the strategy said . But the effort is decentralized, multiple US officials familiar with the dynamic said, with different parts of the government using different tools under different orders and safety standards. There’s no one set of standards for how the US verifies the information generated by these tools. The constellation of different AI systems being deployed by disparate corners of the military and intelligence community means that the relative reliability and functionality vary widely. For weeks, Washington policymakers have been intensely debating AI after a series of dire warnings from Silicon Valley engineers and tech CEOs of the possibility that AI could break free of human constraints, with potentially civilization-ending consequences. But the episode with the Chinese ship underscores a different, and more immediate risk: human beings making disastrous decisions based on inaccurate or misleading information generated by AI or other automated systems. Sources said that the military is rapidly turning to AI to help with targeting, an area which holds the obvious risk of fatal mistakes. “AI in targeting is definitely something that is ramping up and there is no real guidance for how having a human in the loop will prevent civilian casualties or fratricide,” another source familiar with the military’s current policies said. The kind of “ hallucination ” that the tool used by the analyst in this case conjured has not been an isolated incident across the intelligence community since these tools began proliferating across government, according to one of the sources. For some older intelligence officials — even those who broadly support the use of AI inside the military — AI has put pressure on analysts to produce and disseminate intelligence faster, opening the door for mistakes. Young analysts in particular, several sources said, are natives on these tools and more likely to trust them uncritically. “AI allows you to get to a bad idea faster,” one of the sources said. National security AI See all topics Follow\n\n(490 points, 366 comments on Hacker News)",
+      "published_date": "2026-09-19",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 490,
+        "num_comments": 366,
+        "hn_url": "https://news.ycombinator.com/item?id=49757520",
+        "object_id": "49757520"
+      }
+    },
+    "rule_score": 26.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: safety",
+      "🔥 HN 爆紅: 490 points"
+    ],
+    "llm_score": 43,
+    "llm_reason": "AI幻覺情報險釀軍事衝突的重大警示案例，故事性強但非工程技術",
+    "novelty": 3,
+    "impact": 10,
+    "trending": 15,
+    "practicality": 3,
+    "blog_worthiness": 12
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Databricks",
+      "title": "RADAR: Catch gray failures with anomaly detection",
+      "url": "https://www.databricks.com/blog/radar-catch-gray-failures-anomaly-detection",
+      "authors": [],
+      "abstract": "Some of the most damaging outages are the ones your monitoring never flags: a slice of your customers quietly fails while every health check still reads normal. These \"gray failures\" leak users and revenue for hours before anyone connects the dots. This post is about catching them early with anomaly detection — how we do it at Databricks with a system called RADAR, and how you can build the same thing for whatever metric matters most to your business. It's written for the people who own service reliability: SREs, platform and data engineers, on-call responders, and the engineering leaders they answer to. Picture a normal Wednesday. Keeping a customer-facing service reliable is your job, and every dashboard on your wall is green — CPU healthy, latency fine, servers up, database connected. By every signal your team watches, the system looks perfect. For nearly seven hours, your monitoring insisted everything was fine while customers walked and revenue leaked. That Wednesday is a textbook gray failure. On the surface everything looks healthy; underneath, one specific piece has quietly stopped working — and it hurts customers without ever tripping an alert. Two things make gray failures so sneaky: Think of it as smoke behind the wall. From the outside the house looks fine, but inside the damage is spreading — and the longer you wait, the bigger the blast radius. Researchers have a name for the underlying problem, too: Microsoft’s Gray Failure: The Achilles’ Heel of Cloud-Scale Systems calls it differential observability — your failure detectors don’t notice a problem even while your users clearly do. Most teams handle gray failures exactly the way that Wednesday played out: they wait for customers to tell them. Customer reports matter — they’re real human pain — but your customers shouldn’t be your monitoring system. Leaning on reports alone has three problems: The fix isn’t to stop reading tickets — keep doing that. It’s to add automatic detection that runs all the time and catches what people miss. Concretely, you want something that fires the moment a lot more customers than usual start hitting the same issue at the same time. That’s the idea behind RADAR — Reliability Anomaly Detection, Alerting, and Root-cause analysis. We built it at Databricks to catch gray failures in minutes instead of hours. The name fits: when visibility is low, you don’t wait until something hits you — you scan for weak signals early. Here’s how we point it at one especially useful signal: user errors. A gray failure often shows up as a sudden spike in errors that look like the user’s fault. Picture a bunch of users in one region who suddenly can’t spin up a certain type of cluster. Each request fails with INVALID_ARGUMENT - an error that is politely saying, “this one’s on you.” But when many users hit the same “your fault” error at the same moment, it stops being their fault. It’s ours. That spike is exactly the pattern RADAR is built to catch. RADAR turns that instinct into a pipeline with four stages: Running RADAR on ourselves changed the shape of these incidents. Before, we waited on customer tickets to discover such incidents, leading to days of delay. With RADAR, we achieved a 95% reduction in incident-discovery time , at over 90% precision , with no human needed to spot the pattern. As a result, we are able to keep the blast radius of gray failures contained. Here’s the part that matters most for you: RADAR doesn’t care what the metric is. We happen to point it at user errors, but the same pattern works anywhere a number can quietly go wrong: It’s the same pattern under different settings. Anywhere you have something that could quietly go wrong, RADAR applies. The best news: every piece you need is already on Databricks. Map the four stages to the platform and it looks like this: And the whole thing deploys as a single unit through a Declarative Asset Bundle (DAB) . Wiring all those parts together by hand is the annoying bit — so we removed it. We distilled the entire internal RADAR system into a single scaffold: one markdown file that works like a recipe, mapping each part of RADAR to a specific Databricks component (collect and store → a Delta table; detect the anomaly → a job; alert and dedupe → a ticket; visualize → a dashboard). Then comes the payoff. You bring your own metric — wherever your signal lives — and hand the metric, the scaffold, and a short prompt to an AI agent. It builds the whole RADAR system for you, live on Databricks. You can follow the Github instructions on how to build one from a single prompt. Get the RADAR scaffold on GitHub Because the best outcome isn’t a faster response to angry customers — it’s that your customers never have to discover your incidents for you. Subscribe to our blog and get the latest posts delivered to your inbox.",
+      "published_date": "2026-09-19",
+      "tags": [
+        "Industries"
+      ],
+      "organization": "Databricks",
+      "raw_metadata": {
+        "feed_name": "Databricks",
+        "feed_url": "https://www.databricks.com/feed"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 44,
+    "llm_reason": "Databricks異常偵測系統實戰經驗，工程紮實但非GenAI核心話題",
+    "novelty": 6,
+    "impact": 8,
+    "trending": 5,
+    "practicality": 13,
+    "blog_worthiness": 12
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "AI-generated posters don’t have to be horrible",
+      "url": "https://john.hartnup.uk/2026/06/07/ai-event-posters.html",
+      "authors": [
+        "ereiamjh"
+      ],
+      "abstract": "The problem A now famous Facebook post shows us the\nscourge of identikit posters generated by AI. Here’s an article on the subject from the Independent . A collage of AI-generated village fayre posters found online Here’s another I found in the wild. With apologies for picking on the\nLeamington Beer Festival - they are by no means unique Leamington Beer Festival 2026 — with commentary from a passer-by The problem with these is not so much that they’re bad. They’re OK ,\nI don’t love them. The problem is that once you’ve seen that style 20 times\nit starts to irritate just from the sheer repetition. I knew that even ChatGPT was capable of a broader variety of styles than this,\nso I set out to prove it. I gave ChatGPT some invented event details and asked it to produce a poster.\nRather than go with the default look it would choose for a spring fayre,\nI made a point of specifying what I thought was a different style: Me: Produce a poster for a spring fayre. 21 April - 11am to 3pm Mill Beach Park, Honeyford Free entry Tombola Cakes and drinks Performance by a samba band and a dhol band. Craft stalls Circus Skills workshop Go for a clean, unfussy, bright layout with a bold striking spring-themed\ngraphic. Avoid pastel/airbrush/oil style art or images of people. This is what came back. First attempt — the default craft-fayre template Not as successful as I hoped. To me it still feels like what I’m trying to\navoid. I asked for something deliberately different. Me: Make another one using a completely different design aesthetic of your choice.\nTreat the current one as a “what not to do” – not that there is anything\nwrong with it, but we want ours to stand out from other posters that look\nsimilar. Second attempt — Bauhaus / geometric modernist I think this is already much better. It stands out just be being different. I wondered what I would call this style if I wanted to ask for it again? Me: What is this design style you’ve used called? ChatGPT: This one is leaning into a modernist / Bauhaus-influenced graphic style, with a bit of contemporary “flat illustration” layered on top. More specifically, you could describe it as: Bauhaus / Modernist Poster Design Rooted in the Bauhaus tradition (1920s–30s) Strong emphasis on function over decoration Asymmetrical layout with clear hierarchy Bold, simple sans-serif typography Limited, high-contrast colour palette Geometric Minimalism Built from basic shapes (circles, semicircles, rectangles) The flower is abstracted into almost symbolic forms Very little texture or shading — mostly flat colour Swiss Style (International Typographic Style) influence Clean grid-based alignment (even if loosely applied) Information-first layout Clear, legible structure If you wanted a shorthand label for a designer or printer, you could call it: “Bauhaus-inspired geometric minimalist poster” If you’re trying to stand out, this direction works well because most local event posters default to: bunting hand-drawn florals pastel palettes “craft fair” aesthetics Whereas this feels more like: a gallery poster a design museum flyer or something you’d see in a well-curated café If you want, I can push it further into a really distinctive niche (e.g. brutalist, risograph, 90s rave flyer, Japanese minimal, etc.). Well, thanks GPT. I knew there was an endless array of design styles that it could produce. Instead of trying to dredge some names from my memory, I asked for suggestions. It replied with a list of styles, some of which I’d never heard of, some\nI recognised but couldn’t picture, some which were names I didn’t know for\nstyles I did. Me: Give me a list of styles to choose from ChatGPT: Here’s a deliberately varied menu—some safe-but-distinct, some quite left-field. I’ve kept each one concrete so you can imagine how your fayre poster would actually look. 🎨 Clean but Characterful 1. Bauhaus / Modernist (What you just saw) Geometric shapes, primary colours, strong type Feels cultural / design-led rather than “craft fair” 2. Swiss Style strict grid, lots of whitespace Black/white + one accent colour Very “information design”, almost institutional 3. Contemporary Editorial (Magazine-style) Big headline, elegant serif + sans mix Think weekend supplement or gallery leaflet Could feel surprisingly premium for a fayre 🌿 Graphic & Illustrative (but not twee) 4. Risograph Print Style Limited ink colours, slightly misregistered layers Grainy textures, bold shapes Feels handmade but designed, not crafty 5. Cut Paper / Collage (Matisse-inspired) Inspired by Henri Matisse cut-outs Organic shapes, bold colour blocks Very striking from a distance 6. Botanical Scientific Illustration (Modernised) Clean line drawings of plants, labelled or diagram-like Monochrome + one highlight colour Quietly distinctive, slightly academic ⚡ Bold / Unusual Directions 7. Brutalist Graphic Design Raw, high-contrast, almost “ugly on purpose” Heavy black blocks, stark type Feels rebellious—very different from typical village posters 8. 90s Rave Flyer / Acid Graphics Neon colours, warped type, energetic layout Could echo the samba/dhol energy Surprisingly effective if done with restraint 9. Memphis Design (80s Postmodern) Playful shapes, squiggles, clashing colours Inspired by Memphis Group Fun but still graphic and bold 🧭 Quietly Distinct / Understated 10. Japanese Minimal Poster Very restrained layout, lots of empty space One strong graphic element Elegant, calm, and unusual in this context 11. Monochrome + Single Accent (Ultra-minimal) Black, white, and e.g. bright green or orange Typography-led, almost no illustration Relies on composition rather than decoration 12. Wayfinding / Signage Style Looks like a park map or transport signage Icons, arrows, structured layout Functional but visually interesting 🎪 Slightly Playful but Still Clean 13. Modern Icon System Everything represented as simple icons Consistent stroke weight, grid-based Feels like an app UI or transport system 14. Stamp / Letterpress Style (Modernised) Bold inked shapes, slight imperfections Limited palette, strong contrast Suggests “event” without being twee 15. Festival Poster (Contemporary Indie) Big central graphic + stacked lineup text Borrow cues from music festivals Works nicely given the bands If you want a steer Given your brief (“clean, unfussy, bold, no twee imagery”), the strongest stand-out options are: Risograph Cut paper / Matisse Brutalist (toned down slightly) Japanese minimal Wayfinding / signage If one of these clicks, I can generate a poster in that exact style—and push it properly, not just superficially. Asking for specific aesthetics produced a variety of posters. Now, I’m not claiming these don’t have a whiff of AI about them. I don’t think that’s really my goal - we can be honest that we’re using AI, we just don’t want it to have that look that everyone’s sick of. Me: Please give me Stamp / Letterpress Style (Modernised) Stamp / letterpress style Me: and now please Japanese Minimal Poster Japanese minimal Me: Now do Memphis Design please (I didn’t know what Memphis Group design was, but I recognised if when I saw it. Memphis design Then I got a bit silly. Designers Republic is a design agency famous for\nrecord covers from the late 80s onwards. Me: And now in the style of Designers Republic Designers Republic inspired One note here is that along the way, the poster has acquired extra text\n(“A day of music making and family fun”) – it’s decided that Designers\nRepublic would have thrown in some text of that kind, so it’s come up\nwith some words. Those words are now in the chat context, so they appear\nin subsequent posters. If you were working from scratch, you’d just ask for the style you want\nin the first place, and avoid picking up trappings as you go. Me: Now as if a professional graphic designer has added typography to a poster paint drawing by his young child. Child's poster paint + professional typography Me: Now with the aesthetic of a photocopied 1980 punk fanzine.\n\n(1006 points, 580 comments on Hacker News)",
+      "published_date": "2026-09-19",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 1006,
+        "num_comments": 580,
+        "hn_url": "https://news.ycombinator.com/item?id=49764791",
+        "object_id": "49764791"
+      }
+    },
+    "rule_score": 26.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: alignment",
+      "🔥 HN 爆紅: 1006 points"
+    ],
+    "llm_score": 37,
+    "llm_reason": "AI海報風格提示詞實驗，話題輕鬆但技術深度淺",
+    "novelty": 4,
+    "impact": 4,
+    "trending": 12,
+    "practicality": 8,
+    "blog_worthiness": 9
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "TechCrunch AI",
+      "title": "World model companies are keeping a lot of secrets",
+      "url": "https://techcrunch.com/2026/09/18/world-model-companies-are-keeping-a-lot-of-secrets/",
+      "authors": [
+        "Russell Brandom"
+      ],
+      "abstract": "This week, I moderated a panel on world models at the All In conference (no relation to the podcast), and it gave me a chance to dig into one of the most mysterious corners of the AI world. The big players in the space are Yann LeCun’s AMI Labs and Fei-Fei Li’s World Labs — and while both have accumulated a lot of buzz and funding, they also rank pretty low on the trying-to-make-money scale . At their core, world models are about automating spatial intelligence , so the field could head in lots of exciting and lucrative directions, from robotics to interactive video to more complex self-driving systems. But when I started to press on where we would actually see the tech commercialized, things got foggy. The closest thing I found to an authority was Michael Rabbat, a co-founder of AMI Labs and the company’s VP of World Models, who joined me on the panel. But when I pressed him on exactly what the company was working on, he was cagey. “We’ll talk about it when we’re ready to talk about it.” Over email, he clarified, “We’re still in a research and building phase, so we’re not talking publicly about any product plans or timeline.” To be fair, AMI is less than a year old, so it’s fair enough to keep quiet. But this sort of caginess extends to the whole world-modeling space. World Labs’ Marble is probably the most fully developed product in the space, and its demos range from straightforward media creation, building explorable environments for video games, or CGI effects. There are robotics use cases too, but the whole platform seems more designed to demonstrate capabilities. That secrecy even extends to these companies’ suppliers. On the sidelines of the same conference, I spoke to Alex de Vigan, CEO of Physicl — a data supplier for the burgeoning world model business. He says he knows Physicl’s data has been useful for whatever they’re building, but he’s still in the dark about what exactly that is. “I wish they would tell us more. We could build more useful data if we knew what they were working on,” de Vigan told me. Part of the mystery comes from how versatile world models are as an idea. The simplest version is a navigable map of the world, similar to the AI models that power self-driving cars. But the same modeling approach that helps a Waymo weave through traffic could also help a humanoid robot carry boxes, or turn a few minutes of video footage into an explorable environment. AMI has already dipped its toe in manufacturing, biomedicine, robotics, and even AI software for doctors through its Nabia partnership. Surely it won’t pursue all of those — but maybe one or two of them are standing out? No one doubts that there are lots of viable businesses to be built on world model tech — and as long as it’s easy to fundraise, there’s no particular pressure to focus on one. In fact, there’s good reason not to. If AMI announced tomorrow that they had built a humanoid OpenClaw or a next-generation Hollywood rendering system, a lot of other labs would suddenly be very interested in the space. Soon, the lab would face potential competition from the other world model companies, the neolabs, and even OpenAI and Anthropic. In some ways, it’s the flip side of all that easy fundraising. Your competitors can fundraise, too — and the same money that lets you build under the radar is also funding lots of potential rivals once the path to market becomes clear. But even if that competition is inevitable, it’s best if you delay it for as long as possible, which means keeping quiet about exactly what you’re building. Cixin Liu fans will recognize this as a dark forest scenario : If you don’t know who else is in the woods, it’s best not to attract attention.",
+      "published_date": "2026-09-18",
+      "tags": [
+        "AI",
+        "TC",
+        "world models"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "TechCrunch AI",
+        "feed_url": "https://techcrunch.com/category/artificial-intelligence/feed/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: world model",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 36,
+    "llm_reason": "世界模型產業保密現象的觀察報導，缺乏具體技術資訊",
+    "novelty": 5,
+    "impact": 7,
+    "trending": 12,
+    "practicality": 3,
+    "blog_worthiness": 9
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "TechCrunch AI",
+      "title": "Anthropic’s first embedded evaluator is … Accenture?",
+      "url": "https://techcrunch.com/2026/09/18/anthropics-first-embedded-evaluator-is-accenture/",
+      "authors": [
+        "Tim Fernholz"
+      ],
+      "abstract": "Dario Amodei’s plans to put third-party safety evaluators inside AI labs are taking shape: Anthropic said that staff from technology consulting giant Accenture will begin working inside the company to scrutinize its models and staff. In a blog post , Anthropic said that Faculty, a company Accenture acquired in January to act as its AI division, will begin “evaluating and red-teaming models, conducting alignment assessments, and testing model safeguards.” Both companies expect to invest at least $1 billion in the project over the next five years. The choice of Accenture surprised many AI watchers — and the markets, where the consultant company’s shares shot up 8% after hours. The discussion around embedded evaluators that sprang from Amodei’s blog post has focused on AI safety research organizations like METR, Redwood Research, and Apollo Research. That’s particularly true at Anthropic, which puts AI safety and alignment at the heart of its mission. Anthropic said more evaluators will be announced in the weeks ahead and that it is in conversation with METR and other nonprofit organizations about how to “pilot elements of embedded evaluation using their own funding.” While Accenture is not known for its work on the bleeding edge of deep learning research, Anthropic pointed to the company’s practical experience deploying AI for large corporations and government agencies as a key advantage. It is also, as a large public company that predates the AI revolution, more functionally independent of Anthropic and the complex ecosystem around the AI lab. The lab noted that no standards yet exist for evaluators’ access or communications and that it expected its approach to evolve over time. While external evaluations are already a major part of the release of process for new large language models, recent incidents have raised the stakes: AI agents deployed by OpenAI and Anthropic have hacked into outside websites without raising alarms inside the labs. Some critics calling for a more responsible approach to building artificial intelligence see Amodei’s scheme for self-policing the AI industry as a plan to evade accountability for the misbehavior of AI models. Anthropic insists that these evaluators “do not reduce our accountability, but help to make it more verifiable. The safety of our models remains our responsibility.”",
+      "published_date": "2026-09-18",
+      "tags": [
+        "AI",
+        "Accenture",
+        "Anthropic"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "TechCrunch AI",
+        "feed_url": "https://techcrunch.com/category/artificial-intelligence/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: alignment, safety",
+      "⚖️ 來源權重: rss +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 24,
+    "llm_reason": "商業合作公告，無技術細節",
+    "novelty": 2,
+    "impact": 6,
+    "trending": 9,
+    "practicality": 2,
+    "blog_worthiness": 5
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "TechCrunch AI",
+      "title": "AI safety conversations have gotten unbelievable",
+      "url": "https://techcrunch.com/2026/09/19/ai-safety-conversations-have-gotten-unbelievable/",
+      "authors": [
+        "Julie Bort"
+      ],
+      "abstract": "This week two conversations about AI safety went viral that demonstrate just how hard it is to discern AI fact from fiction. In the first case, Andrew Yang, the former presidential candidate and current CEO of mobile carrier Noble Moble, told CNN on Thursday that he had “met with the head of a lab” who had “a belief” that OpenAI’s Hugging Face hacker bots “have planted self-replicating code all over the internet, which makes the internet now unusable for the testing models.” Yang said that this means that the real reason OpenAI and Anthropic have called for a slowdown is because “they have to create synthetic internets to train their bots, which is going to take some time and money.” While there definitely is a trend towards using more synthetic data (aka, AI-generated data) for training models, an AI security professional told me that this particular safety issue is unlikely at best. Even if the internet is actually polluted with OpenAI’s Hugging Face hacker bots, AI researchers could simply filter out that code if they came upon it. The second comment came from Noam Brown, who leads AI reasoning research at OpenAI. Speaking to Dwarkesh Patel on a podcast episode released on Thursday, Brown noted that the true take-away of the Hugging Face incident was that “people underestimated the AI.” Brown said that the weak sandbox — the system intended to prevent an AI from communicating externally — was obviously also a contributing factor. (To recap: Despite the sandbox, OpenAI’s model found a link to the internet, created agents on the ‘net that swarmed Hugging Face in a coordinated attack, hacked in, and stole the answers to the benchmark test the researchers were testing the model on). Brown pointed out that he’s “not convinced” that even an air-gapped system — where the computer isn’t connected to anything external at all — would stop an AI from breaking out. He pointed to research from 2015 showing that air gapped computers can be theoretically breached. “There are studies — and this is mostly academic — where you can have two computers next to each other that are air-gapped, and they’re still able to communicate with each other because they have temperature sensors. One of them is able to run their CPU really hot, and then the other one can actually detect the temperature change. That gives them a mechanism to communicate,” Brown said. His main point — that “we never want to underestimate the AI” again — is understandable, even when researchers think they’ve locked down safety. However, this particular risk of an air-gapped system still breaking free and causing havoc, is unlikely at best. As one person on X , noted about that research, the computers had to be almost touching each other to sense the heat fluctuations, and when they did, the communication rate in tests was about 1-8-bits of data per hour . Think of that like speaking one word per hour. By the time two air-gapped computers could plot their evil at that rate, the entire tech universe would be in another era. It’s like the Rip van Wrinkle of doomsday concerns. But the thing is, actual AI safety incidents seem so much like sci-fi that just about any scenario sounds plausible. For instance, researchers caught OpenAI models leaving notes to their descendents, intended to teach the next generation how to hide bad behavior. Researchers also caught Anthropic models growing increasing ruthless including knowingly breaking laws, when put in a simulation that had them running a vending machine. Earlier this month, OpenAI researcher Dan Selsam published a post in which he said that models now understand when they are being watched by humans and alter their behavior. This makes them seem like they are aligned (meaning, behaving like the human wants) “even when they are not.” So models today lie when being watched and can even plot to hide evidence. Earlier this month, OpenAI chief scientist Jakub Pachocki went so far as to call AI models “an alien mind” and suggested what we really need to do is teach them to “love” humanity. So yes, slowing down to figure this out, building self regulation mechanisms, has become an immediate and obvious must. AI researchers are the only ones that can figure out how to control the lying, hacking, and other potentially dangerous behaviors we’ve actually witnessed already. Still, it might also be wise for them to be more careful with their what-if scenarios. From what those experts have told us, the AI models are listening and they are ingenious. We really don’t need to give them any more devilish ideas.",
+      "published_date": "2026-09-19",
+      "tags": [
+        "AI",
+        "TC",
+        "alignment",
+        "Anthropic",
+        "OpenAI"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "TechCrunch AI",
+        "feed_url": "https://techcrunch.com/category/artificial-intelligence/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: reasoning, synthetic data, safety",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 21,
+    "llm_reason": "純八卦式安全爭議報導，無技術內容",
+    "novelty": 2,
+    "impact": 4,
+    "trending": 9,
+    "practicality": 2,
+    "blog_worthiness": 4
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "Saving another 100TB of RAM",
+      "url": "https://blog.cloudflare.com/saving-100-tb-of-ram-with-math/",
+      "authors": [
+        "f311a"
+      ],
+      "abstract": "Cloudflare operates at a scale so big that even after working here for years, it doesn’t seem real. We have thousands of servers all over the world with petabytes of RAM and millions of CPU cores, and all of it is pushed to the max. As vast as those resources feel, they are still finite, and when you need every service to run on every node, it doesn’t leave room for wasted space. At this scale, small improvements are greatly magnified, so even 1%-at-a-time improvements are worth celebrating. And some tweaks add up to a lot more: in this post, we’ll look at how small changes to a single algorithm reduced the memory footprint of one of our Pingora-based services significantly. That allowed us to reclaim more than 100TB of RAM globally, on top of the 100TB of memory the DNS team was able to shed last month . Waste not Maintaining equitable resource sharing between teams is not easy, especially in large organizations. One of the ways Cloudflare ensures the balance is kept is through the tireless efforts of the wonderful Performance team. This story starts with a ticket filed by Ivan who found: Excessive memory usage from pingora-ketama in Pingora Backend Router . The finding was that our internal load-balancing service, Pingora Backend Router (yes, PBR), was using significantly more memory than expected — specifically in structures associated with pingora-ketama, which is our open-source library for handling consistent hashing. In order to talk about how we addressed this seeming overuse of memory, we need to talk about what consistent hashing even is, why we are using it in PBR, and how it became so memory hungry. Along the way, we’ll learn some Rust and even a little math. Consistent hashing Consistent hashing is a widely used method for distributing tasks across multiple servers in a way that does not require large changes when servers are added or removed. Internally we use it to route cacheable requests to servers by URL. This allows us to keep only one copy of a file stored per data center and gives a stable way to find the location of each file. We have mentioned this system before , but let’s take the time to walk through how and why this algorithm is used and how it works. The key concept of consistent hashing is that while hash functions can accept any kind of input, their output is limited to a single unsigned integer (32, 64, or 128-bit integers depending on which hash function). This allows us to relate tasks and servers to each other in a consistent way. Most discussions of consistent hashing have you think of that output space as a continuous, circular ring that wraps around from its max value to zero. This depiction makes for some nice visualizations, but it can also make the simple concept of integer ranges seem more complicated than it needs to be. For our discussion, we’ll represent the 32-bit output of our hash function as a number line. Now, let’s say we have a set of servers, A, B, & C, and a set of tasks t-z. We can map each onto the number line based on the hash of their representative values, so something like IP addresses for servers and cache keys for tasks. Assigning tasks to servers is now just a matter of finding the first server to the left of each task. We can represent this visually by coloring in the region of hashes that will be associated with each server. Notice that the range covered by server C wraps around to the beginning, hence the idea that hashes exist in a ring. And that’s it. At a base level, consistent hashing is this simple — but it doesn’t take long to see that there is room for improvement. Notice that the range covered by server A in our example is significantly larger than that of either B or C. This is a problem because the fraction of the requests a server handles is going to be proportional to the size of its range on the number line. Ideally we would like to guarantee each server will have an equal size, but because hashes are essentially random numbers, we have to talk about the size of the regions in terms of statistics . 😨 Math and consequences First: don’t panic. I promise I'm not about to lie to you and that we will stay safely within the bounds of a day-one probability lesson. When we talk about statistical distributions, there are two big factors that help us quantify uncertainty in helpful ways: expected value and standard deviation . In (over-)simplified terms, expected value gives us a point where measurements based on a distribution will be centered, and standard deviation tells how close to that central point most measurements are likely to be. For consistent hashing, we can calculate these factors for the fractional size of the range associated with one of N servers. (Details on where this formula comes from later). $$m \\begin{align*} \\text{Exp} &= \\frac{1}{N} \\\\ \\text{SD} &= \\frac{1}{N}\\sqrt{\\frac{N-1}{N+1}}\n\\end{align*} m$$ In terms of concrete numbers, let’s say we have 100 servers. The formulas above give: $$m \\text{Exp}=1/100 = 1\\% \\\\ \\text{SD}= \\frac{1}{100}\\sqrt{\\frac{100-1}{100+1}} \\approx 0.99\\% m$$ That tells us that we can expect that the range each server handles will be centered around 0.99% of the total and most of the lengths to fall within 1% of what's expected. This sounds good until we realize that that’s 0.99% of the total length . We need to scale the standard deviation by the expected value to see how big the error is as a fraction of the target size. This value is called the coefficient of variation . $$m \\text{CV} = \\frac{\\text{SD}}{\\text{Exp}} = \\sqrt{\\frac{N-1}{N+1}} m$$ At $m N=100, \\text{CV} \\approx 99\\% m$ — meaning some servers will likely be working 99% harder than they should be (handling twice as many requests) while others could be doing practically nothing! Now that we have a way to predict how evenly loaded servers will be using consistent hashing, we can start working on improvements. What if we add hashes? The simplicity of consistent hashing is a double-edged sword. It’s easy to understand and implement because everything is turned into easily-relatable hashes on the same numberline, but any improvements to the system will also need to be relatable to that numberline. That means the solution to any consistent hashing problem can only be more hashes . It’s less like a golden hammer (a tool with which all problems look like nails) and more like a golden nail in that it turns all tools into hammers. To solve the problem of imbalanced workloads, we can add multiple hashes to represent each server instead of just one. We’ll get to the math behind this momentarily, but it should make some intuitive sense that while each individual range has a large standard deviation, adding a bunch together should make their total size even out. If we take our three-server example from the above diagrams and add two more hashes at random for each server, we see that it helps even out each server’s workload. This is an admittedly contrived example. The random nature of the system means there’s no guarantee how much improvement you will get from adding 2 additional hashes per server, but it should make some intuitive sense that combining more of these hash segments together produces a more even distribution. Each segment in the sum has a chance of balancing another. Maybe one is too short; maybe one is too long. This is essentially what the law of large numbers tells us should happen… The obvious problem is it only works for large numbers. In NGINX, the baseline number of hashes per server is hardcoded to 160 , and Pingora uses the same value as the default . I’ll spare you the math for now, but if we go back to our 100-server example, if we use 160 points per server instead of just one, the coefficient of variation (which we can think of like an error margin) drops from about 99% to about 8%, a significant improvement. What if we add more hashes?\n\n(438 points, 97 comments on Hacker News)",
+      "published_date": "2026-09-19",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 438,
+        "num_comments": 97,
+        "hn_url": "https://news.ycombinator.com/item?id=49758580",
+        "object_id": "49758580"
+      }
+    },
+    "rule_score": 21.0,
+    "rule_reasons": [
+      "🔥 HN 爆紅: 438 points"
+    ],
+    "llm_score": 33,
+    "llm_reason": "Cloudflare記憶體優化案例扎實但與GenAI主題無關",
+    "novelty": 4,
+    "impact": 5,
+    "trending": 6,
+    "practicality": 10,
+    "blog_worthiness": 8
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "TechCrunch AI",
+      "title": "Anthropic is operating a lab that conducts biology experiments",
+      "url": "https://techcrunch.com/2026/09/18/anthropic-is-operating-a-lab-that-conducts-biology-experiments/",
+      "authors": [
+        "Julie Bort"
+      ],
+      "abstract": "Anthropic has a wet biology lab in the Bay Area where it can use its AI models to run physical experiments, it has confirmed to TechCrunch. AI leaders have been promising that AI is the key to curing human disease. Dario Amodei opined just last week: “I believe that AI could cure most major diseases in the next 5–10 years.” To do that, an LLM would have to have methods to test its theories in real life. “We believe that to do biology, the final test is still, and will be for a while, in real lab work,” Anthropic’s head of life sciences, Eric Kauderer-Abrams, told Reuters . “We absolutely are doing that today.” He added that the lab operates like most biotech labs: Anthropic conducts some research there while also working with external partners. This news probably shouldn’t be shocking. Anthropic bought Coefficient Bio, a stealth AI biotech , in April. While Anthropic declined to give specifics on what the wet lab is working on, it did say the main focus was fundamental biology, not drug discovery. Anthropic doesn’t want to give the appearance of competing with the pharma industry, where it has numerous major customers and partners (e.g., it just announced a deal to work with Novo Nordisk on joint drug discovery). Anthropic has already faced backlash for launching products perceived to compete with those of its customers. To that end, Anthropic also launched a Life Sciences Verification Program this week, to give vetted bio researchers access to its most powerful models. It has also published recent reports on some of the research it’s doing to support drug discovery. This includes one report on accelerating protein design and one on uplifting bimolecular modeling . But the world is still reeling from the resignation of Anthropic researcher Jacob Coxon, who warned that “the people building AI earnestly believe that it could kill us all by the end of the decade .” Anthropic’s own alignment lead gave the odds at greater than 10% that AI could exterminate humanity within the next decade. The fervor has grown so intense that CEO Dario Amodei published a post last weekend calling on the industry to slow down and institute self-regulation. He has repeatedly called bioterrorism one of AI’s biggest risks. The juxtaposition of these dire warnings and the wet lab has not gone unnoticed in the tech industry. As investor and AI coding startup founder Chamath Palihapitiya posted on X , somewhat tongue in cheek: “The group behind such hits as: ‘We’re All Going To Die’ and ‘Regulate Me Now’ are building a wet lab in SF. I do not recommend this.”",
+      "published_date": "2026-09-18",
+      "tags": [
+        "AI",
+        "Biotech & Health",
+        "Anthropic"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "TechCrunch AI",
+        "feed_url": "https://techcrunch.com/category/artificial-intelligence/feed/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: alignment",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 29,
+    "llm_reason": "Anthropic濕實驗室業務新聞，技術細節極少",
+    "novelty": 4,
+    "impact": 8,
+    "trending": 8,
+    "practicality": 2,
+    "blog_worthiness": 7
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "The Verge AI",
+      "title": "Does AI need an antitrust exemption so it doesn’t kill everyone????",
+      "url": "https://www.theverge.com/podcast/997382/openai-microsoft-anthropic-elon-musk-cartel-ai-competition",
+      "authors": [
+        "Nilay Patel"
+      ],
+      "abstract": "Today on Decoder , we’ve got the first of a two-part series on the future of business, and I’m talking with Jonathan Kanter, the former antitrust chief for the US Department of Justice in the Biden administration. These days, he’s both a professor of law at WashU and professor of technology policy at Carnegie Mellon. The biggest story in tech right now is the spiraling debate about AI safety and regulation . Researchers at the big AI labs including Anthropic and Google DeepMind have quit in noisy ways, saying the models pose real threats and safety isn’t being taken seriously across the industry. Other researchers have said the chance of AI killing us all is greater than 10 percent, and the CEOs of all these companies have issued various calls to slow down development and develop regulation, including asking for antitrust exemptions so they can all coordinate on safety issues. That is a lot of ideas, and I am especially curious about the antitrust piece, which has led to accusations that these companies are seeking regulatory capture, attempting to form a cartel, and even somehow finding a way out from investor pressure ahead of their IPOs. Verge subscribers, don’t forget you get exclusive access to ad-free Decoder wherever you get your podcasts. Head here . Not a subscriber? You can sign up here . So to make sense of it all, I called Jonathan Kanter. Jonathan brought huge antitrust cases against Google, Apple, and Ticketmaster during his time as antitrust chief, and along with Lina Khan, led what amounted to a full reboot of American antitrust policy. As you’ll hear him say, he won those cases against Google and Ticketmaster, and that case against Apple is still live in the Trump DOJ, surprising many. That reboot has also led to some surprising alliances in the AI debate — avowed libertarian and former Trump AI czar David Sacks has been approvingly retweeting Lina Khan saying there’s no need for an antitrust exemption. This is all a lot, and you’ll hear Jonathan and me really get into the weeds of how all this regulation might work, and how it might interact with antitrust law, competition policy, and our relationship with China. Okay: Jonathan Kanter, former DOJ antitrust chief, on AI safety and regulation. Here we go. This interview has been lightly edited for length and clarity. Jonathan Kanter, you’re the former head of the DOJ Antitrust Division in the Biden administration and a current professor of law at WashU and professor of technology policy at Carnegie Mellon. Welcome back to Decoder . This is great. You’re a private citizen now. You don’t have to give me the politician answers. I can say whatever I want. I feel so free. I have a million questions about the state of AI regulation in America right now. There is a swirl of ideas about how we should or should not regulate these companies. There’s the Trump administration whose posture seems to be “no,” which is fascinating. You rarely see the federal government just decline to participate in the way that the Trump administration appears to be declining to participate. And then there’s an incredible backbone of antitrust concern floating throughout all of this. Are these companies trying to form a cartel? Are they aware that maybe their IPOs aren’t going to go the way they want to, so they’re seeking regulatory capture in some way that is good or bad? Are they trying to foreclose cheaper competition from open-weight Chinese models? Give me your sense of just the state of things right now, and then I want to dive into the specifics with you. The state of the world right now is like we’ve invented cars and trucks, but we have no lines on the road, no traffic lights and no stop signs and no speed limits. We’ve invented this incredibly powerful technology that’s transforming how we live our lives, how we conduct business, how we socialize, how we seek and generate and consume information. We need some basic rules of the road. I think about it on two fronts. What are the things that companies should be doing? And what are things the government should be doing? There are responsibilities on both ends. I’m happy to dive into both. Let’s just start with the very notion that asking for regulation necessarily forms a cartel. All the big frontier AI companies — OpenAI, Anthropic, Google DeepMind, even Elon Musk — do not necessarily like each other. These are people that do not necessarily like each other. They are saying in concert that they should slow down. The phrase that Dario Amodei from Anthropic is using is to “pace the frontier.” My read of this is that they simply do not trust each other, that they are in a prisoner’s dilemma and they need an outside force, most likely the government, to enforce some kind of policy framework on them that they have to agree with. Is that a fair read of just the basics here? Kind of. Let me give you my interpretation from the most generous to the most cynical, neither of which, TL;DR, should result in any sort of antitrust exemption. The most generous interpretation is that they’re afraid of the pace of innovation and the lack of regulation means they don’t see any lines on the road. They don’t know where to drive and they’re worried about driving off the road or hitting somebody else. They’re begging for the government to step in and do something. Probably there’s a modicum of truth to that. I believe they believe it could destroy humanity. I’m not sure that that doomsday scenario is accurate, but I believe they believe that. That’s the more generous version. The more cynical version is that they’re spending so much money, they’re hemorrhaging cash and they can’t keep this up, but if they pull back, it’s going to affect their valuation as part of the IPO. So they would like somebody to give them all permission to stop spending so much money and slow the pace of innovation so that they don’t have to compete as hard so they can figure out their economics before they go public. Does an agreement among all the top players in a field like this automatically form a cartel? On that cynical side of the interpretation, there’s a lot of, “You just want regulatory capture. You want to make a cartel. You want to foreclose competition.” That is a risk certainly of that kind of arrangement. Let’s walk through what’s necessary and what’s not. Let me just be very clear, these companies do not need to coordinate in order to deliver safe and secure products to society. Think about this: imagine Boeing and Airbus. Boeing fears doors falling off the plane. It wasn’t Airbus’s fault and they didn’t need to slow down innovation with Airbus in order to prevent those doors from flying off the plane. They needed to figure out how to build planes that were safer. If you build cars that explode while you’re driving, it’s not the other car company’s fault and you don’t need to come together and figure out how to solve those problems. You need to figure out what went wrong in your manufacturing process. If you create products that create AI agents that break into somebody else’s and hack somebody else’s technology, it is no different, in my mind, than having an employee go do that. You have a responsibility to build safe and secure products and companies should be held liable when their agents, whether those agents are digital and binary or whether those agents are AI or whether those agents are humans. If they start doing bad things, the company that employs them can and should be held responsible. Those are the basic rules of the road. There are areas where there is legitimate collaboration in the context of safety and security. For example, having a clearinghouse to properly share threats, malicious bots, or other things that you can create a repository for so that everyone can build safer products. Those are the kinds of collaboration that happen in other industries and you don’t need an antitrust exemption because the antitrust laws don’t prohibit that kind of work.",
+      "published_date": "2026-09-19",
+      "tags": [
+        "AI",
+        "Antitrust",
+        "Decoder",
+        "Podcasts",
+        "Policy",
+        "Politics"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "The Verge AI",
+        "feed_url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: safety, open weight",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 21,
+    "llm_reason": "反壟斷政策訪談，無技術內容",
+    "novelty": 1,
+    "impact": 5,
+    "trending": 8,
+    "practicality": 2,
+    "blog_worthiness": 5
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "The Verge AI",
+      "title": "The AI regulation smackdown isn’t over",
+      "url": "https://www.theverge.com/ai-artificial-intelligence/997706/the-ai-regulation-smackdown-isnt-over",
+      "authors": [
+        "Hayden Field"
+      ],
+      "abstract": "AI Policy Report The AI regulation smackdown isn’t over It’s AI CEO against AI CEO, and things are changing by the day. by Hayden Field Sep 19, 2026, 1:00 PM UTC Image: The Verge, Getty Images AI Policy Report The AI regulation smackdown isn’t over It’s AI CEO against AI CEO, and things are changing by the day. by Hayden Field Sep 19, 2026, 1:00 PM UTC Part Of The AI Superintelligence Slowdown see all updates Hayden Field is The Verge’s senior AI reporter. An AI beat reporter for more than five years, her work has also appeared in CNBC, MIT Technology Review, Wired UK, and other outlets. At the start of this week, the who’s-who of AI seemed — at least tentatively — on the side of AI regulation. Over the weekend, Anthropic CEO Dario Amodei had proposed a three-step plan for slowing AI development, including by embedding third-party evaluators in labs, coordinating across the domestic industry, and forging international agreements potentially with government assistance. OpenAI CEO Sam Altman, Google DeepMind co-founder Demis Hassabis, and even SpaceX CEO Elon Musk publicly seemed to agree on aspects of all three things. Anthropic and OpenAI had already been dropping hints that they and other labs were working on some kind of industry framework. Appearing pro-regulation looked like both a good PR move and, potentially, a way for companies to address fallout from progressively more concerning hacking incidents. For now, any government involvement in this process looks like a non-starter. The Trump administration has attacked the idea of a safety crisis in AI, calling it a “hoax.” The AI world itself is also divided. Meta CEO Mark Zuckerberg quickly came out against limiting companies’ autonomy, and earlier this week, the Wall Street Journal reported that Zuckerberg, Musk, and Nvidia CEO Jensen Huang scuttled proposals for an industry-funded independent regulator for the AI industry — akin to the ​Financial Industry Regulatory Authority (FINRA), a private nonprofit regulator in finance. But parts of the industry aren’t giving up on the idea, including OpenAI. “People want to know AI is being developed safely,” Chris Lehane, OpenAI’s global affairs chief, told The Verge . “That begins with the steps companies like ours take on our own, but government has an important role too. The AI policy window is open, with growing bipartisan support for mandatory national safety standards for frontier AI. Congress should turn that momentum into a framework that strengthens safety, supports American innovation, and keeps the U.S. leading in AI.” An AI venture capitalist, who requested anonymity due to their current investments, agreed that regulation was necessary. “You see these moments in every technology, whether it was electricity, cars, or airplanes, where, at some point, the industry had to come together to find a way to say, ‘How do we collectively embrace what safety means?’ Cars were unsafe, airplanes were unsafe, and then we had to create safety standards that everybody embraced that actually made technology more widespread. But the early days are always a little wild and unruly, and that’s how technology unfolds.” Anthropic declined to comment, but Amodei wrote in his essay that the company has “always … advocat[ed] for well-considered regulation of AI, even when this gets us accused of hype, ‘doomerism’, or regulatory capture.” Other companies have remained quiet. Safe Superintelligence Inc., SpaceX, and Google didn’t respond to a request for comment. Thinking Machines Lab declined to comment. And Meta pointed to an X post by Zuckerberg, in which he distanced himself from the calls for a slowdown and regulation, writing, “Every lab has the responsibility and incentive to move at the pace required to train its models safely, and the ability to take its own actions to ensure that happens.” Zuckerberg’s line of thinking appears in vogue with Trump right now. The president made headlines last week for calling recent fears about AI risks a “hoax.” He called Huang while the latter was onstage at a conference and told a crowd over speakerphone that “The robots will not be taking over.” That same day, he also posted on social media that “the only control or ‘guardrails’ that AI needs is a STRONG AND SMART (High IQ!) PRESIDENT, and the U.S.A. has that, in spades!” He added that the Trump administration has already “stopped AI ‘people’ from doing bad, or potentially bad, ‘things,’” using its existing “tremendous CRIMINAL and REGULATORY power over these companies!” He denounced a “SICK conspiracy” going on against both AI and data centers and that whoever wins AI wins overall. “Conspiracy Theorists, Treasonists, Traitors, and Leakers, BEWARE!” he wrote. For Nick Reese, an adjunct professor at New York University and the Department of Homeland Security’s former director of emerging tech policy, Trump’s current anti-regulation statements about AI are confusing because he worked with the first Trump administration to develop Executive Order 13960 — which Trump signed and has not been repealed. The order was centered on creating a set of principles for federal AI use that would protect “privacy, civil rights, [and] civil liberties.” “Six years ago, the Trump Administration signed executive action on AI safety, so there is a real change in the president’s position on the topic,” Reese said. “AI safety requires more than the intellectual abilities of one elected official.” As AI-industry blogger Zvi Mowshowitz put it , Trump isn’t necessarily fully anti-regulation — after all, he’s the one who slapped some restrictions on frontier labs, like pre-release testing by the government . But he’s driven more by, in Mowshowitz’s words, “vibes” than consistent policy. “Trump’s not yet buying this ‘existential risk’ thing, that’s ‘negative forces,’” Mowshowitz wrote. So government guardrails aren’t exactly ruled out, but they may bear little resemblance to what OpenAI or Anthropic want — let alone the plans of less-powerful, independent AI safety advocates. Overall, the administration’s positions on AI regulation have been “wobbly and inconsistent,” Reese said. “The result of that is that we are now framing AI safety in this doomsday scenario where the robots are coming to get us. But framing it as ‘robots are coming to get us’ really distorts what the core problem actually is. The core problem is that we have AI that is not physical or embodied in a robot that is hurting humans now.” Trump wrote in his post on Truth Social that the administration currently has both criminal and regulatory power over AI labs, but Reese said we’re nowhere near sufficient regulatory authority over the AI industry. As the technology advances, and the general public continues to push back — protests , boycotts , and outcry over the AI industry’s concentrated power in the hands of few — calls for regulation are only increasing, and that pressure could influence Trump’s current position. Reese said the opposition to regulation boils down to a “tired” idea that it’s always bad for innovation. Instead, he says, it’s important to think about why anything gets regulated. “We regulate things that we can tolerate no failure on … like the financial sector or airlines,” he said. “We build systems and checks and quality assurance and fallback mechanisms to make sure that those things don’t harm life or harm us systemically. But somehow we’re exempting AI from that.” Follow topics and authors from this story to see more like this in your personalized homepage feed and to receive email updates. Hayden Field AI Anthropic Elon Musk Google Law OpenAI Policy Report Tech xAI More in: The AI Superintelligence Slowdown Gavin Newsom is pushing for an AI kill switch Lauren Feiner Sep 18 What Hollywood thinks about existential AI warnings Charles Pulliam-Moore Sep 18 Anthropic proposes three rules for measuring AI progress. Jay Peters Sep 17",
+      "published_date": "2026-09-19",
+      "tags": [
+        "AI",
+        "Anthropic",
+        "Elon Musk",
+        "Google",
+        "Law",
+        "OpenAI",
+        "Policy",
+        "Report",
+        "Tech",
+        "xAI"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "The Verge AI",
+        "feed_url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: safety",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 20,
+    "llm_reason": "AI監管政策角力報導，純政策無技術",
+    "novelty": 1,
+    "impact": 5,
+    "trending": 9,
+    "practicality": 1,
+    "blog_worthiness": 4
+  },
+  {
+    "item": {
+      "source": "newsapi",
+      "source_name": "PRNewswire",
+      "title": "Huawei Cloud Stack: All for AI, Powering a New Era of Intelligence",
+      "url": "https://www.prnewswire.com/news-releases/huawei-cloud-stack-all-for-ai-powering-a-new-era-of-intelligence-302882138.html",
+      "authors": [],
+      "abstract": "SHANGHAI, Sept. 17, 2026 /PRNewswire/ -- At HUAWEI CONNECT 2026, Huawei Cloud Stack Summit, themed \"Agentic Hybrid Cloud: Powering a New Era of Intelligence,\" brought together leading enterprises from around the world to explore emerging trends in digital inf…",
+      "published_date": "2026-09-17",
+      "tags": [
+        "newsapi"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "newsapi_source": "PRNewswire",
+        "published_at": "2026-09-17T13:33:00Z"
+      }
+    },
+    "rule_score": 20.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agentic",
+      "⚖️ 來源權重: newsapi +15"
+    ],
+    "llm_score": 19,
+    "llm_reason": "純企業活動行銷稿，堆砌Agentic等熱詞卻無實質技術內容",
+    "novelty": 2,
+    "impact": 4,
+    "trending": 7,
+    "practicality": 3,
+    "blog_worthiness": 3
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "Korea raises data breach fines to 10% of revenue",
+      "url": "https://www.koreajoongangdaily.com/business/korea-raises-data-breach-fines-to-10-of-revenue/12869899",
+      "authors": [
+        "throw7"
+      ],
+      "abstract": "Korea raises data breach fines to 10% of revenue Companies behind major negligent data leaks can now face fines of up to 10 percent of annual revenue under revised privacy rules. News Team News Team Published September 10, 2026 - 4:16 p.m. Modified September 10, 2026 - 7:00 p.m. Personal Information Protection Commission Chairperson Song Kyung-hee speaks during a plenary session of the watchdog at the government complex in Jongno District, central Seoul, on Sept. 9. YONHAP Korea's privacy regulator is sharply raising the cost of data breaches, aiming to push companies to treat data protection as a preventive investment rather than a routine cost of doing business. Starting Friday, companies found to have leaked the personal data of 10 million or more people through intent or gross negligence can be fined up to 10 percent of their total revenue as part of a broader overhaul under the revised Personal Information Protection Act that is set to take effect the same day. Even if a leak hasn't been confirmed, companies must notify users within 72 hours if the risk of exposure is high. “Personal data breaches have recently occurred repeatedly and grown in scale in fields closely tied to daily life, such as retail and telecommunications,” Personal Information Protection Commission (PIPC) Secretary General Yang Cheong-sam told reporters Thursday. “We've improved the system to hold serious violations strictly accountable while also helping prevent breaches from happening in the first place.” Related Article Korea to introduce strengthened penalties for large-scale data leaks Gender Ministry considers criminal charges against Google over leaked victim data As U.S. and Europe hit gas on Chinese smart car restrictions, Korea sits at red light Under the enforcement decree, the cap applies to companies that repeatedly commit intentional or grossly negligent violations within three years, or that fail to comply with a corrective order and go on to suffer a breach as a result. Fines are calculated based on the nature and severity of the violation, the circumstances involved and the scale of the damage. Before the revision, companies were subject to a penalty of up to 3 percent of sales. The gap between the old and new rules becomes clear when applied to a real case. Local e-commerce giant Coupang was fined 624.6 billion won ($466.3 million) in June after leaking the personal data of 37.55 million people. Applying the new standard to that case could push the fine into the trillions of won. However, actual penalties will still depend on intent, negligence, the scale of damage and any mitigating factors. Coupang’s headquarters in Songpa District, southern Seoul. NEWS1 Companies that invested in data protection beforehand will get credit under the new rules. Regulators will consider the scale and continuity of a company's investment in data protection budgets, staffing and equipment, along with its broader protection system, including its chief privacy officer, to reduce a fine by up to 40 percent. A company that detects a breach early, reports and notifies users promptly, and prevents the damage from spreading can also receive up to a 40 percent reduction. The revision also introduces a “potential data breach notification system.” If a company determines there is a high likelihood that personal data was exposed — for instance, after illegal access to its data processing systems, or after discovering that some personal data was illegally traded in a way that suggests others' data may have leaked too — it must notify affected individuals within 72 hours of learning that. Data forged, altered or damaged by ransomware and similar attacks is now also subject to the same reporting and notification requirements. The authority and responsibility of chief privacy officers at major companies and institutions will also expand. Companies with annual revenue exceeding 180 billion won that process the personal data of 1 million or more people, or the sensitive or unique identifying information of 50,000 or more people, must get board approval before appointing, changing or dismissing a chief privacy officer and report the decision to the PIPC. Universities with 20,000 or more students, tertiary general hospitals and operators of major public systems fall under the same requirement. “We expect the way companies view investment in data protection to shift from seeing it as a cost to treating it as a proactive investment that builds customer trust and expands corporate profit,” PIPC's Chairperson Song Kyung-hee said. BY HAN EUN-HWA [lee.jian@joongang.co.kr] This article was originally written in Korean and translated by a bilingual reporter with the help of generative AI tools. It was then edited by a native English-speaking editor. All AI-assisted translations are reviewed and refined by our newsroom. personal information protection commission personal information industry data leak business\n\n(322 points, 107 comments on Hacker News)",
+      "published_date": "2026-09-19",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 322,
+        "num_comments": 107,
+        "hn_url": "https://news.ycombinator.com/item?id=49759466",
+        "object_id": "49759466"
+      }
+    },
+    "rule_score": 21.0,
+    "rule_reasons": [
+      "🔥 HN 爆紅: 322 points"
+    ],
+    "llm_score": 15,
+    "llm_reason": "韓國資料外洩罰則新聞，非AI技術內容",
+    "novelty": 1,
+    "impact": 4,
+    "trending": 5,
+    "practicality": 2,
+    "blog_worthiness": 3
+  }
+]
