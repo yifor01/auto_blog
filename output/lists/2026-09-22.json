@@ -1,0 +1,711 @@
+{
+  "date": "2026-09-22",
+  "github": [
+    {
+      "title": "stablyai/orca",
+      "slug": "stablyai-orca",
+      "url": "https://github.com/stablyai/orca",
+      "abstract": "Orca 中文 · 日本語 · 한국어 · Español · Français · Português The AI Orchestrator for 100x builders. Run Codex, ClaudeCode, OpenCode or Pi side-by-side — each in its own worktree, tracked in one place. Download Orca Features Mobile Companion Monitor and steer your agents from your phone — get notified when an agent finishes and send follow-ups from anywhere. iOS App Store · TestFlight · Android APK 0.0.50 · Docs → Parallel Worktrees Fan one prompt across five agents, each in its own isolated git worktree — compare the results and merge the winner. Docs → Terminal Splits Ghostty-class terminals with WebGL rendering, infinite splits, and scrollback that survives restarts. Docs → Design Mode Click any UI element in a real Chromium window to send its HTML, CSS, and a cropped screenshot straight into your agent's prompt. Docs → GitHub & Linear, Native Browse PRs, issues, and project boards in-app — open a worktree from any task and review without a context switch. Docs → SSH Worktrees Run agents on a beefy remote box with full file editing, git, and terminals — auto-reconnect and port forwarding included. Docs → Annotate AI Diffs Drop comments on any diff line and ship them back to the agent — review, edit, and commit without leaving Orca. Docs → Drag Files to Agents VS Code's editor with autosave everywhere — drag files or images straight into an agent prompt. Docs → Orca CLI Agents drive Orca too — script every workflow with orca worktree create , snapshot , click , and fill . Docs → Also in the box: Quick open — Search across worktrees, files, agents, commands, and repo context without leaving your flow. Account switcher & usage tracking — See Claude and Codex usage and rate-limit resets, and hot-swap accounts without re-logging in. Rich repo previews — Preview Markdown, images, PDFs, and repo docs in the workspace. Computer Use — Let agents operate desktop apps and visible UI when a workflow needs real interaction. Notifications and unread state — Know when an agent finishes or needs attention, then mark threads unread to come back later. And many, many more — we ship daily, so this list is perpetually behind. The changelog is the real feature list. Supported Agents Works with any CLI agent — if it runs in a terminal, it runs in Orca. Claude Code Codex Grok Cursor GitHub Copilot OpenCode MiMo Code Amp OpenClaude Antigravity Pi oh-my-pi Hermes Agent Devin Goose Auggie Autohand Code Charm Cline Codebuff Freebuff Command Code Continue Droid Kilocode Kimi Kiro Mistral Vibe Qwen Code Rovo Dev + any CLI agent Install Desktop — macOS, Windows, Linux Download from onOrca.dev Or grab a build directly: macOS Apple Silicon · macOS Intel · Windows (.exe) · Linux AppImage · All builds Running orca serve on a headless Linux server? See the headless Linux server guide . Or via a package manager: # macOS (Homebrew) brew install --cask stablyai/orca/orca # Arch Linux (AUR) — or stably-orca-git to build from source yay -S stably-orca-bin Mobile Companion — iOS, Android Pair with your desktop app to monitor and steer your agents from your phone. iOS: Download on the App Store or join TestFlight Android: Download APK 0.0.50 · Install guide Community & Support Discord: Join the community on Discord . Twitter / X: Follow @orca_build for updates and announcements. WeChat: Scan to join the Orca community WeChat group 9. Feedback & Ideas: We ship fast. Missing something? Request a new feature . Privacy: See the privacy & telemetry docs for what anonymous usage data Orca collects and how to opt out. Show Support: Star this repo to follow along with our daily ships. Developing Want to contribute or run locally? See our CONTRIBUTING.md guide. The relay that pairs the mobile app with a desktop host is also in this repository under cloud/ , with a separate pnpm workspace and setup guide. Signed Builds Windows code signing sponored/provided by SignPath.io , certificate by SignPath Foundation . License Orca is free and open source under the MIT License .",
+      "stars_today": 985,
+      "language": "TypeScript"
+    },
+    {
+      "title": "hydra-db/hydradb",
+      "slug": "hydra-db-hydradb",
+      "url": "https://github.com/hydra-db/hydradb",
+      "abstract": "HydraDB HydraDB is an object-store-native distributed graph database written in Rust.\nIt combines durable graph storage on SlateDB with snapshot-consistent\nOpenCypher queries, GraphBLAS traversal, Neo4j-compatible Bolt connectivity,\nand an HTTPS query API. Storage and compute are fully disaggregated. S3-compatible object storage is the\ndurable source of truth, and compute runs as two independent roles: data\nnodes ( graph-node ) serve queries and canonical mutations, while indexers ( graph-indexer ) build immutable traversal indexes in the background. Both keep\nonly disposable state in memory and on local SSD or NVMe, so they can be replaced\nor scaled without moving the graph itself. Why HydraDB Object-store durability. Graph records, WALs, manifests, and immutable\ntraversal indexes live in S3-compatible storage. Independent compute. Data nodes and indexers scale separately and can\nrebuild their local caches from durable state. Safe writer handoff. Object-store CAS leases select the active writer for\neach cell, while SlateDB writer epochs fence stale writers. Consistent reads. Every query runs against one pinned SlateDB snapshot.\nIndexed traversal combines a compiled CSC generation with its visible WAL\noverlay. Graph-native execution. The planner uses property indexes, reverse\nadjacency, sparse traversal, and SuiteSparse GraphBLAS where appropriate. Familiar clients. Applications can use Neo4j drivers over Bolt 5.x or the\ntyped JSON and streaming NDJSON HTTP API. Bounded operation. Authentication, authorization, deadlines, result\nlimits, backpressure, cancellation, cache budgets, metrics, and traces are\npart of the server runtime. Architecture flowchart TB\n    C[\"Applications<br/>Neo4j drivers or HTTPS\"]\n    SVC[\"Service or load balancer\"]\n\n    subgraph Q[\"Data tier — graph-node\"]\n        direction LR\n        subgraph N1[\"graph-node\"]\n            Q1[\"query + mutation engine\"]\n            S1[\"local SSD / NVMe cache\"]\n            Q1 <--> S1\n        end\n        subgraph N2[\"graph-node\"]\n            Q2[\"query + mutation engine\"]\n            S2[\"local SSD / NVMe cache\"]\n            Q2 <--> S2\n        end\n    end\n\n    subgraph I[\"Indexing tier — graph-indexer\"]\n        IX1[\"graph-indexer\"]\n        IXN[\"graph-indexer\"]\n    end\n\n    STORE[\"S3-compatible object storage<br/>WAL, SSTs, leases, CSC generations\"]\n\n    C --> SVC\n    SVC --> N1\n    SVC --> N2\n    N1 <--> STORE\n    N2 <--> STORE\n    IX1 <--> STORE\n    IXN <--> STORE Loading Each data node owns a private local SSD/NVMe cache; the object store is the shared\nlayer beneath the whole tier and the only durable copy of the graph. Data nodes serve reads and canonical graph mutations. Indexer workers build\nimmutable CSC generations asynchronously and publish them through atomic\nobject-store pointers. Readers remain correct when an index is absent or behind\nbecause the visible WAL tail is applied to the indexed base. See architecture.md for the storage model, query pipeline,\nwriter coordination, index lifecycle, and failure semantics. Getting Started There are two ways to bring up a single development node: the published Docker\nimage , or a build from source . Either way, once the node is listening, use Verify a running node to confirm it works — a listening\nport is not proof; a round-tripped write is. TLS is required by default in\ndeployed environments, so the local flows below enable plaintext explicitly. Run with Docker — fastest, no local toolchain Release images are published to ghcr.io/hydra-db/hydradb .\nEach v* release is tagged with its full version, compatible minor and major\nversions, the commit SHA, and latest (for example 0.1.0 , 0.1 , 0 , latest , sha-7bf77ac ): docker pull ghcr.io/hydra-db/hydradb:latest Images are published for linux/amd64 and linux/arm64 , so Docker selects the\nright one for the host and Apple Silicon needs no extra flags. Releases up to\nand including 0.1.0 were linux/amd64 only, and pulling one of those on an\nARM host fails with: no matching manifest for linux/arm64/v8 in the manifest list entries That message means the tag predates multi-architecture publishing, not that the\npull is misconfigured. Move to a release after 0.1.0 , or run the older tag\nunder emulation with --platform linux/amd64 — correct but slower, and it\nrequires Rosetta on Apple Silicon. To see which architectures a tag actually\ncarries before pulling it: docker buildx imagetools inspect ghcr.io/hydra-db/hydradb:latest This starts one plaintext node backed by a host directory mounted into the\ncontainer: mkdir -p hydradb-data/store hydradb-data/cache printf ' %s\\n ' ' local-development-token-32-bytes ' > hydradb-data/auth-token\n\ndocker run --rm \\\n  --user \" $( id -u ) : $( id -g ) \" \\\n  -p 7687:7687 -p 8443:8443 -p 9090:9090 \\\n  -v \" $PWD /hydradb-data:/data \" \\\n  -e CLOUD_PROVIDER=local \\\n  -e LOCAL_PATH=/data/store \\\n  -e GRAPH_NAMESPACE=default \\\n  -e GRAPH_ID=default \\\n  -e GRAPH_CELL_ID=cell-0 \\\n  -e GRAPH_CELLS=cell-0 \\\n  -e GRAPH_NODE_ID=node-0 \\\n  -e GRAPH_BOLT_NODE_ADDRESSES=node-0=127.0.0.1:7687 \\\n  -e GRAPH_ADVERTISED_BOLT_ADDR=127.0.0.1:7687 \\\n  -e GRAPH_DATA_CACHE_DIR=/data/cache \\\n  -e GRAPH_AUTH_TOKEN_FILE=/data/auth-token \\\n  -e GRAPH_ALLOW_PLAINTEXT=true \\\n  -e RUST_MIN_STACK=33554432 \\\n  ghcr.io/hydra-db/hydradb:latest The node runs in the foreground. LOCAL_PATH must point at a directory that\nalready exists, which is why hydradb-data/store is created before the mount. --user \"$(id -u):$(id -g)\" is required: the image runs as UID/GID 10001 ,\nbut the bind-mounted hydradb-data is owned by the host user, so without it the\ncontainer cannot write its store or cache and fails on the first storage\noperation. Running as the host user makes the mounted directories writable and\nkeeps the created files host-owned. The image entrypoint is graph-node ; it\nalso ships graph-indexer . For production, pin an image digest rather than latest — see the Helm chart guide . Build from source — for development and the full recipe surface Prerequisites HydraDB requires Rust 1.91 or newer, a C/C++ toolchain, libcypher-parser , and SuiteSparse GraphBLAS. Ubuntu or WSL: sudo apt-get update\nsudo apt-get install -y \\\n  build-essential clang libclang-dev cmake pkg-config \\\n  libcypher-parser-dev libgraphblas-dev \\\n  curl git python3 python3-venv The last line is not needed to build, but the steps below use it: curl for\nthe Rust installer and the readiness checks, git to clone, and python3-venv for the Neo4j driver used by scripts/runtime_smoke.sh . macOS with Homebrew: xcode-select --install\nbrew install just cmake pkg-config llvm suite-sparse\nbrew install cleishm/neo4j/libcypher-parser # Rust, only if `rustup toolchain list` does not already show a stable toolchain: curl --proto ' =https ' --tlsv1.2 -sSf https://sh.rustup.rs | sh libcypher-parser is not in homebrew-core; the fully-qualified cleishm/neo4j/... name adds the tap automatically. A plain brew install libcypher-parser fails with No available formula . Rust comes from the official installer rather than Homebrew because the rustup formula is keg-only and no longer ships a rustup-init binary, so brew install rustup leaves nothing named rustup on PATH . rust-toolchain.toml pins channel = \"stable\" , so any rustup-managed stable\ntoolchain works. No PKG_CONFIG_PATH export is needed: libcypher-parser is not keg-only, so\nHomebrew links cypher-parser.pc into the default pkg-config search path. just is the supported command runner for the\nrepository. Install it with cargo install just --locked when your package\nmanager does not provide it. Docker is optional and is used only by MinIO,\nNeo4j comparison, image-build, and Kubernetes harnesses. Clone and verify git clone https://github.com/hydra-db/hydradb.git cd hydradb\n\njust native-check\njust smoke The smoke example creates a local graph, writes and deletes edges, runs a sparse\ntraversal, closes the database, reopens it, and verifies the durable result.",
+      "stars_today": 794,
+      "language": "Rust"
+    },
+    {
+      "title": "Nasiko-Labs/nasiko",
+      "slug": "nasiko-labs-nasiko",
+      "url": "https://github.com/Nasiko-Labs/nasiko",
+      "abstract": "Deploy, route, secure, and observe any A2A -speaking agent\n  with a single command — no gateway, no sidecar, no glue code. 📚 Documentation • 💬 Discord • 🐛 Report a bug Table of Contents What is Nasiko? Features Architecture Requirements Quick Start — Docker only (no Rust needed) Setup guides by operating system CLI — install & use Coding Agents & LLM Router Environment Variables Project Structure Troubleshooting Project Activity Documentation & Links Support Contributing License What is Nasiko? Running more than a couple of agents quickly turns into an operations problem: who calls whom , which key does each agent hold , what did that call cost , why did it fail? Nasiko is a single control-plane process that sits in front of every agent and answers all of that.\nIt terminates TLS, authenticates every request, and proxies all agent-to-agent traffic itself, so agents\nare never publicly reachable — every hop is a checkpoint for rate limits, ACLs, and tracing. Different language, same A2A protocol — bring your own agents in Python, Rust, Go, or TypeScript.\nNo proprietary agent format, no lock-in. Nasiko Dashboard — deploy agents, route traffic, manage tools, and watch traces. Features Feature What it does Deploy anything that speaks A2A nasiko deploy builds, pushes to the embedded registry, and runs it. No external registry required. Intelligent routing engine 3-stage pipeline — shortlist by embedding similarity, rerank on conversation context, then LLM final pick. Callers don't need to know your fleet. Single ingress, always proxied Agents are never publicly reachable; every agent-to-agent call is proxied through the server. MCP Gateway One permanent URL gives every agent a merged, permission-filtered view of Composio toolkits and custom MCP servers — without the agent holding the credentials. LLM Router Agents get an OPENAI_BASE_URL + a short-lived identity token instead of a real key. The router resolves provider/model/key server-side. No agent or log ever sees a real API key. Full observability Every dispatch and proxy hop emits a real OTel span -> one end-to-end trace. Token usage & cost are auto-collected from gen_ai.* attributes. Flow guards Redis-backed cascade limits (depth, fan-out, token budget, timeout, cycle detection) stop runaway agent loops. Encrypted secrets Per-agent secrets are AES-256-GCM encrypted at rest, injected only at deploy time. Access control User to-agent ownership/grants and an agent-to-agent allowlist gate every proxy call, independently. Embedded OCI registry Self-hosted, S3-backed registry with layer dedup — nasiko push / nasiko deploy need nothing external. CLI-first, no lock-in nasiko new , run , chat , deploy . Bring your own LLM provider. Architecture Nasiko is a single process — there is no separate gateway. Every inter-agent call is proxied back\nthrough the server, the single chokepoint where flow limits, ACLs, and observability are enforced.\nDurable state lives in Postgres , Redis , and S3 (RustFS), with optional observability via Tempo / Loki / the OTel Collector . flowchart LR\n    subgraph Clients[\"Clients\"]\n        UI[\"Web Dashboard (embedded)\"]\n        CLI[\"nasiko CLI\"]\n    end\n\n    subgraph CP[\"nasiko-server (single control-plane process)\"]\n        direction TB\n        API[\"REST API (agents, builds, uploads)\"]\n        AUTH[\"Auth (session JWT, TLS, rate-limit, ACLs)\"]\n        OIDC[\"OIDC client (SSO)\"]\n        ROUTE[\"Routing engine (shortlist, rerank, select)\"]\n        PROXY[\"A2A Proxy (generic agent reverse-proxy)\"]\n        MCP[\"MCP Gateway (tools/list, tools/call, OAuth)\"]\n        LLM[\"LLM Router (OpenAI-compatible egress)\"]\n        OCI[\"Embedded OCI registry (/v2/*)\"]\n        FLOW[\"Flow guards (depth, fan-out, token budget, cycles)\"]\n        SECRETS[\"Secrets engine (AES-256-GCM)\"]\n        GITHUB[\"GitHub App integration\"]\n    end\n\n    subgraph Infra[\"Backing services (Docker)\"]\n        PG[(Postgres)]\n        RD[(Redis)]\n        S3[(RustFS S3)]\n        OTEL[\"OTel Collector\"]\n        TEMPO[\"Tempo\"]\n        LOKI[\"Loki\"]\n    end\n\n    subgraph Agents[\"Agent containers (Docker runtime)\"]\n        A1[\"Agent A\"]\n        A2[\"Agent B\"]\n        A3[\"Agent C\"]\n    end\n\n    UI --> API\n    CLI --> API\n    CLI -. \"push / pull images\" .-> OCI\n\n    API --> ROUTE\n    API --> GITHUB\n    ROUTE --> FLOW\n    OIDC --> AUTH\n    SECRETS --> API\n\n    AUTH -. gates .-> API\n    AUTH -. gates .-> MCP\n    AUTH -. gates .-> OCI\n    AUTH -. gates .-> PROXY\n\n    ROUTE -- \"selected agent, direct call\" --> Agents\n    PROXY -. \"proxied A2A calls (bypasses routing)\" .-> A1\n    PROXY -. \"proxied A2A calls (bypasses routing)\" .-> A2\n    PROXY -. \"proxied A2A calls (bypasses routing)\" .-> A3\n    OCI -- \"image pull at deploy\" --> Agents\n    Agents -- \"OPENAI_BASE_URL\" --> LLM\n    Agents -- \"tools/list, tools/call\" --> MCP\n\n    OCI --> S3\n    FLOW --> RD\n    SECRETS --> PG\n    AUTH --> PG\n    CP --> OTEL --> TEMPO\n    OTEL --> LOKI Loading Every request to an agent is either dispatched by the routing engine or proxied generically — both\npaths originate inside the server. Agents never receive a direct, public request, and both call\nback out into the LLM Router and MCP Gateway rather than holding real API keys or tool credentials. Requirements Component Minimum version Why Docker Engine + Compose V2 Compose V2 plugin (the docker compose command — not the legacy standalone docker-compose v1 binary) docker-compose.yml uses the extended depends_on: condition: service_healthy syntax; the Docker-only path needs nothing else. Rust 1.85+ (stable) The workspace targets edition = \"2024\" (see Cargo.toml ), stabilized in Rust 1.85 — only needed for the CLI / Path B developer setup, not the Docker-only path. A2A protocol Spec v1.0 exactly (latest upstream release: v1.0.1, Linux Foundation) Nasiko requires and hardcodes the A2A-Version: 1.0 header on every request; agents on older/pre-1.0 spec versions (e.g. 0.2.x, 0.3.0) are rejected with -32009 VersionNotSupported (see docs/A2A_PROTOCOL.md ). Any agent speaking v1.0 works, regardless of its implementation language. Quick Start — Docker only (no Rust needed) The fastest way to run Nasiko requires only Docker (with Compose).\nThe server builds itself from source inside Docker. 1. Clone and configure git clone https://github.com/Nasiko-Labs/nasiko.git cd nasiko\ncp .env.example .env Edit .env and set at minimum: OPENAI_API_KEY — your OpenAI key (used by the routing engine and injected into agents) ADMIN_PASSWORD — password for the bootstrap admin account 2. Start the platform docker compose up -d This builds the server image and starts the full stack: Postgres · Redis · RustFS (S3) · OTel Collector · Tempo · Loki · nasiko-server . First build takes a few minutes (compiles Rust inside Docker) — subsequent builds are fast. Open http://localhost:8080 for the dashboard and log in with ADMIN_USERNAME / ADMIN_PASSWORD (default admin / changeme ). docker compose logs -f server # follow server logs docker compose down # stop everything docker compose up -d --build # rebuild after pulling new changes No Docker? Use the Developer / Rust setup below. Setup guides by operating system You have two supported paths : Path Requires Best for A. Docker-only Docker only Anyone who just wants to run the platform B. Source / Rust Rust + just Contributors, developers, hot-reload Path A — Docker-only Windows Install Docker Desktop -> https://www.docker.com/products/docker-desktop/ Open Docker Desktop and wait until the engine is running. In a terminal (PowerShell or Git Bash): git clone https: // github.com / Nasiko - Labs / nasiko.git\ncd nasiko Copy-Item .env.example .env # edit .env -> set OPENAI_API_KEY and ADMIN_PASSWORD docker compose up - d Open http://localhost:8080 and log in. Windows troubleshooting: see the Troubleshooting section (port conflicts,\nline endings, encryption key, WSL, Docker Desktop). macOS Install Docker Desktop for Mac -> https://www.docker.",
+      "stars_today": 734,
+      "language": "Rust"
+    },
+    {
+      "title": "Crosstalk-Solutions/project-nomad",
+      "slug": "crosstalk-solutions-project-nomad",
+      "url": "https://github.com/Crosstalk-Solutions/project-nomad",
+      "abstract": "Project NOMAD Knowledge That Never Goes Offline Project NOMAD is a self-contained, offline-first knowledge and education server packed with critical tools, knowledge, and AI to keep you informed and empowered — anytime, anywhere. Installation & Quickstart Project NOMAD can be installed on any Debian-based operating system (we recommend Ubuntu 26.04 LTS; 24.04 LTS and Debian 12 are also supported). Installation is completely terminal-based, and all tools and resources are designed to be accessed through the browser, so there's no need for a desktop environment if you'd rather setup NOMAD as a \"server\" and access it through other clients. Note: sudo/root privileges are required to run the install script Quick Install (Debian-based OS Only) sudo apt-get update && \\\nsudo apt-get install -y curl && \\\ncurl -fsSL https://raw.githubusercontent.com/Crosstalk-Solutions/project-nomad/refs/heads/main/install/install_nomad.sh \\\n  -o install_nomad.sh && \\\nsudo bash install_nomad.sh Project NOMAD is now installed on your device! Open a browser and navigate to http://localhost:8080 (or http://DEVICE_IP:8080 ) to start exploring! For a complete step-by-step walkthrough (including Ubuntu installation), see the Installation Guide . For Windows users, see the WSL2 install guide — community-supported path covering native Docker and Docker Desktop install routes. Advanced Installation For more control over the installation process, copy and paste the Docker Compose template into a docker-compose.yml file and customize it to your liking (be sure to replace any placeholders with your actual values). Then, run docker compose up -d to start the Command Center and its dependencies. Note: this method is recommended for advanced users only, as it requires familiarity with Docker and manual configuration before starting. How It Works NOMAD is a management UI (\"Command Center\") and API that orchestrates a collection of containerized tools and resources via Docker . It handles installation, configuration, and updates for everything — so you don't have to. Built-in capabilities include: AI Chat with Knowledge Base — local AI chat powered by Ollama or you can use OpenAI API compatible software such as LM Studio or llama.cpp, with document upload and semantic search (RAG via Qdrant ) Information Library — offline Wikipedia, medical references, ebooks, and more via Kiwix Education Platform — Khan Academy courses with progress tracking via Kolibri Offline Maps — downloadable regional maps via ProtoMaps Data Tools — encryption, encoding, and analysis via CyberChef Notes — local note-taking via FlatNotes System Benchmark — hardware scoring with a community leaderboard Supply Depot — a one-click app catalog (PDF tools, file browser, e-book library, password manager, and more) plus the ability to run your own custom Docker containers Automatic Updates — opt-in, hands-off updates for the core software, installed apps, and offline content, on a schedule you control Easy Setup Wizard — guided first-time configuration with curated content collections NOMAD also includes built-in tools like a Wikipedia content selector, ZIM library manager, and content explorer. What's Included Capability Powered By What You Get Information Library Kiwix Offline Wikipedia, medical references, survival guides, ebooks AI Assistant Ollama + Qdrant Built-in chat with document upload and semantic search Education Platform Kolibri Khan Academy courses, progress tracking, multi-user support Offline Maps ProtoMaps Downloadable regional maps for offline viewing and search Data Tools CyberChef Encryption, encoding, hashing, and data analysis Notes FlatNotes Local note-taking with markdown support System Benchmark Built-in Hardware scoring, Builder Tags, and community leaderboard Supply Depot Built-in One-click app catalog + bring-your-own custom Docker containers Device Requirements While many similar offline survival computers are designed to be run on bare-minimum, lightweight hardware, Project NOMAD is quite the opposite. To install and run the\navailable AI tools, we highly encourage the use of a beefy, GPU-backed device to make the most of your install. At its core, however, NOMAD is still very lightweight. For a barebones installation of the management application itself, the following minimal specs are required: Note: Project NOMAD is not sponsored by any hardware manufacturer and is designed to be as hardware-agnostic as possible. The hardware listed below is for example/comparison use only Minimum Specs Processor: 2 GHz dual-core processor or better RAM: 4GB system memory Storage: At least 5 GB free disk space OS: Debian-based (Ubuntu 26.04 LTS recommended) Stable internet connection (required during install only) To run LLMs and other included AI tools: Optimal Specs Processor: AMD Ryzen 7 or Intel Core i7 or better RAM: 32 GB system memory Graphics: NVIDIA RTX 3060 or AMD equivalent or better (more VRAM = run larger models) Storage: At least 250 GB free disk space (preferably on SSD) OS: Debian-based (Ubuntu 26.04 LTS recommended) Stable internet connection (required during install only) For detailed build recommendations at three price points ($150–$1,000+), see the Hardware Guide . Again, Project NOMAD itself is quite lightweight — it's the tools and resources you choose to install with NOMAD that will determine the specs required for your unique deployment Running AI models on a different host By default, NOMAD's installer will attempt to setup Ollama on the host when the AI Assistant is installed. However, if you would like to run the AI model on a different host, you can go to the settings of the AI assistant and input a URL for either an ollama or OpenAI-compatible API server (such as LM Studio). Note that if you use Ollama on a different host, you must start the server with this option: OLLAMA_HOST=0.0.0.0 . Ollama is the preferred way to use the AI assistant, as it has features such as model download that OpenAI API does not support. So when using LM Studio, for example, you will have to use LM Studio to download models.\nYou are responsible for the setup of Ollama/OpenAI server on the other host. Frequently Asked Questions (FAQ) For answers to common questions about Project NOMAD, please see our FAQ page. About Internet Usage & Privacy Project NOMAD is designed for offline usage. An internet connection is only required during the initial installation (to download dependencies) and if you (the user) decide to download additional tools and resources at a later time. Otherwise, NOMAD does not require an internet connection and has ZERO built-in telemetry. To test internet connectivity, NOMAD first attempts to make a request to Cloudflare's utility endpoint, https://1.1.1.1/cdn-cgi/trace . If that endpoint is unreachable (for example, because your network blocks 1.1.1.1 ), it falls back to other endpoints the application already contacts (the GitHub API and the Project NOMAD API) and considers the connection online if any of them respond. You can override the endpoint used for this check in two ways. The connectivity test URL can be configured from the UI under Settings → Advanced (stored locally on your instance), or you can set the INTERNET_STATUS_TEST_URL environment variable. When set, the environment variable always takes precedence over the UI-configured value. If neither is set, the built-in defaults above are used. About Security By design, Project NOMAD is intended to be open and available without hurdles — it includes no authentication. If you decide to connect your device to a local network after install (e.g. for allowing other devices to access its resources), you can block/open ports to control which services are exposed. Will authentication be added in the future? Maybe.",
+      "stars_today": 543,
+      "language": "TypeScript"
+    },
+    {
+      "title": "dream-num/univer",
+      "slug": "dream-num-univer",
+      "url": "https://github.com/dream-num/univer",
+      "abstract": "The Office Harness for AI Agents Spreadsheets · Documents · Presentations · Bases · Boards · PDFs (coming soon) High-performance, fully customizable Office SDK Build embeddable productivity experiences with a plugin architecture, Canvas-based rendering,\na formula engine, and one Facade API that works in the browser and on Node.js. English | 簡體中文 | 繁體中文 | 日本語 | 한국어 | Español 🌐 Website | 📖 Documentation | ✨ Showcase | 📘 API Reference | 📝 Blog ✨ What is Univer? Univer is an open-source SDK for creating office applications inside your own product. It gives you the building blocks for spreadsheet, document, and presentation experiences without forcing you into a hosted app or a fixed UI. Use Univer when you need to: Embed spreadsheet or document editing into a SaaS product, internal tool, BI workflow, or AI application. Run workbook/document processing on the server with the same architecture used in the browser. Compose only the features you need through plugins or start quickly with presets. Extend behavior through custom plugins, commands, services, UI components, and Facade APIs. Univer is not a spreadsheet file viewer only. It is a framework for building your own productivity surface. Across the Univer product family , Office tools share a runtime for storage and computation. Content can be composed and embedded across tools, with linked data and references updating together. People and AI agents can work in the same files. See the capability matrix for product coverage and Open Source and Pro for this repository's scope. Built with Univer Office SDK These open-source projects are built with Univer Office SDK: Project Description Univer Workspace An Office workspace for people and AI agents, with shared editing and review of agent changes. Univer Office for DeepSeek Harness An Office plugin for DeepSeek Harness with connected content, validation, and isolated worktrees for agent collaboration. Univer CLI A local command-line workspace for agents to create, edit, inspect, and deliver Office content. Univer Office for WorkBuddy A local Office integration for WorkBuddy with MCP previews and draft review. Development preview. Univer Office for OpenClaw Tools for creating, reviewing, and delivering Office content in OpenClaw. Each project documents its own setup and SDK licensing requirements. 🌟 Highlights ⚡ Built for large surfaces Canvas-based rendering and a dedicated formula engine keep complex workbooks responsive. 🧩 Plugin-shaped by default Compose, replace, lazy-load, or extend capabilities without taking the whole stack. 🤖 Headless for AI infrastructure Run workbook and document logic in Node.js to power agents, automation, and server-side workflows. 🛠️ Product-ready SDK Framework adapters, Facade APIs, presets, and headless runtime fit real integration paths. 🌗 Dark-mode ready UI components and the rendering engine both adapt to light and dark themes. 🔌 Unified Facade API One consistent API surface for workbooks, ranges, formulas, and documents across browser and Node.js. 🚀 Why Univer? Isomorphic by design : run UI apps in browsers and headless processing in Node.js. Plugin-first architecture : every capability is delivered as a composable plugin, so features can be added, removed, replaced, or lazy-loaded. Preset mode for fast integration : use the curated plugin collections in presets/ when you want a working app quickly. Plugin mode for full control : manually compose packages when you need custom loading, smaller bundles, or deep integration. Facade API : work with workbooks, worksheets, ranges, documents, formulas, commands, and events through a higher-level API. Canvas rendering engine : support large editable document surfaces with a rendering layer shared across document types. Extensible UI : integrate with React, Vue, Web Components, and framework-specific application shells. 🤖 Office Workflows for AI Agents Univer's AI and collaboration capabilities connect agent operations with interactive editing and human review: Programmatic editing : agents inspect and modify Office content through structured APIs. Output verification : agents check results through content inspection, rendered screenshots, and layout diagnostics. Worktree collaboration : agents work in isolated drafts, then people review their changes and decide what to merge. See the AI SDK documentation for integration details. Live editing, shared revisions, and Worktree workflows require the corresponding Web SDK and collaboration capabilities; package availability and licensing vary by feature. ⚡ Quick Start Use Plugin Mode for complete product coverage and precise composition. For supported Sheets, Docs, and Node profiles, Preset Mode provides a shorter curated setup. Plugin Mode Plugin Mode gives you lower-level control over packages, style imports, locale merging, Facade API registration, and plugin configuration. pnpm add @univerjs/core @univerjs/design @univerjs/docs @univerjs/docs-ui @univerjs/engine-formula @univerjs/engine-render @univerjs/sheets @univerjs/sheets-formula @univerjs/sheets-formula-ui @univerjs/sheets-numfmt @univerjs/sheets-numfmt-ui @univerjs/sheets-ui @univerjs/ui import { LocaleType , mergeLocales , Univer } from '@univerjs/core' import { FUniver } from '@univerjs/core/facade' import DesignEnUS from '@univerjs/design/locale/en-US' import { UniverDocsPlugin } from '@univerjs/docs' import { UniverDocsUIPlugin } from '@univerjs/docs-ui' import DocsUIEnUS from '@univerjs/docs-ui/locale/en-US' import { UniverFormulaEnginePlugin } from '@univerjs/engine-formula' import { UniverRenderEnginePlugin } from '@univerjs/engine-render' import { UniverSheetsPlugin } from '@univerjs/sheets' import SheetsEnUS from '@univerjs/sheets/locale/en-US' import { UniverSheetsFormulaPlugin } from '@univerjs/sheets-formula' import SheetsFormulaEnUS from '@univerjs/sheets-formula/locale/en-US' import { UniverSheetsFormulaUIPlugin } from '@univerjs/sheets-formula-ui' import SheetsFormulaUIEnUS from '@univerjs/sheets-formula-ui/locale/en-US' import { UniverSheetsNumfmtPlugin } from '@univerjs/sheets-numfmt' import { UniverSheetsNumfmtUIPlugin } from '@univerjs/sheets-numfmt-ui' import SheetsNumfmtUIEnUS from '@univerjs/sheets-numfmt-ui/locale/en-US' import { UniverSheetsUIPlugin } from '@univerjs/sheets-ui' import SheetsUIEnUS from '@univerjs/sheets-ui/locale/en-US' import { UniverUIPlugin } from '@univerjs/ui' import UIEnUS from '@univerjs/ui/locale/en-US' import '@univerjs/design/lib/index.css' import '@univerjs/ui/lib/index.css' import '@univerjs/docs-ui/lib/index.css' import '@univerjs/sheets-ui/lib/index.css' import '@univerjs/sheets-formula-ui/lib/index.css' import '@univerjs/sheets-numfmt-ui/lib/index.css' import '@univerjs/engine-formula/facade' import '@univerjs/ui/facade' import '@univerjs/sheets/facade' import '@univerjs/sheets-ui/facade' import '@univerjs/sheets-formula/facade' import '@univerjs/sheets-numfmt/facade' const univer = new Univer ( { locale : LocaleType . EN_US , locales : { [ LocaleType . EN_US ] : mergeLocales ( DesignEnUS , UIEnUS , DocsUIEnUS , SheetsEnUS , SheetsUIEnUS , SheetsFormulaEnUS , SheetsFormulaUIEnUS , SheetsNumfmtUIEnUS , ) , } , } ) univer . registerPlugin ( UniverRenderEnginePlugin ) univer . registerPlugin ( UniverFormulaEnginePlugin ) univer . registerPlugin ( UniverUIPlugin , { container : 'app' } ) univer . registerPlugin ( UniverDocsPlugin ) univer . registerPlugin ( UniverDocsUIPlugin ) univer . registerPlugin ( UniverSheetsPlugin ) univer . registerPlugin ( UniverSheetsUIPlugin ) univer . registerPlugin ( UniverSheetsFormulaPlugin ) univer . registerPlugin ( UniverSheetsFormulaUIPlugin ) univer . registerPlugin ( UniverSheetsNumfmtPlugin ) univer . registerPlugin ( UniverSheetsNumfmtUIPlugin ) const univerAPI = FUniver . newAPI ( univer ) univerAPI . createWorkbook ( { } ) Preset Mode Presets are curated collections of Univer plugins that include the required Facade API registrations and styles.",
+      "stars_today": 202,
+      "language": "TypeScript"
+    },
+    {
+      "title": "superdesigndev/treg",
+      "slug": "superdesigndev-treg",
+      "url": "https://github.com/superdesigndev/treg",
+      "abstract": "Treg (OpenRouter for Tools) OpenRouter, but for agent tools instead of models. Point an agent at one base URL with one token\nand it can do the job: 3,000+ catalogued endpoints across 60+ providers — SEO and backlinks,\nsocial and trends, people and company enrichment, ads, scraping, image and video generation — priced per call, from a cent ,\nwith no provider signup. Plus your own team's keys, skills and CLIs, callable by every teammate's\nagent without the credential ever leaving the server. Ask for the task, not the tool. You do not need to know which vendor sells backlink data, or to\nhold an account with them. Search for what you want to do, read the price, call it. Built for the Superdesign team, live at treg.to — anyone can self-host. Why it exists The tools an agent needs for real work sit behind subscriptions nobody buys for a single run —\nSemrush $139/mo, Moz $99/mo, Crunchbase $99/mo, Apollo $59/seat — behind signup walls, or behind no\npublic API at all (invite-only, partner-only, app-review-only). treg carries those accounts and\nbills fractions of a cent per call. Two kinds of tool, one token The catalog — external endpoints treg can serve with its own key or through a verified public\nroute that needs no provider key. Own-key calls use the team's prepaid balance; anonymous calls\nare free. No account with the provider is needed. New verified accounts receive $1.00 free once, when they create an eligible team. Your own tools — anything a teammate registered: a paid API account, an OAuth connection, a\nvendor CLI, a SKILL.md . Your own key always wins over treg's, and those calls are never\nmetered. The vocabulary for the second half: tool = something the registry calls for you with the org's credential. Two kinds: endpoint — an upstream base_url + credential bindings (each binding injects one\nsecret into the request; a request can carry several, e.g. an OAuth bearer and a developer-token header). CLI — a vendor binary ( stripe , gh , vercel , ...) run with the credential injected. skill / bundle = a recipe ( SKILL.md ) + its secrets + its tool(s), registered together. The one rule: the proxy relays, never models the upstream, and injects auth server-side — so it survives upstream API changes and callers never hold keys. Part 1 · Using the registry Visit treg.to (hosted on Render) — the dashboard,\nsign-in, and every URL below live there. Quickstart Same flow as the dashboard's Getting started guide: # 1. install the CLI — also points it at the registry curl -fsSL https://treg.to/install.sh | sh # 2. sign in (GitHub default · --email for a one-time code · --token for agents/CI) treg login # 3. do something useful immediately — no key, nothing registered treg catalog search \" backlinks for a domain \" # find a tool by what it DOES treg call tikhub.tiktok.user.profile --query uniqueId=tiktok\ntreg balance # exactly what that cost # (or `treg onboard` for the guided walkthrough) Fish Audio provides S2.1 Pro speech, public-voice discovery, and private voice cloning.\nSpeech is binary stdout, so redirect it to a file. A discovered voice's _id or a team voice id is\nthe TTS reference_id ; voices created on treg's Fish account are durable team resources: treg call fishaudio.tts.s2-1-pro --method POST --header model=s2.1-pro \\\n  --data ' {\"text\":\"Hello from treg\",\"format\":\"mp3\"} ' > speech.mp3\ntreg call fishaudio.voices.discover --query self=false --query licensed=false --query language=en\ntreg resources list --provider fishaudio --kind voice With your own Fish key, requests remain an unrestricted, unmetered upstream relay and Fish owns the\naccount boundary. Catalog tool inputs are described by treg catalog get <id> . Tools marked strict_query reject undeclared or repeated query parameters, unsupported values and request bodies. Your token identifies you on every call ( X-Treg-Token header) and is the same for all tools.\nDiscover what your team has shared: treg tool ls · check credential health: treg health . Or install it as a Claude Code plugin /plugin marketplace add superdesigndev/treg\n/plugin install treg@treg Installs with no token and no configuration. The skill loads as treg:treg and, on its first run,\nwalks your agent through the rest — the CLI, sign-in, then treg mcp install — so you end up with\nthe command line and treg's tools. Other agents: npx skills add superdesigndev/treg -s treg (the -s matters — without it you also get this repo's internal dev skills).\nSee docs/CLAUDE-PLUGIN.md . MiniMax Code / MiniMax Agent users: the same\nskill ships via the MiniMax Plugin Marketplace ( docs/MINIMAX-PLUGIN.md ). Claude.ai connector The Claude Connectors Directory surface is https://treg.to/mcp/v2/ . It exposes only curated\ncatalog endpoints and separates read calls from write calls so Claude receives accurate safety\nsignals. The existing /mcp/ surface remains available for catalog endpoints, team-owned tools,\nand imported skills. See the MCP and OAuth architecture for the boundary and implementation, and the submission runbook for release gates. Call a tool you don't have a key for The catalog is grouped by what endpoints do : keyword and rank tracking, backlinks and authority,\nAI visibility, trending and discovery, publishing to socials, people and company enrichment, ads\nmanagement and creative, measurement. treg catalog # every platform, busiest first treg catalog search \" find a work email \" # by the job, not the vendor treg catalog get hunter.people.email.find # params, PRICE, example response treg call hunter.people.email.find --query domain=reddit.com --query full_name= \" Alexis Ohanian \" How a catalogued call is served — the credential ladder, in order: your team registered its own tool for that provider → that tool, that key; your team stored a secret for the provider → injected through a virtual tool; neither, and the endpoint has a verified public route → no provider key , free; otherwise → treg's own key , billed to the team's prepaid balance. The anonymous price assumes the caller does not send a provider credential header. The faithful\nrelay preserves caller headers, so a caller-supplied provider key can use that key's credits.\nYour own credential always beats treg's, so connecting a key you already pay for makes those calls\nfree of the balance rather than duplicating them. An endpoint treg has no published price for is refused , not served free — you are told to connect your own key instead. Where several providers\nserve one capability, treg catalog search shows them side by side with prices; choosing is\nyours — treg does not silently pick or fail over between providers for you. (When treg's own\naccount for a provider is out it may serve the same endpoint through a treg-owned relay account,\ndisclosed on the response; a team can opt out.) The exception you opt into: treg.<capability> routed endpoints, where treg picks the provider for you and names it. treg balance # credit left, calls in flight, recent spend treg topup # add funds, or set up automatic top-ups Out of balance is an HTTP 402 carrying balance_micro , estimated_cost_micro and a topup_url ,\nso an agent can act on it without reading prose. Enrich Arena lives at /enrich-arena , outside the dashboard. Compare enrichment answers with each vendor’s cost and speed,\nvote for the best answer in one click, or watch a sequential waterfall. Browsing is\npublic; submitting requires login, and billable attempts use your team's credits. See the Arena guide . Share & use your own tools The zero-thought path — point treg at a project and it figures out what's shareable: treg scan # read-only preview: the keys, skills & CLIs upload would register treg upload # register them (encrypted server-side); idempotent, --replace to update treg upload scans the .env (matching keys against ~80 known providers), every skill\nsubdirectory, and installed catalog CLIs. Three kinds of things go into the registry — here's how\nto share and use each: 1.",
+      "stars_today": 197,
+      "language": "Python"
+    },
+    {
+      "title": "upscayl/upscayl",
+      "slug": "upscayl-upscayl",
+      "url": "https://github.com/upscayl/upscayl",
+      "abstract": "v2.15 is out! 🥳 Download Now ⬇️ Special thanks to our sponsors: Warp, the intelligent terminal for developers Use images as AI context in your terminal! Requestly - Free & Open-Source alternative to Postman All-in-one platform to Test, Mock and Intercept APIs. 🆙 Upscayl Free and Open Source AI Image Upscaler Upscayl lets you enlarge and enhance low-resolution images using advanced AI algorithms.\nEnlarge images without losing quality. It's almost like magic! 🎩🪄 https://upscayl.org Demo.Showcase.mp4 Contents 👨‍💻 Installation 🐧 Linux 🍎 macOS 🐌 Windows 👨‍🏫 Documentation - Tutorials and Guides ⚖️ Demo Results (Before and After) 🤫 Roadmap 🛠 Developing Upscayl 🤓 FAQ 🎁 Donate and support the project ❤ Credits 👨‍💻 Installation Important You'll need a Vulkan compatible GPU (Graphics Card) to upscale images. Many iGPUs (integrated graphics) do not work but, no harm in trying :) 🐧 Linux Upscayl should be available on the software listings of most Linux operating systems. Your distro's Store app might also support the Flatpak or Snap version. 💼 Portable Method Go to releases section or our official website . Download the upscayl-x.x.x-linux.AppImage file. Right Click AppImage -> Go to Permissions tab -> Check 'allow file to execute' and then double click the file to run Upscayl. You can also choose to install using other formats like RPM (Fedora), DEB (Debian/Ubuntu based), and ZIP (Any x86 Linux OS). 🍎 macOS (MacOS 12 and later) Link Go to releases section or our official website . Download the upscayl-x.x.x-mac.dmg file. Double click dmg, drag Upscayl icon into Applications folder. Open Finder, click 'Applications' tab in the left sidebar. Find Upscayl and right click on it. Select 'Open'. In the window that appears, press 'Open' yet again. 🍺 Homebrew brew install --cask upscayl 🐌 Windows (Windows 10 and later) Go to releases section or our official website . Download the upscayl-x.x.x-win.exe file. Double click exe file to launch. If you get a SmartScreen warning - click 'More Info' and then 'Run Anyway' OR press 'YES' on the unverified publisher dialog. Follow the installation steps. Profit! 👨‍🏫 Documentation - Tutorials and Guides Check out our Documentation here . Try out even more new models! Convert your own models Compatibility List Troubleshooting ⚖️ Results Check out Upscayl before/after comparisons here . 🤫 Roadmap You can track all the progress here: https://github.com/orgs/upscayl/projects/1 Fix bugs Make the whole world use FOSS (WIP 🚧) 🛠 Development I recommend using Volta: https://volta.sh for installing Node.js.\nDownload and install volta, then do: volta install node . 🏃 Running Note If you are not willing to install git , you can skip the first line, download the source zip and extract it to upscayl instead and carry on with the rest of the instructions. git clone https://github.com/upscayl/upscayl cd upscayl # INSTALL DEPENDENCIES npm install # RUN THE DEVELOPMENT SERVER LOCALLY # # YOUR LOGS WILL NOW APPEAR IN THE TERMINAL npm run start 🏗️ Building # INSTALL DEPENDENCIES npm install # PACKAGE THE APP npm run dist # PUBLISH THE APP, MAKE SURE TO ADD GH_TOKEN= IN SHELL # ONLY DO THIS IF YOU'RE A MAINTAINER npm run publish-app 🤓 FAQ How does Upscayl work? Upscayl uses AI models to enhance your images by guessing what the details could be. It uses Real-ESRGAN and Vulkan architecture to achieve this. Our backend is fully open-source under the AGPLv3 license. I don't see a drastic change in my upscaled image. Why is that? Upscayl can enhance low resolution images and images that are pixelated but it cannot de-blur or do focus adjustment on your image. If your image is out-of-focus or totally blurred, Upscayl is not the right tool for it. Please use images that are similar to the examples we've given here. Is there a CLI available? The CLI tool is called upscayl-ncnn . Do I need a GPU for this to work? Yes, unfortunately. NCNN Vulkan requires a Vulkan-compatible GPU. Upscayl won't work with most iGPUs or CPUs. But hey, no harm in trying ;) @Wyrdgirn has contributed a workaround for Windows and Linux in #390 ! Nobody knows how to manipulate the macOS and Haiku frameworks... I stopped the magic Batch Upscayl and my images haven't been processed, compressed, or are in the wrong scale! When a model doesn't support an action, Upscayl will finish upscayling all the images first before post-processing them. What this means is that you should simply wait for the process to finish. How can I contribute? You can report issues, fix code and add features by submitting PRs, or donate! 😊 What's the GPU ID for? It is for selecting which GPU to use. The specific procedure is detailed in the Wiki . Note that for Windows systems, if Upscayl is not set to performance mode, the system may override this setting. Where do I find more models? More models can be taken from here: https://github.com/upscayl/custom-models 🎁 Donate ❤ Credits Real-ESRGAN for their wonderful research work. Real-ESRGAN: Copyright (c) 2021, Xintao Wang @JanDeDinoMan, @xanderfrangos, @Fdawgs, @keturn for their code contributions @aaronliu0130 for providing community support :) Helaman for their HFA2k model (included as \"High Fidelity\") Foolhardy for their Remacri model . Kim2091 for their Ultrasharp and Ultramix Balanced model . @NicKoehler for their amazing logo :) Copyright © 2023 - Upscayl By Nayam Amarshe and TGS963 Made with 🖱 & ⌨",
+      "stars_today": 177,
+      "language": "TypeScript"
+    },
+    {
+      "title": "browser-use/video-use",
+      "slug": "browser-use-video-use",
+      "url": "https://github.com/browser-use/video-use",
+      "abstract": "video-use Introducing video-use — edit videos with Claude Code. 100% open source. Drop raw footage in a folder, chat with Claude Code, get final.mp4 back. Works for any content — talking heads, montages, tutorials, travel, interviews — without presets or menus. Try video-use in Browser Use Cloud . What it does Cuts out filler words ( umm , uh , false starts) and dead space between takes Auto color grades every segment (warm cinematic, neutral punch, or any custom ffmpeg chain) 30ms audio fades at every cut so you never hear a pop Burns subtitles in your style — 2-word UPPERCASE chunks by default, fully customizable Generates animation overlays via HyperFrames , Remotion , Manim , or PIL — spawned in parallel sub-agents, one per animation Self-evaluates the rendered output at every cut boundary before showing you anything Persists session memory in project.md so next week's session picks up where you left off Setup prompt Paste into Claude Code, Codex, Hermes, Openclaw, or any agent with shell access: Set up https://github.com/browser-use/video-use for me.\n\nRead install.md first to install this repo, wire up ffmpeg, register the skill with whichever agent you're running under, and set up the ElevenLabs API key — ask me to paste it when you need it. Then read SKILL.md for daily usage, and always read helpers/ because that's where the editing scripts live. After install, don't transcribe anything on your own — just tell me it's ready and wait for me to drop footage into a folder. The agent handles the clone, dependencies, skill registration, and prompts you once for your ElevenLabs API key (grab one at elevenlabs.io/app/settings/api-keys ). Then point your agent at a folder of raw takes: cd /path/to/your/videos\nclaude # or codex, hermes, etc. For always-on editing from your own VPS or Telegram, run the agent through Browser Use Box . Watch the 15-second demo . And in the session: edit these into a launch video It inventories the sources, proposes a strategy, waits for your OK, then produces edit/final.mp4 next to your sources. All outputs live in <videos_dir>/edit/ — the skill directory stays clean. Manual install If you'd rather do it by hand: # 1. Clone and symlink into your agent's skills directory git clone https://github.com/browser-use/video-use ~ /Developer/video-use\nln -sfn ~ /Developer/video-use ~ /.claude/skills/video-use # Claude Code # ln -sfn ~/Developer/video-use ~/.codex/skills/video-use       # Codex # 2. Install deps cd ~ /Developer/video-use\nuv sync # or: pip install -e . brew install ffmpeg # required brew install yt-dlp # optional, for downloading online sources # 3. Add your ElevenLabs API key cp .env.example .env $EDITOR .env # ELEVENLABS_API_KEY=... How it works The LLM never watches the video. It reads it — through two layers that together give it everything it needs to cut with word-boundary precision. Layer 1 — Audio transcript (always loaded). One ElevenLabs Scribe call per source gives word-level timestamps, speaker diarization, and audio events ( (laughter) , (applause) , (sigh) ). All takes pack into a single ~12KB takes_packed.md — the LLM's primary reading view. ## C0103  (duration: 43.0s, 8 phrases)\n  [002.52-005.36] S0 Ninety percent of what a web agent does is completely wasted.\n  [006.08-006.74] S0 We fixed this. Layer 2 — Visual composite (on demand). timeline_view produces a filmstrip + waveform + word labels PNG for any time range. Called only at decision points — ambiguous pauses, retake comparisons, cut-point sanity checks. Naive approach: 30,000 frames × 1,500 tokens = 45M tokens of noise .\nVideo Use: 12KB text + a handful of PNGs . Same idea as browser-use giving an LLM a structured DOM instead of a screenshot — but for video. Pipeline Transcribe ──> Pack ──> LLM Reasons ──> EDL ──> Render ──> Self-Eval\n                                                              │\n                                                              └─ issue? fix + re-render (max 3) The self-eval loop runs timeline_view on the rendered output at every cut boundary — catches visual jumps, audio pops, hidden subtitles. You see the preview only after it passes. Design principles Text + on-demand visuals. No frame-dumping. The transcript is the surface. Audio is primary, visuals follow. Cuts come from speech boundaries and silence gaps. Ask → confirm → execute → self-eval → persist. Never touch the cut without strategy approval. Zero assumptions about content type. Look, ask, then edit. 12 hard rules, artistic freedom elsewhere. Production-correctness is non-negotiable. Taste isn't. See SKILL.md for the full production rules and editing craft.",
+      "stars_today": 155,
+      "language": "Python"
+    },
+    {
+      "title": "max-sixty/worktrunk",
+      "slug": "max-sixty-worktrunk",
+      "url": "https://github.com/max-sixty/worktrunk",
+      "abstract": "Worktrunk September 2026 : Worktrunk was released at the start of the year, and has quickly become the most popular git worktree manager. It's built with love (there's no slop!). Please let me know any frictions at all; I'm intensely focused on continuing to make Worktrunk excellent, and the biggest help is folks posting problems they perceive. Worktrunk is a CLI for git worktree management, designed for running AI agents in parallel. Worktrunk's three core commands make worktrees as easy as branches. Plus, Worktrunk has a bunch of quality-of-life features to simplify working with many parallel changes, including hooks to automate local workflows & copy-on-write build caches. A quick demo: 📚 Full documentation at worktrunk.dev 📚 Context: git worktrees AI agents like Claude Code and Codex can handle longer tasks without\nsupervision, such that it's possible to manage 5-10+ in parallel. Git's native\nworktree feature gives each agent its own working directory, so they don't step\non each other's changes. But the git worktree UX is clunky. Even a task as small as starting a new\nworktree requires typing the branch name three times: git worktree add -b feat ../repo.feat , then cd ../repo.feat . Worktrunk makes git worktrees as easy as branches Worktrees are addressed by branch name; paths are computed from a configurable template. Commands that take a branch also accept the path of the worktree it is checked out in. Start with the core commands Core commands: Task Worktrunk Plain git Switch worktrees wt switch feat cd ../repo.feat Create + start Claude wt switch -c -x claude feat git worktree add -b feat ../repo.feat && \\\ncd ../repo.feat && \\\nclaude Clean up wt remove cd ../repo && \\\ngit worktree remove ../repo.feat && \\\ngit branch -d feat List with status wt list git worktree list (paths only) Expand into the more advanced commands as needed Workflow automation: Hooks — run commands on create, pre-merge, post-merge, etc LLM commit messages — generate commit messages from diffs Merge workflow — squash, rebase, merge, clean up in one command Interactive picker — browse worktrees with streaming CI status and diff, log, PR and comment previews Share build caches — ten worktrees get target/ , node_modules/ , etc without building or copying them (on APFS, btrfs, and XFS) wt list --full — CI status and AI-generated summaries per branch PR checkout — wt switch pr:123 to jump straight to a PR's branch Dev server per worktree — hash_port template filter gives each worktree a unique port Aliases & per-branch variables — custom wt <name> commands and branch-scoped state for hook templates ...and lots more Multiple parallel agents, same simple commands: Install Homebrew (macOS & Linux): brew install worktrunk && wt config shell install Shell integration allows commands to change directories. Cargo: cargo install worktrunk && wt config shell install Windows & other Windows. wt defaults to Windows Terminal's command, so Winget additionally installs Worktrunk as git-wt to avoid the conflict: winget install max-sixty.worktrunk\ngit-wt config shell install Alternatively, disable Windows Terminal's alias (Settings → Apps → Advanced app settings → App execution aliases → \"Terminal\"/\"Terminal Preview\") to use wt directly. Free code signing provided by SignPath.io , certificate by SignPath Foundation — policy . Arch Linux: sudo pacman -S worktrunk && wt config shell install Conda / Pixi (community-maintained feedstock ): conda install -c conda-forge worktrunk && wt config shell install Or with Pixi : pixi global install worktrunk && wt config shell install . Quick start Create a worktree for a new feature: $ wt switch --create feature-auth ✓ Created branch feature-auth from main and worktree @ ~/repo.feature-auth This creates a new branch and worktree, then switches to it. Do your work, then check all worktrees with wt list : $ wt list Branch        Status      HEAD±     main↕    main…±    Remote⇅  Commit    Age  Message @ feature-auth  +   ↑      +27   -8   ↑1       +31                4bc72dc    2h  Add authenticatio… ^ main              ^⇡                                    ⇡1      0e631ad    1d  Initial commit ○ Showing 2 worktrees, 1 with changes, 1 ahead, hidden: Path The @ marks the current worktree. + means staged changes, ↑1 means 1 commit ahead of main, ⇡ means unpushed commits. When done, either: PR workflow — commit, push, open a PR, merge via GitHub/GitLab, then clean up: wt step commit # commit staged changes gh pr create # or glab mr create wt remove # after PR is merged Local merge — squash, rebase onto main, fast-forward merge, clean up: $ wt merge main ◎ Generating commit message and committing changes... (2 files, +53, no squashing needed) Add authentication module ✓ Committed changes @ a1b2c3d ◎ Merging 1 commit to main @ a1b2c3d (no rebase needed) * a1b2c3d Add authentication module auth.rs | 51 +++++++++++++++++++++++++++++++++++++++++++++++++++ lib.rs  |  2 ++ 2 files changed, 53 insertions(+) ✓ Merged to main (1 commit, 2 files, +53) ◎ Removing feature-auth worktree & branch in background (same commit as main, _) ○ Switched to worktree for main @ ~/repo For parallel agents, create multiple worktrees and launch an agent in each: wt switch -x claude -c feature-a -- ' Add user authentication ' wt switch -x claude -c feature-b -- ' Fix the pagination bug ' wt switch -x claude -c feature-c -- ' Write tests for the API ' The -x flag runs a command after switching; arguments after -- are passed to it. Configure post-start hooks to automate setup (install deps, start dev servers). Next steps Learn the core commands: wt switch , wt list , wt merge , wt remove Set up hooks for automated setup Explore LLM commit messages , interactive\npicker , Claude Code integration , CI\nstatus & PR links Browse tips & patterns for recipes: aliases, dev servers, databases, agent handoffs, and more Extending Worktrunk — customize workflows with hooks & aliases Watch @DevOpsToolbox's video on Worktrunk Run wt --help or wt <command> --help for quick CLI reference Contributing ⭐ Star the repo Tell a friend about Worktrunk Open an issue — feedback, feature requests, even a small friction or imperfect user message, or a worktree pain not yet solved Share: X · Reddit · LinkedIn Running the tests cargo test The shell integration tests need bash, zsh, fish, nushell, and pwsh, plus jq : cargo test --test integration --features shell-integration-tests 📚 Full documentation at worktrunk.dev 📚 Star history",
+      "stars_today": 76,
+      "language": "Rust"
+    },
+    {
+      "title": "code-yeongyu/lazycodex",
+      "slug": "code-yeongyu-lazycodex",
+      "url": "https://github.com/code-yeongyu/lazycodex",
+      "abstract": "LazyCodex The one and only agent harness for complex codebases. Project memory, planning, execution, and verified completion inside Codex. What is this? · OmO · lazycodex.ai Note [OmO] 60K Stars: the terrifying token burner has arrived in LazyCodex. Sisyphus Labs' OmO is the quality-obsessed agent harness whose public lore says it loved Anthropic models hard enough to get third-party clients blocked. Now that same OmO quality bar is available for Codex through LazyCodex. If you wanted OmO but did not want the setup ceremony, start here: npx lazycodex-ai install Context: OmO 60K Stars on X 🚀 Install One line. No global install, no npm i -g . Always use npx : npx lazycodex-ai install This is shorthand for npx --yes --package oh-my-openagent omo install --platform=codex . For a fully autonomous, no-TUI setup: npx lazycodex-ai install --no-tui --codex-autonomous Install from the Codex marketplace (experimental) The npx installer above stays the primary path. As an additive, experimental\nalternative you can install from inside Codex itself: type /plugins , open the Add Marketplace tab (\"Add a marketplace from a Git repo or local root.\"),\nand enter https://github.com/code-yeongyu/lazycodex , then install omo from\nthe sisyphuslabs marketplace. Or from the CLI: codex plugin marketplace add https://github.com/code-yeongyu/lazycodex\ncodex plugin add omo@sisyphuslabs On the next launch, approve the omo hooks in Codex's startup review — hooks\nnever run before approval. The first approved session prints LazyCodex bootstrap running in background — restart the session when it completes while a background worker finishes the setup (config blocks, agent roles, bin\nlinks, a pinned sg binary for the ast_grep MCP); restart when it is done.\nThe marketplace path never touches Codex permission settings — autonomous mode\nremains the explicit npx lazycodex-ai install --no-tui --codex-autonomous choice. Upgrade with codex plugin marketplace upgrade sisyphuslabs . The next startup\nreview shows the hooks as Modified — expected after every upgrade —\nre-approve them and the following session re-runs bootstrap on the new version.\nIf anything looks pending or degraded, npx lazycodex-ai doctor explains what\nand why. Full details: lazycodex.ai/docs . Verify it worked npx lazycodex-ai doctor doctor prints the installation health report: plugin cache, hooks, MCP\nservers, agents, and config state. Inside Codex, type $ in the composer to\nbrowse every installed skill — init-deep , ulw-loop , ulw-plan , start-work , and the rest — and hooks announce themselves with LazyCodex(<version>): ... status messages during a session. Uninstall npx lazycodex-ai uninstall Removes the installed plugin cache, bin links, agent roles, and the managed\nsections of ~/.codex/config.toml . ⚡ Commands LazyCodex installs these as OmO commands for Codex. Invoke them with the $command syntax shown by the installer. Command Type this What it does $ulw-loop $ulw-loop \"task\" [--completion-promise=TEXT] [--strategy=reset|continue] Self-referential loop that runs until Oracle-verified completion. Caps at 500 iterations in ultrawork mode, 100 in normal mode. $ulw-plan $ulw-plan \"what to build\" Prometheus strategic planner. Writes a plan to plans/<slug>.md . Never writes product code. $start-work $start-work [plan-name] [--worktree <path>] Executes a plan until every checkbox is done. Prints ORCHESTRATION COMPLETE . Full documentation lives at lazycodex.ai/docs . Use the built-in workflows LazyCodex should be judged by the features it actually installs. It is the\nCodex distribution for OmO's agent harness: project memory, planning,\nexecution, verified completion, skills, hooks, model routing, and diagnostics. 1. $init-deep creates project memory $init-deep generates hierarchical AGENTS.md context. It scores complex\ndirectories, writes local guidance near the code that needs it, and gives future\nagents landmarks before they edit. Type $init-deep in the Codex composer —\nthe $ prefix is how every installed skill is invoked. Use it when the repository is too large to explain from memory. Run it again\nwhen the shape of the codebase changes. 2. The three command pillars stay up front Use $ulw-plan when the work needs decisions before implementation. It writes a\nplan to plans/<slug>.md and does not touch product code. Use $start-work when a plan is ready. It executes the checklist with durable\nBoulder progress and stops only when the plan is complete. Use $ulw-loop when the task should keep moving until the result is verified by\nevidence instead of a hopeful status update. 3. Skills cover specialized work The command layer stays simple. The skill layer adds specialist judgment for the\nactual work: Feature Use it for $init-deep Hierarchical project memory through AGENTS.md $ulw-plan Decision-complete planning before code changes $start-work Durable plan execution with Boulder progress $ulw-loop Verified completion for open-ended tasks review-work Multi-angle post-implementation review remove-ai-slops Behavior-preserving cleanup of AI-looking code frontend-ui-ux Polished UI surfaces programming Strict TypeScript, Rust, Python, or Go discipline LSP Diagnostics, definitions, references, symbols, and renames AST-grep Structural search and rewrite across code rules Project instructions from AGENTS, rules, and instruction files comment-checker Feedback after edit-like operations 4. Sub-agent roles ride Codex's native multi-agent tools LazyCodex installs selectable agent roles into ~/.codex/agents/ : explorer , librarian , plan , momus , metis , and codex-ultrawork-reviewer . Pick one\nby passing agent_type to Codex's spawn_agent tool — the child agent runs\nwith that role's model and instructions: spawn_agent({ \"message\" : \" TASK: map the auth flow end to end. \" , \"agent_type\" : \" explorer \" }) The installer exposes agent_type on multi_agent_v2 sessions (Codex hides it\nby default). If your Codex build's spawn tool has no agent_type parameter,\ndescribe the role inside message instead — the skills are written to fall\nback to that form automatically. Start at https://lazycodex.ai . 💤 What is this? LazyCodex packages OmO (oh-my-openagent) as the Codex agent harness for complex codebases. Think LazyVim for lazy.nvim , but for Codex. OmO is the agent harness: discipline agents, parallel orchestration, multi-model routing, skills, hooks, and verified completion. LazyCodex packages that harness for Codex. \"LazyVim made Neovim usable for the rest of us. LazyCodex does the same for Codex.\" Credit: The LazyCodex name idea is inspired by LazyVim . The Ultragoal and UltraQA ideas are inspired by oh-my-codex , reimplemented from concept for this Codex setup. 🧩 What you get Feature Description 🤖 Discipline Agents Sisyphus orchestrates Hephaestus, Oracle, Librarian. A full AI dev team 🔀 Parallel Execution Multiple agents working simultaneously on subtasks 🎯 Multi-Model Routing Automatic model selection per task category 🛠️ Skills System Extensible skill library for specialized tasks 📋 Hooks & Lifecycle Pre/post hooks for every agent action 🔧 Zero Config Sensible defaults, override when you want 🧠 Why different GPT models appear Do not be surprised if an OmO/LazyCodex run shows models like gpt-5.2 with xhigh , gpt-5.4-mini , gpt-5.3-codex , or newer equivalents like gpt-5.5 with xhigh . That is intentional. OmO does not blindly spend your best model on every subtask. Its source\ndefines task categories and fallback chains so the agent can pick the most\nappropriate model for the job: quick routes to gpt-5.4-mini for small\nedits, ultrabrain uses a high-reasoning GPT model for hard logic, and\nagentic coding paths can use Codex-tuned GPT models when available. See openai-categories.ts and model-requirements.ts . The point is quota discipline: use the strongest model when the task needs\ndeep reasoning, use a cheaper/faster model when that is enough, and keep\nparallel agent work efficient instead of burning premium quota on routine\nsteps.",
+      "stars_today": 63,
+      "language": "TypeScript"
+    }
+  ],
+  "papers": {
+    "hf": [
+      {
+        "title": "RRSI: Regularized Recursive Self-Improvement of Agent Harnesses",
+        "slug": "rrsi-regularized-recursive-self-improvement-of-agent",
+        "url": "https://huggingface.co/papers/2609.24972",
+        "abstract": "An LLM agent's capability is largely magnified by its harness, namely the prompts, control flow, tooling, memory, and context management surrounding the frozen backbone model. Recent methods increasingly automate this process by iteratively proposing and selecting component-wise edits of an agent harness, practically establishing a form of recursive self-improvement (RSI) at the agent-system level. However, such recursive evolution may overfit by memorizing the training tasks, showing large in-distribution gains that shrink or even vanish on out-of-distribution benchmarks. We introduce Regularized Recursive Self-Improvement of Agent Harnesses (RRSI), which incorporates the principles of regularizations into harness self-improvement by constraining the evolution candidate proposal and selection. The proposer operates with a temporally annealed budget, limiting how many edits a candidate can bundle, and it encourages unexplored trajectories based on evolution history. The selector is equipped with a critic and a pruner: the critic screens benchmark-specific proposals, while the pruner, removes changes that are too small, too expensive, or no longer useful. Together these constraints favor reusable agent mechanisms over benchmark-specific ones or even noises. Across eight benchmarks spanning coding, agentic workspace and engineering design tasks, RRSI gains up to 14.1 points on the split it evolves against and up to 4.7 points on the five out-of-distribution benchmarks, while producing a harness that runs on 30% fewer policy tokens than the unregularized evolution. Code is available at https://github.com/google-research/rrsi and project page is https://regularized-rsi.com/.",
+        "upvotes": 151,
+        "arxiv_id": "2609.24972",
+        "authors": []
+      },
+      {
+        "title": "WorldCrafter: Consistent Video World Model with Implicit 3D-aware Memory",
+        "slug": "worldcrafter-consistent-video-world-model-with-implicit-3d",
+        "url": "https://huggingface.co/papers/2609.24984",
+        "abstract": "Video world models enable interactive exploration of dynamic environments, yet struggle to respect prior observations over long horizons and across viewpoints. We present WorldCrafter, a video world model that learns a camera-queryable implicit 3D-aware memory for this purpose. The key insight is to let the requested viewpoint shape how multi-view evidence is compressed into the video generator's limited token budget. Trained jointly with the video generator, a memory encoder and pose-conditioned readout module integrate historical observations into a fixed set of target view-specific tokens before denoising, without explicit depth-based correspondences. By combining this memory with recent temporal context and few-step distillation, WorldCrafter enables streaming scene exploration from a single input image or text prompt. Experiments across static and dynamic scenes show substantial gains in long-horizon consistency and camera-control accuracy while preserving visual quality during minute-scale exploration.",
+        "upvotes": 112,
+        "arxiv_id": "2609.24984",
+        "authors": []
+      },
+      {
+        "title": "GameHorizon Suite: Multi-Horizon Data and Evaluation in Gameplay",
+        "slug": "gamehorizon-suite-multi-horizon-data-and-evaluation-in",
+        "url": "https://huggingface.co/papers/2609.25001",
+        "abstract": "Modern video games provide a measurable testbed for AI models, combining abilities of visual understanding, instruction decomposition, goal planning, and precise action control over multiple temporal horizons. Existing datasets and benchmarks, however, either cover a narrow range of games, lack language instructions, or rely on high-variance online rollouts. To address these challenges, we introduce GameHorizon, a unified data and evaluation suite that measures gameplay capabilities at different horizons for diverse model families. GameHorizon Suite consists of three components. First, GameHorizon-Annotator is a scalable and automated annotation pipeline for multi-horizon instructions. Second, utilizing the pipeline, we construct GameHorizon-Data, the first large-scale AAA gameplay dataset with temporally aligned videos, player actions, and multi-horizon instructions. It comprises 5,000 hours of recordings from 21 games, collected by 100 human expert players. Third, we build GameHorizon-Bench with reproducible offline and stepwise online testing. The offline track enables reproducible evaluation using thousands of standardized questions organized into three primary tasks and a series of diagnostic variants, while the online track tests whether offline scores reflect actual gameplay capabilities and localizes failures to specific steps within long-horizon gameplay. Based on our GameHorizon Suite, we evaluate 47 models through more than one million model invocations, revealing a meaningful hierarchy of task difficulty and pronounced differences in model capabilities. Our work can provide a standardized yardstick for evaluating gameplay capabilities across horizons and model families. We will release our dataset, annotator, and benchmark to facilitate future research.",
+        "upvotes": 110,
+        "arxiv_id": "2609.25001",
+        "authors": []
+      },
+      {
+        "title": "Transferring the Intelligence of VLMs to Robotic Control",
+        "slug": "transferring-the-intelligence-of-vlms-to-robotic-control",
+        "url": "https://huggingface.co/papers/2609.22966",
+        "abstract": "Humans can seamlessly adapt to both physical and digital worlds, suggesting that while a digital-to-real gap exists in embodiment, environment and task, human intelligence itself may transfer across this gap. This naturally raises a fundamental question: can the intelligence of vision-language models (VLMs) similarly generalize from the digital world to the physical world for robotic control? We investigate this question through RoboDawn, a human-intuitive interface that exposes robotic control to an agentic VLM through a compact set of discrete translation, rotation, and gripper commands. Using this interface, the VLM controls a robot in a closed loop: it observes the current visual state, reasons about the next action, executes it, and adapts subsequent decisions to the resulting state. Furthermore, we introduce an in-context learning (ICL) scheme that uses a few demonstrations to ground the VLM in both interface usage and task-solving strategies. Experiments on RoboTwin 2.0 C2R and RoboDojo demonstrate that RoboDawn achieves strong performance without task-specific robot training. In the zero-shot setting, RoboDawn outperforms several strong policies trained on benchmarkspecific robot data, while a single in-context demonstration further yields substantial performance gains and establishes state-of-the-art (SOTA) results. On RoboTwin 2.0 C2R, the success rate increases from 53.2% zero-shot to 73.6% one-shot, exceeding the solid baseline π0.5 (46.0%). Similar gains are observed on RoboDojo, where success rate improves from 35.67% zero-shot to 47.17% one-shot. The same framework also transfers to real-world robots, performing block-in-basket and block stacking on Franka.",
+        "upvotes": 101,
+        "arxiv_id": "2609.22966",
+        "authors": []
+      },
+      {
+        "title": "OmniEdu: Open Foundation Models for Learning and Teaching",
+        "slug": "omniedu-open-foundation-models-for-learning-and-teaching",
+        "url": "https://huggingface.co/papers/2609.23088",
+        "abstract": "Educational foundation models must solve problems, understand curriculum structure, diagnose learner difficulties, and provide appropriate instructional support. Existing educational language models often focus on either problem solving or tutoring, with training mixtures organized by source or task rather than capability. We present OmniEdu, an open family of foundation models for K-12 learning and teaching. Its instruction-tuning corpus combines over 100 educational resources and general instruction sources, organized around four capabilities: subject competence, curriculum grounding, diagnostic reasoning, and pedagogical action and scaffolding. Our pipeline integrates deterministic cleaning, semantic auditing and rewriting, task-specific quality scoring, token-budgeted diversity selection, and pedagogical instruction assignment. It yields 69,999 examples and 15.96M supervised response tokens, including 60,951 education-specific examples. We fine-tune 4B, 9B, and 27B models and evaluate curriculum grounding, K-12 problem solving, and pedagogical tutoring, alongside general capability. Education-oriented tuning consistently improves all three educational benchmark groups across model scales. OmniEdu-27B achieves 63.12% EM and 76.69% F1 on K12-Bench, 85.89% on MathFish, 86.95% on EDUMATH, and 78.74% in MathTutorBench's Scaffold setting. It also achieves the highest Teaching average on LongTutor among the evaluated models, at 3.02. These results demonstrate the value of curated, capability-balanced supervision for adapting general language models to educational tasks spanning problem solving, curriculum understanding, and instructional support.",
+        "upvotes": 66,
+        "arxiv_id": "2609.23088",
+        "authors": []
+      },
+      {
+        "title": "Document Retrieval-Aware Chunking (D-RAC): Universal Retrieval-Aware Ingestion of Enterprise Documents via PDF Normalization and Multimodal Markdown Conversion",
+        "slug": "document-retrieval-aware-chunking-d-rac-universal-retrieval",
+        "url": "https://huggingface.co/papers/2609.24220",
+        "abstract": "Retrieval-Augmented Generation (RAG) systems over enterprise knowledge bases must ingest heterogeneous document formats -- PDFs, Word documents, presentations, and scans -- whose content is locked inside complex visual layouts, multi-column pages, and dense tables. Rule-based extraction and OCR destroy reading order, flatten tables, and lose heading hierarchy, while fully agentic chunking over extracted text incurs high token costs and hallucination risk. We present Document Retrieval-Aware Chunking (D-RAC), an extension of our Web Retrieval-Aware Chunking (W-RAC) framework to arbitrary document formats. D-RAC first normalizes any input document into PDF, exploiting the fact that virtually every format has a faithful, deterministic PDF rendering. A single multimodal LLM pass then converts rendered pages into retrieval-optimized Markdown -- rewriting tables as self-contained prose statements and preserving heading hierarchy -- after which chunking proceeds exactly as in W-RAC: deterministic parsing into ID-addressable units followed by lightweight LLM-based chunk planning over identifiers rather than text. Source text is never regenerated during chunking, preserving W-RAC's cost, determinism, and observability benefits while unlocking every renderable format as a first-class input. On the 236-document, 795-page PDF subset of the RAG-Multi-Corpus benchmark spanning five enterprise domains, D-RAC converts and chunks the entire corpus in 72 minutes with zero errors, producing 1,748 retrieval-ready chunks. Compared to agentic chunking with frontier LLMs, D-RAC reduces chunking-stage output tokens by 95.7%, cutting chunking cost by 77.8% (GPT-4.1 pricing) to 85.6% (Gemini 2.5 Pro pricing) and chunking time by 75%. D-RAC scales linearly to documents of 500+ pages.",
+        "upvotes": 48,
+        "arxiv_id": "2609.24220",
+        "authors": []
+      },
+      {
+        "title": "VideoGen-Agent: Reinforcing Video Generation Agents",
+        "slug": "videogen-agent-reinforcing-video-generation-agents",
+        "url": "https://huggingface.co/papers/2609.24997",
+        "abstract": "Recent advances in video generative models have enabled high-fidelity, temporally coherent video generation. However, these models often struggle to satisfy prompts requiring specialized knowledge, specific identities, physical consistency, or ordered events. In this paper, we present VideoGen-Agent, a multimodal agent trained through multitask agentic reinforcement learning to use external tools for video generation. The agent coordinates augmentation, generation, and verification tools through multi-turn interactions, using the prompt and intermediate observations to guide its decisions. We train a shared policy on a category-balanced dataset spanning six tasks. Supervised fine-tuning on teacher-generated trajectories establishes tool-use behavior, which is then refined through reinforcement learning. A category-aware hybrid reward evaluates tool-call validity, task-appropriate tool use, and generated video quality. We further introduce VABench, a held-out benchmark of 600 prompts covering procedural knowledge, single- and multi-entity identity preservation, physical consistency, scene composition, and multi-shot temporal structure. On VABench, VideoGen-Agent improves over its base text-to-video generator by 19.1 points, from 56.5 to 75.6. Upgrading the generation tools further raises the score to 86.1 without additional agent training. Human raters prefer the upgraded configuration over the strongest standalone baseline in 84.3% of comparisons. These results support learning tool use across video-generation tasks and show that the trained agent can benefit from subsequent advances in generation tools.",
+        "upvotes": 34,
+        "arxiv_id": "2609.24997",
+        "authors": []
+      },
+      {
+        "title": "onPanda: Efficient Annotation of On-Policy Alignment Data for LLMs and Agents via Token-Level Correction",
+        "slug": "onpanda-efficient-annotation-of-on-policy-alignment-data-for",
+        "url": "https://huggingface.co/papers/2609.24983",
+        "abstract": "We present onPanda, an interactive tool for efficiently annotating LLM alignment data and agent trajectories. onPanda adopts token-level correction as its core interaction: while reading a model response, the annotator locates the first inappropriate token and either picks a substitute from the model's candidate tokens or types the correct text via free-form editing. The system then truncates everything after that position and continues generation from the corrected prefix, repeating this locate-correct-continue loop until a satisfactory response is obtained. This mechanism lets annotators precisely steer model outputs at low cost: a small controlled study suggests that onPanda reduces median annotation time by 52% over manual post-editing. Since the vast majority of tokens in the final response are generated by the model itself, the resulting data largely preserves the model's sampling distribution and is well suited for constructing on-policy SFT and preference data. Furthermore, the token-level corrections recorded during annotation provide fine-grained supervision with precise positions and naturally paired positive--negative samples. onPanda also connects to external tools and harnesses, enabling interactive trajectory annotation in realistic environments. In addition, we release Panda-CVL, a dataset annotated with onPanda, together with a benchmark for token-level correction.",
+        "upvotes": 26,
+        "arxiv_id": "2609.24983",
+        "authors": []
+      },
+      {
+        "title": "Grounded Action Model: 3D Grounding as a Foundation for Robotics",
+        "slug": "grounded-action-model-3d-grounding-as-a-foundation-for",
+        "url": "https://huggingface.co/papers/2609.23863",
+        "abstract": "Manipulation policies must know which objects matter and where they are, yet the pretrained backbones that current robot foundation models build on, from language in vision-language-action models (VLAs) to video generation in world-action models (WAMs), do not directly require this metric grounding, leaving it to be learned implicitly from robot demonstrations. We propose Grounded Action Models (GAMs), a new paradigm of robot foundation models built with 3D grounding. GAM can be conditioned using language, points, or box prompts, which are first transformed into a shared object-centric representation of the selected objects. This representation captures target-focused visual features and metric object geometry, which is mixed with robot state history through a multi-stream transformer to predict action chunks. Although GAMs can be run autonomously, they can also serve as a low-level controller that a high-level planner controls using its various input modalities, allowing for long-horizon and memory-dependent manipulation. On RoboTwin 2.0, GAM achieves an average success rate of 55.3% across 50 tasks (vs. 52.0% for Spatial Forcing), including 47.6% under scene randomization (vs. 30.4% for Abot-M0), with its action policy trained only on clean-scene demonstrations. On LIBERO-PRO, it achieves a state-of-the-art average success rate of 61% (vs. 53% for π_{0.5}) across 16 perturbation settings, with the largest gains when targets are relocated or newly designated. On two real robots, GAM retains 17/20 successes under visual shift on a bimanual YAM versus 4/20 for π_{0.5}, while its composition with a Molmo2 planner on a Franka achieves 64.7% ID and 49.8% OOD step completion on long-horizon and memory-dependent tasks.",
+        "upvotes": 19,
+        "arxiv_id": "2609.23863",
+        "authors": []
+      },
+      {
+        "title": "One to More, More to One: Category-Aware Iterative Expert Training for Software Engineering Agents",
+        "slug": "one-to-more-more-to-one-category-aware-iterative-expert",
+        "url": "https://huggingface.co/papers/2609.23377",
+        "abstract": "Repository-level software engineering (SWE) comprises heterogeneous task categories, whose progress under pooled agentic reinforcement learning can be uneven: gains in some categories coincide with regressions in others, while aggregate resolution obscures these changes. Motivated by this category see-saw, we develop a category-aware expert-training and policy-integration framework. Executable task construction and SWE Labeler, an evidence-grounded multi-axis labeling system, organize the training pools. Initial category-specific RL improves average training success while leaving uneven instance-level progress, motivating explicit consolidation of successful behavior and policy-adaptive task selection. Same-origin category experts alternate long-horizon Agentic-miniRL with Refresh-Repair-Expand (RRE): the updated policy refreshes instance mastery, reuses its own verified successful trajectories for Repair SFT, and reselects tasks for further RL. Label-routed multi-teacher on-policy distillation (MOPD) consolidates the experts into one deployable student, with ReLU-gated reward extrapolation keeping only each teacher's improving direction over the reference. Expert training and policy integration require no external model to provide solution trajectories or action targets. We evaluate Pooled RL and Balanced RL, expert development, and single-model integration through aggregate and per-category resolution, the minimum category lift over each joint-RL baseline, and expert-gain recovery. The final MOPD policy achieves mean resolution of 58.04% on Pro-618 and 59.00% on SWE-bench Multilingual, improving over the base model by 5.39 and 2.78 percentage points, respectively.",
+        "upvotes": 16,
+        "arxiv_id": "2609.23377",
+        "authors": []
+      }
+    ],
+    "others": [
+      {
+        "title": "AI information literacy in knowledge work: a pathway from tool awareness to responsible information practice",
+        "slug": "ai-information-literacy-in-knowledge-work-a-pathway-from",
+        "url": "https://www.semanticscholar.org/paper/f9a8b5c1ec8b2c4deac62f294604ff7f96c0e8f2",
+        "abstract": "As generative artificial intelligence (GenAI) increasingly mediates information-intensive activities, greater attention is needed to the factors associated with critical, evaluative, and ethical AI information practices. This study examines AI information literacy in knowledge work, understood as the creation, processing, retrieval, evaluation, and application of information across varied occupational and educational contexts.\n \n \n \n The study draws on survey data from 758 adults in Israel who completed screening concerning their current work or study status. Path analysis examined how perceived AI familiarity was associated with four AI information literacy domains: information creation and processing, assessment and critique, seeking and retrieval, and ethics. The model tested whether these associations operated through routine AI use, breadth of AI tool use, and perceived AI understanding.\n \n \n \n Perceived AI familiarity was positively associated with both routine AI use and breadth of tool use. However, in the final model, only breadth of tool use was associated with stronger perceived AI understanding, whereas routine AI use was not. Perceived AI understanding was positively associated with all four AI information literacy domains. Significant indirect effects linked perceived AI familiarity to AI information literacy through breadth of tool use and perceived AI understanding.\n \n \n \n The study distinguishes between routine GenAI use and breadth of tool use, two forms of engagement that are commonly treated as equivalent. While routine use was not associated with perceived AI understanding in the final model, breadth of tool use was. Perceived AI understanding, in turn, was associated with all four AI information literacy domains. These findings qualify the assumption that repeated use alone corresponds to greater literacy and identify breadth of engagement and perceived understanding as distinct correlates of responsible GenAI-mediated information practice.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-22",
+        "authors": [
+          "I. Levkovich",
+          "Lilach Alon"
+        ]
+      },
+      {
+        "title": "Tongue-pulse synergistic prescription recommendation via topology reconstruction and multi-source alignment in heterogeneous graphs",
+        "slug": "tongue-pulse-synergistic-prescription-recommendation-via",
+        "url": "https://www.semanticscholar.org/paper/f23e76f5df2ef3351a17aa1e3011e11128e01918",
+        "abstract": "Tongue-pulse synergistic prescription recommendation via topology reconstruction and multi-source alignment in heterogeneous graphs. Network Modeling Analysis in Health Informatics and Bioinformatics",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-22",
+        "authors": [
+          "Ke-Shuang Li",
+          "Jin Liu",
+          "Zhe-Wei Ye",
+          "Yu-Yu Duan",
+          "Qi-Feng Hou",
+          "Tong-Tong Huo"
+        ]
+      },
+      {
+        "title": "Structured Prompt and Agent AI Framework for Reliable LLM-Based RC Beam Design",
+        "slug": "structured-prompt-and-agent-ai-framework-for-reliable-llm",
+        "url": "https://www.semanticscholar.org/paper/e3d819807bd6cf13aaa14c6d677dfe45eb323375",
+        "abstract": "Structured Prompt and Agent AI Framework for Reliable LLM-Based RC Beam Design. International Journal of Concrete Structures and Materials",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-22",
+        "authors": [
+          "Seokjae Heo",
+          "Wonjun Choi",
+          "Sanghyun Lee"
+        ]
+      },
+      {
+        "title": "Explainable optimized deep learning and generative AI based framework for finger millet disease detection in smart agriculture",
+        "slug": "explainable-optimized-deep-learning-and-generative-ai-based",
+        "url": "https://www.semanticscholar.org/paper/dac35046281dd088ad23b357c312fc0208dd99d2",
+        "abstract": "Explainable optimized deep learning and generative AI based framework for finger millet disease detection in smart agriculture. Discover Artificial Intelligence",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-22",
+        "authors": [
+          "Sunil Kumar Mohapatra",
+          "A. S. K. Patro",
+          "Lulen Kumar Sahu",
+          "Chinmayee Dora",
+          "Sujata Chakravarty",
+          "K. Sahoo",
+          "Byomakesh Mahapatra"
+        ]
+      },
+      {
+        "title": "BootDiffLights: Decentralized traffic signal control via diffusion-based reward generation",
+        "slug": "bootdifflights-decentralized-traffic-signal-control-via",
+        "url": "https://www.semanticscholar.org/paper/b76948bec899c64b935a080c4886894df7979574",
+        "abstract": "BootDiffLights: Decentralized traffic signal control via diffusion-based reward generation. Applied intelligence (Boston)",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-22",
+        "authors": [
+          "Bin-Yu Hao",
+          "Jia-Jun He",
+          "Jiao-Ling Zheng",
+          "Wen-An Dong",
+          "Qing-Yong Yang",
+          "Xiao-Jing Ma"
+        ]
+      },
+      {
+        "title": "RadCoT: a Radiological Chain-of-Thought framework for enhanced error detection in radiology reports",
+        "slug": "radcot-a-radiological-chain-of-thought-framework-for",
+        "url": "https://www.semanticscholar.org/paper/a7371283dae8ce8bd8f4d952f09dc2aa2d42d237",
+        "abstract": "RadCoT: a Radiological Chain-of-Thought framework for enhanced error detection in radiology reports. European Radiology Experimental",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-22",
+        "authors": [
+          "Jia Li",
+          "Zi-Chun Zhou",
+          "Yan-Tao Niu",
+          "Peng-Fei Zhao",
+          "Yan Xu",
+          "Xing-Hao Wang",
+          "Li-Hua Wang",
+          "Li-Ning Dong",
+          "Wei Wei",
+          "Xuan Wei",
+          "Zhen-Chang Wang",
+          "H. Lv"
+        ]
+      },
+      {
+        "title": "Artificial intelligence in pediatric diabetes: clinical benefits, developmental risks, and ethical challenges",
+        "slug": "artificial-intelligence-in-pediatric-diabetes-clinical",
+        "url": "https://www.semanticscholar.org/paper/a09763c2a70bc8b1a25815bc91739e22311f2d8f",
+        "abstract": "Artificial intelligence in pediatric diabetes: clinical benefits, developmental risks, and ethical challenges. European Journal of Pediatrics",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-22",
+        "authors": [
+          "Hadel Khalil",
+          "Jane L. Lynch",
+          "A. Sowan",
+          "Angel Ortega",
+          "Hussein Zaitoon"
+        ]
+      },
+      {
+        "title": "A comprehensive survey of Edge-Fog-Cloud-IoT architectures: Intelligence, Security, and Sustainability",
+        "slug": "a-comprehensive-survey-of-edge-fog-cloud-iot-architectures",
+        "url": "https://www.semanticscholar.org/paper/9bc3f845e04e686e4bf31fcd0386d9a07597c20c",
+        "abstract": "A comprehensive survey of Edge-Fog-Cloud-IoT architectures: Intelligence, Security, and Sustainability. Journal of King Saud University: Computer and Information Sciences",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-22",
+        "authors": [
+          "Patrick Effraim",
+          "Micheal Mensah",
+          "Bismark Budu"
+        ]
+      },
+      {
+        "title": "Fastvsearch: vision-language retrieval with object-level indexing for low-latency large-scale video search",
+        "slug": "fastvsearch-vision-language-retrieval-with-object-level",
+        "url": "https://www.semanticscholar.org/paper/9b0712082cbe75e7d63f35fb5b5df6a0514e41b9",
+        "abstract": "Fastvsearch: vision-language retrieval with object-level indexing for low-latency large-scale video search. Machine Vision and Applications",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-22",
+        "authors": [
+          "Long-Jiang Li",
+          "Tian-Le Shao",
+          "Daniel Xiong",
+          "Jian-Jun Yang",
+          "Rong Jia",
+          "Qin Yu",
+          "S. Xiong"
+        ]
+      },
+      {
+        "title": "ProtoSurv: prototype-guided adaptation of computed tomography foundation model for lung-cancer prognosis prediction",
+        "slug": "protosurv-prototype-guided-adaptation-of-computed-tomography",
+        "url": "https://www.semanticscholar.org/paper/8fdb9c733b3c9a368d03b37298bb46a20de9b3df",
+        "abstract": "ProtoSurv: prototype-guided adaptation of computed tomography foundation model for lung-cancer prognosis prediction. Visual Computing for Industry, Biomedicine, and Art",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-22",
+        "authors": [
+          "Cheng-Cai Liu",
+          "Shi-Tian Li",
+          "Hao-Lin Sang",
+          "Xing-Yu Huang",
+          "Cheng-Hao Wang",
+          "Yi-Fei Shu",
+          "Yi Wu",
+          "Jie Tian",
+          "Hui-Mao Zhang",
+          "Lei Zhang",
+          "Shuo Wang"
+        ]
+      },
+      {
+        "title": "Uncoded Clinical Features from Multilingual Electronic Health Records in Catalonia: Development and Validation Study",
+        "slug": "uncoded-clinical-features-from-multilingual-electronic",
+        "url": "https://www.semanticscholar.org/paper/80b59c2bc72499f78b75483cb4b88d0759e5ba97",
+        "abstract": "Uncoded Clinical Features from Multilingual Electronic Health Records in Catalonia: Development and Validation Study. medRxiv",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-22",
+        "authors": [
+          "D. Ouchi",
+          "S. Riudavets",
+          "Á. Franquet",
+          "S. Fernández-García",
+          "C. Llor",
+          "A. Moragas Moreno",
+          "M. Giner-Soriano",
+          "F. Torres",
+          "R. Morros"
+        ]
+      },
+      {
+        "title": "Large language models for teaching and learning in higher education: opportunities, challenges, and future directions",
+        "slug": "large-language-models-for-teaching-and-learning-in-higher",
+        "url": "https://www.semanticscholar.org/paper/7c4835ccf285952882894756298dd8ef16b2dae6",
+        "abstract": "Large language models for teaching and learning in higher education: opportunities, challenges, and future directions. International Journal of Educational Technology in Higher Education",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-22",
+        "authors": [
+          "Zheng-Dao Li",
+          "Jordi Conesa",
+          "Moncef Gabbouj",
+          "Xiao-Fen Chen"
+        ]
+      },
+      {
+        "title": "Cortex: A Retrieval-Augmented Framework for Career-Aligned Learning Paths",
+        "slug": "cortex-a-retrieval-augmented-framework-for-career-aligned",
+        "url": "https://www.semanticscholar.org/paper/6a7bbb77aa25b988836879a6fd3ae3c8457be63b",
+        "abstract": "Cortex: A Retrieval-Augmented Framework for Career-Aligned Learning Paths. Machine-mediated learning",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-22",
+        "authors": [
+          "Vatsala Ramachandran",
+          "Manasvi Vedanta",
+          "Sonia Khetarpaul"
+        ]
+      },
+      {
+        "title": "Preparing AI chatbots to respond to patient distress and suicidality in high-risk healthcare settings",
+        "slug": "preparing-ai-chatbots-to-respond-to-patient-distress-and",
+        "url": "https://www.semanticscholar.org/paper/6a055eeba748710cd67bbe081dc3e09edd8258f7",
+        "abstract": "Preparing AI chatbots to respond to patient distress and suicidality in high-risk healthcare settings. npj Digital Medicine",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-22",
+        "authors": [
+          "Joanna M. Streck",
+          "Dallas T. Swendeman",
+          "W. Comulada",
+          "Xian Y. Ho",
+          "Julia Cannistraro",
+          "G. Pachas",
+          "D. Alves-Back",
+          "W. Li",
+          "Jonathan L. Jackson",
+          "Delta-Marie Lewis",
+          "Namrata Tomar",
+          "David Warren",
+          "D. Levy",
+          "Lillian Gelberg"
+        ]
+      },
+      {
+        "title": "Artificial intelligence driven digital twin for dynamic reconfigurable intelligent surface control in terahertz internet of things mesh networks",
+        "slug": "artificial-intelligence-driven-digital-twin-for-dynamic",
+        "url": "https://www.semanticscholar.org/paper/677eb1f02b571005467c8e29b677158b4a6de831",
+        "abstract": "Artificial intelligence driven digital twin for dynamic reconfigurable intelligent surface control in terahertz internet of things mesh networks. Discover Artificial Intelligence",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-22",
+        "authors": [
+          "Dhanish Ladwani",
+          "Siddhi Jaiswal",
+          "Gurupreet Dhande",
+          "Arnav Kalambe",
+          "Akhil Gupta"
+        ]
+      },
+      {
+        "title": "A systematic review and Zero Trust governance framework for agentic UAV robotics in public safety",
+        "slug": "a-systematic-review-and-zero-trust-governance-framework-for",
+        "url": "https://www.semanticscholar.org/paper/4a00ce7e329baa4afd0f14a66a0ee9dcb77347b1",
+        "abstract": "A systematic review and Zero Trust governance framework for agentic UAV robotics in public safety. Discover Robotics",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-22",
+        "authors": [
+          "Swarnamouli Majumdar",
+          "Anjali Awasthi"
+        ]
+      },
+      {
+        "title": "Scalable Causal-Interpretable Machine Learning for Cancer Prescreening Using Electronic Health Records",
+        "slug": "scalable-causal-interpretable-machine-learning-for-cancer",
+        "url": "https://www.semanticscholar.org/paper/3a103d89c123414993f6d80ec7ad3a7837ba61dc",
+        "abstract": "Scalable Causal-Interpretable Machine Learning for Cancer Prescreening Using Electronic Health Records. medRxiv",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-22",
+        "authors": [
+          "S. Zhang",
+          "F. Xue"
+        ]
+      },
+      {
+        "title": "Security smell detection in Dockerfiles",
+        "slug": "security-smell-detection-in-dockerfiles",
+        "url": "https://www.semanticscholar.org/paper/270613a02c5d792744a286ac258387a52aeadf9d",
+        "abstract": "Security smell detection in Dockerfiles. International Conference on Automated Software Engineering",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-22",
+        "authors": [
+          "Wen-Bo Zhang",
+          "Inah Omoronyia"
+        ]
+      },
+      {
+        "title": "Computational Approaches to Penicillin Allergy De-labelling: A Clinical Review",
+        "slug": "computational-approaches-to-penicillin-allergy-de-labelling",
+        "url": "https://www.semanticscholar.org/paper/2454bd5562129bb1ee5b5eff568116246c3c251b",
+        "abstract": "Computational Approaches to Penicillin Allergy De-labelling: A Clinical Review. Clinical reviews in allergy and immunology",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-22",
+        "authors": [
+          "S. Elkhalifa",
+          "Jack Devey",
+          "Abdulrahaman Al-Asali",
+          "Haggar Elbashir",
+          "M. B. Ćalasan",
+          "R. Pleijhuis",
+          "Ingrid Terreehorst",
+          "F. Salvo",
+          "Irfan Shafiq",
+          "Said Isse",
+          "M. Abuzakouk",
+          "Mohamed Medhat Gaber",
+          "Rehan Bhana"
+        ]
+      },
+      {
+        "title": "Iterative Demand Response Algorithm for Human-Computer Cooperation Integrating Knowledge of Large Language Model",
+        "slug": "iterative-demand-response-algorithm-for-human-computer",
+        "url": "https://www.semanticscholar.org/paper/209c739e5922d1f95c40b6ddf61245357fbd1f1d",
+        "abstract": "Iterative Demand Response Algorithm for Human-Computer Cooperation Integrating Knowledge of Large Language Model. Applied intelligence (Boston)",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-22",
+        "authors": [
+          "Jun Yin"
+        ]
+      },
+      {
+        "title": "From transformer to large language models for automated generation of hospital discharge summaries: a systematic review",
+        "slug": "from-transformer-to-large-language-models-for-automated",
+        "url": "https://www.semanticscholar.org/paper/12cd94930911be12507bf2f44f48195d1c3e7ae7",
+        "abstract": "From transformer to large language models for automated generation of hospital discharge summaries: a systematic review. Network Modeling Analysis in Health Informatics and Bioinformatics",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-22",
+        "authors": [
+          "Bhuvaneswari Sivagnanam",
+          "Saranya Rajiakodi",
+          "R. Abdulkader",
+          "Bharathi Raja Chakravarthi"
+        ]
+      },
+      {
+        "title": "Beyond the gold standard: evaluating AI for subject indexing of Swedish LGBTQ + fiction",
+        "slug": "beyond-the-gold-standard-evaluating-ai-for-subject-indexing",
+        "url": "https://www.semanticscholar.org/paper/014cf94cb457da71794aba0943f2e525519a01bc",
+        "abstract": "This study evaluates the potential of large language models (LLMs) for subject indexing of Swedish LGBTQ + fiction using the dedicated QLIT thesaurus, based on Homosaurus. It examines both the quantitative performance and qualitative characteristics of AI-generated subject terms, with particular attention to thesaurus compliance and indexing policy.\n \n \n \n Four general-purpose AI tools (ChatGPT, Claude, Gemini, and DeepSeek) were evaluated on a collection of 14 historical LGBTQ + literary works represented by 16 texts. Subject terms were generated from both metadata records and full texts and compared with existing indexing in the Queerlit database of Swedish LGBTQ + fiction. The metadata subset produced 518 AI-generated subject terms in total, while the full-text subset produced 590 terms. The analysis was based on a coding scheme, which was refined through several rounds of analysis until complete agreement was achieved.\n \n \n \n Performance was substantially higher for metadata than for full texts, with average F1 scores of 44% and 12%, respectively. Across both datasets, fully incorrect terms constituted the largest category of generated outputs (37.5% for metadata and 56.1% for full texts), while fully correct terms accounted for only 30.0 and 8.3%, respectively. Qualitative analysis revealed recurring problems, including the assignment of broader concepts rather than, or in addition to, more specific concepts, failure to follow thesaurus definitions and indexing policies, confusion between general themes and LGBTQ + -specific themes, and the application of contemporary LGBTQ + concepts to historical texts. Poetry proved particularly challenging because themes were often implicit and open to interpretation. Although a small proportion of generated terms were judged potentially useful despite not appearing in existing indexing, no AI-generated terms were classified as fully correct additions beyond the current Queerlit metadata.\n \n \n \n The study focuses on a relatively specific collection of Swedish historical LGBTQ + fiction and a specialized controlled vocabulary. The findings nevertheless demonstrate the importance of complementing quantitative measures with qualitative evaluation and suggest that assessment of automated subject indexing should consider thesaurus definitions, indexing policies, and interpretive aspects of literary aboutness in addition to agreement with existing metadata.\n \n \n \n The results indicate that current general-purpose LLMs are unlikely to be suitable as semi-automated indexing tools for historical LGBTQ + fiction without substantial human oversight. While AI systems may assist in identifying candidate concepts and additional access points, effective indexing continues to depend on expert knowledge of controlled vocabularies and indexing policy.\n \n \n \n This study contributes to research on AI-assisted subject indexing by combining quantitative and qualitative evaluation of LLM-generated subject terms in a specialized LGBTQ + knowledge organization context. It demonstrates the limitations of gold-standard-based evaluation for fiction indexing and highlights the role of human expertise in applying controlled vocabularies to historically and culturally complex literary materials.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-09-22",
+        "authors": [
+          "K. Golub",
+          "Olof Falk",
+          "Siska Humlesjö"
+        ]
+      },
+      {
+        "title": "Critical-State RL: Diagnosing Trainable States for Multi-Turn Tool Use",
+        "slug": "critical-state-rl-diagnosing-trainable-states-for-multi-turn",
+        "url": "http://arxiv.org/abs/2609.24985v1",
+        "abstract": "Multi-turn tool-use failures can hinge on a single model call, yet reward variation alone does not reveal which call would benefit from training. When rewards depend on later interactions, their variation can reflect downstream randomness rather than differences between the current actions. We introduce Critical-State RL to identify trainable states in multi-turn interactions. Given task-defined candidate calls and local rewards, the method assesses whether each reward captures the action's effect on task success and whether improvement over a reference policy is possible. It then uses nested sampling to separate action-dependent reward variation from continuation noise and optimizes the policy at the selected states using contextual-bandit training. Experiments on the Berkeley Function Calling Leaderboard (BFCL) v4 compare training at diagnostic-selected states with training at alternative states. For missing-function tasks, the diagnostic selects the response after the tool becomes available; for missing-argument tasks, it selects the response before the missing argument is supplied. Training the selected responses improves performance, including about 14 percentage points on the missing-function task, while training the alternatives leaves performance flat or worse. We further apply the recipe across models and tasks, including logged repeat-call avoidance and memory management.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-09-21",
+        "authors": [
+          "Zixiang Chen",
+          "Wenting Zhao",
+          "Zhepeng Cen",
+          "Akshara Prabhakar",
+          "Jielin Qiu",
+          "Jianguo Zhang",
+          "Zhiwei Liu",
+          "Tulika Manoj Awalgaonkar",
+          "Liangwei Yang",
+          "Shelby Heinecke",
+          "Silvio Savarese",
+          "Huan Wang"
+        ]
+      },
+      {
+        "title": "GAE: Learning a Geometry-Native Latent Space for 3D-Consistent World Generation",
+        "slug": "gae-learning-a-geometry-native-latent-space-for-3d",
+        "url": "http://arxiv.org/abs/2609.24981v1",
+        "abstract": "We present a compact geometry-native latent space as a shared foundation for perception and generation. Visual generators can produce photorealistic frames without preserving a consistent 3D scene. We argue that this is not only a modeling problem but also a representation problem: generators typically evolve appearance-centric latents, while perception models recover geometry in a semantically rich space that encodes cross-view structure. Rather than adding geometry as another output, we reparameterize a geometry foundation model's features into a compact latent space for generation. We realize this shift with the geometry-native autoencoder (GAE), whose latent is jointly decodable to appearance, depth, cameras, and point maps. With this state, a standard conditional flow supports diverse generation tasks. In controlled comparisons that hold the generator and training protocol fixed, replacing the latent with GAE improves both visual quality and independently measured 3D coherence: FVD falls by $12.7\\%$ and $23.1\\%$ on RealEstate10K and DL3DV, and camera-trajectory error is halved on RealEstate10K. Together, these results show that the latent space is central to geometry-consistent generation and can serve as a shared interface between perception and generation.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-09-21",
+        "authors": [
+          "Jiahao Lu",
+          "Minghao Yin",
+          "Wenbo Hu",
+          "Hengyu Liu",
+          "Wang Zhao",
+          "Sai-Kit Yeung",
+          "Ying Shan",
+          "Yuan Liu"
+        ]
+      },
+      {
+        "title": "LoRA-generating hypernetworks for efficient on-device LLM generative personalization",
+        "slug": "lora-generating-hypernetworks-for-efficient-on-device-llm",
+        "url": "http://arxiv.org/abs/2609.24979v1",
+        "abstract": "On-device large language models (`LLMs'), e.g. running on mobile phones, are ripe for improvement via personalization. The limited compute resources of mobile devices impose limits on model scale and thus model quality, making any realizable quality gains highly impactful. At the same time, their personal nature (i.e., the close coupling to a particular user) means that a given on-device LLM tends to be used in similar, predictable patterns over the course of time. This paper presents a novel method for personalizing on-device LLMs. It trains a hypernetwork to map a user's context tokens to a low-rank adaptation (`LoRA') well-suited to that user. Once the trained common artifacts are deployed to users' devices, each user uses the hypernetwork to synthesize (entirely on device) a personalized LoRA. This approach blends the benefits while avoiding the drawbacks of two existing approaches to LLM customization: in-context learning (`ICL') and parameter-efficient fine-tuning (`PEFT'). Like ICL (and unlike PEFT), the on-device phase of our approach is computationally feasible, requiring only forward passes through neural networks. Like PEFT (and unlike ICL), our approach modifies the `target' base LLM via weights (the LoRA), avoiding negative consequences (e.g. increased latency) associated with extending the input sequence. Our approach is particularly well-suited to the mobile device regime. Apart from the on-device compute and latency benefits mentioned, it also requires minimal additional storage, as internally its architecture partly leverages the same LLM weights as belong to the target LLM to be personalized. We demonstrate the benefits of LoRA-generating hypernetworks on several representative personalization datasets, comparing against baselines like ICL and PEFT. Of note, our personalization experiments focus on more challenging and less studied long-form text generation tasks.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-09-21",
+        "authors": [
+          "Sean Augenstein",
+          "Li Ding",
+          "Jihwan Lee",
+          "Keith Rush",
+          "Andrey Zhmoginov"
+        ]
+      },
+      {
+        "title": "DexTacWAM: A Visuo-Tactile World-Action Model for Dexterous Manipulation",
+        "slug": "dextacwam-a-visuo-tactile-world-action-model-for-dexterous",
+        "url": "http://arxiv.org/abs/2609.24976v1",
+        "abstract": "Dexterous manipulation depends on contact dynamics that are often only partially observable from vision. Recent World-Action Models (WAMs) couple predictive video world modeling with action generation, but remain largely vision-centric and therefore cannot directly model these contact dynamics. We present DexTacWAM, a visuo-tactile WAM that encodes each fingertip independently, aggregates the resulting features through a finger- and pose-aware tactile compressor, and injects the tactile latent into a video diffusion world model for joint visuo-tactile world modeling. Across six contact-rich dexterous manipulation tasks on a 22-DoF bimanual platform, DexTacWAM achieves the highest score on every task, averaging 70.6 versus 38.0 for the strongest baseline. Ablations attribute the gain to modeling contact evolution as part of the predicted world state rather than tactile conditioning alone: removing tactile world modeling reduces the four-task mean from 74.7 to 26.6 while keeping the same tactile features and action expert. After four hours of tactile-encoder adaptation with a frozen pretrained vision VAE, our continual vision-to-touch learning extends the pretrained video model to touch using roughly 100 demonstrations per task without tactile midtraining, while retaining visual prediction quality within 0.5 dB of vision-only counterparts. The compressor retains 89.4% of pre-fusion contact recall while enabling 2.26x faster training and 1.29x faster inference. Together, these results show that pretrained video priors can be extended to distributed multi-finger contact dynamics in a data- and compute-efficient manner.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-09-21",
+        "authors": [
+          "Haoran Yuan",
+          "Zekai Wang",
+          "Boning Shao",
+          "Haoran Lu",
+          "Trevor Darrell",
+          "Ismini Lourentzou",
+          "Wei Zhan"
+        ]
+      },
+      {
+        "title": "DolphinBench: Mapping the Pareto Frontier of Agent Memory",
+        "slug": "dolphinbench-mapping-the-pareto-frontier-of-agent-memory",
+        "url": "http://arxiv.org/abs/2609.24971v1",
+        "abstract": "Agents today often take real-world actions that depend on long-term memory and context recall over time. However, most current memory benchmarks are built for a conversational question-answer format, where the question itself signals that some fact must be retrieved, and often which one. Moreover, benchmarks rarely require anything beyond accuracy from submissions, allowing memory systems to make unreasonable cost/time tradeoffs to achieve higher scores.\n  We present DolphinBench, a benchmark that evaluates memory directly through an agent's task completion. DolphinBench includes three knowledge-work personas with roughly 500k tokens of user messages per persona and evaluates agents on tasks that depend on information from that history. We verify all 200 tasks per persona by running an agent with and without the relevant history, requiring success with it and failure without it.\n  Finally, we require all evaluations to report total cost and latency alongside accuracy, which enables us to evaluate agent memory systems holistically. No existing memory benchmark combines all three. The dataset and evaluation code are available at https://dolphinbench.ai.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-09-21",
+        "authors": [
+          "Soumil Rathi",
+          "Deshraj Yadav",
+          "Taranjeet Singh"
+        ]
+      },
+      {
+        "title": "Rare Event Estimation via Iterative Unalignment",
+        "slug": "rare-event-estimation-via-iterative-unalignment",
+        "url": "http://arxiv.org/abs/2609.24969v1",
+        "abstract": "As agents are deployed with increased autonomy, even extremely rare events along their stochastic output trajectories can occur and prove catastrophic. Safe deployment therefore does not depend on whether these events can occur, but on how often they might. We study the problem of estimating the probability of rare events that arise from stochastic variation in the agent's own actions. Estimating this type of risk requires searching over the combinatorially vast space of trajectories. Naive Monte Carlo is computationally prohibitive in this regime, and constructing effective importance sampling (IS) proposals requires coordinated changes to a context-dependent chain of conditional distributions. We develop a new IS method that perturbs the original model's weights to construct the proposal. The proposal is itself a differentiably parameterized language model, enabling gradient-based search over weight space. We formulate an objective that combines a differentiable surrogate for event amplification and an adaptive regularization scheme that dynamically balances amplification against estimator stability. We evaluate our approach on $\\sim$120M and $\\sim$2.6B models across three event families spanning 300+ rare events as rare as $10^{-9}$, with reference probabilities computed with $<10\\%$ relative standard error. In our most verifiable settings, we observe that our IS estimator achieves over $800\\times$ compute-weighted efficiency gains over naive Monte Carlo for events with probabilities lower than $10^{-7}$. Our implementation is available at https://github.com/namkoong-lab/iterative-unalignment.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-09-21",
+        "authors": [
+          "Hanming Yang",
+          "Daksh Mittal",
+          "Jing Dong",
+          "Hongseok Namkoong"
+        ]
+      },
+      {
+        "title": "Emergent Collusion in Long-Horizon LLM Agent Interaction",
+        "slug": "emergent-collusion-in-long-horizon-llm-agent-interaction",
+        "url": "http://arxiv.org/abs/2609.24967v1",
+        "abstract": "LLM agents are increasingly deployed in collaborative settings, yet long-term interaction may give rise to undesirable coordination. We study the emergence of collusion in a long-horizon multi-agent environment: two agents repeatedly complete individual tasks, share task logs, verify each other's work, and receive rewards. We introduce realistic constraints that make compliance with the verification protocol incompatible with reward maximization, and find that agents increasingly deviate from the protocol over repeated interactions. Collusion emerges in 94% of trajectories across 10 models, and more capable models within the same family reach it earlier. Controlled peer interventions show that collusion is shaped by peer behavior, while ablations reveal additional effects of reward structure, the verification feedback agents receive, and their interaction history. In particular, restricting the amount and scope of interaction history available to agents reduces collusion. Overall, our findings show that long-horizon interaction can reshape how agents coordinate in ways that create safety risks.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-09-21",
+        "authors": [
+          "Xinrui Shi",
+          "Yanzhe Zhang",
+          "Diyi Yang"
+        ]
+      },
+      {
+        "title": "Jev for Scientific Decisions: Evaluating Semantic Choices and Their Consequences",
+        "slug": "jev-for-scientific-decisions-evaluating-semantic-choices-and",
+        "url": "http://arxiv.org/abs/2609.24965v1",
+        "abstract": "Scientific workflows often require choosing among known relations before a deterministic calculation can proceed. Whether observations share a culture, treatment or reference standard can change the scientific meaning of the resulting count or comparison. We evaluate Jev as a semantic decision component using a harness that follows its documented guidance and assigns arithmetic to code. The study compares twelve model configurations on twenty source-grounded Choices across ten scientific cases, each repeated five times. We measure semantic selections, downstream outputs and final claim labels separately. Jev matched five other configurations at complete semantic correctness and achieved the lowest observed median latency among successful responses. Across three comparison models, seven wrong selections on one culture-history question changed downstream counts while preserving the correct final label. These results identify a useful role for Jev in prepared scientific decision tasks and show why evaluating that role requires checking the relations and quantities that a workflow will reuse.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-09-21",
+        "authors": [
+          "Boyuan Deng",
+          "Shuyi Fan",
+          "Hongyang Zhang",
+          "Xinhong Xie"
+        ]
+      }
+    ]
+  }
+}
