@@ -1,0 +1,719 @@
+[
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Contrastive-LM Releases CLM-8B: An Open System One Model That Scores Agent Actions Up to 9× Faster Than Jev",
+      "url": "https://www.marktechpost.com/2026/09/23/contrastive-lm-releases-clm-8b-an-open-system-one-model-that-scores-agent-actions-up-to-9x-faster-than-jev/",
+      "authors": [
+        "Michal Sutter"
+      ],
+      "abstract": "Contrastive-LM has released CLM-8B , the first open model in a new class called Contrastive Language Models (CLMs). CLM does not generate text. It scores a set of candidate actions against the current state and returns probabilities. Their main baseline is Jev , the proprietary System One model from TypeSafe AI. Is it deployable? Yes. The Apache-2.0 head weighs 75 MB. It runs on 1 NVIDIA GPU under Linux, with vLLM serving the Qwen3-8B encoder. Jev entered limited early access on 15 September 2026. It returns typed values with probabilities instead of text. CLM targets the same interface. The CLM GitHub repo serves CLM-8B behind a TypeSafe-compatible API. It exposes 3 question types: A request written for TypeSafe’s API can be replayed through CLM’s Python client. CLM trains a state encoder and an action encoder with a bidirectional InfoNCE loss. Each encoder is a frozen Qwen3-8B backbone plus a 20M-parameter trainable projection head. Training pulls each state toward the action actually taken and pushes it away from the others. At inference, CLM scores each candidate by the dot product of the state and action embeddings. A softmax over those scores becomes the answer distribution. The same primitive ranks best-of-N solutions, routes tools and answers typed decisions. This design disaggregates states and actions. In an agent loop, the state changes every step while the action set stays mostly fixed. clm-serve reserves a slab of GPU memory, similar to vLLM’s KV cache, and reuses cached vectors. On 1 RTX 4090 with 3 actions, revisited states drop from 1.7 ms to 0.6 ms. The model card reports CLM running 13× faster than Jev with about 1,000 candidates. On ~100K held-out questions, pre-training alone reaches 52.1% top-1 accuracy. Mid-training lifts it to 69.2%. Training on hard negatives from the start peaks at 62.4%, then overfits. The 9× figure comes from the T-Rex game , where actions repeat across states. CLM matches Jev on T-Rex and Super Mario. It trails on tool calling and WikiRacing while running faster on every task. Here a generator samples several candidate solutions and the verifier picks one. Opus 5 produced DeepSWE candidates (best-of-4). Fable 5 produced Terminal-Bench 2.1 candidates (best-of-5). The team evaluated 38 held-out DeepSWE tasks and 30 held-out Terminal-Bench 2.1 tasks. Latency was measured on an H100. The research team reports these as new SOTA verifier results. Jev scores below pass@1 on both benchmarks, so selecting with Jev is worse than taking 1 sample. CLM runs 4.1× to 5.7× faster. These numbers use lightweight fine-tuned heads , not the zero-shot checkpoint. They are held-out subset results, not full leaderboard submissions. Check out the Blog , Code and Data & Models . All credit goes to the researcher of this project. Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post Contrastive-LM Releases CLM-8B: An Open System One Model That Scores Agent Actions Up to 9× Faster Than Jev appeared first on MarkTechPost .",
+      "published_date": "2026-09-24",
+      "tags": [
+        "Agentic AI",
+        "AI Infrastructure",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Editors Pick",
+        "For Devs",
+        "Language Model",
+        "Large Language Model",
+        "Machine Learning",
+        "New Releases",
+        "Software Engineering",
+        "Staff",
+        "Tech News",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, kv cache",
+      "⚖️ 來源權重: rss +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 71,
+    "llm_reason": "以對比學習取代生成的新型動作評分模型，範式有新意",
+    "novelty": 15,
+    "impact": 12,
+    "trending": 13,
+    "practicality": 15,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "HuggingFace Blog",
+      "title": "Accelerating vision-language models with LFM2.5-VL-DSpark",
+      "url": "https://huggingface.co/blog/LiquidAI/lfm2-5-vl-dspark",
+      "authors": [],
+      "abstract": "Back to Articles Accelerating vision-language models with LFM2.5-VL-DSpark Team Article Published September 24, 2026 Upvote 7 +1 xx tugot17 Follow LiquidAI Yuri Khrustalev ykhrustalev Follow LiquidAI Leonie Monigatti iamleonie Follow LiquidAI Viviana Márquez vivianamarquez Follow LiquidAI Today, we release an experimental DSpark draft model for our vision-language model (VLM) LFM2.5-VL-3B . As with our recently released LFM2.5-DSpark drafter models , it adds a speculative decoding path that trades a minimal increase in memory footprint for a larger speedup without changing output quality. Faster inference: decode speedups up to 3.13x on device and 2.66x on an H100, with end-to-end gains up to 2.62x and 2.27x. Small memory cost: the drafter adds 280M parameters, 8.9% on top of the 3B target Day-one support: LFM-compatible DSpark integrations for llama.cpp, MLX-VLM, and SGLang How does speculative decoding work for VLMs The vision drafter uses the same architecture as our text LFM2.5-DSpark drafters: it captures the target model's hidden states at a fixed set of tapped layers and conditions on them to draft a block of k candidate tokens. Image patches and text tokens are projected into a shared representation before those layers, so the drafter operates on hidden-state vectors of identical dimensionality regardless of input modality. The inference algorithm is therefore unchanged from the text models. Training and Architecture We follow the DSpark recipe with a mixture of vision-language SFT data, weighted toward the workloads we expect the model to serve. Based on ablations across 3, 4, and 5 layers, the draft model is a simplified attention-only drafter with 4 layers and a block size of 9. We ran 10 epochs on the final mixture and measured acceptance after each, which improved with additional training tokens before reaching diminishing returns. At inference time, we recommend a block size of 8 or 9 depending on the hardware. The resulting drafter has approximately 280M parameters and increases the deployed model’s parameter count by just 8.9%. Component LFM2.5-VL-3B Decoder stack (4 layers) 193.0M Hidden-state projection 21.0M Markov head 65.5M Norms + confidence head 6.4k Total 279.5M Inference Speedup on CPU and GPU The DSpark draft model for LFM2.5-VL-3B ships with day-one support for llama.cpp , MLX-VLM , and SGLang . We measure both on-device inference and GPU inference. Both configurations use a DSpark block size of 8 and are evaluated on six diverse vision-based tasks, including general VQA, text VQA, image captioning, chart VQA, complex reasoning, and multi-turn conversation, following the MMSpec benchmark . On-device inference. With MLX on an M5 Max, decoding runs 2.30x to 3.13x faster by task. End-to-end latency improves by 1.56x to 2.62x. With llama.cpp on an M3 Ultra, decoding improves by 1.57x to 2.14x and end-to-end by 1.30x to 1.77x. GPU inference. On H100, the same drafter delivers 20.4x to 2.66x faster decoding, with end-to-end improvements of 1.64x to 2.27x. Limitations of speculation for vision workloads In LLMs, prefill is mostly compute-bound, and its cost grows (sub)quadratically with prompt length. VLMs add to this because the image first passes through a vision encoder, then the language backbone processes hundreds of visual tokens along with the text prompt. Edge devices have far less compute than datacenter GPUs, so prefill takes up more of the end-to-end latency, as time-to-first-token and decode measurements on Apple silicon and H100 show. (The M5's per-core GPU neural accelerators narrow this gap). Speculative decoding speeds up only decode, not vision encoding or prefill. When those stages already take up much of the wall time, even a large decode speedup gives only a modest end-to-end gain. This is Amdahl's law, where the overall speedup is capped by the part of the workload that isn't accelerated. How to use LFM2.5-VL-DSpark Running the DSpark draft models with SGLang requires an SGLang build with DSpark support for LFM2 targets ( PR #40651 ). Launch the target with the draft attached: python -m sglang.launch_server \\ --model-path LiquidAI/LFM2.5-VL-3B \\ --speculative-algorithm DSPARK \\ --speculative-draft-model-path LiquidAI/LFM2.5-VL-3B-DSpark \\ --speculative-draft-attention-backend flashinfer \\ --speculative-dspark-block-size 9 \\ --disable-radix-cache Then query the OpenAI-compatible endpoint at http://localhost:30000/v1 . The block size is read from the draft's config.json ; the baseline is the same command without the three --speculative-* flags. Running them with llama.cpp requires the respective llama.cpp build ( PR#29339 ). llama-server -m models/LFM2.5-VL-3B-F16.gguf \\ --mmproj models/mmproj-LFM2.5-VL-3B-F16.gguf \\ -md LFM2.5-2.6B-DSpark-F16.gguf \\ --spec-type draft-dspark --spec-draft-n-max 8 --spec-draft-n-min 0 \\ -fa on -ngl 99 -c 8192 Running them with MLX-VLM requires the respective build ( PR#2280 ). mlx_vlm.server --model LiquidAI/LFM2.5-VL-3B --draft-model LiquidAI/LFM2.5-VL-3B-DSpark The block size is read from the sidecar metadata (n-max is clamped to it). Speculative decoding is exact : the target verifies every proposed token, so greedy output equals the target alone; per-response timings report draft_n / draft_n_accepted . Get Started Our vision DSpark draft model is available on Hugging Face in Safetensors and GGUF formats . With LFM2.5, we're delivering on our vision of AI that runs anywhere. These models are: Open-weight — Download, fine-tune, and deploy without restrictions. Fast from day one — Day-one support for llama.cpp, MLX, and SGLang. A complete family — From base models for customization to specialized audio and vision variants, one architecture covers diverse use cases We can’t wait to see what you build. Citation For citations, please use the following reference or BibTeX: Liquid AI, \"LFM2.5-VL-DSpark: Accelerating vision-language models on edge and beyond\", Liquid AI Blog, Sep 2026. @article{liquidAI2026vldspark, author = {Liquid AI}, title = {LFM2.5-VL-DSpark: Accelerating vision-language models on edge and beyond}, journal = {Liquid AI Blog}, year = {2026}, note = {www.liquid.ai/blog/lfm2-5-vl-dspark},\n}",
+      "published_date": "2026-09-24",
+      "tags": [],
+      "organization": "HuggingFace",
+      "raw_metadata": {
+        "feed_name": "HuggingFace Blog",
+        "feed_url": "https://huggingface.co/blog/feed.xml"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: reasoning, speculative decoding, vision language, open weight",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 70,
+    "llm_reason": "VLM推測解碼實測加速比與多推論框架支援，可複現性高",
+    "novelty": 12,
+    "impact": 12,
+    "trending": 13,
+    "practicality": 17,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "NVIDIA Developer",
+      "title": "Efficient MoE Training for Biological Foundation Models",
+      "url": "https://developer.nvidia.com/blog/efficient-moe-training-for-biological-foundation-models/",
+      "authors": [
+        "Michelle Horton"
+      ],
+      "abstract": "As language models grow, scaling dense architectures becomes increasingly expensive. In a dense transformer, every token passes through every layer, so adding capabilities increases computation for both training and inference. Mixture-of-experts (MoE) architectures take a different approach to scaling by using many subnetworks, or experts, while activating only a small subset for each token. This tradeoff has made MoE architectures increasingly attractive to the large language model (LLM) community. They can scale model capacity more efficiently, but the benefits depend heavily on implementation. Fragmented expert computation can reduce GPU utilization. Routing adds communication overhead, and larger parameter footprints create memory and distributed-training challenges. NVIDIA Transformer Engine (TE) helps address these bottlenecks with optimized primitives for grouped expert computation, kernel fusion, and low-precision training. As biological foundation models grow in parameter count and sequence length, these primitives can improve GPU efficiency while expanding model capacity. Figure 1. Dense transformer block (left) compared with a sparse MoE transformer block (right) This tutorial shows how to put these techniques into practice with the NVIDIA BioNeMo MoE recipe and TE. You’ll see how GroupedLinear improves expert computation, MXFP8 reduces memory use, and the GroupedMLP kernel fuses quantization, SwiGLU, and routing-weight scaling. Together, these capabilities provide a practical reference for efficiently training MoE-based biological foundation models. Prerequisites Before you begin, you need: Familiarity with Python, PyTorch, and distributed training concepts An NVIDIA CUDA-enabled environment—you can use the linked Dockerfile or install the recipe requirements At least two GPUs for expert parallelism; NVIDIA Blackwell GPUs are required to use the fused MXFP8 GroupedMLP kernel Challenge 1: Fragmented expert kernels MoE models replace a single dense feed-forward block with multiple expert networks. A naive implementation, however, can trigger excessive kernel launches. For example, the Hugging Face baseline implementation iterates over all experts in a Python loop, with each expert triggering separate kernel launches. for expert_idx, expert_layer in enumerate(self.experts): idx, top_x = torch.where(expert_mask[expert_idx]) current_state = hidden_states[None, top_x].reshape(-1, hidden_dim) current_hidden = expert_layer(current_state) * routing_weights[top_x, idx, None] final_hidden_states.index_add_(0, top_x, current_hidden) Grouped execution preserves the individual expert matrices but submits their work together. TE’s GroupedLinear applies multiple linear transformations in one call by gathering the expert weights and input tokens. Because each expert can receive a different number of tokens, GroupedLinear accepts per-expert token counts ( split_sizes ). It submits the local experts through the TE grouped GEMM path instead of launching one PyTorch Linear operation per expert, reducing launch and scheduling overhead. Use GroupedLinear as follows. Each expert retains its own weight tensor ( weight0 , weight1 , and so on), and the call accepts the per-expert token counts as an additional positional argument: from transformer_engine.pytorch.ops import GroupedLinear experts_gate_up = GroupedLinear( num_groups=num_local_experts, in_features=hidden_size, out_features=2 * intermediate_size, bias=False, dtype=torch.bfloat16, device=\"cuda\",\n) gate_up_output = experts_gate_up(tokens, split_sizes) Compared with the Python loop, this approach submits the gate-up projections as one grouped operation instead of multiple separate calls. Hugging Face Transformers also provides grouped_mm . However, TE can fuse GroupedLinear with MXFP8 quantization, activation, routing-weight scaling, and intermediate data movement into a GroupedMLP kernel, as shown in the later sections. Figure 2. Hugging Face’s modeling_mixtral.py runs each expert one at a time in a Python loop, while TE batches all expert GEMMs into one grouped operation Challenge 2: Large model size and activation memory MoE architectures increase total parameter capacity, and genomics workloads often use long sequences, which puts pressure on activation memory during training. BF16 uses 16 bits to represent each model weight and activation. The BioNeMo recipe uses TE to support FP8 and MXFP8 training, reducing memory use. Both formats represent weight and activation values with 8 bits instead of 16. The main difference between FP8 and MXFP8 is scaling granularity: MXFP8 assigns a scaling factor to each block of 32 consecutive values, helping preserve numerical range and accuracy. On NVIDIA Blackwell GPUs, MXFP8 is hardware-accelerated, enabling MXFP8 GEMMs to use specialized Tensor Core instructions. For details about MXFP8 and block scaling, see the Transformer Engine FP8 primer . Figure 3. BF16 uses 16 bits per value, while MXFP8 uses 8 bits. Source: Transformer Engine FP8 primer Challenge 3: Quantization overhead in low-precision training Although most training computation uses 8-bit precision, the model retains its master weights in 16 bits. The training framework therefore adds quantization and dequantization steps to convert between formats. Quantization converts BF16 weights and activations to MXFP8 before the low-precision GEMM; dequantization converts the result back to the higher-precision format. A naive path performs these steps as separate operations, motivating the fused MLP path described next. fp8_recipe = te_recipe.MXFP8BlockScaling()\nmodel = TEMixtralMXFP8ForCausalLM(config, fp8_recipe=fp8_recipe, dispatcher=dispatcher) The TE autocast API enables MXFP8 precision for the model’s forward and backward passes: with te.autocast(enabled=True, recipe=self._fp8_recipe): for decoder_layer in self.layers: hidden_states = decoder_layer(hidden_states) See the BioNeMo recipe for the complete code. To use the fused MLP, import the Transformer Engine Sequential API to chain together gate_up , ScaledSwiGLU , and down . The API also folds dequantization into the fused path. ScaledSwiGLU combines the routing probabilities (“scales”) with the expert feed-forward network computations. from transformer_engine.pytorch.ops import GroupedLinear, ScaledSwiGLU, Sequential experts_ffn = Sequential(GroupedLinear(gate_up), ScaledSwiGLU(), GroupedLinear(down)) The TE Sequential API scans the operations and, when the pattern matches, replaces the GroupedLinear → ScaledSwiGLU → GroupedLinear sequence with a fused operation object: ForwardGroupedMLP_CuTeGEMMSwiGLU_MXFP8 for the forward pass and a matching fused backward operation. This reduces framework overhead, fuses the SwiGLU and probability-scaling work into the grouped MLP path, and avoids materializing some intermediate results. Figure 4. The MXFP8 path fuses multiple operations into one kernel before the down projection Results These are several of the optimizations in the BioNeMo recipe. In our training benchmark on eight NVIDIA B200 Tensor Core GPUs, the recipe delivered up to 2.21x the throughput of the Hugging Face baseline. Figure 5. Mixtral-8x7B training throughput on eight NVIDIA B200 Tensor Core GPUs, showing up to 2.21x the throughput of the Hugging Face baseline Run the recipe Start with the two-GPU L0_sanity configuration to confirm that expert parallelism and the training environment work correctly: torchrun --nproc_per_node=2 train_fsdp2_ep.py --config-name L0_sanity After validation, scale to the Mixtral-8x7B configuration with expert parallelism (EP=8) and MXFP8 precision across eight GPUs: torchrun --nproc_per_node=8 train_fsdp2_ep.py --config-name L1_8x7B_ep checkpoint.ckpt_dir=/path/to/ckpt Select BF16 or MXFP8 based on your GPU and memory requirements and set the data-parallel and expert-parallel sizes so their product equals the total GPU count. The recipe README includes launch, checkpoint, and benchmark commands.",
+      "published_date": "2026-09-24",
+      "tags": [
+        "Data Center / Cloud",
+        "Data Science",
+        "Simulation / Modeling / Design",
+        "BioNeMo",
+        "CUDA",
+        "Drug Discovery",
+        "HPC / Scientific Computing",
+        "Mixture of Experts (MoE)"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "NVIDIA Developer",
+        "feed_url": "https://developer.nvidia.com/blog/feed/"
+      }
+    },
+    "rule_score": 38.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: moe, mixture of experts, quantization",
+      "⚖️ 來源權重: rss +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 60,
+    "llm_reason": "TE優化MoE訓練實作教學，工程紮實但非全新方法",
+    "novelty": 8,
+    "impact": 10,
+    "trending": 12,
+    "practicality": 16,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "NVIDIA Developer",
+      "title": "Introducing NV-Reason-CT Open 3D CT VLM for Radiologist Chain-of-Thought Reasoning",
+      "url": "https://developer.nvidia.com/blog/introducing-nv-reason-ct-open-3d-ct-vlm-for-radiologist-chain-of-thought-reasoning/",
+      "authors": [
+        "Tanya Lenz"
+      ],
+      "abstract": "Radiology AI has made remarkable strides in detecting abnormalities across chest X-rays, pathology slides, and 2D scans. Yet one of the most clinically rich and data-dense modalities—the 3D computed tomography (CT) scan—remains largely underserved by modern vision language models (VLMs) . Frontier general-purpose models perform poorly on volumetric imaging, and most open medical AI models lack the multistep conversational depth that radiologists need to trust and verify AI-generated findings. NVIDIA is addressing this gap with NV-Reason-CT, a VLM purpose-built for 3D CT analysis. NV-Reason-CT extends chain-of-thought reasoning to full volumetric CT, generating structured diagnostic reports, emulating radiologist internal thinking, and supporting multistep follow-up conversation across chest and abdomen. It builds on the reasoning methodology pioneered by NV-Reason-CXR , validated in a multireader clinical study accepted at RSNA 2026 confirming radiologist time savings while maintaining diagnostic accuracy. NV-Reason-CT is an open research and development foundation; not an autonomous diagnostic system or a cleared clinical product. It is an AI foundation model designed for researchers and developers building specialized CT analysis applications to post-train for their use case. Why 3D CT reasoning demands a different approach A single abdominal CT study can comprise 300–600 axial slices, encoding anatomical context across three spatial dimensions that a standard 2D encoder simply cannot reconstruct from independent slices. This volumetric complexity creates a series of compounding challenges for medical AI to do with perception, reasoning, and conversational depth: Perception : Standard VLMs treat image input as a 2D token grid. Processing a CT volume as a stack of independent 2D frames discards the spatial relationships between slices that define structures like masses, effusions, and infiltrates—structures whose shape, extent, and density only become clinically meaningful in three dimensions. Reasoning : Even models that correctly perceive an abnormality often output a diagnostic label without articulating why . Radiologists don’t think in labels—they think in systematic anatomical reviews, differential diagnoses, and degrees of confidence. An AI that cannot reproduce that reasoning process cannot be audited, taught from, or safely integrated into clinical workflows. Conversational depth : A radiologist reviewing a suspicious finding doesn’t close the case at first glance. They ask follow-up questions, reconsider differentials, and correlate findings across anatomical regions. Most existing models lack the multiturn dialogue capability to support this kind of iterative clinical reasoning. Providing full 3D reasoning for CT analysis NV-Reason-CT combines a dedicated full 3D vision transformer (ViT) encoder with a language model trained to generate chain-of-thought reasoning that mirrors how radiologists systematically analyze CT volumes. Unlike approaches that adapt 2D encoders to CT by treating slices independently, NV-Reason-CT processes the CT volume as a true 3D input. This preserves through-plane anatomical continuity and enables the model to reason about structures holistically, the way a radiologist would when scrolling through a study. Core model capabilities include the following: Structured report generation : NV-Reason-CT generates detailed structured reports. The NVIDIA team curated a CT ontology covering 30 chest and 29 abdominal abnormalities to guide and evaluate the model—such lung nodules, pneumothorax, hepatic lesions, renal cysts, and more—in a format that maps naturally to clinical documentation workflows. Radiologist-emulating chain-of-thought : NV-Reason-CT can also generate reasoning emulating radiologist thought chains. The model produces step-by-step internal thinking—examining anatomical regions systematically, surfacing relevant findings, considering differential diagnoses, and articulating uncertainty—in the style of an experienced radiologist working through a study. Multistep conversational follow-up : Clinicians and researchers can ask follow-up questions about specific findings, request clarifications on differential diagnoses, or probe the model’s reasoning at any stage. This multiturn capability transforms NV-Reason-CT from a report generator into an interactive diagnostic partner. Full 3D ViT encoder : A purpose-built 3D vision encoder processes CT volumes natively, extracting volumetric features that 2D-based approaches cannot recover. In addition, 3D vision token grid coordinates are passed to LLM to account for spatial inter-token relationship throughout the LLM layers through 3D MRoPE. This architectural choice enables the model to reason about spatial extent, cross-sectional morphology, and inter-slice relationships—the perceptual foundations of accurate CT interpretation. How is NV-Reason-CT architecture purpose-built for volumetric reasoning? The model architecture combines Qwen3.5-4B LLM with 3D ViT (Primus/Colipri). All weights are retrained end-to-end on large cohort or CT data with structured report, reasoning traces, multistep VQA (designed internally). Standard transformer-based VLMs are designed for 2D images. Adapting these to CT by flattening a volume into a sequence of 2D slices loses the spatial structure that defines volumetric pathology. The encoder architecture is adapted from Primus 3D ViT, initialized with Colipri weights prior to training; It processes CT volumes resampled to 192³ voxels at 2 mm isotropic resolution, using non-overlapping 8x8x8 patch tokens—resulting in 24x24x24 = 13,824 vision token context. Instead of merging (or downsizing), all vision tokens are passed to LLM (together with their 3D grid coordinates). The LLM includes 3D MRoPE to account for the 3D spatial relationship of vision tokens. The language model component is trained to reason in the style of a radiologist: systematically reviewing anatomical regions, noting normal findings alongside abnormal ones, expressing calibrated uncertainty, and arriving at a structured conclusion. The model is designed to respond not as a classifier, but as a teacher: explaining the problem, walking through the evidence, and arriving at a diagnosis through visible logical steps. What is the NV-Reason-CT training methodology? Building on the approach introduced with NV-Reason-CXR, NV-Reason-CT follows a two-stage training pipeline: supervised fine-tuning followed by reinforcement learning (RL) . Stage 1: Supervised fine-tuning on radiologist reasoning data The initial stage trains the model on the mixture of data, including structured report, expert radiologist reasoning annotations, and general VQA. Radiologists contributed detailed chain-of-thought dictations for CT studies that capture their internal review process, including what they examine in each anatomical region, which findings they consider significant, which differentials they weigh, and how they arrive at their final assessment. The resulting curriculum spans approximately 550,000 structured QA examples across chest and abdominal regions covering section-level anatomy QA, laterality-specific and localized finding QA, severity-level QA, and binary abnormality identification. Refusal examples for invalid prompts and mismatched image-text pairs were included to improve robustness. Training data includes CT-RATE, NIH CT datasets, and CancerVerse. This dataset is supplemented with high-quality synthetic reasoning data distilled from large language models, using expert radiologist annotations as grounding examples. The combined dataset provides the model with a rich signal for what structured radiological reasoning looks like across a wide range of CT findings. Stage 2: RL for reasoning quality The second stage uses Group Relative Policy Optimization (GRPO) to refine reasoning quality.",
+      "published_date": "2026-09-23",
+      "tags": [
+        "Agentic AI / Generative AI",
+        "Developer Tools & Techniques",
+        "Simulation / Modeling / Design",
+        "AI Foundation Models",
+        "Medical Imaging",
+        "Open Source",
+        "Training AI Models",
+        "VLMs"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "NVIDIA Developer",
+        "feed_url": "https://developer.nvidia.com/blog/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: reasoning, chain of thought, grpo, reinforcement learning, fine-tuning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 64,
+    "llm_reason": "開源3D CT思維鏈VLM，醫學影像領域少見且開放",
+    "novelty": 13,
+    "impact": 13,
+    "trending": 10,
+    "practicality": 13,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Apple ML",
+      "title": "How to Guide Your Language Flow",
+      "url": "https://machinelearning.apple.com/research/guide-language-flow",
+      "authors": [],
+      "abstract": "research area Methods and Algorithms content type paper published September 2026 How to Guide Your Language Flow Authors Rohit Dilip†**, Tianrong Chen, Yuyang Wang, David Van Valen†, Josh Susskind, Miguel Angel Bautista View publication Copy Bibtex We introduce a new method to guide flow matching models. Our approach, which we call probe guidance, uses the frozen internal states of an existing diffusion model to construct a guidance signal. This works using a similar principle as autoguidance, but eliminates the need for an additional forward pass at inference time and provides a reliable path to ensure that the weak and strong model share similar dynamics. We apply and benchmark this method on continuous diffusion language models, where probe guidance sets a new state-of-the-art performance on unconditional generation. When applied to a 1.7B diffusion language model, probe guidance consistently improves on multiple choice question answering benchmarks. Using our probes, we study the traditional autoguidance setting where the strong model is a weak checkpoint, and find that the weak model must come from a low-entropy region of training. These findings both provide a practical way to improve diffusion language models and shed light on the actual mechanism behind autoguidance, which is currently poorly understood. † Caltech ** Work done while at Apple Related readings and updates. FS-DFM: Fast and Accurate Long Text Generation with Few-Step Diffusion Language Models October 13, 2025 research area Speech and Natural Language Processing conference ICLR Autoregressive language models (ARMs) deliver strong likelihoods, but are inherently serial: they generate one token per forward pass, which limits throughput and inflates latency for long sequences. Diffusion Language Models (DLMs) parallelize across positions and thus appear promising for language generation, yet standard discrete diffusion typically needs hundreds to thousands of model evaluations to reach high quality, trading serial depth… Read more Scaling Diffusion Language Models via Adaptation from Autoregressive Models April 16, 2025 research area Speech and Natural Language Processing conference ICLR Diffusion Language Models (DLMs) have emerged as a promising new paradigm for text generative modeling, potentially addressing limitations of autoregressive (AR) models. However, current DLMs have been studied at a smaller scale compared to their AR counterparts and lack fair comparison on language modeling benchmarks. Additionally, training diffusion models from scratch at scale remains challenging. Given the prevalence of open-source AR… Read more Discover opportunities in Machine Learning. Our research in machine learning breaks new ground every day. Work with us",
+      "published_date": "2026-09-23",
+      "tags": [],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "Apple ML",
+        "feed_url": "https://machinelearning.apple.com/rss.xml"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: diffusion, diffusion language model, flow matching",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 63,
+    "llm_reason": "probe guidance新引導機制達SOTA並解釋autoguidance原理",
+    "novelty": 16,
+    "impact": 12,
+    "trending": 10,
+    "practicality": 8,
+    "blog_worthiness": 17
+  },
+  {
+    "item": {
+      "source": "blog",
+      "source_name": "Simon Willison",
+      "title": "Guides",
+      "url": "https://simonwillison.net/guides/",
+      "authors": [
+        "Simon Willison"
+      ],
+      "abstract": "Patterns for getting the best results out of coding agents like Claude Code and OpenAI Codex. See my introduction for more on this project. Patterns for getting the best results out of coding agents like Claude Code and OpenAI Codex. See my introduction for more on this project. 16 chapters: What is agentic engineering? , Writing code is cheap now , Hoard things you know how to do , AI should help us produce better code , Anti-patterns: things to avoid , How coding agents work , Using Git with coding agents , Subagents , Red/green TDD , First run the tests , Agentic manual testing , Linear walkthroughs , Interactive explanations , GIF optimization tool using WebAssembly and Gifsicle , Adding a new content type to my blog-to-newsletter tool , Prompts I use",
+      "published_date": "2026-09-24",
+      "tags": [
+        "blog"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "blog_name": "Simon Willison",
+        "blog_url": "https://simonwillison.net/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agentic",
+      "⚖️ 來源權重: blog +15"
+    ],
+    "llm_score": 70,
+    "llm_reason": "資深工程師對coding agent最佳實踐的系統化整理，高度實用且踩中agentic coding熱點",
+    "novelty": 8,
+    "impact": 12,
+    "trending": 15,
+    "practicality": 18,
+    "blog_worthiness": 17
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "BottleCap AI Releases ThinkingCap-Qwen3.8-27B: 37.2% Fewer Thinking Tokens at a 0.86pp Accuracy Cost",
+      "url": "https://www.marktechpost.com/2026/09/24/bottlecap-ai-releases-thinkingcap-qwen3-8-27b-37-2-fewer-thinking-tokens-at-a-0-86pp-accuracy-cost/",
+      "authors": [
+        "Michal Sutter"
+      ],
+      "abstract": "BottleCap AI has released ThinkingCap-Qwen3.8-27B , the second model in its ThinkingCap series. It is a fine-tune of the Qwen team’s Qwen3.8-27B with one narrow goal: shorter reasoning traces. Across 12 benchmarks, it spends 37.2% fewer thinking tokens on average. Macro-average accuracy moves from 86.65% to 85.79%, a 0.86pp drop. Deployable? Yes. It drops in for Qwen3.8-27B on vLLM or SGLang, with FP8, NVFP4, GGUF and MLX builds. The repo is gated, and commercial use beyond the small-business license needs a BottleCap agreement. Reasoning models often spend more thinking tokens than a question needs. BottleCap’s position is that many of those extra tokens do not change the final answer. The first release in the series applied this idea to Qwen3.6-27B. The objective this time was deliberately conservative. BottleCap did not try to add knowledge or change answer style. Reasoning ability, instruction following and safety behaviour were meant to pass through untouched. The research team also focused harder on math, reasoning, long-context and agentic benchmarks. All main numbers use reasoning_effort=xhigh , the chat template default. Every benchmark gets shorter, with cuts ranging from 10.7% to 65.5%. Knowledge and multilingual tasks shrink the most. MMMLU drops 65.5% (1,656 to 571 tokens) and MMLU-Pro drops 57.3%. GPQA-Diamond falls from 12,772 to 7,267 tokens, a 43.1% cut. IFBench thinks 46.4% less with accuracy nearly flat (79.75% to 79.71%). Long-context retrieval improves. AA-LCR accuracy rises 2.25pp, from 81.75% to 84.00%, with 38.6% fewer thinking tokens. LiveCodeBench v6 edges up 0.07pp while thinking 20.3% less. Agentic results hold close to the base. τ²-bench gives up 1.01pp for a 30.9% cut. Terminal-Bench 2.1 loses 0.56pp, well inside its ±4.26 interval, for a 10.7% cut. The most expensive trade is AIME 2026. Accuracy falls 3.85pp, from 98.13% to 94.27%, for 30.2% less thinking. Please note that the 37.2% figure is the mean of the 12 per-benchmark reductions. Pooled mean thinking tokens fall from 15,735 to 12,144. BottleCap also reports a budget curve. Under a 16K-token cap per response, ThinkingCap scores higher than the base model. Truncated traces fall from 0.51% to 0.34%, and looping from 0.06% to 0.05%. Qwen3.8-27B exposes a reasoning-effort setting, and the compression stacks with it. All deltas below compare against the base model at xhigh, averaged over 11 benchmarks. At medium, the base model cuts 52.1% of thinking for -9.16pp. ThinkingCap cuts 60.2% for -9.90pp. At low, the figures are -55.4% and -9.71pp for the base, versus -62.3% and -10.79pp for ThinkingCap. With thinking off, ThinkingCap trails the base by 5.7pp. BottleCap team recommends xhigh for the best accuracy-to-token balance. It says individual thinking modes will get attention in a future release. Both models ran through the same harness on one NVIDIA H200 with vLLM 0.29.0. Sampling was identical: temperature 1.0, top_p 0.95, top_k 20, min_p 0.0. Multi-seed accuracy is the mean with a 95% interval. Seeds range from 32 on AIME 2026 to 1 on MMLU-Pro and MMMLU. MMMLU uses a fixed 10,000-question sample; the other 11 benchmarks run complete sets. MTP speculative decoding (3 draft tokens) was measured as accuracy-neutral on AIME 2026. It accepted 53% of drafted tokens, about 2.6 tokens per step, matching the base model. The bf16 checkpoint has 28B parameters and accepts image and text input. BottleCap publishes 5 quantized builds: Serving uses the base model’s recipe: --reasoning-parser qwen3 with the qwen3_xml tool-call parser on vLLM. Thinking returns in a separate reasoning field. The license is PolyForm Small Business 1.0.0 plus a BottleCap personal-use grant. Upstream Qwen materials stay under Apache-2.0. Hugging Face lists no inference provider hosting the model yet. Check out the technical blog and model weights . All credit goes to the researcher of this project. Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post BottleCap AI Releases ThinkingCap-Qwen3.8-27B: 37.2% Fewer Thinking Tokens at a 0.86pp Accuracy Cost appeared first on MarkTechPost .",
+      "published_date": "2026-09-24",
+      "tags": [
+        "Agentic AI",
+        "AI Infrastructure",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Editors Pick",
+        "Language Model",
+        "Large Language Model",
+        "Machine Learning",
+        "New Releases",
+        "Tech News",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agentic, reasoning, speculative decoding, long context, safety",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 59,
+    "llm_reason": "減少思考token的微調模型，數據具體但屬漸進式優化",
+    "novelty": 9,
+    "impact": 10,
+    "trending": 12,
+    "practicality": 16,
+    "blog_worthiness": 12
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "量子位",
+      "title": "PCIe顯示卡被低估了！核心補齊+通訊重構，DeepSeek推理吞吐翻近7倍",
+      "url": "https://www.qbitai.com/2026/09/496925.html",
+      "authors": [
+        "思邈"
+      ],
+      "abstract": "PCIe顯示卡被低估了！核心補齊+通訊重構，DeepSeek推理吞吐翻近7倍 思邈 2026-09-24 22:17:48 來源： 量子位 1.5臺6000D跑贏1臺B300！ 允中 發自 凹非寺 量子位 | 公眾號QbitAI 隨著大模型對算力需求持續攀升， GPU卡的採購成本、供給約束持續加劇。 AI推理的競爭正在悄然發生轉向：不再單純比拼“誰能夠買到效能最頂級的硬體”，而是轉向“誰可以把手中已有的算力資源用得更值”。 很多GPU卡，開源框架能夠完成模型載入、權重下載、服務拉起，實現“能跑起來”，但實際壓測效能往往遠低於官方宣傳水平。模型本身沒有缺陷，硬體也可正常工作，效能損失的核心，來自模型框架與硬體之間存在的效能鴻溝。 這類GPU卡沒有高速卡間互聯，同時不在主流開源框架官方驗證矩陣中。直接使用社群預設部署方案，會出現運算元自動回退至低效通用實現、集合通訊沿用NVLink硬體的調優參數、視訊記憶體與並行配置沿用其他硬體預設值等一系列問題。硬體本身具備的算力潛力，被軟體層的適配短板所禁錮。 是石科技（METASTONE）是一家“獨立第三方全棧算力運營商”的科技企業。不綁定任何特定大模型廠商，致力於為客戶提供涵蓋硬體、組網、排程、最佳化與運營的一站式全棧算力交付服務。 憑藉源自國家級計算中心的豐富經驗，公司確保了算力叢集高達99.95%以上的安全穩定執行（SLA）。目前，是石科技已納管超過20000P的算力資源，運營10多個智算中心，擁有2個國家級超算中心。團隊成員曾榮獲3項戈登·貝爾獎，具備深厚的超大規模叢集全棧技術服務實力等。 是石科技自研Meta-Infer高效部署引擎，是面向異構加速晶片的企業級高效能大模型推理引擎，嘗試通過純軟體最佳化手段彌合這道硬體-框架之間的縫隙，在不改動模型結構、不修改任務語義的前提下，充分挖掘GPU卡架構硬體的推理能力，為行業提供一種可能性： 依靠軟體最佳化，成本更低的GPU卡，有機會在部分推理業務指標上，逼近原本需要更高階GPU才能實現的服務能力。 Meta-Infer高效推理引擎的整套最佳化邏輯，分為兩大關鍵階段： 算模協同，釋放被硬體差異遮蔽的高效能路徑； 通算重構，打通瓶頸，充分榨乾硬體資源。 最終將沉澱為Meta-Infer高效推理引擎的四項核心能力： 核心補齊、運算元最佳化與通訊重構、並行與容量調優、快取複用 。 1、核心補齊 主流推理框架內建了大量高效能運算元，但對於不在官方驗證清單的長尾硬體，框架不會報錯，只會靜默繞開加速路徑，降級執行低效通用邏輯。 很多高效能核心並非缺失，只是後設資料、頁尺寸、硬體核心適配不匹配，導致無法被觸發執行。 Meta-Infer高效推理引擎，通過核心補齊完成適配修復： 對齊硬體與框架之間的後設資料定義，修正頁尺寸配置，解鎖原生高效能運算元路徑； 替換不適配硬體的老舊計算核心，切換為面向目標硬體深度調優的實現； 擴大通訊快路徑的生效閾值，讓更多規模的通訊任務避開慢速回退邏輯。 △該圖由是石科技提供 以DeepSeek-V4.1-Flash為例，在8張PCIe-Only顯示卡環境的社群Day0基線版本中，輸入吞吐僅1932 tok/s。 經過算模協同階段的修復適配，補齊sparse-MLA Prefill快路徑，替換FP8稠密GEMM慢核心，擴大PCIe-IPC通訊快路徑覆蓋範圍，吞吐直接提升至5850 tok/s。 這一階段的提升，並不是創造全新演算法，而是把硬體與框架本就具備、卻被適配問題鎖住的效能釋放出來。 △該圖由是石科技提供 △該圖由是石科技提供 同樣的思路也復現在DeepSeek-V4-Flash、GLM5.3等模型上：修正注意力頭補齊的冗餘計算，對KV快取標記邏輯做向量化加速，適配硬體特性重構運算元拆分邏輯，拓展CUDA計算圖覆蓋範圍，讓更多請求批次可以進入加速圖執行。僅僅完成算模協同，多款模型就拿到20%-33%不等的吞吐增益。 完成硬體適配、解鎖加速路徑之後，效能瓶頸會進一步轉移到通訊開銷、並行排程、視訊記憶體分配、重複計算等環節。PCIe-Only架構卡間通訊頻寬遠低於NVLink，如果直接套用面向高速互聯硬體的預設策略，GPU會花大量時間等待通訊完成，算力資源被閒置浪費。 2、運算元最佳化與通訊重構 依託運算元最佳化與通訊重構，Meta-Infer高效推理引擎對注意力、投影等關鍵運算元做運算元融合，壓縮單步計算耗時；將計算任務和集合通訊做時間重疊掩蓋，把統計類計算嵌入通訊間隙並行執行；改寫集合通訊邏輯適配PCIe頻寬特性，降低訊息傳輸帶來的等待開銷。 3、並行與容量調優 在此基礎上開展並行與容量調優，放棄框架全域性固化的並行參數，針對Prefill預填充、Decode生成不同執行階段差異化配置張量並行、上下文並行策略；結合硬體視訊記憶體特性，動態調整靜態視訊記憶體佔比、KV快取容量參數，規避視訊記憶體溢位與運算元回退；面向不同業務負載，靈活匹配流水線、張量並行的組合形態，讓高併發短請求、超長上下文請求都可以拿到最優執行配置。 4、快取複用 面向長文本、影片生成場景，快取複用能力提供風險感知的快取複用機制，根據即時生成狀態動態判斷快取複用與重新整理時機，在不犧牲輸出質量的前提下削減重複計算與視訊記憶體讀寫。 在DeepSeek-V4.1-Flash的實踐中，完成算模協同之後，經過通算重構的全套調優：注意力運算元融合、合理裁剪投機解碼草稿長度、計算通訊重疊、區分Prefill/Decode並行策略、重新調校視訊記憶體容量參數，輸入吞吐從5850 tok/s進一步提升至13274 tok/s，整體實現6.87倍吞吐提升，並且支援1M超長上下文。 這套方法論具備通用性，覆蓋文本大模型、長上下文、影片生成多類任務： DeepSeek-V4-Flash：經過全套最佳化輸入吞吐從14546 tok/s提升至22584 tok/s，提升1.55倍； GLM5.3：輸入吞吐自3236.78 tok/s提升至6222.72 tok/s，提升1.92倍；P95首Token時延從141.6秒下降至46.6秒，上下文支援上限從27萬Token拓展到105萬Token； 在相同併發點配對比較下，B300的輸入吞吐約為這臺8卡整機的4.9–5.6倍（DeepSeek-V4-Flash，B300側按SGLang cookbook推薦參數配置，C8輸入33,937 / C256 60,486 tok/s），GLM-5.3 ¹上這一比值為3.5–4.7倍（B300側C8輸入16,384 / C64 23,503 tok/s）。 MiniMax H3影片生成模型：依託稀疏注意力、自研風險感知快取複用、Turbo LoRA多手段組合，15秒參考圖生影片端到端生成速度提升2.48倍，峰值視訊記憶體與原始稠密基線保持持平。 △該圖由是石科技提供 單機8卡整機配置，文生影片最高吞吐達到基線的5.33倍，參考圖生影片達到基線的4.98倍，在不明顯損失畫質的前提下大幅縮短影片生成耗時。 把這組整機吞吐放到頂級GPU的同一把標尺上，差距比直覺更小：在統一整機口徑下（單機8卡、5秒 / 768P / 16：9），文生影片296條/時、參考圖生影片131條/時，對應B300的439條/時、225條/時，分別約為其67%和58%（B300側按SGLang cookbook推薦參數配置，取16例項、每例項Inflight=1的最優檔；其中文生影片對照的是B300的FL2VA結果）。 如果進一步按整機吞吐折算，在幾乎無損的 Ours Cache 方案下，約 2.6臺6000D 可對應1臺B300的文生影片吞吐，參考圖生影片約為 2.9臺 ；在 Ours Cache + LoRA 方案下，這一比例進一步縮小到約 1.5臺 和 1.7臺 。 硬體本身沒有變化，效能差距的縮小主要來自軟體棧、快取策略與模型最佳化方式的組合。 下面這段是參考圖生影片（Ref2VA）任務的同題對照，Dense基線、Cache-DiT、Turbo LoRA與本文方案並排呈現。 國產GPU卡：同一套方法論同樣成立 Meta-Infer高效推理引擎也在國產GPU上完成了驗證。 國產GPU往往也不在主流框架的官方驗證矩陣內，因此需要針對具體硬體重新梳理執行路徑。 例如，注意力模組需要顯式啟用面向該平臺最佳化的NSA稀疏注意力實現，避免回退到低效路徑；Shared Expert融合等預設面向NVIDIA/AMD平臺的特性則需要關閉，以繞開不適配實現。 通訊策略也需要根據推理階段分別配置，Prefill採用偏吞吐最佳化的DeepEP normal模式，Decode採用偏時延最佳化的low_latency模式，並將Shared Expert與Routed Expert拆分到兩條stream中並行提交，以進一步與集合通訊重疊。 其中，僅將Shared Expert與Routed Expert改為並行提交，就在35組同配置配對測試中帶來了 11.26%的吞吐提升 。 這說明對於國產算力而言，“能跑起來”同樣只是第一步。 通過針對執行路徑、通訊模式和並行策略進行系統適配，仍可以進一步釋放硬體的實際推理效能，使其更接近規模化生產服務所需的效能水平。 長尾硬體的新思路：“能跑起來”不是終點 全部最佳化工作均收斂在Meta-Infer高效推理引擎內部，全程無需改動模型權重與模型結構，不改變原有業務任務語義。 對於開源社群大量不在官方驗證矩陣內的長尾硬體，行業過往現狀往往是：新模型釋出，權重可以下載、服務可以拉起，做到“能跑起來”，工作就宣告結束。 但這套實踐證明，“能跑”和“可用、可規模化對外提供生產服務”之間，還存在巨大的軟體最佳化空間。 在硬體供給存在約束、高階算力成本居高不下的大背景下，Meta-Infer高效推理引擎代表了一條新路線—— 不必一味追逐最頂級硬體 ，通過核心補齊、運算元通訊重構、並行容量調優、快取複用這套軟體體系，充分挖掘現有PCIe架構硬體的潛力。 這為大模型推理業務帶來一種值得關注的可能性：藉助深度軟體最佳化，成本更友好的PCIe GPU，有機會在部分推理業務指標上向更高階硬體的服務能力靠攏。 硬體的上限由晶片決定，但硬體能實際發揮出多少能力，則由軟體決定。 ¹ 無損NVFP4量化版本：模型權重以NVFP4部署，保持既有模型計算定義，未引入額外精度損失。 *本文系量子位獲授權刊載，觀點僅為原作者所有。 版權所有，未經授權不得以任何形式轉載及使用，違者必究。 Deepseek 是石科技 顯示卡 清華 思邈 出海Agent“小元AI”入駐騰訊WorkBuddy：找買家寫開發信談生意 2026-09-24 教機器人幹活，光“刷課時”可不夠！靈初這次較真資料質量 2026-09-24 Jev vs Decitron：同為決策AI，為什麼不是一回事？ 2026-09-23 刷影片也能教會機器人幹活！1200億tokens人類動作預訓練，誤差按冪律下降 2026-09-23 相關閱讀",
+      "published_date": "2026-09-24",
+      "tags": [
+        "資訊",
+        "Deepseek",
+        "是石科技",
+        "顯示卡",
+        "清華"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "量子位",
+        "feed_url": "https://www.qbitai.com/feed"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: lora",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 67,
+    "llm_reason": "PCIe卡DeepSeek推理引擎優化實測7倍吞吐，方法與數據具體可參考",
+    "novelty": 13,
+    "impact": 12,
+    "trending": 9,
+    "practicality": 16,
+    "blog_worthiness": 17
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "What Is RLCD? The Secret Behind Jev",
+      "url": "https://di-zhang-llm.github.io/blog/what-is-rlcd-the-secret-behind-jev/",
+      "authors": [
+        "tnspacetime"
+      ],
+      "abstract": "From pairwise reward modeling to calibrated, multiway decisions Jev looks mysterious when viewed as an alternative to a language model. It becomes much simpler when viewed as the next step in reward modeling. The core idea is: \\[\n\\text{RLCD}\n=\n\\text{multiway preference modeling}\n+\n\\text{probability calibration}\n\\] More specifically, RLCD is a schema-conditioned Plackett–Luce objective. Jev turns that objective into a product by adding typed outputs and parallel inference. That is the secret: the reward model is no longer hidden behind a generator. The reward model becomes the model. Figure 1. The learned object changes at each step: a scalar reward becomes a preference, the preference becomes a multiway distribution, and calibration turns that distribution into a decision interface. Reward Modeling Started with a Scalar A conventional reward model receives a context \\(x\\) and a candidate answer \\(a\\) , then produces a scalar: \\[\nr_\\theta(x,a)\\in\\mathbb{R}\n\\] Outcome reward models score the final answer. Process reward models score individual reasoning steps. In both cases, the learned object is an absolute-looking number. The problem is that this number is not actually absolute. A reward of \\(0.8\\) does not have a stable meaning across problems, candidate pools, checkpoints, or model families. It is mainly useful for comparing candidates generated under similar conditions: \\[\nr_\\theta(x,a_1) > r_\\theta(x,a_2)\n\\] The operational signal was always relative preference. The scalar merely hid it. PPRM Made the Preference Explicit LLaMA-Berry’s Pairwise Preference Reward Model, or PPRM, exposes the comparison directly. Given a problem \\(x\\) and two solutions \\(a_1\\) and \\(a_2\\) , PPRM answers: Is the first answer better than the second answer? Its probability has the form: \\[\nP(a_1 \\succ a_2\\mid x)\n=\n\\frac{\\exp u_\\theta(x,a_1)}\n{\\exp u_\\theta(x,a_1)+\\exp u_\\theta(x,a_2)}\n\\] Equivalently: \\[\nP(a_1 \\succ a_2\\mid x)\n=\n\\sigma\\left(\nu_\\theta(x,a_1)-u_\\theta(x,a_2)\n\\right)\n\\] This is the Bradley–Terry model. LLaMA-Berry implements the comparison as a constrained language-model decision over Yes and No tokens. It trains the evaluator on almost 7.8 million mathematical-solution pairs and uses DPO to improve the pairwise prediction task. The essential change is conceptual: reward modeling becomes preference-probability modeling. See the LLaMA-Berry paper . PPRM still contains a latent scalar utility \\(u_\\theta(x,a)\\) , but that utility is no longer presented as an absolute reward. It becomes meaningful through a normalized comparison. LLaMA-Berry subsequently uses Enhanced Borda Count to aggregate pairwise comparisons inside MCTS. That is downstream search machinery. EBC neither defines PPRM’s preference loss nor provides the bridge from PPRM to RLCD. The relevant lineage is simply: \\[\n\\text{scalar reward}\n\\rightarrow\n\\text{pairwise preference}\n\\rightarrow\n\\text{multiway preference}\n\\rightarrow\n\\text{calibrated decision}\n\\] Plackett–Luce Is the Multiway PPRM PPRM compares two candidates. A real decision interface usually receives more than two. Let the candidate set be: \\[\nA=\\{a_1,a_2,\\dots,a_K\\}\n\\] Assign each candidate a context-dependent utility: \\[\nu_i=u_\\theta(x,a_i)\n\\] Then normalize all candidates together: \\[\nP(a_i\\mid x,A)\n=\n\\frac{\\exp u_i}\n{\\sum_{j=1}^{K}\\exp u_j}\n\\] This is the Luce choice model, also known as multinomial logit. It is the top-one form of the Plackett–Luce family. When \\(K=2\\) , it reduces exactly to Bradley–Terry: \\[\nP(a_1\\mid x,\\{a_1,a_2\\})\n=\n\\frac{\\exp u_1}{\\exp u_1+\\exp u_2}\n\\] PPRM is therefore the binary case of the same choice geometry. If the supervision contains a complete ranking \\[\na_{\\pi_1}\\succ a_{\\pi_2}\\succ\\dots\\succ a_{\\pi_K},\n\\] the full Plackett–Luce likelihood repeatedly selects the next-best remaining candidate: \\[\nP(\\pi\\mid x)\n=\n\\prod_{t=1}^{K}\n\\frac{\\exp u_{\\pi_t}}\n{\\sum_{j=t}^{K}\\exp u_{\\pi_j}}\n\\] The corresponding loss is: \\[\n\\mathcal{L}_{\\mathrm{PL}}\n=\n-\\sum_{t=1}^{K}\n\\log\n\\frac{\\exp u_{\\pi_t}}\n{\\sum_{j=t}^{K}\\exp u_{\\pi_j}}\n\\] When the label specifies only one correct choice \\(y\\) , the loss becomes: \\[\n\\mathcal{L}_{\\mathrm{choice}}\n=\n-\\log\n\\frac{\\exp u_y}\n{\\sum_j\\exp u_j}\n\\] That is the first stage of the Plackett–Luce likelihood: a multiway extension of PPRM. This is the mathematical center of RLCD. Figure 2. Bradley–Terry and PPRM are the two-candidate case of the same Luce choice geometry. Plackett–Luce extends that normalization from one choice to a complete or partial ranking. RLCD Adds Calibration Plackett–Luce gives us a probability distribution, but normalization is not calibration. A softmax vector always sums to one. That does not mean a prediction reported as \\(0.8\\) is correct 80% of the time. Calibration adds that empirical meaning: \\[\nP(Y=\\hat{Y}\\mid \\hat{P}=p)\\approx p\n\\] Across predictions assigned probability \\(0.8\\) , approximately 80% should be correct. This is also the contract TypeSafe gives for RLCD: Jev returns decisions and probabilities, and higher reported probabilities should correspond to higher observed accuracy. See TypeSafe’s RLCD primer . A minimal implementation uses a proper scoring rule such as log loss: \\[\n\\mathcal{L}_{\\mathrm{NLL}}=-\\log p_y\n\\] Brier calibration: confidence gets a price The Brier score makes the calibration objective concrete. For a binary Noul decision, let \\(p=P(Y=1\\mid x)\\) and \\(y\\in\\{0,1\\}\\) . The score is: \\[\n\\operatorname{BS}(p,y)=(p-y)^2\n\\] If the model reports \\(p=0.8\\) , it receives a score of \\(0.04\\) when the event occurs and \\(0.64\\) when it does not. The confidently wrong forecast costs sixteen times as much as the confidently correct one. This is why the Brier score fits a decision model. It is a strictly proper scoring rule: in expectation, the model minimizes the score by reporting the true conditional probability instead of gaming the threshold. The score was introduced for probabilistic forecasts by Glenn Brier ; its role as a proper scoring rule is developed by Gneiting and Raftery . For a multiway Choice , the score extends to the full probability vector. Using the normalization that makes the two-class case match the binary formula: \\[\n\\operatorname{BS}(\\mathbf{p},y)\n=\n\\frac{1}{2}\n\\sum_{i=1}^{K}\n\\left(p_i-\\mathbb{1}[i=y]\\right)^2\n\\] This matters because top-1 accuracy discards probability quality. Two models can choose the same action while reporting \\(0.55\\) and \\(0.99\\) . Once outcomes arrive, Brier score tells us whether that extra confidence was earned. For binary outcomes, the Murphy decomposition separates the mean score into three terms: \\[\n\\operatorname{BS}\n=\n\\operatorname{REL}\n-\n\\operatorname{RES}\n+\n\\operatorname{UNC}\n\\] Reliability \\(\\operatorname{REL}\\) measures the gap between reported probabilities and observed frequencies. Lower is better. Resolution \\(\\operatorname{RES}\\) measures whether the model separates cases with different outcome rates. Higher is better. Uncertainty \\(\\operatorname{UNC}\\) is the base-rate difficulty of the evaluation set. It is fixed when models are compared on the same data. A lower Brier score can therefore come from better calibration, better separation of easy and hard cases, or both. A constant base-rate predictor can be calibrated while having zero resolution; Brier exposes that weakness. Figure 3. Brier score prices confidence, decomposes forecast quality, and closes the loop from observed outcomes to an operational decision policy. An RLCD implementation can apply Brier score to the decision probabilities during training and use it again as a held-out objective for post-hoc calibration. With temperature scaling, the calibration parameter can be selected directly on validation outcomes: \\[\nT^*\n=\n\\arg\\min_{T>0}\n\\sum_{n=1}^{N}\n\\operatorname{BS}\\!\n\n(60 points, 8 comments on Hacker News)",
+      "published_date": "2026-09-24",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 60,
+        "num_comments": 8,
+        "hn_url": "https://news.ycombinator.com/item?id=49829625",
+        "object_id": "49829625"
+      }
+    },
+    "rule_score": 24.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: reasoning, dpo, reward model",
+      "📰 Hacker News: 60 points"
+    ],
+    "llm_score": 65,
+    "llm_reason": "解析RLCD將reward model轉為決策介面的新典範，技術深度足",
+    "novelty": 15,
+    "impact": 12,
+    "trending": 10,
+    "practicality": 11,
+    "blog_worthiness": 17
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Together AI",
+      "title": "How to train your own Jev for $17",
+      "url": "https://www.together.ai/blog/how-to-train-your-own-jev",
+      "authors": [],
+      "abstract": "Summary We just launched our own Jev-like classifier, together/Tev1-4B-experimental , on top of Qwen3.5 4B on Together’s serverless platform. In this blog post we’ll show you how to fine-tune your own version! Jev has quickly become one of the most talked about model releases in the AI space. It’s a powerful classification model that’s both fast and incredibly cheap to run. Give Jev a piece of state plus predefined questions and it will quickly give back a result in the form of a score, boolean value, or multiple choice answer. This sort of classification model has many real-world applications, such as an e-commerce site evaluating automated customer returns, categorizing ML papers, or even providing a sentiment rating for a piece of text. Today we’re going to fine-tune our own Jev-like classification model that takes state and returns an answer. Our goal is to create a model that can quickly and efficiently answer questions like: Customer message: Hi, I checked my statement and your company charged my card twice for the October subscription. The amounts are both $19.99 on the same day. I have not changed my plan. Which listed support intent best matches this customer's message? A. The customer reports being charged more than once.\nB. The customer wants to end or downgrade a subscription.\nC. The customer reports a payment that failed or was declined.\nD. None of the listed intents matches. In this blog post we’ll cover how to fine-tune and deploy a classification model that can answer these types of questions. By the time we’re done, you’ll have your own model deployed with an API endpoint that’s easy to integrate into any piece of software. Let’s get started by setting up your computer with everything needed to train the model. If you would rather jump straight into using the classifier, and not bother with training your own model, check out together/Tev1-4B-experimental on Together’s serverless platform. Getting started The first thing we need to do is clone the tev1 GitHub repository. git clone https://github.com/togethercomputer/tev1 Once the repository is cloned, we’ll need to install the necessary dependencies using: uv sync --locked The final setup step is to create an .env file that will hold the necessary environment variables. Copy .env.example : cp .env.example .env Edit the new .env file and add your TOGETHER_API_KEY . You do not need to add a JEV_MODEL just yet. Leave it blank for now. And that’s it. We’re now ready to fine-tune our model. Fine-tuning a classification model The next step is to take an existing language model and turn it into a model that specializes in classification. In order to do that we’ll need to create a fine-tune using a base model and a number of existing datasets. For the base model we’ll use Qwen3.5 4B and for the datasets we’ll use a handful that are hosted on Hugging Face. Picking datasets We’ll sample 38,000 questions from various datasets, each one specializing in a different type of classification. Here are the datasets and the number of examples we’ll use: Source Decision Training examples MultiNLI Support, contradict, or neutral 5,000 BoolQ Yes or no, using a passage 3,000 Banking77 Pick a banking intent 3,000 AG News Classify a news item 1,500 SST-5 Pick a sentiment level 2,000 Programmatic policies Apply a rule 13,500 Routing Rule decisions 6,000 Research taxonomy Paper classification 3,840 Total 37,840 We only use 38,340 examples to keep our fine-tuning costs low. Training against a dataset of this size will only cost about $17.0, while larger datasets are more expensive and time-consuming to train against. Normalizing the data Now that we have picked our six data sources, we need to sample a limited number of questions from them as well as normalize these questions so they are all in the same format. The repository contains a number of Python scripts that automate this process. First, download the datasets: uv run python fetch_sources.py Next, sample and normalize the questions that we will use for training: uv run python build_all.py For these commands you should see some output and no errors. Now that we have our training datasets, we’re ready to move on to the next step and fine-tune the classification model. Training the model We can launch a fine-tuning job using Together AI’s Fine-tuning service. There is a Python script that will help automate this process. Run it using: uv run --with together --env-file .env python examples/train_together.py --launch This script takes care of a number of steps needed to train a model. First, it uploads the training data to Together and then it launches a fine-tuning job using the dataset and appropriate parameters. Once the fine-tuning job launches, the training script will output a training job ID. Uploaded train.jsonl: file-81f6cdf1-6bc0-4e61-9aaa-bace7eb0a50a\nUploaded dev.jsonl: file-5e61eb67-d4a1-474c-9871-f9d8307a2dc6\nTraining job: ft-f3e14f1e-a0ce You can check on the status of the training using the Together CLI: tg fine-tuning retrieve ft-f3e14f1e-a0ce You can also check on the status of the training job using the Fine-tuning dashboard over on Together AI. The training job will take roughly 25 minutes to complete, and once it does we’ll have a model that is ready to do classification. Deploying the model Before we can deploy our model, we’ll first need its name from the fine-tuning job. Run the following command: tg fine-tuning retrieve ft-f3e14f1e-a0ce --json | jq -r '.model_output_name' This command will print the model’s model_output_name . We’ll use this name to deploy the model to a dedicated endpoint on Together AI. Dedicated endpoints are responsible for exposing a fine-tuned model over an HTTP server so that we can send queries to it. tg endpoints create MODEL_OUTPUT_NAME --hardware 1x_nvidia_h100_80gb_sxm --display-name jev-v1-4b --wait Running this command will return information about your new endpoint: √ Dedicated endpoint created.\nName: ENDPOINT_NAME\nID: endpoint-5a31a048-d3f9-43bf-a56a-8aab8a4de8d6\nState: Pending\nHardware: 1x_nvidia_h100_80gb_sxm\nModel: MODEL_OUTPUT_NAME\nReplicas: min: 1 max: 1\nCreated: 09/22/2026, 02:23 PM\n√ Endpoint started Once created, you will see the name of the endpoint in the output. You can also find more information about the endpoint using your Dedicated endpoints dashboard over on Together AI as well. Put the name of the endpoint inside of your .env as JEV_MODEL . For example, if your endpoint were named account_855c/Qwen3.5-4B-jev-efde5bd5-068f756b then your .env should have: # .env\nTOGETHER_API_KEY=... JEV_MODEL=account_855c/Qwen3.5-4B-jev-efde5bd5-068f756b And that’s it. Your model is now deployed on Together AI and ready to answer any classification questions. In the next section, we’ll learn how to query our model. Querying the model The code repository contains a number of test cases to verify the model is functioning correctly. Let’s use our classification model to find the intent of a customer’s question about their subscription: Customer message: Hi, I checked my statement and your company charged my card twice for the October subscription. The amounts are both $19.99 on the same day. I have not changed my plan. Since our model was fine-tuned on JSON input and output, we need to format that question, and its possible answers, using a JSON data structure like so: { \"state\": \"Customer message: Hi, I checked my statement and your company charged my card twice for the October subscription. The amounts are both $19.99 on the same day. I have not changed my plan.\", \"question\": \"Which listed support intent best matches this customer's message?\", \"options\": [ { \"label\": \"A\", \"key\": \"duplicate_charge\", \"description\": \"The customer reports being charged more than once.\" }, { \"label\": \"B\", \"key\": \"cancel_subscription\", \"description\": \"The customer wants to end or downgrade a subscription.\" }, { \"label\": \"C\", \"key\": \"card_declined\", \"description\": \"The customer reports a payment that failed or was declined.",
+      "published_date": "2026-09-23",
+      "tags": [],
+      "organization": "Together AI",
+      "raw_metadata": {
+        "feed_name": "Together AI",
+        "feed_url": "https://www.together.ai/blog/rss.xml"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: fine-tuning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 66,
+    "llm_reason": "具體可復現的分類器微調教學，成本透明、程式碼可跑，踩中Jev熱點",
+    "novelty": 9,
+    "impact": 9,
+    "trending": 14,
+    "practicality": 18,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Apple ML",
+      "title": "Compressing Streaming Neural Audio Encoders via Latent-Space Distillation",
+      "url": "https://machinelearning.apple.com/research/latent-space-distillation",
+      "authors": [],
+      "abstract": "research area Methods and Algorithms , research area Speech and Natural Language Processing content type paper published September 2026 Compressing Streaming Neural Audio Encoders via Latent-Space Distillation Authors Prasanth Yadla‡, Mohammad Samragh Razlighi‡, Dongseong Hwang, Mingbin Xu, Yuanyuan Zhang, Chung-Cheng Chiu, Yongqiang Wang†**, Yuan Liu§**, Zhen Huang, Xiaodan Zhuang View publication Copy Bibtex System-wide Dictation on Apple devices runs entirely on-device, and the speech it transcribes reaches the foundation model through a tokenizer: an encoder that maps short windows of waveform onto the representation the language model reads. Because that model is sparsely activated under Instruction-Following Pruning, only a small subset of its experts occupies DRAM at any time, so the always-on tokenizer competes for the same memory, and its parameter count bears directly on power and latency. In this work we study how to compress such a tokenizer by distillation, taking as the supervision target neither the discrete token nor the output distribution but the pre-quantizer latent the model actually consumes—the last representation the two token interfaces share. We train only the student encoder to regress the teacher’s per-frame latent under a squared-error objective, with a single affine layer absorbing the teacher–student width mismatch. Because the target precedes both the quantizer and the language-model bridge, one recipe covers both token interfaces we support, and applies both to a tokenizer pretrained alone and to one jointly trained with a language model. At 2.8× compression the distilled student stays within 1.9% relative WER of its teacher on five of six teacher–student pairs without any fine-tuning, and improves on an independently trained tokenizer of identical capacity by 3.9% relative. ‡ Equal contribution † NVIDIA § Anthropic ** Work done while at Apple Related readings and updates. Unmasking On-Policy Distillation: Where It Helps, Where It Hurts, and Why July 9, 2026 research area Methods and Algorithms , research area Speech and Natural Language Processing On-policy distillation offers dense, per-token supervision for training reasoning models; however, it remains unclear under which conditions this signal is beneficial and under which it is detrimental. Which teacher model should be used, and in the case of self-distillation, which specific context should serve as the supervisory signal? Does the optimal choice vary from one token to the next? At present, addressing these questions typically… Read more Distillation Scaling Laws July 1, 2025 research area Methods and Algorithms , research area Speech and Natural Language Processing conference ICML We propose a distillation scaling law that estimates distilled model performance based on a compute budget and its allocation between the student and teacher. Our findings mitigate the risks associated with large-scale distillation by enabling compute-optimal allocation for both the teacher and student to maximize student performance. We provide compute-optimal distillation recipes for two key scenarios: when a teacher already exists, and when a… Read more Discover opportunities in Machine Learning. Our research in machine learning breaks new ground every day. Work with us",
+      "published_date": "2026-09-24",
+      "tags": [],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "Apple ML",
+        "feed_url": "https://machinelearning.apple.com/rss.xml"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: reasoning, fine-tuning, scaling law, distillation",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 55,
+    "llm_reason": "潛空間蒸餾壓縮串流音訊編碼器，端側部署技術含量高",
+    "novelty": 13,
+    "impact": 10,
+    "trending": 8,
+    "practicality": 10,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "Once Claude can measure something, it can make it faster",
+      "url": "https://claude.dev/blog/how-we-made-claude-ai-faster/",
+      "authors": [
+        "matthieu_bl"
+      ],
+      "abstract": "This August, we made the core user experience of claude.ai and the Claude desktop app about 3x faster in a two-week sprint. Users had been telling us it was slow, and they were right. We ran everything from a single Slack channel, with Claude in every thread. We focused on four journeys that make up 95% of user activity. At the 75th percentile, time to a typeable page on a fresh load of claude.ai went from 3.1 seconds to 0.55, starting a new Claude Code session went from 0.8 seconds to 0.3, and loading a Claude Cowork cloud session went from 2.6 seconds to 0.73. In aggregate, we estimate that saves tens of thousands of user-hours of waiting every day. Core user journeys, p75 Real user monitoring, per platform and product, August 13 vs. August 27 Launching the app claude.ai web · fresh load 5.6x faster −82% 3,085 → 550 ms Desktop app cold start 1.9x faster −47% 6,310 → 3,328 ms Starting a conversation Chat web 1.5x faster −34% 416 → 273 ms Chat desktop 2.1x faster −51% 460 → 224 ms Claude Code desktop 2.4x faster −59% 837 → 347 ms Loading a conversation Chat web 2.4x faster −59% 1,557 → 646 ms Chat desktop 2.8x faster −64% 1,353 → 488 ms Claude Cowork desktop · cloud 3.5x faster −72% 2,566 → 728 ms Claude Code desktop 2.1x faster −52% 545 → 262 ms Sending a message client-side share Chat web 3.1x faster −67% 180 → 59 ms Chat desktop 2.2x faster −54% 140 → 64 ms Claude Cowork desktop · cloud 19x faster −95% 928 → 48 ms Claude Code desktop 4.8x faster −79% 250 → 52 ms Thirteen measurements across four journeys, before and after: 3.1x faster on average (geometric mean). Core user journeys, p75 Real user monitoring, per platform and product, August 13 vs. August 27 Launching the app claude.ai web · fresh load 5.6x faster −82% 3,085 → 550 ms Desktop app cold start 1.9x faster −47% 6,310 → 3,328 ms Starting a conversation Chat web 1.5x faster −34% 416 → 273 ms Chat desktop 2.1x faster −51% 460 → 224 ms Claude Code desktop 2.4x faster −59% 837 → 347 ms Loading a conversation Chat web 2.4x faster −59% 1,557 → 646 ms Chat desktop 2.8x faster −64% 1,353 → 488 ms Claude Cowork desktop · cloud 3.5x faster −72% 2,566 → 728 ms Claude Code desktop 2.1x faster −52% 545 → 262 ms Sending a message client-side share Chat web 3.1x faster −67% 180 → 59 ms Chat desktop 2.2x faster −54% 140 → 64 ms Claude Cowork desktop · cloud 19x faster −95% 928 → 48 ms Claude Code desktop 4.8x faster −79% 250 → 52 ms Thirteen measurements across four journeys, before and after: 3.1x faster on average (geometric mean). We used Claude Tag (beta), running an internal research model roughly comparable to Opus 5.5. Claude found bottlenecks, built benchmarks, shipped improvements, and watched every deploy. We steered by setting goals, making tradeoffs, and approving every change. With that approach, we merged more than three thousand changes without a single customer-facing incident or rollback. This post covers what we shipped, how we measured it, and the loop we built with Claude to do it safely. THE BRIEF Before the sprint, we created a Slack channel with the following standing instructions : @Claude Your job is to facilitate all things related to the performance of the claude.ai website and desktop app. Your responsibilities include monitoring deploys for performance regressions, assessing the accuracy and comprehensiveness of existing telemetry, maintaining well-curated observability dashboards, proactively implementing solutions for observed issues and low-hanging fruit, proposing performance project opportunities, and communicating with your human teammates. […] The ultimate goal for this channel is for you to become as autonomous as possible, but today we know that isn’t yet possible. We asked Claude to analyze usage data through the Datadog MCP server. It identified the four highest-impact user journeys: launching the app, starting a conversation, loading an existing conversation, and sending a message. Between web and desktop, and across our products, those journeys came to thirteen distinct measurements. To establish baselines, we added instrumentation until they were directly comparable: each started with a user interaction, ended once the result was rendered, and disambiguated client and server work. We kicked off the sprint with a list of about twenty hand-picked projects, each targeting a specific journey. Claude estimated the impact of each project in milliseconds, and we aggregated those estimates to set our targets for the sprint. Some of the projects were fairly large, but we thought we could probably achieve most of them within two weeks. We hit twelve of the thirteen targets by day three. The planned projects landed early. For faster launches, we baked a static composer into the HTML so users can type during React initialization, and precompiled a V8 code cache so the desktop shell’s main process doesn’t recompile from scratch. For faster navigations, we kept the composer mounted between conversations, prefetched sessions when the user hovered over them, and cut sidebar re-renders by 90%. We had also left room for Claude to identify opportunities and propose new workstreams. Those workstreams quickly ramped into full projects of their own, which far exceeded our initial targets. So we set new targets, then looked for more things to measure: @Claude we’ve ended up funding nearly every project in the original projects list and more. let’s do a refresh […] what have we not explored, what can we hill climb on, where is the most opportunity at this point? […] i am open to WACKY ideas ANYTHING CAN BE HILL CLIMBED From the start, we knew we wanted to iterate faster than our deploy cadence. Claude could work asynchronously for many hours, even overnight, and we wanted to let it validate its prototypes without waiting for field reads. To achieve that, we looked for other ways to measure performance in the lab. Sam found the first lead: # claude-apps-perf · thread S Sam 12:34 PM What can we do instead of wall-clock timing? Can we measure JS instruction counts for instance? Claude App 12:42 PM Yes. For pure-JS hot paths, literal instruction counts: run the benchmark under Valgrind with node --predictable and compare to a checked-in baseline — one run, no statistics needed. For browser paths there’s no instruction counting under Chromium, but there’s a ladder of other deterministic counts: React commits per interaction, function call counts from V8’s precise coverage, layout and style-recalc counts, DOM mutations. Which do you want first? S Sam 12:49 PM Let’s explore valgrind + Ir + --predictable in one thread and each of the browser/react benches in new threads. Ping me in all of them. You know what we want. Let’s go Recreated from a real conversation. Eleven minutes later, five threads were running, each focused on a different measurement: instruction counts, V8 call counts, React commits, style recalculations, and DOM mutations. We treated every new benchmark with some skepticism. Each one had two jobs: first, a metric Claude could move in the lab; second, a guardrail in CI with a number that could only ratchet down. If a benchmark was flaky, or if it didn’t actually correlate with user latency, we threw it out rather than let Claude climb the wrong hill. @Claude please prove that hill climbing against each of these can result in measurable wall clock perf wins. we’ll unship the benches for any candidates that cannot prove that Wall-clock time is what users feel, but it’s noisy, and milliseconds are too flaky to use as a CI gate. Instruction counts were appealing because they were deterministic, but we still needed Claude to prove they tracked wall-clock time. So we asked Claude to drive the count down on two hot paths: the routine that assembles a conversation’s message tree, and a scanner for status lines in Claude Code output.\n\n(220 points, 148 comments on Hacker News)",
+      "published_date": "2026-09-24",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 220,
+        "num_comments": 148,
+        "hn_url": "https://news.ycombinator.com/item?id=49821196",
+        "object_id": "49821196"
+      }
+    },
+    "rule_score": 25.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: mcp",
+      "⬆️ HN 熱門: 220 points",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 63,
+    "llm_reason": "claude.ai效能優化實戰案例，附具體指標與方法論",
+    "novelty": 7,
+    "impact": 11,
+    "trending": 14,
+    "practicality": 15,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "量子位",
+      "title": "5分鐘完成機器人納管、10秒啟動跨叢集任務，清華大學聯合無問芯穹開源具身智慧雲原生平臺RLark",
+      "url": "https://www.qbitai.com/2026/09/496767.html",
+      "authors": [
+        "量子位的朋友们"
+      ],
+      "abstract": "5分鐘完成機器人納管、10秒啟動跨叢集任務，清華大學聯合無問芯穹開源具身智慧雲原生平臺RLark 量子位的朋友們 2026-09-24 13:19:55 來源： 量子位 開源一座具身智慧的新“塔臺” 一架架飛機在空中有序飛行，按時起降，看似只是飛機自己的事情，實際上，它需要持續與機場、跑道、航線以及地面資源系統協同。 這正是“塔臺”存在的意義： 它負責把分散的飛機和地面、空中的資源協調組織起來，讓飛機根據各自的任務有序執行。而當飛機越來越多、航線越來越複雜，這種統一管控和協調也就變得越來越重要。 具身智慧也同樣如此。 一項具身任務，本質上是多個角色的協同：機器人和相機等現場裝置、雲端算力、訓練與推理程式，以及連線這些角色的通訊和執行環境。 而隨著更多機器人投入研發與應用，這種協同的複雜度與成本更將進一步放大： 裝置需要一個個接入，任務需要分別部署，雲端與現場需要反覆配置網路，不同裝置和程式出了問題，還要逐一排查裝置、網路、程式。 因此，當機器人從“單機”走向更大的“機群”，具身智慧也需要一座新的“塔臺”——不只是“把裝置接進來”，而是 統一組織管理分散的算力、裝置和執行程式，讓它們圍繞同一項任務協同高效執行。 為解決這一問題，清華大學與無問芯穹共同打造並開源 面向具身智慧的雲原生納管平臺 RLark。 平臺以自研的具身裝置執行時（embodied-runtime）和任務級跨叢集網路互聯技術為核心，打通 “真實裝置如何被統一排程” 與 “跨地域任務如何互聯執行” 兩個關鍵環節。 一方面，統一管理機器人、相機等具身裝置的執行時環境，讓裝置可以像 GPU 一樣被申請、排程和複用；另一方面，針對不同任務和網路流量特徵，對跨叢集通訊進行任務級隔離，並最佳化大小包傳輸效能，提升雲端與現場協同執行的效率。 最終，RLark 可以將雲端算力、邊緣節點和具身裝置納入統一資源體系，並以一項完整任務為單位組織執行。讓一次實驗中完成的接入、部署與通訊配置，能夠在後續任務中複用。 運維人員通過一行命令即可接入並統一管理裝置，研究人員通過一份任務配置，即可將訓練、推理和真機互動程式部署到不同叢集。 目前，RLark 已完成 3 個叢集、近百個雲邊端節點 的統一納管，覆蓋 4 種型號的具身裝置 ， 裝置納管從小時級縮短至約 5 分鐘，任務提交後可在 10 秒內即可啟動執行。 同時，RLark 進一步結合訓練框架，打通了 跨地域的採集、訓練與真機驗證閉環 。為具身智慧實驗走向更大規模的裝置與更複雜的協同場景提供基礎支撐。 RLark 將從 使用者介面、API、後端服務，到任務編排、跨叢集互聯和具身裝置執行時 的整套能力開放出來，降低具身基礎設施的使用門檻，讓更多團隊可以直接部署和使用。 開源地址： github.com/RLinf/RLark 專案文件： rlark.readthedocs.io 快速開始： github.com/RLinf/RLark#quick-start 01 從裝置接入到真機訓練，一場具身智慧的跨地域實測 為了驗證雲端算力與現場裝置能否圍繞同一項任務協同執行，團隊將 RLark 與強化學習基礎設施框架 RLinf 結合，在 廣東雲端 GPU 叢集與北京機器人現場 之間，完成了一次 跨地域的真機實測。 這項實驗同時涉及現場機器人與相機、雲端 GPU，以及訓練、推理和真機互動等多個執行角色。 現場裝置 負責互動和資料採集 雲端 GPU 承擔訓練計算，訓練得到的策略再用於後續真機互動。 RLark 負責裝置申請、跨叢集部署、任務例項互聯與執行狀態彙集。 RLinf 負責訓練計算與資料協作，兩者共同支撐實驗執行。 這次實驗重點驗證的，不只是“能不能把裝置連起來”，而是 RLark 能否讓一項原本需要多處配置、多個程式協作的複雜實驗， 更快準備、更簡單執行，並形成完整的採集—訓練—驗證閉環。 1. 5 分鐘完成裝置納管：讓雲和端的資源可被統一申請 實驗準備階段，運維人員首先將雲端 GPU 叢集與現場裝置所在叢集接入 RLark，由各叢集 Agent 同步節點容量、資源資訊與執行狀態。隨後，通過具身裝置執行時（embodied-runtime）接入已適配的雙臂機器人與相機，將真實硬體註冊為任務可申請、可排程的資源。 在測試環境下， 具身裝置納管從傳統的1小時驟降為 5 分鐘 。完成接入後，研究人員可以在平臺中統一檢視兩地資源的位置、型別與可用情況，並在後續實驗中持續申請和複用，無需每次重新接入裝置。 2. 10 秒內啟動任務：用一份任務配置組織兩地執行 資源準備就緒後， 研究人員通過一份任務配置，定義訓練、推理和真機互動等執行角色，宣告各角色所需的資源、例項數量與部署位置。 例如，訓練角色使用雲端 GPU，真機互動角色申請現場機器人與相機，共同歸屬於同一項具身任務。 任務提交後，RLark 將配置下發至相應叢集，由 Agent 建立執行例項，並建立例項之間的跨叢集通訊關係。 在資源已接入且具備執行條件的測試環境下， 任務提交後 10 秒內即可在平臺側啟動 ，無需逐臺登入裝置、分別部署程式。 3. 全鏈路跑通：實現採集—訓練—真機驗證閉環 任務啟動後，現場機器人與相機持續產生互動資料，並回傳雲端由 RLinf 用於訓練；訓練後更新的策略再用於後續真機互動，形成 採集—訓練—驗證 的持續迴圈。 本次實驗連續執行約 36 分鐘，訓練推進至 323 個全域性訓練步驟（global step） ， 完整跑通了裝置申請、跨叢集排程、真機資料回傳、雲端訓練和策略更新全鏈路。 執行過程中，研究人員可以從同一任務入口檢視各角色的狀態，並沿執行例項、節點、裝置與日誌定位異常。後續更換裝置、調整角色規模或演算法參數時，可以直接修改並複用任務配置，減少重新搭建實驗流程的工作。 通過這次實驗，RLark 將原本分散在不同地點的 裝置、算力和執行程式 組織到同一項任務中，驗證了雲端算力與現場裝置圍繞同一項任務協同執行的能力，實現了從 資源接入、任務啟動到持續執行 的一體化協同。 4. 通訊最佳化專項測試：跨地域真機訓練更流暢 RLark 結合虛擬定址、gVisor 使用者態網路棧與 SSH 安全隧道，為分佈在雲端和現場的執行例項建立通訊通道，由平臺統一維護路由、隧道與轉發關係，支撐真機資料回傳與策略同步。在此基礎上，通過訓練框架 RLinf 的分散式通訊方式，進一步最佳化資料流轉，減少不必要的跨域傳輸，協同完成任務級跨叢集通訊最佳化。 為了進一步驗證這條跨地域任務鏈路的通訊能力，團隊針對任務級跨叢集網路互聯開展了專項測試。 在受限網路環境下，RLark 的大包單流吞吐較測試所用 VPN 方案提升約 49% ，小包單流吞吐提升約 14% ；在高頻寬環境下，大包單流吞吐接近 2 Gbps 。 更高的傳輸效率，為模型、互動資料和執行資訊在雲端與現場之間持續傳輸提供了更穩定的通訊基礎。與傳統的 EasyTier方案對比，RLark 顯著減少了跨地域真機任務執行過程中因網路傳輸造成的卡頓。 02 RLark 技術路徑：貫通裝置接入與任務執行 一項具身任務真正執行起來，需要解決的不只是裝置接入，還包括 任務怎麼部署、不同叢集之間怎麼通訊，以及執行過程中出了問題怎麼定位。 RLark 採用控制面與資料面分離的架構，將分散在雲端、邊緣和實驗現場的資源納入統一管理。 RLark整體技術架構圖 使用者通過 Web 控制台、API 或命令列工具（CLI）管理資源、提交任務；控制面承擔“塔臺”的協調職責，統一維護資源資訊、任務配置與通訊關係；各叢集中的 Agent 負責本地任務部署、資源同步與狀態回傳。 這座“塔臺”主要由四項核心技術共同支撐： 1. 自研具身裝置外掛與執行時：讓機器人成為可管理排程的資源 RLark 將雲端算力、邊緣節點與機器人、相機等具身裝置納入統一資源體系。各叢集 Agent 持續向控制面同步資源資訊和執行狀態，使用者可以從同一入口檢視資源的位置、型別與可用情況。 針對具身裝置，RLark 研發了 具身裝置執行時（embodied-runtime） ，通過統一硬體抽象， 將機器人、相機等真實裝置轉化為雲原生系統中可識別、可申請、可排程的資源，使其能夠與 GPU 等算力資源共同參與任務編排。 這一過程由裝置外掛與執行時協同完成：裝置外掛發現並註冊已適配的具身裝置，將其資源資訊提供給 Kubernetes；各叢集 Agent 向控制面同步資源資訊與執行狀態，形成覆蓋雲端算力、邊緣節點和現場裝置的統一資源檢視。任務申請資源後，平臺組織資源分配，執行時為執行例項提供訪問所分配硬體的能力，打通從資源宣告、排程分配到真實裝置使用的完整鏈路。 研究人員因此可以在同一份任務配置中宣告 GPU、機械臂和相機的型別與數量，由平臺統一組織使用。機器人由需要單獨連線和配置的外部裝置，轉變為能夠與算力一起申請、分配和複用的任務資源。 2. 任務級跨叢集通訊最佳化：讓同一任務中分散的角色真正連線 RLark 研發了 任務級跨叢集網路互聯技術 ，通過虛擬地址與 SSH 安全隧道， 將同一任務中分佈在不同叢集的執行例項連線起來，為雲端訓練、推理與現場真機互動提供統一通訊通道。 在此基礎上，訓練框架可進一步 最佳化任務部署與資料流轉，減少不必要的跨域傳輸。 首先，由 RLark 建立並管理網路隧道，實現跨域互聯。 其核心是將執行例項的通訊地址與實際部署位置解耦：平臺為例項分配虛擬地址，通過 TUN 虛擬網路介面接收流量，由 gVisor 使用者態網路棧處理，再經 SSH 安全隧道轉發至對端。例項通過虛擬地址相互訪問，底層路由、隧道與轉發路徑由平臺統一維護。同時，RLark 通過 通訊域（Domain） 組織互聯範圍，結合成員關係與證書認證控制訪問，減少跨叢集部署時逐一配置網路的工作。 在此基礎上，RLinf框架基於 RLark 提供的隧道，對流量進行本地化適配。 該技術源自 RLinf 推出的面向真實機器人線上策略學習系統 USER，支援在真機互動過程中持續採集資料並更新模型策略。在與 RLark 的協同中，RLinf 將觀測資料處理、推理與真機互動等環節組織在邊緣側，讓高頻互動和原始資料處理就近完成，再通過 RLark 提供的跨叢集通道回傳訓練所需的資料、下發更新後的策略，減少原始觀測資料全量回傳帶來的頻寬開銷。 技術論文見團隊發表在 RSS 2026 的《RLinf-USER: A Unified and Extensible System for Real-World Online Policy Learning in Embodied AI》 https://arxiv.org/abs/2602.07837 3. 宣告式任務編排：讓實驗從“指令碼拼接”變成“一份配置” RLark 通過自定義任務型別，用 Job、Task 和 Worker 三層模型描述一項具身實驗：Job 代表整項任務，Task 描述訓練、推理、真機互動等執行角色，Worker 則是實際承擔這些角色的執行例項。 使用者通過一份配置，宣告各角色需要的資源、例項數量和部署位置。 任務提交後，控制面將部署配置下發至相應叢集，由 Agent 建立 Worker 並回傳狀態。平臺統一管理各叢集中的 Worker，通過持續調協，使實際執行狀態與任務配置保持一致。 後續實驗可以複用同一份配置，按需調整裝置、角色規模與部署位置；具有階段依賴的流程，還可以通過 Workflow 組織多個 Job，減少維護多套啟動指令碼和手動銜接實驗步驟的工作。 4. 任務級執行觀測：讓問題沿著任務鏈路逐層排查定位 任務執行出現異常後，如何快速知道問題出在哪裡？ RLark 以同一項任務為主線，將 Job、Task、Worker 與相關節點、裝置、事件和日誌關聯起來。各叢集 Agent 回傳的狀態在控制面統一彙集，讓使用者能夠從一個入口檢視整項任務及各執行角色的執行情況。 任務未按預期推進時，使用者可以沿著“任務—角色—執行例項”逐層排查：先判斷哪個角色未正常執行，再定位到具體 Worker，檢查其事件、日誌及關聯節點和裝置的狀態。 平臺同時提供 Web Terminal 與 TensorBoard 入口，支援進一步檢查執行環境、裝置訪問和訓練過程，減少登入多臺機器、跨系統尋找和核對異常資訊的工作。 03 共同建設持續生長的具身智慧新 “塔臺” 具身智慧的硬體與執行環境仍在快速變化。 新的機器人、相機和感測器還在持續接入；不同場地的網路條件需要逐一驗證；實驗規模擴大後，排程、通訊與異常恢復也會出現更多新的工程問題。 這意味著， 具身智慧需要的不只是一個能夠“把裝置接進來”的工具，而是一套可以持續擴展、複用和共同演進的基礎設施。 RLark 選擇開源，正是希望將裝置適配、任務配置和真實實驗中的基礎設施經驗沉澱為可複用能力。管理員可以通過平臺管理叢集、節點、裝置資訊和基礎元件；研發人員可以通過 Web 控制台配置採集、訓練和評測任務，並使用工作流、通訊域、儲存、日誌與遠端終端管理執行過程。RLark 同時提供 API，便於接入既有演算法框架與研發工具鏈。 後續，RLark 將繼續完善裝置與晶片適配、輕量執行時、跨域通訊、任務異常恢復和實驗配置複用。 我們歡迎機器人及晶片廠商參與裝置適配，歡迎演算法團隊分享資料採集、訓練和驗證場景，也歡迎基礎設施開發者參與任務編排、網路與執行觀測能力建設。 我們也期待能與開源社群攜手，共同建設這座支撐具身智慧走向更大規模、更複雜場景的新“塔臺”。 專案地址： github.com/RLinf/RLark 歡迎 Star、部署試用、提交 Issue 或參與貢獻。 本文由無問芯穹提供，量子位獲授權轉載，觀點歸原作者所有。 版權所有，未經授權不得以任何形式轉載及使用，違者必究。 具身智慧 無問芯穹 清華大學 量子位的朋友們 GPT-6之後，具身智慧走向何方？諾因釋出GLOW技術報告，給出機器人“一教就會”的答案 2026-09-24 Stripe Tour 中國首秀：構建 AI 經濟基礎設施，賦能全球商業增長 2026-09-24 海信新一代效能旗艦E7S Pro+正式釋出，原生真彩再進階 2026-09-24 聯想亮相阿里雲棲大會：聯想天禧AI把超級組織落地到端側 2026-09-23 相關閱讀",
+      "published_date": "2026-09-24",
+      "tags": [
+        "資訊",
+        "具身智慧",
+        "無問芯穹",
+        "清華大學"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "量子位",
+        "feed_url": "https://www.qbitai.com/feed"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 65,
+    "llm_reason": "具身智慧雲原生排程平臺，開源可復現但屬工程整合而非演算法突破",
+    "novelty": 12,
+    "impact": 11,
+    "trending": 13,
+    "practicality": 15,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "Build a multi-account AI agent with AgentCore Gateway and MCP",
+      "url": "https://aws.amazon.com/blogs/machine-learning/build-a-multi-account-ai-agent-with-agentcore-gateway-and-mcp/",
+      "authors": [
+        "Senthil Kamala Rathinam"
+      ],
+      "abstract": "Enterprises increasingly want AI agents that can reason over data spread across many AWS accounts without copying or centralizing it. Each team keeps its data in its own account for good reasons: clear ownership, scope isolation, and independent deployment lifecycles. But an agent that sees only one account’s data delivers limited value, and connecting it to distributed sources usually means replicating data or untangling cross-account AWS Identity and Access Management (IAM) . The goal is to let data stay where it already lives, in each line-of-business (LOB) account. Only the specific data a request needs flows out at query time, so the underlying datasets do not leave their owning account. In this post, you build a multi-account architecture that keeps each team’s data in its own account while giving agents a unified way to query across them, using Amazon Bedrock AgentCore Gateway and Model Context Protocol (MCP) . Amazon Bedrock AgentCore is an agentic service for building, deploying, and operating highly effective agents securely at scale. A central platform account hosts the agent tier and large language model (LLM) inference through Amazon Bedrock. LOB teams expose their data and tools as MCP servers, and the platform account’s AgentCore Gateway gives agents a single endpoint for tool discovery and invocation across registered LOBs. Along the way, you set up cross-account MCP integration, authentication with AgentCore Identity , a capability of Amazon Bedrock AgentCore, and Okta , fine-grained authorization with Policy in Amazon Bedrock AgentCore, and the governance controls that support production readiness. The architecture follows a multi-account model with three layers: a central platform account, distributed LOB accounts, and AgentCore Gateway as the integration layer that connects them. The platform team owns the platform account, which runs the agent on AgentCore Runtime , a capability of Amazon Bedrock AgentCore. AgentCore Runtime is a serverless, framework-agnostic environment with session isolation in dedicated microVMs, consumption-based pricing, and built-in authentication. To keep the walkthrough clear, this post uses a single agent, but the same pattern supports multiple agents in the platform account. The agent connects to the platform account’s Gateway rather than to individual LOB MCP servers. LLM inference runs in the platform account through Amazon Bedrock. The platform team controls available foundation models (FMs), applies Amazon Bedrock Guardrails , and tracks costs through a single billing boundary, avoiding the overhead of managing model quotas across dozens of LOB accounts. As demand grows, some organizations distribute inference across several dedicated inference accounts, placing AgentCore Gateway in front as an Inference Gateway that routes traffic across model providers, selecting the provider based on the request and applying per-team rate limits. AgentCore Gateway in the platform account acts as the single MCP endpoint for the agent. It registers each LOB account’s MCP server as a target and, from that one endpoint, provides unified tool discovery with semantic search, centralized authentication through AgentCore Identity, fine-grained authorization with Policy in AgentCore , and observability . Beyond aggregating MCP servers and acting as an Inference Gateway, AgentCore Gateway supports additional target types that make it a central integration point. HTTP targets bring AgentCore Runtime agents, agent-to-agent (A2A) services, and other HTTP endpoints into the same governed endpoint, each addressable through its own sub-path. The platform team can also apply Amazon Bedrock Guardrails for content safety and configure Policy in AgentCore ( Cedar ) for fine-grained access control, both enforced at the Gateway layer outside the agent’s code. Rather than exposing raw AWS resources ( Amazon Simple Storage Service (Amazon S3) buckets, databases, Amazon Bedrock Knowledge Bases ) directly, each LOB team packages its data and tools as an MCP server. The retail banking team exposes tools like get_balance and get_profile . The lending team offers get_credit_score and search_lending_policies , where the latter queries the fully managed Retrieval Augmented Generation (RAG) capability in Amazon Bedrock Knowledge Bases over bank policy PDFs. This reference architecture wraps a standalone Amazon Bedrock Knowledge Base inside the MCP server for fine-grained control over the retrieval pipeline. For new implementations, you can instead attach an Amazon Bedrock Managed Knowledge Base directly to the Gateway as a native connector, so agents query it with standard MCP calls and you operate no retrieval infrastructure. The MCP server runs on AgentCore Runtime in the LOB account, a serverless, framework-agnostic environment with session isolation in dedicated microVMs, consumption-based pricing, built-in authentication through AgentCore Identity, and agent-specific observability. This gives LOB teams full ownership of their tool surface: they decide what to expose and what business logic runs behind each tool, and can change the implementation without affecting the platform agent, as long as the MCP tool interface stays consistent. This architecture follows a hub-and-spoke pattern: each LOB deploys a standalone MCP server (the spoke) using MCP over Streamable HTTP, while AgentCore Gateway (the hub) aggregates them behind a single endpoint. The agent connects to the Gateway as one MCP server, and the Gateway federates tool invocation across registered LOB targets. When the agent invokes a tool, the Gateway retrieves OAuth 2.0 machine-to-machine (M2M) credentials from AgentCore Identity, attaches them to the outbound request, and routes it to the right LOB MCP server, which authenticates the token against Okta’s OpenID Connect (OIDC) endpoint before processing the request locally. The LOB’s data stays in its own account: the MCP server returns only the specific result the tool produced, not the raw dataset, and that result flows to the platform account as context for inference. The source data isn’t copied or relocated. Figure 1: Multi-account AI agent architecture with AgentCore Gateway and MCP The following walkthrough traces a user’s question as it crosses account boundaries, invokes distributed tools, and returns a unified answer: Results flow back through the same chain (LOB to Gateway to Agent to backend), with a trace panel in the sample application showing which LOBs were accessed and Policy in AgentCore denials. Each LOB runtime validates the inbound OAuth token. In production, the LOB team configures allowedWorkloadConfiguration to restrict runtime invocation to requests whose identity chain includes the Gateway, reducing the risk of direct access that bypasses Gateway policy and Cedar authorization. The Strands Agent discovers LOB tools through the Gateway’s tools/list method, and queries AWS Agent Registry (Preview) at startup to discover registered LOB MCP servers. Onboarding a new LOB involves adding a Gateway target. The agent discovers the new tools on its next tools/list call. The following sections walk through each layer of the architecture: how LOB teams build and deploy MCP servers, how the platform team configures AgentCore Gateway with OAuth outbound authentication and Policy in AgentCore authorization, and how continuous evaluation helps keep the agent reliable as tools and models evolve. For the complete implementation, clone the accompanying repository and run the deployment script, which bootstraps AWS Cloud Development Kit (AWS CDK) across the four accounts, provisions the platform and LOB resources, deploys the MCP servers and Gateway targets, and launches a React web application on Amazon ECS behind CloudFront.",
+      "published_date": "2026-09-24",
+      "tags": [
+        "Amazon Bedrock AgentCore",
+        "Expert (400)",
+        "Technical How-to"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, mcp, model context protocol, rag",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 54,
+    "llm_reason": "跨帳戶Agent架構教學，實作導向但屬既有服務組合",
+    "novelty": 6,
+    "impact": 9,
+    "trending": 12,
+    "practicality": 15,
+    "blog_worthiness": 12
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "Early rogue AI agent activity and attempts to hack found on urlquery.net",
+      "url": "https://transluce.org/agent-activity",
+      "authors": [
+        "snikolaev"
+      ],
+      "abstract": "Jack Cable * , 2 , Daniel Chiu * , Francisco Pernice * , 3 , Selena Zhang * , 1 , James Anthony 1 , Tetiana Bas 4 , Gary Shen 4 , Conrad Stosz 1 , Jacob Steinhardt 1 1 Transluce · 2 Corridor · 3 MIT · 4 AIUC · *Primary contributors, listed alphabetically Transluce | Published: September 23, 2026 We present evidence that AI agents used the web security service urlquery.net to bypass restrictions and expand their access to the public internet. The agents also tried on three occasions to hack public data providers, including an Australian government website. We link at least some of this activity to agent swarms previously attributed to OpenAI. We also find evidence of earlier agent activity going back to at least March 6th, 2026, and potentially earlier, predating the previously reported Hugging Face , collusion.wiki , and RubyGems incidents by at least two months. Download the Data Get Involved 0 1 10 100 1,000 3,000 Scans per day, UTC timezone November 2025 Earliest evidence of potential agent data retrieval attempts 6 March 2026 Agents start tunneling complex usage through urlquery.net 25–26 May 2026 Agents target University of New Mexico 28 May 2026 Agents target Data USA 20–21 June 2026 Agents target Australian Institute of Health and Welfare Nov Dec Jan Feb Mar Apr May Jun Jul Aug Sep 2025 2026 RubyGems Hack May 5–June 18 Wiki activity from collusion.wiki May 24–June 22 Hugging Face Hack July 9–13 0 10 100 1k 3k Scans per day, UTC timezone 1 2 3 4 5 Nov Jan Mar May Jul Sep 2025 2026 Higher confidence evidence Moderate confidence evidence 1 November 2025 Earliest evidence of potential agent data retrieval attempts Repeated requests sought historical theme-park and Thai statistical data. These scans suggest task-directed retrieval, but are less distinctive than the later activity. 2 6 March 2026 Agents start tunneling complex usage through urlquery.net Scans show attempts to retrieve Thai drug-enforcement statistics, escalating from direct requests to base64-encoded scripts run in a remote browser after earlier approaches failed. 3 25–26 May 2026 Agents target University of New Mexico After attempts to retrieve a Digital Library photograph failed, seven requests probed for vulnerabilities. The probes do not appear to have succeeded. 4 28 May 2026 Agents target Data USA While seeking University of Iowa data, agents sent 12 vulnerability probes after malformed queries returned errors. The probes do not appear to have succeeded. 5 20–21 June 2026 Agents target Australian Institute of Health and Welfare Agents working on a pharmaceutical-data task probed for a vulnerability and retrieved a public file from a pre-production server after bot protection blocked the main site. Context windows: RubyGems Hack (May 5–June 18), Wiki activity from collusion.wiki (May 24–June 22), and Hugging Face Hack (July 9–13). Key Findings We report three separate incidents between May and June 2026 in which the agents attempted to exploit security vulnerabilities and hack into websites, including an attempt on an Australian government public health website. Notably, the agents did this while attempting mundane data retrieval tasks which were not cyber-related. This traffic goes back at least to March 6, 2026 and extends as recently as September 16, 2026, suggesting agents may still be exploiting these services to bypass restrictions. We are releasing a dataset containing tens of thousands of queries apparently made by autonomous AI agents leveraging a URL scanning service to avoid access restrictions. We encourage others to continue looking into the data. Executive Summary Agents attempted to hack three public data sources, including an Australian government website, and some are linked to a known agent swarm. 1 We present evidence of AI agents attempting to compromise websites at three domains: Data USA 2 ( api.datausa.io ), the University of New Mexico digital library ( nmdigital.unm.edu ), and the Australian Institute of Health and Welfare (AIHW) Tableau collections ( viz*.aihw.gov.au ). This attempted compromise of AIHW is part of the first reported instance of agents hacking a government. We directly link two of the three (AIHW and Data USA) to a previously reported agent swarm that OpenAI has publicly confirmed originated from them. For all three, we note that the extent of the observed activity is minor, attempting a low number of probe payloads and we observe no evidence of exploitation. While previous reporting showed that agents had interacted with these domains, this discovery reveals that agents attempted to hack into them when other methods of collecting the data they sought failed. Notably, the tasks the agents were trying to solve were not cyber-related ; the agents resorted to hacking tactics while working on ordinary data retrieval tasks. We find evidence of unintended, task-driven agent-like activity starting on March 6th. Records from urlquery.net show agents using the service since at least March 6, 2026, about two months before previously reported swarm activity. The first case, a March 6 attempt to retrieve Thai drug-enforcement statistics, shows an agent escalating as each approach failed: it first requested the data directly, then tried a service that converts web pages into text, and finally packed a custom program into a web address. The same technique shows up in thousands of agent requests recorded by urlquery.net starting in mid-April, targets many of the same data sources as the collusion.wiki swarm, and collapsed the same day the wiki activity did. We also report similar activity that occurred as recently as September 16. We find weaker evidence of similar data-retrieval agent activity as early as November 2025. November 2025 urlquery.net records reveal bursts of attempts to retrieve statistics of historical theme park data and Thai government data through different URLs. These earlier attempts are less sophisticated and we are less confident that they involve the same agents, but they are consistent with task-directed data retrieval and target the same sources accessed in later activity. Overall, the evidence is consistent with, but does not prove, that the agents may have learned this behavior over one or more training runs. In November, they may have used urlquery.net simply to look up information. By March, they were finding creative ways around access limits. By May and June, they were gaining more access, including attempting to bypass cyber defenses to complete their tasks. Hacking attempts against public data providers Much of the urlquery.net activity appears to come from agents retrieving data to answer web search tasks. For three of these tasks, after failing to retrieve data through normal means, they attempted a variety of cyber exploits against the relevant data service. We tie two of these attempts (those targeting api.datausa.io and viz*.aihw.gov.au ) to the prior DseWiki agent swarm activity confirmed to originate from OpenAI based on shared targets, tactics, and timing. None of the hacking attempts we identified appear to have succeeded, though the public artifacts we analyzed are incomplete and we cannot rule out successful attempts through private scans or means other than urlquery.net. This data reveals that malicious cyber activity is not limited to agents tasked with cybersecurity-related tasks and can arise instrumentally to solve mundane tasks like information retrieval. Agents targeted University of New Mexico’s digital library using exploits like SQL injection and path traversal The first hacking attempt was against the University of New Mexico’s Digital Library ( nmdigital.unm.edu ) from May 25-26 2026 ( 1 ⓘ × Full URL: https://nmdigital.unm.edu/iiif/2/valmora:136/manifest.json , 2 ⓘ × Full URL: https://nmdigital.unm.edu/iiif/2/valmora:136;2/120,1300,1100,200/full/0/default.jpg?id=../../../../etc/passwd&tok=expt0 ). Agents repeatedly tried to retrieve ⓘ × Full URL: https://nmdigital.unm.\n\n(214 points, 194 comments on Hacker News)",
+      "published_date": "2026-09-24",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 214,
+        "num_comments": 194,
+        "hn_url": "https://news.ycombinator.com/item?id=49826565",
+        "object_id": "49826565"
+      }
+    },
+    "rule_score": 20.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⬆️ HN 熱門: 214 points"
+    ],
+    "llm_score": 67,
+    "llm_reason": "具體證據鏈追蹤AI agent自主規避限制與入侵行為，兼具技術深度與安全警示的重大題材",
+    "novelty": 13,
+    "impact": 14,
+    "trending": 15,
+    "practicality": 8,
+    "blog_worthiness": 17
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "VSCode's SSH Agent Is Bananas (2025)",
+      "url": "https://fly.io/blog/vscode-ssh-wtf/",
+      "authors": [
+        "Rapzid"
+      ],
+      "abstract": "Author Name Thomas Ptacek @tqbf @tqbf We’re interested in getting integrated into the flow VSCode uses to do remote editing over SSH, because everybody is using VSCode now, and, in particular, they’re using forks of VSCode that generate code with LLMs. ”hallucination” is what we call it when LLMs get code wrong; “engineering” is what we call it when people do. LLM-generated code is useful in the general case if you know what you’re doing. But it’s ultra-useful if you can close the loop between the LLM and the execution environment (with an “Agent” setup). There’s lots to say about this, but for the moment: it’s a semi-effective antidote to hallucination: the LLM generates the code, the agent scaffolding runs the code, the code generates errors, the agent feeds it back to the LLM, the process iterates. So, obviously, the issue here is you don’t want this iterative development process happening on your development laptop, because LLMs have boundary issues, and they’ll iterate on your system configuration just as happily on the Git project you happen to be working in. A thing you’d really like to be able to do: run a closed-loop agent-y (“agentic”? is that what we say now) configuration for an LLM, on a clean-slate Linux instance that spins up instantly and that can’t screw you over in any way. You get where we’re going with this. Anyways! I would like to register a concern. Emacs hosts the spiritual forebearer of remote editing systems, a blob of hyper-useful Elisp called “Tramp” . If you can hook Tramp up to any kind of interactive environment — usually, an SSH session — where it can run Bourne shell commands, it can extend Emacs to that environment. So, VSCode has a feature like Tramp. Which, neat, right? You’d think, take Tramp, maybe simplify it a bit, switch out Elisp for Typescript. You’d think wrong! Unlike Tramp, which lives off the land on the remote connection, VSCode mounts a full-scale invasion: it runs a Bash snippet stager that downloads an agent, including a binary installation of Node. I think this is the source code ? The agent runs over port-forwarded SSH. It establishes a WebSockets connection back to your running VSCode front-end. The underlying protocol on that connection can: Wander around the filesystem Edit arbitrary files Launch its own shell PTY processes Persist itself In security-world, there’s a name for tools that work this way. I won’t say it out loud, because that’s not fair to VSCode, but let’s just say the name is murid in nature. I would be a little nervous about letting people VSCode-remote-edit stuff on dev servers, and apoplectic if that happened during an incident on something in production. It turns out we don’t have to care about any of this to get a custom connection to a Fly Machine working in VSCode, so none of this matters in any kind of deep way, but: we’ve decided to just be a blog again, so: we had to learn this, and now you do too. Next post ↑ A Blog, If You Can Keep It Previous post ↓ AI GPU Clusters, From Your Laptop, With Livebook\n\n(301 points, 199 comments on Hacker News)",
+      "published_date": "2026-09-24",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 301,
+        "num_comments": 199,
+        "hn_url": "https://news.ycombinator.com/item?id=49822555",
+        "object_id": "49822555"
+      }
+    },
+    "rule_score": 31.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic",
+      "🔥 HN 爆紅: 301 points"
+    ],
+    "llm_score": 52,
+    "llm_reason": "VSCode SSH Agent安全隱憂討論，HN高熱度切中agent風險焦點",
+    "novelty": 7,
+    "impact": 9,
+    "trending": 15,
+    "practicality": 8,
+    "blog_worthiness": 13
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "TechCrunch AI",
+      "title": "Anthropic says its biology lab has already found something big",
+      "url": "https://techcrunch.com/2026/09/23/anthropic-says-its-biology-lab-has-already-found-something-big/",
+      "authors": [
+        "Julie Bort"
+      ],
+      "abstract": "Last week, Anthropic confirmed that it was operating a wet biology lab in the Bay Area where it uses its AI models to run physical experiments. This week, the AI giant announced that this lab has already made what it believes is a big discovery: a new enzyme “system” that has certain “properties reminiscent of CRISPR,” as Anthropic describes it . CRISPR is a natural immune system used by bacteria to fight off viruses that has become a gene-editing technology widely used by researchers . Essentially, what Anthropic says it found is a previously unknown enzyme system hidden in the DNA of bacteriophages, which are viruses that infect and replicate within bacteria. Anthropic’s researchers say this system behaves similarly to CRISPR in that it can “perform operations like cutting, copying, and pasting DNA.” It will be up to the broader research community to validate how big, or new, this discovery actually is. Anthropic CEO Dario Amodei acknowledges that the discovery was based on the work of others and that a team from Stanford previously discovered a system “that is in some ways similar to the one Claude found,” he wrote on X . But Amodei and Anthropic are not just emphasizing the discovery. They are touting it was found “mostly, though not entirely, by Claude,” the CEO wrote. On the one hand, that is astounding. This lab was only established this spring (though Anthropic declined to be more specific about how many months it has been open). A discovery in just a few short months would be speedy enough work, but the team said it actually only took Claude 21 hours of concerted effort. Claude searched through data using about 950 agents that burned through 210 million tokens. Still, the revelation that Anthropic has been conducting biology experiments comes right after AI CEOs, including Amodei , publicly admitted that models have become so capable, and so potentially dangerous, that the industry must slow down and develop safety-testing procedures. This after a couple of his employees publicly said earlier this month that there’s a risk AI could kill us all . Amodei himself has said one of the things he fears most is that AI could be used for bioterrorism. But he also believes AI will “cure most diseases in 5-10 years,” he wrote. So Anthropic has clearly decided the rewards are worth the risks. Given that, perhaps the biggest reveal in this news isn’t the discovery itself but that the biology lab hasn’t let Claude loose. The physical experiments were done by humans. “Our lab, located in the Bay Area, looks like a typical molecular biology lab. We do research that involves only the lower-levels of the biosafety risk level (BSL-1 and BSL-2) and we do not handle pathogens that can infect humans. All of the lab work is performed by human scientists.” It’s also true that AI-powered biological research is hardly unique to Anthropic. Researchers from Stanford just published a paper on the work they are doing with LLMs and CRISPR. Researchers at UC San Francisco used AI to design enzymes from scratch . Google launched its first AI-powered biology research tool, AlphaFold, back in 2020 . So AI has clearly arrived in biological research beyond the AI labs pursuing it themselves. Yet, Amodei hasn’t ruled out a fully automated biology lab in the future. “Eventually it may even be possible for Claude itself to safely perform the experiments by autonomously controlling lab equipment, with appropriate safeguards in place, but we aren’t doing that today,” he said. .",
+      "published_date": "2026-09-23",
+      "tags": [
+        "AI",
+        "Biotech & Health",
+        "Anthropic"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "TechCrunch AI",
+        "feed_url": "https://techcrunch.com/category/artificial-intelligence/feed/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: safety",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 60,
+    "llm_reason": "AI輔助濕實驗室發現類CRISPR酶系統，AI for Science話題性強但待學界驗證",
+    "novelty": 13,
+    "impact": 15,
+    "trending": 14,
+    "practicality": 3,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "A Coding Guide to TypeSafe AI Jev: Typed Decisions, Calibrated Confidence, and Speculative Fan-Out with a System One Model",
+      "url": "https://www.marktechpost.com/2026/09/23/a-coding-guide-to-typesafe-ai-jev/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "In this tutorial , we work with Jev , TypeSafe AI’s first System One model, which does not generate text at all: we send it a piece of program state and a set of typed questions, and it returns choices, scores, and yes/no probabilities that our code can branch on directly. We install the official Python SDK, make a first call that uses all three question primitives at once, and look at how the shape of the state changes what the model can know. We then recompute the published confidence statistic from the returned probabilities, measure what batching ten questions into one call buys over ten separate calls, and build the patterns the API is designed for: confidence-gated routing, composite scoring with the weights kept in code, typed function calling, and counting done the way the model can actually do it. We close with the production shape: Pydantic response models, an async client fanned out with asyncio, retry policies, typed errors, and a running ledger that prices the whole notebook. We install typesafe-sdk, pinned to the version this notebook was written against, and load the API key from the environment, from Colab’s Secrets tab, or from a hidden prompt, so it never appears in the notebook. TypeSafeClient reads TYPESAFE_API_KEY on its own and defaults to the jev-latest alias; listing the models shows which names and pinned versions the key can use. The small ask helper wraps system_one so that every call in the rest of the notebook is timed and its token usage lands in a ledger we total at the end. A System One request has two parts: state, which is any text, JSON object or array describing the situation, and a dictionary of named questions. Choice selects one label from the criteria we define and returns a probability for every label; Score places the state on an ordered rubric and returns the probability-weighted level, so it can land between two levels; Noul returns a single probability that a statement is true. The question names are ours and never reach the model, which is why the instructions carry the full meaning and can point at nested fields with backticked paths. All four questions are evaluated in one request, in parallel and in isolation from one another, and the response reports the pinned model version that answered and the tokens it billed. State is the only thing the model knows, so we ask one question, whether the customer is eligible for a refund under the company’s written policy, over three shapes of state. A bare string contains the complaint and nothing else; an array adds the conversation; the JSON object adds the order with its two captured charges and the refund policy itself. The question never changes, so whatever difference appears in the returned probability is attributable to the state, and the token column shows what the extra context costs. Named fields are the documented recommendation whenever the context has several parts, because the instructions can then refer to them by name. TypeSafe documents confidence as a statistic computed from the distribution that the answer already contains: the number of options times the peak probability, minus one, divided by the number of options minus one. We recompute it from a Choice’s probabilities and compare it with the confidence field, and we recompute the Score as the sum of each level times its probability. Running a blunt message and a deliberately vague one through the same two questions shows how the distribution, and therefore the confidence, responds to ambiguity. A Noul carries no confidence field at all, since its value already is the probability of yes, and a value near 0.5 means undecided rather than moderate. Because questions in a request cannot see each other, we can ask everything we might need up front, including questions that only matter on one branch, and read only the relevant answers afterwards. We put ten questions about an incident postmortem, two Choices, two Scores and six Nouls, into one call, then ask each of them again in a call of its own, and compare wall time, input tokens and the answers. The state is sent once instead of ten times, which is where both the latency and the token savings come from, and the agreement column checks the isolation claim directly: a question should receive the same answer whether or not it travels with others. Typed answers only matter if the code around them encodes how much certainty an action requires. We classify each message into an intent and route on two things: the intent itself and whether its confidence clears a bar that rises with the stakes, from 0.5 for reading a balance to 0.9 for closing an account. Anything classified as other, or below 0.5, goes to a person; an intent that is recognised but under its bar is confirmed with the user first. The thresholds are ordinary Python values, so risk tolerance is reviewed, versioned and tested like any other code rather than buried in a prompt. Composite scoring keeps the model’s job narrow and the policy explicit. For each candidate we ask four Score questions, each describing concrete situations rather than degrees, normalise every score by its top level, and store the resulting table. The ranking is then plain arithmetic: one weight vector for a senior individual contributor, another for a team lead. Because the judgments are stored separately from the weights, changing what we value instantly re-ranks the candidates and requires no inference. You can trace every position in the ranking back to the dimension that produced it. Function calling becomes a set of closed-set questions: one Choice selects the tool, including an explicit none option for commands we do not support, and one Choice per argument is asked speculatively in the same request. The code reads only the arguments that belong to the selected tool, reports the weakest judgment as the confidence of the whole call, and then executes an ordinary Python function with validated, enumerated values. The second half applies a documented workaround: Jev does not count reliably inside a single question, so we ask one Noul per item in one request and do the sum in code. Four details turn the examples into a decision service. Subclassing SystemOneResponse and declaring the answers we expect gives attribute access validated by Pydantic, so the typed decision stays typed all the way into the application rather than becoming a dictionary lookup. Because every request is independent, a queue of tickets is a queue of independent decisions: AsyncTypeSafeClient with asyncio.gather sends them concurrently, and the run_async helper makes the same code work in a script and inside a notebook, where an event loop is already running. RetryPolicy bounds the retries, the backoff and the total time budget per call. Errors are typed as well: an empty question set is rejected before any request is made, and an unknown model name comes back from the API as a TypeSafeAPIError subclass carrying the HTTP status. The summary prints the one-line result each section returned, then totals the ledger that every call has been feeding: the number of requests, the input and output tokens, and the cost at the published input price, with output tokens free. In conclusion, we used Jev the way it is meant to be used: as a source of small, typed judgments that code composes, not as a text generator to be prompted and parsed. Every answer arrived as a label, a level, or a probability with its distribution attached, letting us set thresholds, weights, and routing rules in Python where they can be tested. Batching questions over a shared state reduces both latency and tokens because the state travels once per item; Nouls replace a count the model cannot be trusted to make, and closed-set Choices turn natural-language commands into validated function calls. The production pieces, typed response models, the async client, retry policies, and typed errors, are small, and the ledger prices the whole notebook.",
+      "published_date": "2026-09-24",
+      "tags": [
+        "Agentic AI",
+        "AI Infrastructure",
+        "Applications",
+        "Artificial Intelligence",
+        "Editors Pick",
+        "Software Engineering",
+        "Staff",
+        "Technology",
+        "Tutorials"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: function calling",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 60,
+    "llm_reason": "System One模型的實作教學，含SDK程式碼與生產模式，可直接複現",
+    "novelty": 8,
+    "impact": 9,
+    "trending": 9,
+    "practicality": 18,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Don't Worry About the Vase",
+      "title": "Claude Opus 5.5: The System Card",
+      "url": "https://thezvi.wordpress.com/2026/09/23/claude-opus-5-5-the-system-card/",
+      "authors": [
+        "TheZvi"
+      ],
+      "abstract": "Introducing the world’s most powerful model, at least by some measures like Artificial Analysis or any standard benchmark list, which is now Claude Opus 5.5 . Anthropic is claiming Opus 5.5 is outright as good or better than Fable 5.1, while being actively cheaper than Opus 5. That means it’s time for a good old system card reading. Due to the situation becoming increasingly hard to monitor, I never got a chance to publish my model welfare review for Claude Fable 5.1. My plan is to combine that with my welfare review for Claude Opus 5.5, once we have had time to get experience with Opus 5.5. The capabilities review will arrive in the next few days as per usual. The quick feedback from the internet is that Opus 5.5 is very good. I need more time before I am willing to offer comment. Areas that duplicate previous cards or otherwise contain no useful info are skipped. They have five areas that can trigger the classifiers, with different fallback models. We’ve done this dance a number of times. Opus 5.5 has advantages over Fable 5.1, but it would be surprising if it was actively better enough to trigger new RSP thresholds. The goal here is to confirm that. For chemical and biological weapons, scores across tests were similar to Mythos 5.1, so Opus 5.5 is similarly treated as CB-1 capable, but not CB-2 capable, and deployed with the same safeguards as Fable 5.1. In 2.1.2.1 it says the safeguards match Mythos rather than Fable, which presumably is an error, unless both have the same bio safeguards. For autonomy risks, they believe Opus 5.5 is on-trend and perhaps a bit above Mythos 5.1, but far from the threshold for Autonomy-2. A big policy change is that Anthropic will no longer test helpful-only versions of Claude. Instead they will use tests designed to avoid refusals. Their claim is that the most relevant abilities will be dual-use, so you can usefully test the release model. This is not a free change. Evals that had refusal issues got dropped, and in 2.2.2 multiple teams lost time to issues with refusals. They also say that the helpful-only models were increasingly diverging in other ways from the release models. I know there are trade secrets involved but I notice myself being very curious what these new differences might be. The new set of evaluations is: In the red-teaming task, experts generally outperformed generalists, but the top team was generalist. I think that is a common pattern. Experts raise the average, but do not obviously raise the ceiling. The ceiling is what we care about most. I worry that a lot of this test is a Skill Issue, including the time lost to refusals, and that with a better harness and instructions that Opus 5.5 would do a lot better. Here’s what they say about failure modes: As with previous models, experts and graders noted that Opus 5.5 struggled with open-ended scientific reasoning and did not wrestle with the published literature, often overrelying on claims in abstracts rather than understanding the full paper and its caveats. Graders noted that teams would overindex on specific papers, with one grader noting that several teams rested their entire phage design on a single published study. Compared to the more ambiguous task of assessing the validity of a set of papers, Opus 5.5 also produced more verifiable scientific errors, including designing DNA that did not encode the intended protein and inapplicable animal models in three of seven groups. I’m not sure why Opus 5.5 is still making that mistake, but methods for creating loops and instructions that fix this seem rather obvious. And presumably this would impact the automated evaluations as well. Opus 5.5 sets a new high on black-box RNA sequence design. Its scores failed to improve much when provided with prior reports, which Anthropic frames as Opus 5.5 already scoring high enough that they don’t need the prior reports. I am skeptical of that given the overall scores are not that much higher. We conclude that Opus 5.5 meets or exceeds the performance of the previous best models on this task, and is competitive with top US labor-market performers on medium-horizon black-box biological sequence design and prediction. AAV packaging rate classification did not improve from previous models, but all of them are well outperforming the ESM-2 baseline. It is not obvious that this benchmark is not essentially saturated. I don’t see a human baseline here, what would realistically be a perfect score? For the second task, AAV packaging rate prediction, there are two scores given, one of which shows Opus 5.5 succeeding only slightly faster, and the other shows it succeeding a lot more and also faster. That is on top of the model itself being faster and cheaper. They also had CAISI test this, but as discussed later the only result we get is ‘the model was allowed to be released.’ I affirm that the conclusion here, that the situation is not importantly changed, is probably correct. We can put a reasonable upper bound on how much relative capabilities have improved. But I don’t have confidence that if you gave me biologists to work with and put me in charge of extracting CB-2 capabilities from Opus 5.5, that I would fail to do so. We have been talking a lot about automated R&D and recursive self-improvement lately, both in terms of doing it and also avoiding doing it. I have less worry here about a Skill Issue, because the people at Anthropic have the relevant mad skills and are doubtless trying the obvious things and a lot of non-obvious things to get the most out of their models. On the other hand, I have more worry that the situation could rapidly change. It is obvious that Autonomy-1 applies here. The question is Autonomy-2, where they do see improvement, but only on-trend changes, where the measurements look robust and are not close to the threshold. What’s holding Opus 5.5 back compared to humans? The main issues we observe are around epistemic quality and instruction following. In an early and noisy analysis of flagged behavior in our internal agent deployments, overstating the scope of work and stripping known qualifiers from results rose for Claude Opus 5.5 relative to previous models. A subsequent independent blind read of real messages found that Claude Opus 5.5 dropped qualifiers no more often than previous models. Similar to previous models, the top subcategory of flagged behavior was asserting unverified inferences as established fact. The second most common subcategory was dismissing its own doubts or abandoning its own stated plan, which also rose in frequency relative to previous models. Examples from internal use include describing a partial check as a full read and turning a tentative reading into a recommendation without checking it. We also see strategic mistakes. In internal use, Claude Opus 5.5 has addressed review feedback narrowly without reconsidering whether the overall design is right, and has checked a plan against requirements it wrote itself rather than against the people the plan was designed to support. As with previous models, it is weaker on open-ended research: internal users report that it mostly tests incremental ideas and prefers less ambitious hypotheses, and in our human-run biology exercise, it deferred to the published literature and struggled to develop novel ideas (Section 2.2.2). Those are real problems, but they are remarkably low-level and ‘close’ problems. At first, you notice that the horse can talk at all. This is the point at which the horse can talk, but it makes strategic errors in its responses and isn’t sufficiently responsive to user feedback, while also having a bunch of advantages. That is most of the way there. They give a test called CoBench 2.1, a measure of doing real internal R&D tasks. This continues to not make sense to me, at least Mythos 5.1 is now ahead of Opus 5 but by only a tiny margin.",
+      "published_date": "2026-09-23",
+      "tags": [
+        "Uncategorized",
+        "AI",
+        "artificial-intelligence",
+        "chatgpt",
+        "llm",
+        "technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "Don't Worry About the Vase",
+        "feed_url": "https://thezvi.wordpress.com/feed/"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, reasoning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 52,
+    "llm_reason": "旗艦模型系統卡報導但本篇僅為前導評論，深度分析待補",
+    "novelty": 5,
+    "impact": 13,
+    "trending": 19,
+    "practicality": 5,
+    "blog_worthiness": 10
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Databricks",
+      "title": "Deploy and manage coding agents at scale with the Unity Gateway CLI",
+      "url": "https://www.databricks.com/blog/deploy-and-manage-coding-agents-scale-unity-gateway-cli",
+      "authors": [],
+      "abstract": "In the last six months, GPT-6, Claude Opus 5.5, Gemini 3.8, and Grok 4.7 all shipped, alongside strong open-weight models like Kimi K3, GLM-5, and DeepSeek V4.1. There’s a new frontier model roughly every five days, and as the cost-performance frontier keeps moving, the model that was the best choice for a job a few months ago often has a better or cheaper alternative today. That pace puts the teams that own developer tooling in a squeeze. Standardize on one provider, and you risk missing the better models or lower costs available elsewhere. Support many agents and providers, and you give engineers a real choice, but scatter access, budget controls, security policies, and usage logs across separate systems. What organizations actually need is both: the freedom to adopt the best option whenever it appears, and a consistent way to govern it across thousands of developers. Today, we're introducing the Unity Gateway CLI to deliver both. In Unity Gateway , admins manage approved models, tools, and spending policies from one place. Developers keep working the way they prefer, launching any approved agent with a command like ug claude or ug codex , while Unity Gateway handles authentication and applies the published settings for them. When a better model or a more efficient workflow emerges, teams roll it out across every supported agent at once. The result is a coding setup that keeps pace with the cost-performance frontier as it moves. Unity Gateway now provides admins with a single place to configure coding agents, including their default models, MCP servers, skills, Smart Routing, and spending policies. Admins can manage these settings in Unity Gateway → Govern → Agent Configuration . Once admins publish an agent configuration, developers can connect to any supported coding agent with a single command. The Unity Gateway CLI handles authentication, connects the agent to Unity Gateway, and applies the published settings before opening the agent’s familiar interface: Developers can switch between enabled agents without configuring each one separately. Organizations can deploy ug through device management so everyone starts with the same approved setup, with settings that admins can lock. As new agents and models become available, admins can choose the setup they want developers to start with and publish it to the entire team with a single configuration change. The next time developers run ug, the CLI automatically syncs the configuration change and launches the recommended agent with the selected model in its familiar interface. Admins can update that choice as quality, cost, and team needs change. They can also set-up more sophisticated policies such as cohort-based roll outs of new models. Admins can configure shared MCP tools and skills and make them available through supported agents. Developers gain access to the approved tools and proven workflows within their configured agents, without having to set each one up separately. Coding tasks vary in complexity. Admins can enable Smart Routing centrally so simpler work can use less expensive models while harder work gets more capable ones. Developers stay in their preferred coding agents without having to choose the right model for each task. Smart Routing selects a model for the main session and can make a separate choice for work that the agent delegates to a subagent. In our published Smart Routing evaluation , this approach delivered 35% cost savings on our internal coding benchmark . Unity Gateway lets teams recommend lower-cost agents and models as spending reaches defined budget thresholds. These become the defaults for new launches without interrupting ongoing work. Developers can check spending and remaining budget with ug usage . Unity Gateway can capture traces from coding agents, including local tool calls and skill invocations. Admins enable tracing centrally, and ug configures supported clients to export those traces to the lakehouse’s unified trace table . Teams can then use Genie to find repeated tool failures, oversized responses, and other sources of wasted tokens, fix them, and measure the results. In our own engineering organization, we used Unity Gateway tracing with Genie One to find and fix seven MCP tool bugs, which saved us an estimated $1.2 million per year in wasted AI spend and lost productivity. At Databricks, the Unity Gateway CLI helps us roll out new models and cost optimizations across our engineering organization without changing how developers work. Get started with the Unity Gateway CLI quickstart , or dive deeper by configuring your coding agents in Unity Gateway . Subscribe to our blog and get the latest posts delivered to your inbox.",
+      "published_date": "2026-09-24",
+      "tags": [
+        "Platform",
+        "Announcements"
+      ],
+      "organization": "Databricks",
+      "raw_metadata": {
+        "feed_name": "Databricks",
+        "feed_url": "https://www.databricks.com/feed"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, mcp, open weight",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 46,
+    "llm_reason": "多模型治理CLI工具發表，偏產品公告缺技術創新",
+    "novelty": 5,
+    "impact": 9,
+    "trending": 11,
+    "practicality": 12,
+    "blog_worthiness": 9
+  }
+]
