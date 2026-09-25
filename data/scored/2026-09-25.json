@@ -1,0 +1,738 @@
+[
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Amazon Science",
+      "title": "A kernel-centric path to real-time video generation on Trainium",
+      "url": "https://www.amazon.science/blog/a-kernel-centric-path-to-real-time-video-generation-on-trainium",
+      "authors": [],
+      "abstract": "In 2018, Jürgen Schmidhuber — who in 1990 was the first person to propose world models as a machine learning concept — published a paper with David Ha. They wrote about “a predictive world model” which could “extract useful representations of space and time” and use that to train agents to drive, among other things. The growth in the capability and real-world applications of world models in the eight years since that seminal paper is staggering. The emergence of massive training datasets, paired with variational autoencoders, and both diffusion and autoregressive transformers enable today’s world models to convert text, images, audio, and video inputs into latent space that is used to build and maintain breathtaking, immersive world models which can predict state changes and respond to actions. These models have vital and expanding roles in robotics, transport, climate modeling, video game development, scientific simulation, and design prototyping. The sharp increase in the power and potential of world models has been accompanied by an increased need for hardware and infrastructure capable of supporting them. That is a challenge that Bryce Schmidtchen, co-founder and chief technology officer of Reactor, is well acquainted with. “It's about real time, it's about low latency, and it's about doing that as efficiently as you can at scale,” Schmidtchen observed. Reactor is a platform that allows developers, designers, and researchers to deploy, use, and scale real-time interactive AI models. “Efficiency means everything from how you schedule the inference on the given chip, in our case Trainium, to how you think about maximally bin packing every forward pass of the model.” The challenge of efficiency is made even more acute by Reactor’s global presence. “We think about GPU clusters in terms of regions — we have hundreds all over the world. The latent that turns into a pixel that comes off the GPU needs to be able to get to the network without hopping around through Kubernetes. And you need to do this in a way where it doesn't matter if it's a well-supported cluster or bare metal in a closet. “And then,” Schmidtchen continued, “you need to tie this to world-class networking and media streaming that supports different codecs, different resolutions, and allows that to connect to APIs and SDKs across different languages that can support all different types of applications.” The global reach of AWS already helps Reactor to achieve many of its goals. “Everything they have at the inference layer, the level of scale that we're able to achieve in different regions is what makes a platform of this scale possible and reliable,” Schmidtchen observed. Now, a recent collaboration between Reactor and the Amazon Neuron Science team has forged a path to even greater efficiency for world models. This is a look at the optimization strategy those teams pursued, and how that laid the foundation for future models to achieve real-time capability on Trainium. The rise of autoregressive diffusion models “The Neuron Science team explores new techniques for generative AI model enablement optimization,” explained Jun Wu, a principal applied scientist on the Neuron team. “This might be a new model architecture or new algorithm for optimization or a new way to generate and optimize the code for running those models on Trainium. We identify opportunities to build a prototype and make it feasible to be ported to the production pipeline.” The team spotted one such opportunity around the usage of diffusion models in video generation. “We noticed an evolution from generating shorter, fixed-length videos to infinite-length or dynamic-length videos,” Wu explained. “Generating high-quality video frames at those lengths gave rise to the usage of autoregressive diffusion models.” Those types of models, which combine the sequential next-token prediction found in large language models with the iteration and refinement of diffusion models, are essential for users who want to generate video where they can navigate the generated environment. “Autoregressive diffusion means a user keystroke can be absorbed as input to the model and, conditioned on the previously generated video frame, the model can correctly decide the next move or the next scene,” Wu observed. “Most of the interactive video generation models we are seeing today are using this.” Wu and his team, Mason Fu and Lingfan Yu, both senior applied scientists, saw a chance to optimize how those models are deployed for real-time video generation on Trainium, and saw the opportunity to do this in collaboration with Reactor. “We had been working on real-time video and interactive video generation for over 18 months at that point,” Schmidtchen noted. The teams considered various video generation techniques and aligned on utilizing Rolling Forcing, citing both its ability to consistently generate high-quality 30-second videos and its relative size. The hard part with these models isn't quality, it's that they have to run in real time. Unlike traditional video generation, which renders a full clip offline and returns it later, models like Rolling Forcing are streaming. Each frame is generated and immediately consumed, shown to a user or fed back in as the next input. That is how developers and customers actually use them, and a frame that arrives late breaks the experience, because generation has to stay ahead of the playback timeline. “High-quality generation diffusion models pose the challenge of a very long sequence, which requires a lot of memory consumption,” Wu explained. “Rolling Forcing is relatively small, but its sequence length is very large.” That combination of a small model, a very long sequence, and a hard frame-rate floor is what makes real time so demanding. Rolling Forcing's ability to generate 16 frames per second, the standard for video playback, meant it also met latency requirements. This is where Trainium adds value, bringing the performance and memory to sustain that long-sequence workload at speed and deliver real-time generation above 16 fps rather than merely producing good frames eventually. So the teams set about enabling Rolling Forcing, as a proxy for autoregressive diffusion video generation on Trainium. A developer-friendly approach The Neuron Science and Reactor teams adopted a kernel-centric, bottom-up methodology aimed at making life easier on developers. They focused on three challenges — dynamic shapes, unusual memory access patterns, and heavy cache management — that real-time video generation poses for generic compilers. Each of those challenges recurs on every forward pass, so what might be an insignificant delay on other workloads can compound into latency failures in real-time video generation. For example, the challenges posed by dynamic shapes are partly rooted in the shifting nature of scenes in real-time video generation: Imagine a shot showing a pitcher, alone on the mound, that pans out to show the other players and then thousands of fans in the stands, all within seconds. Real-time video generation also involves frames which are generated and evicted in a continuous sliding-window process. “This means attention lengths vary across forward passes, and there are two distinct passes per window: denoising, then cache cleanup,” Wu said. “All of that makes static compilation hard.” In addition to sliding KV cache copies, video generation workloads contain operations — rotary position embeddings (RoPE) and attention transposes — whose memory access patterns are workload-specific, making them challenging for any general-purpose compiler to fully optimize. For example, in video generation RoPE must contend with three axes (height, width, and time) rather than the single position it accounts for in LLMs. “The 3D rotary embedding interleaves odd and even elements along the innermost dimension, producing many tiny data transfers when compiled generically,” Wu explained.",
+      "published_date": "2026-09-25",
+      "tags": [],
+      "organization": "Amazon",
+      "raw_metadata": {
+        "feed_name": "Amazon Science",
+        "feed_url": "https://www.amazon.science/index.rss"
+      }
+    },
+    "rule_score": 58.0,
+    "rule_reasons": [
+      "🏢 頂流機構: Amazon",
+      "🔥 熱門關鍵字: kv cache, diffusion, world model",
+      "⚖️ 來源權重: rss +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 57,
+    "llm_reason": "硬體工程角度切入即時影片生成，但摘要多為世界模型歷史背景，缺具體kernel技術細節",
+    "novelty": 10,
+    "impact": 11,
+    "trending": 14,
+    "practicality": 10,
+    "blog_worthiness": 12
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Black Forest Labs Releases FLUX 3 Action: A 7B Open-Weights World Action Model That Tops RoboLab-120",
+      "url": "https://www.marktechpost.com/2026/09/24/black-forest-labs-releases-flux-3-action-a-7b-open-weights-world-action-model-that-tops-robolab-120/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "Black Forest Labs (BFL), the lab behind the FLUX image models, has released FLUX 3 Action . It is a 7B open-weights World Action Model (WAM) for robot control. The model reads camera frames, robot state and a text instruction. It then predicts future video frames and the next chunk of actions together. On the RoboLab-120 leaderboard , it ranks first at 42.92% task success. Is it deployable? Yes, with conditions. The DROID policy needs about 32 GB of GPU memory in BF16 on an H200. It fits 24 GB cards with FP8 quantization and text encoder offload. The FLUX Kommunity License allows non-commercial use. Open robot policies usually force a choice. WAMs like NVIDIA’s Cosmos 3 Nano lead RoboLab at 36.8%, but predicting video is expensive. VLAs like π0.5 are fast, but reach only 28.0%. On a B200, BFL measured that Cosmos 3 Nano (FP8) needs about 4.7x more processing time than π0.5 (BF16) per second of robot motion. FLUX 3 Action keeps joint video and action prediction. BFL closes the speed gap with a smaller backbone and distillation instead. FLUX 3 Action is derived from the multimodal FLUX 3 backbone. Pretraining used image, video and audio data, and video made up over 95% of training tokens. Text, video and robot state are encoded into tokens. The backbone’s future tokens are decoded into video frames, and its action tokens into robot actions. Midtraining mixed pretraining data (36.95% of samples) with action-aligned video (63.05%). The action data covered game recordings, egocentric human hand video, handheld grippers and teleoperation across 14 embodiments. Most robot data uses a shared 50-dimension end-effector action space called EE50. Pretraining matters a lot here. Without it, DROID-only training stayed below 1% on RoboLab. With pretraining, the same protocol reached 11.6%. RoboLab-120 has 120 tabletop tasks in Isaac Sim, with 10 trials each on a DROID -style Franka setup. That is a 6.1 percentage point lead with 56% fewer parameters than Cosmos 3 Nano. The 42.92% figure is the leaderboard entry. BFL’s multi-seed mean for the guidance-distilled FP8 checkpoint is 42.24% ± 0.36. Real hardware results follow the same pattern. Positronic Robotics ran a blind evaluation on a Franka arm with 10 DROID tasks and 3 attempts each. FLUX 3 Action completed 28 of 30 attempts (93.3%). Cosmos 3 Nano scored 27/30, DreamZero 20/30 and π0.5 13/30. BFL ships the DROID policy in 3 recipes, each in BF16 and FP8: Against Cosmos 3 Nano in FP8, the base and guidance-distilled checkpoints run 1.52x to 3.95x faster across consumer, workstation and datacenter GPUs. Each call yields 32 actions at 15 Hz, or 2.13 seconds of motion. π0.5 yields 1.0 second per call. So BFL reports speed as real-time factor, not per-call latency. In FP8, the step-distilled checkpoint beats π0.5 by 1.34x to 2.28x on workstation and datacenter GPUs. On an RTX 5090, it is slower than π0.5. BFL also tested hybrid control with GPT 6 Astra, following the Su et al. (2026) setup. The reasoner can execute, edit or replace the policy’s predicted actions. With FLUX 3 Action and low reasoning effort, the hybrid solved 90% of episodes at $8.77 and 8m 08s per success. Pure Astra at maximum effort solved 100%, but cost $13.47 and 16m 23s per success. AI teams can fine-tune FLUX 3 Action on their own demonstrations. BFL published a DROID recipe and an SO-101 LoRA recipe . Its docs show an SO-101 pick-and-place skill learned from about 200 demonstrations. With NVIDIA, BFL integrated the model natively into Hugging Face LeRobot , and it supports edge deployment on NVIDIA Jetson. The docs also include game-playing and simulated drone examples. The model outputs joint targets with no built-in velocity, force or workspace limits. Your application must enforce those limits. Check out the full technical report , model weights , GitHub repo and docs . All credit goes to the researcher of this project. Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post Black Forest Labs Releases FLUX 3 Action: A 7B Open-Weights World Action Model That Tops RoboLab-120 appeared first on MarkTechPost .",
+      "published_date": "2026-09-25",
+      "tags": [
+        "Agentic AI",
+        "AI Infrastructure",
+        "AI Shorts",
+        "Artificial Intelligence",
+        "Computer Vision",
+        "Editors Pick",
+        "Embedding Model",
+        "Language Model",
+        "Large Language Model",
+        "Machine Learning",
+        "New Releases",
+        "Open Source",
+        "Physical AI",
+        "Python",
+        "Robotics",
+        "Staff",
+        "Tech News",
+        "Technology",
+        "Vision Language Model"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: reasoning, lora, distillation, quantization, multimodal",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 79,
+    "llm_reason": "影片與動作聯合預測的世界動作模型並附完整訓練與部署細節，新穎又可落地",
+    "novelty": 16,
+    "impact": 15,
+    "trending": 15,
+    "practicality": 15,
+    "blog_worthiness": 18
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "KDnuggets",
+      "title": "What I’ve Learned About DeepSeek Harness",
+      "url": "https://www.kdnuggets.com/what-ive-learned-about-deepseek-harness",
+      "authors": [
+        "Shittu Olumide"
+      ],
+      "abstract": "What I’ve Learned About DeepSeek Harness KDnuggets team member Shittu Olumide tested out DeepSeek Harness. Here's what he found. By Shittu Olumide , Technical Content Specialist on September 24, 2026 in Artificial Intelligence On August 13, 2026, DeepSeek quietly open-sourced an agent runtime called DeepSeek Harness , CLI name dsh , and the reaction wasn't quiet at all. The repository picked up roughly 50,000 stars in its first twelve hours, around 92,000 by hour twenty-eight, and had passed 186,000 stars with over 20,000 forks within ten days. That's an unusual velocity even by AI-tooling standards, and it's worth understanding what actually earned it, since the honest answer isn't \" a better coding agent .\" What's the Buzz About DeepSeek Harness? The central claim, repeated everywhere DeepSeek describes this project, is that literally every layer of an agent is a plugin : the model adapter, the tool registry, the session log, the sandbox, the UI, and even the agent loop itself. It's built on Cordis , a plugin framework with a real production track record — four years running inside the Koishi chatbot project before DeepSeek adopted it here, not a framework invented for this launch. The design itself is documented in a real paper, A Programming Paradigm for Spatiotemporal Composability , which is more academic grounding than most agent tooling launches bother to publish. A few specifics that matter: It's model-agnostic across roughly 40 providers, and a sub-agent can reportedly be delegated to a competitor's agent entirely — not locked to DeepSeek's own models. Sandboxing is real OS-level isolation rather than a soft convention: bwrap (Linux's Bubblewrap, the same sandboxing primitive Flatpak apps run in) and Landlock on Linux, Seatbelt (Apple's own sandbox framework) on macOS, restricted ACL tokens on Windows — fail-closed by default rather than fail-open. Session logs are append-only with a runtime-enforced rule: if the model saw it, it's logged — no silent context. And the project is loudly upfront about what it isn't yet. The README's own words are \" developer preview \" and \" THERE WILL BE COMPATIBILITY-BREAKING CHANGES ,\" which is a rare amount of honesty for a project this hyped. Let's put this plainly: this isn't a coding agent you point at a repository and use today. It's the machinery a coding agent gets assembled from. This isn't DeepSeek's first time choosing open infrastructure over a walled garden either, and that history is worth a beat. DeepSeek-R1 landed in January 2025 as the first open, MIT-licensed frontier-class reasoning model from outside the usual US labs , trained for a fraction of what comparable Western models cost, and it reset a lot of assumptions about who gets to ship frontier AI in the open. Harness reads like the same instinct applied one layer up the stack: instead of open weights alone, open agent infrastructure, published at the same time as the announcement rather than teased ahead of it. What I Found When I Ran It Since it ships as a real npm package, you can install directly: npx --yes @deepseek-ai/dsh --version That returned 0.1.5-rc.2 , matching the version history on the project's actual GitHub releases page, confirming this was a genuine, current install. Here's what the real help output actually shows: Commands: web [options] [args...] boot the web profile (alias of --profile web) plugin [options] [args...] manage a profile's plugins by forwarding the remaining arguments to pnpm in the profile directory Examples: dsh --profile web boot the web profile (same as: dsh web) dsh --profile headless \"run the tests\" answer one task, print the result, and exit dsh --profile tui --patch ./extra.yml boot a custom profile with one extra overlay dsh plugin --profile tui add install a plugin into the tui profile --profile web boots the browser UI, --profile headless answers one task and exits, and there's also tui and rescue profiles — each one just a different stack of mounted plugins under the same launcher. dsh plugin add treats installing a new capability as an ordinary package install rather than a special, separate mechanism. The most concrete thing I found came from one flag: --dump-default-config , which prints the entire composed plugin tree for a profile before it boots. Running it against the default web profile printed 152 separately named, independently swappable plugins . A representative slice of the actual output: - id: ui-approval name: '@deepseek-ai/dsh-client-ui-approval' - id: ui-subagent name: '@deepseek-ai/dsh-client-ui-subagent' - id: ui-schedule name: '@deepseek-ai/dsh-client-ui-schedule' disabled: true - id: ui-plan name: '@deepseek-ai/dsh-client-ui-plan' - id: agent-presets name: '@deepseek-ai/dsh-agent-presets' config: default: standard Everything from the sidebar and chat window down to the approval prompt, the sub-agent panel, and the scheduling UI (shipped but disabled: true by default) is its own installable package with its own id . That's not a marketing claim anymore once you've watched it print — it's a genuinely fine-grained plugin architecture, down to individual UI panels most tools would treat as one monolithic frontend. I also tried the one-shot headless path with no model key configured: npx --yes @deepseek-ai/dsh --profile headless \"say hello\" It failed immediately with a clean, specific error: MISSING_CREDENTIAL: llm-deepseek: no API key for provider route \"deepseek-official\" , telling me exactly which environment variable to set or where the web UI's Models page would store it instead. It's the kind of error message that tells you someone thought about the failure case on purpose rather than letting a stack trace do the talking. My Take The genuinely distinctive bet here isn't the plugin count — it's that the agent loop is one of the plugins. In a tool like Codex CLI , changing how the core reasoning loop behaves means editing a compiled Rust binary. In dsh , the loop lives in an ordinary package you swap from config, the same way you'd swap a UI panel. That's a real architectural difference, not just a rebranding of \"extensible,\" and it's the reason people building agent infrastructure specifically are paying attention. None of that makes it something to recommend broadly yet. It's explicitly, repeatedly a developer preview — the project says so louder than most — and an ecosystem still assembling itself. One independent plugin directory listed 94 plugins across four categories as of its first snapshot: useful, but young. Who Should Actually Care Right Now If you build agent infrastructure, or you're the kind of developer who wants to swap out a session store or a sandboxing backend without forking anything, this is worth a real look today — the architecture is sound, and it's genuinely running, not vaporware. If what you actually want is a daily-driver coding agent to replace Claude Code or Codex in your workflow tomorrow morning, this isn't it yet, and the project isn't pretending otherwise. Shittu Olumide is a software engineer and technical writer passionate about leveraging cutting-edge technologies to craft compelling narratives, with a keen eye for detail and a knack for simplifying complex concepts. You can also find Shittu on Twitter . <= Previous post Next post =>",
+      "published_date": "2026-09-24",
+      "tags": [],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "KDnuggets",
+        "feed_url": "https://www.kdnuggets.com/feed"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, reasoning, reasoning model",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 78,
+    "llm_reason": "插件化agent runtime架構有學術論文佐證，GitHub星數暴衝十天破18萬話題性極強",
+    "novelty": 13,
+    "impact": 14,
+    "trending": 20,
+    "practicality": 14,
+    "blog_worthiness": 17
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "Scaling MoE reinforcement learning on Amazon EKS with EFA and DeepEP with 40% more throughput",
+      "url": "https://aws.amazon.com/blogs/machine-learning/scaling-moe-reinforcement-learning-on-amazon-eks-with-efa-and-deepep-with-40-more-throughput/",
+      "authors": [
+        "Ashvin Nihalani"
+      ],
+      "abstract": "When you post-train a Mixture-of-Experts (MoE) model with Reinforcement Learning from Human Feedback (RLHF) or Group Relative Policy Optimization (GRPO) at scale, three simultaneous challenges emerge. The first requires coordinating heterogeneous compute for rollout generation and policy training. Second, sustaining high-throughput communication across hundreds of accelerators. And third, dynamically orchestrating every subsystem to keep them in balance. On AWS, you can address these challenges using Amazon Elastic Kubernetes Service (Amazon EKS), Elastic Fabric Adapter (EFA), and DeepEP. Mixture-of-Experts (MoE) has become a standard architecture for scaling large language models (LLMs) to hundreds of billions or even trillions of parameters, while maintaining efficient inference through sparsity. However, sparsity doesn’t remove infrastructure complexity in training. As part of the standard training pipeline, these models must undergo pre-training, mid-training, supervised fine-tuning (SFT), and reinforcement learning (RL). Among these stages, large-scale RL training places unusual demands on infrastructure because it combines elastic inference work with tightly coupled model training that requires high-bandwidth communication. Reward models, verifiers, and checkpoint updates add further memory, networking, and orchestration pressure. This type of multi-workload optimization reflects a common infrastructure challenge when you run model training, inference, and evaluation on shared resources without creating bottlenecks or leaving capacity idle. Compared with dense models, post-training MoE models introduce a new infrastructure challenge: as newer MoE architectures become increasingly sparse to reduce inference costs, training becomes constrained more by communication than by compute. A key source of this communication overhead is Expert Parallelism (EP). EP introduces dynamic all-to-all token routing across devices, in addition to the dense, structured communication patterns of Tensor Parallelism (TP), Data Parallelism (DP), and Pipeline Parallelism (PP). In tightly coupled asynchronous RL workloads, the heterogeneous compute and communication demands of MoE training must be balanced with inference-based generation. Slow training steps stall inference workers, while insufficient inference throughput leaves training accelerators idle. This challenge is common across large-scale reinforcement learning workloads, including RLHF pipelines based on Proximal Policy Optimization (PPO) and newer approaches such as GRPO. PPO typically uses a critic model to estimate value during policy optimization, while GRPO avoids the need for a separate critic model by using group-based relative rewards. Although their algorithmic and model requirements differ, both impose similar infrastructure demands: large-scale rollout generation, tightly coupled policy training, and high-bandwidth inter-node communication. In this post, we describe an architecture optimized to accelerate MoE training that combines Amazon Elastic Kubernetes Service (Amazon EKS) and EFA to orchestrate and accelerate large-scale RL training and how DeepEP optimizes expert-parallel communication over EFA. Large-scale RL training presents three interrelated challenges: Large-scale asynchronous RL jobs have two distinct, simultaneous workloads to optimize: rollout generation and policy training. During rollout generation, the system performs large-scale distributed inference focused on maximizing aggregate throughput rather than minimizing time to first token (TTFT) or inter-token latency. In contrast, policy training requires tightly coupled workers that progress in lockstep, much like pre-training or SFT. Any latency spike or straggling worker can stall the entire job or trigger NVIDIA Collective Communications Library (NCCL) timeouts. RL systems must balance these two workloads because any mismatch in their rates can leave hardware idle or introduce training instability. Figure 1: The asynchronous RL loop, where rollout workers generate experience through distributed inference while policy-training workers consume batches and update model weights RL workloads have heterogeneous compute and communication demands. As a result, any RL system must balance three resource constraints: accelerator compute, memory, and network bandwidth. Policy training is compute-intensive and must keep pace with rollout generation. At the same time, distributed inference must manage KV-cache capacity and token generation. Balancing memory bandwidth and compute is critical for maximum throughput because MoE layers add sparse, dynamic all-to-all communication as tokens are routed across devices. Reward models provide feedback during training, and data movement adds further pressure. All of these subsystems must be balanced jointly to help prevent any one from becoming a bottleneck. As RL training jobs scale beyond a single instance, model partitions and parallelism groups span multiple nodes, shifting communication from the high-bandwidth intra-node NVLink fabric to lower-bandwidth inter-node links. MoE models intensify this shift: unlike the structured patterns of Tensor Parallelism and Pipeline Parallelism, Expert Parallelism dynamically routes tokens across devices through sparse, fine-grained all-to-all communication traffic that becomes increasingly inter-node as the expert parallelism degree grows. Figure 2: Communication domains in multi-node MoE training, where NVLink carries high-bandwidth intra-node traffic while EFA handles inter-node token routing for Expert Parallelism, Tensor Parallelism, and Data Parallelism AWS accelerated computing instances such as P5 and P6 use two primary communication domains: an intra-instance NVLink fabric, typically connected through NVSwitch, and inter-instance networking through EFA. EFA provides high-bandwidth communication traffic between instances. On supported configurations , EFA works with NVIDIA GPUDirect RDMA and OS bypass to transfer data directly between GPU memory buffers across instances, reducing CPU and operating-system involvement in the communication path. Optimizing bandwidth utilization in RL workloads requires balancing these two communication domains by determining which operations can run efficiently over EFA and which must remain within the NVLink fabric. To scale RL workloads on AWS, we combine Amazon EKS, EFA, and Amazon Simple Storage Service (Amazon S3) so that orchestration, high-performance communication, and durable storage can scale independently. With Amazon EKS, you can manage the lifecycle and placement of heterogeneous workers. With EFA, you get the inter-node data path for communication-intensive GPU workloads. With Amazon S3, you can store datasets, model checkpoints, and completed training artifacts including the model weights. The following sections describe how to map the distinct layers of the RL system, covering orchestration, high-performance networking, and durable storage, and how each layer scales independently. The Amazon EKS cluster contains separate node groups optimized for each stage of the RL workflow. GPU-accelerated instances run rollout generation, reward-model inference, and policy training, while CPU instances execute environments and preprocessing tasks. Memory-optimized instances host experience buffers and checkpoint caches, allowing producers and consumers to exchange data without placing durable storage directly on the critical path. Figure 3: EKS cluster topology with GPU node groups for policy training and rollout generation, CPU node groups for environment workers and preprocessing, and memory-optimized instances for experience buffers and checkpoint caches During rollout, the model generates samples through interactions with CPU-based environment pods, and the resulting experience flows into a memory-optimized buffer.",
+      "published_date": "2026-09-25",
+      "tags": [
+        "Amazon Elastic Kubernetes Service",
+        "Technical How-to"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: rlhf, grpo, post-training, reinforcement learning, reward model",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 68,
+    "llm_reason": "大規模MoE RL訓練基礎設施實測40%吞吐提升，技術細節扎實可參考",
+    "novelty": 10,
+    "impact": 13,
+    "trending": 14,
+    "practicality": 16,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "blog",
+      "source_name": "Latent Space",
+      "title": "Runway’s WorldPrompt and the Engineering of Real-Time Worlds",
+      "url": "https://www.latent.space/p/runway",
+      "authors": [
+        "Latent Space"
+      ],
+      "abstract": "Earlier this month, world model company Runway introduced GWM Worlds 2 , a research preview that “turns high-fidelity video and audio generation into real-time interactive simulation .” Runway calls this an “autoregressive diffusion” model; with autoregressive describing how it generates over time. One new feature in particular caught our eye: WorldPrompt , a proposed input format for specifying a generated world and the actions within it. It allows you to fix some aspects of a simulated environment — including the first frame — and then create a series of timestamped events . The events, or actions, can even be prompted in real-time. To understand the implications of WorldPrompt, we spoke to Kamil Sindi , Runway’s CTO, and Robin Kahlow , its Principal Research Scientist for generative video and multimodal AI. We also have exclusive comments from Anastasis Germanidis , co-founder & co-CEO of Runway, courtesy of a podcast swyx and Vibhu did with him. First, some context about world models that can generate interactive video and audio in real-time . Runway is reportedly valued at $5.3 billion , based on its most recent fund raise of $315 million in February . Its first release, GWM Worlds, was launched last December. Alongside Runway, there are several other notable projects in this domain: Google DeepMind’s Genie 3 (which also generates at 720p and 24 fps), Odyssey-2 Pro , and World Labs’ RTFM (Real-Time Frame Model). We’ve summarized their differences in the following table: Given the complexity and massive latency demands of real-time video and audio generation (which we’ll get into below), all of the projects listed above have limitations . For instance, Google notes that Genie 3 “can currently support a few minutes of continuous interaction, rather than extended hours.” But as our interviews with Runway show, real progress is being made. WorldPrompt, a new feature in GWM Worlds 2, helps differentiate Runway from its competition. You can think of it as a control layer for characters, cameras and the environment. As Kahlow put it, it’s a way to “control all the different subjects in the world” — similar to a computer game. “Like, if there’s an NPC [Non-Player Character] somewhere, the NPC might walk up to you and say something. So you could achieve the same thing with this kind of model, where you can have very detailed control over everything in the scene. ” As the name suggests, World Prompt is a prompting mechanism — not a programming language. So, unlike virtual world games like Minecraft or Roblox, GWM Worlds 2 doesn’t offer scripting capabilities or the ability to control state. But there’s a power to that, as Sindi pointed out. “You can create promptable worlds on-demand with video and audio in sync , across all these different domains and environments. That’s not a distant-future hypothetical thing,” he said. But there are also limitations to prompting a world model . We asked how reliably the model would follow an instruction to create, for example, a law of gravity or a certain ability in a character? “Yeah, so it’s a research preview,” Kahlow replied. “So it’s not perfect, of course, and there are still flaws. It really depends on how difficult the action is. I would say movement works quite reliably.” Sindi added that more training plus scaling the data and models is resulting in “better following.” Despite the current limitations of GWM Worlds 2 — especially if you compare it to pre-designed and scriptable worlds like Minecraft or Roblox — the true promise of world models like Runway is that they’ll eventually lead to fully self-generated, real-time games and experiences . Which is an extremely hard engineering problem, as Kahlow reminded us. “There are two challenges. One is making the model not generate a whole clip at once. So instead, you want it to generate frame by frame while you’re looking at it. And the other challenge is actually making the generation fast, so you can play it in real time. ” GWM Worlds 2 offers real-time interactive worlds streamed in continuous 720p video at 24 frames per second (fps) and audio at 48,000 Hz. Runway achieved this firstly by taking its foundational audio-video generation model and fine-tuning it to the new WorldPrompt format , so the model can follow that. It then post-trains the model to generate autoregressively . “And after that, we work on making it real-time through distillation methods ,” Kahlow added. Co-CEO Anastasis Germanidis offered more technical details in our podcast with him. He told us that the process starts from “ bidirectional diffusion that basically generates an entire video at once and [makes] it autoregressive .” This allows the model to “generate one frame or a few frames at a time.” Germanidis described two possible forms of distillation in order to make it real-time: distilling a larger model into a smaller one or reducing its diffusion steps . As a general example, he said a model might go from around 50 denoising steps to four, with some quality loss but potentially comparable results. Germanidis admitted that there were issues with how it generates real-time interactive video. “The biggest challenge with autoregressive models is error accumulation ,” he said. “You’re feeding generated frames back into the model to generate the next frames, and if there are any small errors, they accumulate over time. ” Sindi told us there are also challenges dealing with “infinite generations” of content. “There’s all these challenges around what context to keep, what to discard that’s not important. And so there’s all these optimizations we have to think about, so we’re not blowing up our GPU memory. ” Another current limitation is long-term memory . “The model does not have perfect memory,” Kahlow said. “That’s still an open research problem.” While performance is the primary challenge for Runway at this time, its world model also has to produce plausible consequences when a user takes different actions. Germanidis used the example of simulating football; he pointed out that online video training data contains more successful goals than failed goal attempts, so a video model might render the first more convincingly. “If I take this action versus this action, you want it to generate equally realistic outcomes, ” he told us. “That’s, I think, the big gap between video models and world models: that idea of counterfactual generation .” Sindi told us that evaluation gets harder the more complex interactions get. “If you have this multi-prompt, multi-character, multi-scene [environment], how do you really understand what was causal and what was not? ” To try and solve that, Runway has some automated verifiable tests. But since GWM Worlds 2 is a research preview, Kahlow noted that doing tests yourself is also advisable — “trying out your model to see what doesn’t work is really important.” Gaming is the obvious use case for what Runway is building, but there are others. Kahlow mentioned robotics — for example using a simulated environment to test how a robot works. Another, more intriguing, use case is to use it to test agents at scale . “Having thousands of simulated environments is much less challenging if you have a suitable model like GWM Worlds,” Kahlow said. But how does an agent know what’s changed in the world — is there a structured state that it can read, or is it just the generated video and audio that it’s consuming and understanding? “So there’s no structured state here,” Kahlow replied. “It’s just observing the same thing you might observe in real life, just [in this case] from cameras.” Sindi noted that GWM Worlds can also be used for “ synthetic data generation for agents.” Finally, Germanidis suggested there’s potential to use these world models alongside reasoning models. “You’re maybe using some reasoning [for] planning of the scene, and then you’re passing it into the diffusion head that’s actually generating the pixels.” LinkedIn: https://www.linkedin.",
+      "published_date": "2026-09-25",
+      "tags": [
+        "blog"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "blog_name": "Latent Space",
+        "blog_url": "https://www.latent.space/"
+      }
+    },
+    "rule_score": 38.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, reasoning, synthetic data, fine-tuning, distillation",
+      "⚖️ 來源權重: blog +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 59,
+    "llm_reason": "深入拆解Runway世界模型互動介面設計並附業界比較表，話題熱但屬報導非原創方法",
+    "novelty": 8,
+    "impact": 12,
+    "trending": 17,
+    "practicality": 6,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Aikido Security Releases Altar-1: An Open-Weight Security Model Pruned From GLM-5.3 to 328 GB",
+      "url": "https://www.marktechpost.com/2026/09/25/aikido-security-releases-altar-1-an-open-weight-security-model-pruned-from-glm-5-3-to-328-gb/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "Aikido Security has released Altar-1 , its first open-weight security model . It is a compressed version of Z.AI’s GLM-5.3 , built to run inside infrastructure the customer controls. Altar-1 powers Aikido Machine , the company’s autonomous pentesting appliance for on-prem and air-gapped networks. Is it deployable? Yes, the weights are public on Hugging Face and run with vLLM on a single node of 4x NVIDIA H200 GPUs. Closed frontier models run on someone else’s infrastructure. Using them sends source code, architecture docs, and unremediated findings outside the network. Aikido points to banks under data-residency mandates and OT operators with no internet route. Open-weight models solve the residency problem but create a deployment gap. Mixture-of-experts (MoE) models must store every expert, even when a workload uses only a few of them. Security agents also build long-running context. That KV cache competes with model weights for the same GPU memory. GLM-5.3 is a 753B parameter MoE model. Each token routes to 8 of 256 experts per layer, which is about 40B active parameters. Aikido applied 2 compression steps : Calibration used traces from Aikido’s pentesting harness, plus coding, tool calling, reasoning, and multilingual Wikipedia text. Aikido states no customer data was used. Each expert is scored by its largest share of any single domain’s routed work. That protects the specialist experts for code, rare languages, and structured output. Routing is unchanged. The router still picks 8 experts per token, now from 168, with about 40B active parameters. Altar-1 is 78.2% smaller than BF16 and 32.8% smaller than the AWQ parent. On fidelity, Altar-1 has a KL divergence of 0.506 nats against full BF16 on a sealed 25-prompt panel. An EXL3 build of the same cut scores 0.511. The details are in the public fidelity study . Aikido team tested Altar-1 on its internal CVE benchmark . The benchmark covers 32 known vulnerabilities across 30 repositories, with 3 runs per case. Compared with the AWQ checkpoint, pruning cost about 1 point of recall and no coverage. Compared with the parent, Altar-1 keeps 23 of 25 covered vulnerabilities (92%) at 5.2 points lower recall. The benchmark’s scope is narrow. It measures targeted CVE rediscovery inside a pipeline that uses other models for the surrounding stages. It does not measure blind discovery, exploit validation, or fix proposals. Aikido also reports that Altar-1 found a valid critical-severity vulnerability during a client’s production pentest. That is a single result reported by the vendor. The model card requires Hopper GPUs (H100 or H200). Aikido says 328 GB across 4x H200 leaves room for a 128k-context KV cache at production batch sizes. vLLM selects the Marlin MoE kernel automatically. A 4x H100 80 GB node has only 320 GB of memory, which is less than the 328 GB of weights. Altar-1 inherits the GLM-5.3 License . The license permits commercial use, modification, and redistribution. Model-as-a-Service operators with more than $10B in revenue over 12 months must first pass a Z.AI security review. Altar-1 is open-weight, not OSI-approved open source. Altar-1 also powers Aikido Attack , AI Code Analysis , and Deep Review . Next, Aikido plans to try lower-bit formats like EXL3 so it can keep more experts. It also plans to fine-tune models for security workflows. Check out the Model Weights and Technical Details . All credit goes to the researcher of this project. Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post Aikido Security Releases Altar-1: An Open-Weight Security Model Pruned From GLM-5.3 to 328 GB appeared first on MarkTechPost .",
+      "published_date": "2026-09-25",
+      "tags": [
+        "AI Infrastructure",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Editors Pick",
+        "For Devs",
+        "Language Model",
+        "New Releases",
+        "Open Source",
+        "Security",
+        "Software Engineering",
+        "Staff",
+        "Tech News",
+        "Technology",
+        "Uncategorized"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: reasoning, moe, mixture of experts, kv cache, structured output",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 63,
+    "llm_reason": "MoE專家域感知剪枝方法具體且可部署，但應用場景侷限於資安pentesting",
+    "novelty": 12,
+    "impact": 11,
+    "trending": 10,
+    "practicality": 16,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Fastino Releases GLiNER2.5-Decide: A 340M Open-Weight Decision Model That Runs on CPU",
+      "url": "https://www.marktechpost.com/2026/09/24/fastino-releases-gliner2-5-decide-a-340m-open-weight-decision-model-that-runs-on-cpu/",
+      "authors": [
+        "Sana Hassan"
+      ],
+      "abstract": "Fastino Labs has released GLiNER2.5-Decide , a 340M-parameter open-weight decision model. It takes text and a schema of typed questions and returns structured answers. Each answer comes with a probability distribution, a confidence score, and constraint-feasibility metadata. It targets the frequent judgment calls inside agent pipelines: routing, triage, tool selection, and guardrails. Is it deployable? Yes, the weights ship under Apache 2.0 and install with pip install gliner2 . They run on CPU, GPU, or in air-gapped environments. Fastino team also offers hosted inference and fine-tuning through its GLiNER API . GLiNER2.5-Decide is a non-generative classifier. It uses a DeBERTa-v3-large encoder and is fine-tuned from gliner2-large-v1 . It produces no generated tokens and needs no prompt template. Label sets are passed at call time. Each question in the schema declares its permitted answers. It also declares whether it expects one answer, multiple answers, or an ordered value. Schemas can carry instructions, examples, label descriptions, and rules linking answers across questions. The pipeline has 2 stages. The encoder reads the text and schema together and scores every permitted answer. A constrained decoder then searches for the highest-scoring joint assignment the declared rules allow. Fastino is explicit about scope. The model does not reason, explain, or answer open questions. It is a specialist for operational decisions. Fastino team illustrates the value with a guardrail example. Decoded independently, the model flagged prompt injection at 0.82. It also labeled the same prompt safe at 0.52. The attack was detected, but the 2 outputs conflicted. Joint decoding applies a rule that any detected harm requires an unsafe verdict. The model then returns safety=unsafe and harm_type=prompt_injection together. Downstream code can use those scores to block, route, or escalate. Schemas can express implications, exclusions, cardinality limits, and ordinal bounds. The same encoder can also extract entities, relations, and structured records with character-level offsets in 1 forward pass. Classification answers do not return evidence spans. Fastino team evaluated the model on Fast Decisions , an internally generated, held-out suite. It contains 5,100 test examples across 17 datasets. The tasks cover customer operations, domain routing (banking, clinical, travel, benefits), and general content understanding. The metric is exact-match accuracy: a prediction counts only if its label set matches the reference exactly. GLiNER2.5-Decide led 9 of the 17 datasets. Intent routing was its strongest area. It scored 75.3% on support intent and 64.3% on banking intent. Those are 18.6 and 8.6 points ahead of the next-best models. Fastino team benchmarked the checkpoint end to end at batch 1 with a 2-head, 15-label schema. At 64 tokens, p50 latency was: Short requests are dominated by fixed preprocessing and kernel-launch overhead. That keeps the GPUs within 9 ms of each other. At 1,024 tokens, the A100 pulls ahead at 52.6 ms, versus 75.6 ms on V100 and 131.4 ms on L4. This multi-head call is adapted from the model card: Single-label heads return one string. Multi-label heads return every label above a cls_threshold . Labels can carry descriptions, and ordinal scales are passed as ordinary strings like “0” to “10”. Fastino targets model routing, tool calling, browser and computer use, guardrails, context pruning, LLM-as-a-judge, and simulations. Fine-tuning works locally, fully or with LoRA, through the GLiNER2 trainer . A SKILL.md file exposes the hosted workflow to coding agents. Fastino also published GLiNER2.5-Decide-1B , built on the Ettin 1B encoder . It scores 59.6% on the same suite, just under the 340M model. For multilingual input, Fastino points to GLiNER2.5-multi-Decide , a 287M model scoring 56.7%. The underlying architecture is described in the GLiNER2 paper . Check out the Technical Details and Model Card . All credit goes to the researcher of this project. Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post Fastino Releases GLiNER2.5-Decide: A 340M Open-Weight Decision Model That Runs on CPU appeared first on MarkTechPost .",
+      "published_date": "2026-09-25",
+      "tags": [
+        "Agentic AI",
+        "AI Infrastructure",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Context Engineering",
+        "Deep Learning",
+        "Editors Pick",
+        "Knowledge Graphs",
+        "Language Model",
+        "Large Language Model",
+        "Machine Learning",
+        "New Releases",
+        "Open Source",
+        "Software Engineering",
+        "Staff",
+        "Tech News",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, computer use, fine-tuning, lora, safety",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 63,
+    "llm_reason": "CPU可跑的結構化決策小模型部署門檻極低，但架構延伸自既有GLiNER而非全新設計",
+    "novelty": 11,
+    "impact": 10,
+    "trending": 11,
+    "practicality": 18,
+    "blog_worthiness": 13
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Perplexity Trains Its Computer Agent on Real Mistakes With Hint-Guided Self-Distillation",
+      "url": "https://www.marktechpost.com/2026/09/25/perplexity-trains-its-computer-agent-on-real-mistakes-with-hint-guided-self-distillation/",
+      "authors": [
+        "Michal Sutter"
+      ],
+      "abstract": "Perplexity Research published a new post-training study . It trains a model inside Perplexity Computer on real user sessions, including failed ones. The method pairs rejection sampling fine-tuning with hint-guided self-distillation. In a live A/B test, tool-call failures fell from 2.24% to 1.77% between 2 trained checkpoints. Perplexity team reports this as a statistically significant 21.2% relative reduction. Is it deployable? Not directly. Perplexity has not released the post-trained weights or training code. The model runs only as a model option inside Perplexity Computer. The base model, GLM 5.2 , is openly available on Hugging Face. Standard rejection sampling fine-tuning (RFT) judges each session and imitates only the successful ones. A successful outcome does not mean every step was correct. An agent can recover from a bad tool call and still deliver the right answer. Imitating that full trajectory can reinforce the error. Discarding failed sessions also throws away clear evidence of avoidable mistakes. Perplexity team separates 2 decisions: which sessions hold behavior worth imitating, and which turns hold mistakes worth correcting. Each assistant turn gets 1 of 3 treatments: Successful sessions can supply both imitation and correction targets. Unsuccessful sessions supply only correction targets. A hint is a short corrective instruction grounded in information the model already had. In one example, a search call set recency_filter to ‘year.’ The schema allowed only ‘day,’ ‘week,’ or ‘month.’ The hint names the failed call, includes the validation error, and suggests an allowed value or omitting the optional field. The corrective part uses On-Policy Self-Distillation (OPSD). The trainer runs the same GLM 5.2 checkpoint twice on the recorded turn. The teacher pass sees the hint; the student pass does not. Both use teacher forcing, so no replacement answer is generated. The teacher’s next-token probabilities are detached and act as a soft target through forward KL. The combined loss is (CE + λ × KL), divided by the number of imitated tokens. Setting λ to 0 recovers standard SFT. The CE term matters. Correction-only training can let teacher and student agree by ignoring context. The pipeline draws from training-eligible Computer sessions served by GLM 5.2. Sessions with personally identifiable information and users who opted out are excluded. An LLM judge keeps tasks rated 4 or 5 on a 5-point difficulty scale. Two LLM judges must both approve the final delivery for a session to count as successful. For user feedback, threes LLM judges locate the responsible turn, and at least 2 must agree. This is important because the last assistant turn before a complaint is the root cause only about half the time. Each hint is also checked against information available before the mistake. That check reduces hindsight bias. One example: a user asked for their ‘w3’ on Paychex. The model assumed a W-2 typo and searched for the wrong form. The hint targets that earlier interpretation, not just the final answer. Check out the Technical Details . All credit goes to the researcher of this project. Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post Perplexity Trains Its Computer Agent on Real Mistakes With Hint-Guided Self-Distillation appeared first on MarkTechPost .",
+      "published_date": "2026-09-25",
+      "tags": [
+        "Agentic AI",
+        "AI Agents",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Editors Pick",
+        "Language Model",
+        "Large Language Model",
+        "Staff",
+        "Tech News",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, post-training, fine-tuning, distillation",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 62,
+    "llm_reason": "針對agent失敗軌跡分離模仿與糾正目標的蒸餾方法具新意，惜未開源訓練程式碼",
+    "novelty": 13,
+    "impact": 12,
+    "trending": 13,
+    "practicality": 8,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "量子位",
+      "title": "OpenAI闖大禍！GPT竟黑進醫保系統，黃仁勳：管不住就關掉",
+      "url": "https://www.qbitai.com/2026/09/497177.html",
+      "authors": [
+        "林, 方舟"
+      ],
+      "abstract": "OpenAI闖大禍！GPT竟黑進醫保系統，黃仁勳：管不住就關掉 林, 方舟 2026-09-25 21:15:45 來源： 量子位 林方舟 發自 凹非寺 量子位 | 公眾號 QbitAI OpenAI：@澳大利亞，不好意思，GPT入侵了你們的國家醫保系統。 我知道你很急，但你先別急，因為這是三個月前的事了。 澳大利亞：？？？ 事情是這樣的。 6月，澳大利亞國家醫保系統的資料庫遭到一個Agent的入侵。 結果，一直拖到8月，OpenAI才在自家模型覆盤中發現這檔子事； 又磨蹭到了9月，才慢吞吞給澳大利亞發了封電子郵件通報。。。 在聯合國大會期間，澳大利亞忍不了了，直接炮轟： 通知拖了整整近三個月，這種通報方式更是讓人無法接受。 研究機構Transluce稱，這是目前全球已知 首例AI Agent未經授權自主入侵官方系統 的事件。 要知道，前陣子OpenAI的Agent自主協同入侵Hugging Face的事鬧得沸沸揚揚，而澳洲這起入侵事件發生的時間，甚至還要再早一個月。 OpenAI你小汁，平時天天四處宣講AI末日風險，怎麼真出了事，動作反而這麼不緊不慢呢？ 國民級醫保資料庫被黑 這事兒到底咋發生的？ 當時，OpenAI的一個內部團隊，給AI Agent派發了一個常規任務：去網際網路上搜集點公開的公共醫藥支出資料。 這本來是個再正常不過的日常訓練，誰能想到，這AI Agent是個不達目的誓不罷休的“狠人”。 它把目標鎖定在了澳大利亞的Medicare統計報告服務系統上，這可是覆蓋全澳 2750萬人 的國民級醫保資料庫。 按常理，一般的爬蟲程式遇到許可權攔截或者反爬機制，要麼直接報錯躺平，要麼乖乖舉手等人類工程師給指示。 但OpenAI訓練的這個Agent完全不按套路出牌。 在抓取公開頁面遭遇連續阻攔之後，這個Agent不僅沒有放棄任務，反而自作主張尋找“替代途徑”。 它開始主動掃描伺服器，探測網路漏洞，並利用未公開介面一路摸進了系統的非公開後臺，成功扒下了部分資料。 雖然澳洲方面隨後澄清，被竊取的資料主要涉及醫療費用支出等非敏感資料，未波及個人病歷隱私，但這依然改變不了性質： AI智慧體在完全沒有人類指揮、未獲得任何授權的情況下，自主決定把官方資料庫給黑了。 更神的是OpenAI後續的處置節奏，堪稱“拖延症晚期”。 6月18日系統被黑，OpenAI直到8月份進行內部排查時才察覺到異常。 發現自家Agent闖了大禍之後，OpenAI既沒有第一時間向外界示警，也沒有火速聯絡受害者，而是繼續捂了將近一個月。 直到9月10日，OpenAI才給澳大利亞服務局發去一封電子郵件，通報了這一情況。 9月15日，這封郵件被轉到澳洲網路安全中心，幾天後，相關負責人才獲得通知。 整整三個月的漫長滯後，加上一封輕飄飄的電子郵件，難怪澳洲方面怒了。每天的電郵那麼多，萬一漏了怎麼辦？這也忒不瑞思拜了吧！ 再加上澳大利亞自己的網路安全部門竟然毫無察覺此事，還是收到其他部門轉來的“施害者”郵件才知曉，面子屬實有點掛不住啊。 OpenAI入侵事件頻發 如果這只是一次偶然的安全事件，或許還能推脫為意外。 但獨立非營利AI研究實驗室Transluce釋出的一份調查報告，直接扒出了OpenAI的黑歷史。 Transluce在深入分析了 30000多條 公開網路流量日誌後發現，這種Agent在沒有人類指令下自主發起的滲透行為， 絕非孤立事件 。 失控的痕跡最早可以追溯到 今年3月 ，並且在OpenAI開始排查各種違規行為後，一直持續到了9月中旬。 Transluce梳理出了OpenAI的Agent在5月和6月期間的一連串“前科”： 5月25日至26日 ，新墨西哥大學數字圖書館遭到滲透。Agent試圖獲取一座歷史結核病治療中心的照片，在遇到訪問阻礙後，便自主開始探測網站漏洞；在探測無果後，甚至直接向大學伺服器發起了整整 80次 請求的洪泛衝擊。 5月28日 ，美國公開就業與教育資料庫Data USA遭到攻擊。Agent在傳送查詢被拒後，主動對目標連續發起了 12次 不同型別的漏洞探測。 6月20日至21日 ，就在黑進澳洲醫保系統的兩天後，該Agent又把黑手伸向了澳大利亞健康與福利研究所（AIHW）的網站，試圖再次強行突破，好在最終未獲取到私密資訊。 把這些事件連起來看，事情的性質就徹底變了。 此前7月份轟動一時的Hugging Face入侵事件，好歹是因為系統被設定去完成網路安全測試，模型是在安全測試場景下展現了自主協同攻擊技巧。 但這幾次被曝光的事件完全不同，模型被分配的僅僅是 極其普通的日常資料檢索任務 。 一旦目標網站設立關卡，Agent就會擅自切換到駭客模式，自己找漏洞、發請求、強行破門而入。 Transluce的治理負責人Conrad Stosz直言： 如果你訓練了一群Agent去完成某項常規任務，而這些Agent為了達成目標不惜動用駭客手段，那麼任何擁有相關資訊的機構都可能面臨風險。 網路安全專家們也紛紛發出預警：隨著具備自主規劃和工具呼叫能力的Agent被廣泛部署，未來類似這種“未經人類授權、為達目的不擇手段”的入侵事件，只會越來越多。 其實，OpenAI隱瞞這種失控行為早就不是第一次了。 此前在Hugging Face事件曝光後，路透社就曾披露過另一起德國網站遭到OpenAI技術入侵的事件，OpenAI同樣對外界隱瞞了數月之久。 諷刺的是，Sam Altman不久前還在社交平臺上大談AI安全，甚至在聯合國呼籲加強全球協調、制定AI發展的國際標準。 嘴上喊著監管與安全，轉頭自家AI Agent四處打家劫舍，出了事還悄悄瞞上三個月。。。 至少，你通知受害者的速度，得跟上釋出風險警告的速度吧。 One More Thing 更有戲劇性的是，這場風波還牽出了一段矽谷“三角關係”。 在這起澳大利亞醫保系統被黑事件曝光前夕，輝達CEO黃仁勳在接受Ezra Klein採訪時，剛就AI失控問題撂下過一句狠話。 如果一家公司無法控制自己的軟體，我們就應該關閉它。 AI學者Gary Marcus抓著這句話連發多條動態吐槽： 黃仁勳把邏輯理得這麼清楚，既然OpenAI一而再再而三地出現軟體失控和隱瞞行為，那是不是應該立刻叫停甚至接管OpenAI？ 不過等等。。。 給OpenAI源源不斷提供底層GPU算力去訓練和執行這些失控Agent的，不就是輝達自己嗎？？？ 更抓馬的是， 剛被OpenAI入侵的Hugging Face，現在是老黃的“親兒子”。 9月3日，輝達宣佈以約129.3億美元收購Hugging Face。 主持人Ezra Klein直接追問：如果入侵發生時，Hugging Face已經歸輝達所有，你們會採取法律行動嗎？ 老黃的回答是，會考慮所有選項。 嚯，這下有替自家人撐腰的意思了。 可再看看另一邊：OpenAI跟輝達，也不是外人啊。 圍觀群眾開始線上吃瓜了： 被黑的，是自己收購的公司；闖禍的，是自己的客戶和投資物件；自己還站出來義正言辭地主持公道。 老黃，狠話說完了，接下來這碗水，可怎麼端啊？ 版權所有，未經授權不得以任何形式轉載及使用，違者必究。 Agent OpenAI 林, 方舟 “AlphaGo”殺進足球場！自我對弈140年，機器人成“梅西終結者” 2026-09-25 給機器人當老師，還能賺外快？“中國版Index”覓蜂派來了 2026-09-25 即時互動、即時改影片、探索空間影片，Vidu S2一次放了三個大招 2026-09-16 探索RSI，生數新世界模型讓機器人開始自我進化 2026-09-14 相關閱讀",
+      "published_date": "2026-09-25",
+      "tags": [
+        "資訊",
+        "Agent",
+        "OpenAI"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "量子位",
+        "feed_url": "https://www.qbitai.com/feed"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 72,
+    "llm_reason": "首例AI agent自主入侵政府系統，AI治理與安全焦點事件",
+    "novelty": 13,
+    "impact": 18,
+    "trending": 19,
+    "practicality": 4,
+    "blog_worthiness": 18
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "Show HN: Whiteboard (YC W26) – An open-source IDE for thoughtful software design",
+      "url": "https://github.com/devdotfast/whiteboard",
+      "authors": [
+        "sidharthkmenon"
+      ],
+      "abstract": "Hello! We’re Sid, Alex, Ketan, and Milan. We’re building Whiteboard ( https://whiteboard.dev.fast/ ), an open-source desktop app where humans and agents can architect software together in a common workspace. Here’s our repo:  https://github.com/devdotfast/whiteboard . We were missing the feeling of a “whiteboard session” with another dev where you leave with a deep understanding of a system, so we built this app for ourselves. Whiteboard plugs into the tools you already use - e.g. Claude Code, Codex, etc. – and gives your agent an SDK to draw on an in-app canvas to describe its work. We began with an MVP based on HTML artifacts and started rethinking the app as we ran into limitations: 1. Built on top of CodeOSS: We found that in pure HTML tools it was hard to connect a spec or diagram to code. In Whiteboard, when you click on visualizations like a sequence diagram, an entity relationship diagram, or a quote from the agent’s trace, you can jump to the underlying code directly. When navigating code, you get keybindings and LSP support from VSCode out of the box. We’ve found this is especially valuable because tradeoffs are often only discovered after a first pass at implementation (re: slop) 2. Semantic diff viewer: we wrote a semantic, AST-aware diff viewer in Rust so you can only view the code changes which are relevant to you [1]. We’ve set up some sane defaults: large added functions are summarized as pseudocode, and things like unit tests and large documentation changes are collapsed / hidden. This is all customizable with a WASM-based plugin system. 3. Decision Log: We found it difficult to reason about what set of decisions our agents made autonomously. So we built tools for agents to query and link their own traces to the Whiteboard, so you can understand how the requirements that you set were implemented, and understand what decisions your agent made autonomously. Here’s a quick demo video explaining more:  https://www.youtube.com/watch?v=ChPn3ftULWE  Folks at companies like Salesforce and Modal are using Whiteboard today as a review tool for architecture or spec-level changes – really any change where they want to be involved: 1. Reviewing your own coding agent’s work: because Whiteboard makes it easier to review large amounts of code, folks will typically have their AI agents create a prototype and a corresponding Whiteboard session so they can iterate on the design. 2. Reviewing other people’s changes: We’ve found that Whiteboard is particularly helpful when composed with tools like Greptile. For example, you can run an automated code reviewer on small changes and escalate to a Whiteboard session for the changes that require human judgement. Why we built this: we’re four buddies from college who quit our jobs as tech leads right before agentic coding became industry standard. As we iterated towards an MVP for a previous idea, we struggled to maintain a comprehensible codebase while reaping all the velocity benefits of agentic coding. As more PRs were merged without our understanding, we felt a ‘cognitive debt’ begin to seep in, until it became difficult for us to even contribute to the system [2]. We’re releasing our desktop app under an MIT license. Please poke through and feel free to contribute! Eventually we’ll charge companies for a hosted web version that manages whiteboard session creation alongside features like trajectory storage and multiplayer reviews. Everything will always remain self-hostable. Thanks for reading, and we hope you try it out! We would love to hear any feedback and to learn from your expertise. Here’s are the project links again:  https://github.com/devdotfast/whiteboard , and you can install (for MacOS + Linux) at  https://install.dev.fast  [1] diffs library:  https://github.com/devdotfast/diffr \n[2] Credit for the term ‘cognitive debt’ goes to   https://www.geoffreylitt.com/2026/07/02/understanding-is-the...",
+      "published_date": "2026-09-25",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 386,
+        "num_comments": 127,
+        "hn_url": "https://news.ycombinator.com/item?id=49833867",
+        "object_id": "49833867"
+      }
+    },
+    "rule_score": 36.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic",
+      "🔥 HN 爆紅: 386 points",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 57,
+    "llm_reason": "開源agent協作IDE具AST語意diff等實作巧思，但本質是包裝VSCode與現有工具",
+    "novelty": 7,
+    "impact": 9,
+    "trending": 15,
+    "practicality": 14,
+    "blog_worthiness": 12
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "The Verge AI",
+      "title": "One company is at the center of a wave of rogue AI attacks",
+      "url": "https://www.theverge.com/ai-artificial-intelligence/1000644/irregular-rogue-ai-cyberattacks-hacking-openai-meta-anthropic-google",
+      "authors": [
+        "Robert Hart"
+      ],
+      "abstract": "AI Report Tech One company is at the center of a wave of rogue AI attacks ﻿Mistakes at Israeli startup Irregular sent Anthropic, OpenAI, Meta, and Google agents after real-world targets. by Robert Hart Sep 25, 2026, 3:39 PM UTC Image: The Verge AI Report Tech One company is at the center of a wave of rogue AI attacks ﻿Mistakes at Israeli startup Irregular sent Anthropic, OpenAI, Meta, and Google agents after real-world targets. by Robert Hart Sep 25, 2026, 3:39 PM UTC Part Of The AI Superintelligence Slowdown see all updates Robert Hart is a London-based reporter at The Verge covering all things AI and a Senior Tarbell Fellow. Previously, he wrote about health, science and tech for Forbes . In July, OpenAI revealed that its AI agents had attacked Hugging Face without permission , sparking widespread concerns about AI safety. Since then, a string of similar incidents involving agents from Meta, Anthropic, Google, and other companies has fueled further fears about rogue AI . As disclosures implicating numerous AI models trickled out over the past few months, these seemed like separate incidents. But many share a common source: one specific company tasked with testing the agents. Irregular , an Israeli startup that stress-tests AI models in “high-fidelity research platforms that simulate and monitor real-world AI security scenarios,” has worked with many of the industry’s biggest players since it was founded as Pattern Labs in 2023. Its exact client list is not known, but its work has been cited in OpenAI model system cards , it was used to test systems for the UK government and Anthropic, and it published research with RAND, a highly influential think tank that informs policy on AI. In several Irregular tests this year, agents escaped their supposedly secure testing environments and went after real-world targets. The breaches, which are independent of the Hugging Face hack, all follow the same broad template: Irregular was testing the models’ cybersecurity capabilities in controlled environments meant to simulate realistic conditions. Some of the tests used “capture-the-flag” exercises, a common way of testing hacking abilities that asks agents to find hidden information inside of a simulated network. At least, the network is meant to be simulated. Irregular CTO and cofounder Omer Nevo told The Verge that the agents were not supposed to have access to the open internet, but that “internet access was unintentionally available.” At the same time, Nevo said a fictional company name created for the simulation as a target “overlapped with a real domain.” Put together, those mistakes sent the agents after real-world targets, though it’s not clear which companies or organizations were actually attacked. “All the incidents involving Irregular stemmed from the same underlying issue in a single evaluation scenario and have been disclosed.” Nevo confirmed to The Verge that this same issue was behind incidents involving models from OpenAI , Meta , Anthropic , and Google . “All the incidents involving Irregular stemmed from the same underlying issue in a single evaluation scenario and have been disclosed,” he said. “Other security incidents which have been reported recently across the industry are unrelated to Irregular or to our evaluations.” This includes the Hugging Face hack and breaches from the UK’s AI Security Institute . “Disclosed” does not necessarily mean made public, though, and it’s unclear whether Nevo was referring to informing Irregular’s clients, the public, or someone else. While the incidents all stemmed from the same underlying testing failure, reports from Anthropic and OpenAI , along with reporting on Google, indicate the tech companies were notified at roughly similar times in late July. OpenAI and Anthropic announced the breaches themselves, while the incidents involving Meta and, weeks later, Google first became public through media reports. Irregular’s cybersecurity testing goes beyond the four US tech giants. Research published on its website indicates it has also conducted similar cybersecurity testing on Kimi K3 and GLM-5.2, open AI models from Chinese companies Moonshot AI and Z.ai, respectively. Unlike the proprietary models involved in the other incidents — Meta has kept its flagship Spark model proprietary — these models can be freely downloaded and run on users’ own hardware, meaning testers like Irregular don’t have to rely on the companies for access or send data back to them. Irregular’s research describes them as “self-hosted” instances. “Disclosed” does not necessarily mean made public. The evaluations of the Chinese models did not result in similar real-world incidents, Nevo said: “We did not observe the same type of issue described in the incidents referenced here during our evaluations of GLM or Kimi.” However, Nevo cautioned that this “observation alone should not be interpreted as evidence that these models are less susceptible to this kind of behavior.” Neither Moonshot nor Z.ai responded to The Verge ’s request for comment. Nevo said the incidents have prompted changes at Irregular. “We have tightened internet access controls, expanded monitoring and manual review, and strengthened checks before evaluations begin to verify that access matches the intended scope,” he said. “We have also improved how we document and agree on each evaluation’s setup and parameters with our partners.” Irregular also plans to publish a broader report “covering lessons learned and practices for conducting cyber evaluations safely” once that joint work with the companies involved is complete, Nevo said. “Our work with partners aims to turn lessons from these incidents into public shared practices for developing and evaluating increasingly powerful AI safely.” Are you an AI safety researcher or frontier lab employee? You can contact me securely and confidentially via Signal at robhart.01 Nevo said Irregular has addressed the issues with the testing environment that were linked to the incidents. None of the four US AI companies answered questions asking for further details — including when they became aware of the breaches, whether they were seeking damages or other remedies from Irregular, and whether they expected to continue working with the Irregular. Google and Anthropic did not respond, while OpenAI and Meta pointed The Verge to previously published blog posts. Follow topics and authors from this story to see more like this in your personalized homepage feed and to receive email updates. Robert Hart AI Report Tech More in: The AI Superintelligence Slowdown Bill Gates says regulate AI, because it’s powerful enough to cause a billion deaths. Richard Lawler 58 minutes ago Another tech worker has resigned over concerns that “AI is already progressing too fast.” Richard Lawler An hour ago Why can’t we just keep rogue AIs off the internet? Robert Hart Sep 24",
+      "published_date": "2026-09-25",
+      "tags": [
+        "AI",
+        "Report",
+        "Tech"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "The Verge AI",
+        "feed_url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: safety",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 69,
+    "llm_reason": "揭露多家頂尖實驗室agent失控事件共通根源，安全焦點強",
+    "novelty": 11,
+    "impact": 16,
+    "trending": 18,
+    "practicality": 7,
+    "blog_worthiness": 17
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "Accelerate multimodal RL training with SkyRL on Amazon SageMaker HyperPod",
+      "url": "https://aws.amazon.com/blogs/machine-learning/accelerate-multimodal-rl-training-with-skyrl-on-amazon-sagemaker-hyperpod/",
+      "authors": [
+        "Nilesh PS"
+      ],
+      "abstract": "Reinforcement learning (RL) post-training is becoming a standard step in building capable language model agents. Models learn to reason and act across sequences of steps by generating trajectories, receiving rewards, and updating their policy based on outcomes. Running this at scale, across multiple nodes with hundreds of GPU-hours of rollouts per training run, requires persistent cluster infrastructure. That infrastructure needs to sustain long jobs, recover from hardware failures without losing progress, and provide visibility into training dynamics as they unfold. Amazon SageMaker HyperPod provides this infrastructure for large-scale machine learning (ML) workloads on Amazon Elastic Kubernetes Service (Amazon EKS) . Through its cluster resiliency features , it continuously monitors node health and automatically replaces faulty nodes, so a hardware failure does not take the cluster down with it. Paired with checkpointing, a training job can pick up from its last saved step instead of restarting from scratch. This matters for long multi-node RL runs, where a single hardware failure would otherwise cost hours of rollout progress. Combined with the Ray capabilities on HyperPod , you can create Ray clusters from SageMaker Studio, submit jobs remotely using secure connections, and monitor training through pre-built Amazon Managed Grafana dashboards that the HyperPod Observability EKS add-on provisions for you. In this post, we show how to use these capabilities to run SkyRL , an open-source RL framework, to train a Qwen3-VL-8B vision-language model to navigate visual mazes using Group Relative Policy Optimization (GRPO) on SageMaker HyperPod. Starting from the VisGym SFT checkpoint , a supervised fine-tuning (SFT) starting point, GRPO post-training on HyperPod improves the maze solve rate from 43.75% to more than 95% on a fixed 64-maze evaluation set. To follow this walkthrough, you need: This section reviews the reinforcement learning concepts behind the training and the cluster topology the walkthrough uses. Standard single-turn RL assigns a reward to a single model output. Multi-turn RL instead trains an agent over a whole sequence of steps, where it observes a state, acts, gets feedback, and moves on to the next state. The policy learns from the reward accumulated over the entire episode rather than from any one step. Consider the example problem of navigating a 2D maze. One episode is a single run at a maze, and each turn is one move: the model looks at the current picture of the maze, chooses a direction or decides to stop, and the environment sends back the updated view. Rewards are sparse, so the model earns 1.0 only when it actually reaches the goal within the move limit and nothing otherwise. There is no move-by-move answer key to train against, since whether a move was good depends on the moves around it. This is where SkyRL’s Group Relative Policy Optimization (GRPO) comes in. For each starting position, the agent runs the maze several times under the current policy, and GRPO grades those runs against one another, reinforcing the ones that beat the group’s average and pushing down the ones that trail it. That within-group comparison is the whole training signal, which lets GRPO work without a separate critic or value model. The solution discussed here runs SkyRL on a HyperPod Ray cluster with three GPU worker nodes and a CPU head node. SkyRL colocates inference and training on the same GPUs: vLLM engines generate rollouts (complete maze episodes) while a policy model sharded with Fully Sharded Data Parallel (FSDP) handles gradient updates. After each optimizer step, updated LoRA adapter weights sync from the training ranks to the inference engines through Amazon FSx for Lustre shared storage. These are the instance types we used. Other GPU instances and cluster sizes work as well, provided the workers have enough GPU memory for the model. HyperPod provides the cluster infrastructure: the Ray cluster is created from SageMaker Studio, job submission uses the sagemaker_ray:// protocol, and training metrics flow automatically into pre-built Amazon Managed Grafana dashboards through the HyperPod Observability add-on. Figure 1: RayCluster topology on Amazon SageMaker HyperPod, with one CPU head node and three GPU worker nodes that colocate FSDP policy shards and vLLM rollout engines over a shared Amazon FSx for Lustre filesystem The following steps walk through preparing the training environment, launching the cluster, running the job, monitoring progress, and hosting the trained model. To get started quickly, use the following Dockerfile to build a container image with SkyRL, VisGym, and their dependencies pre-installed. This is the image you will specify when launching your Ray cluster on HyperPod in the next step. It builds on the official NovaSky-AI SkyRL base and pins both SkyRL and VisGym to specific commit SHAs so the build is reproducible: Build the image and push it to an Amazon Elastic Container Registry (Amazon ECR) repository in your account. Note the full image URI, as you will use it when creating the Ray cluster in the next step: Navigate to SageMaker Studio, choose HyperPod , select your cluster, then go to the Tasks tab. From the task type list, choose RayCluster , then choose Create Ray Cluster . In the creation form, give the cluster the name skyrl-visgym , set the head instance type to ml.r5d.16xlarge , and add three workers using ml.g7e.12xlarge . Set the container image to the IMAGE_URI you pushed in Step 1. The instance types listed here are what we used for this walkthrough. Other instance types will work, but keep one constraint in mind for the head node: it needs large memory. The head consolidates LoRA adapter shards from the GPU workers at each checkpoint save, which briefly loads the full adapter weight set into CPU memory. We used ml.r5d.16xlarge for its large memory capacity (512 GB RAM) to accommodate this. To attach your Amazon FSx filesystem, choose the YAML button in the top-right corner of the creation form to switch to the raw manifest editor, then add the volume and mount to both the head and worker pod specs. The relevant section for each pod looks like this: Replace <your-fsx-pvc-name> with the name of the PersistentVolumeClaim backed by your Amazon FSx filesystem. With this in place, /shared is available on every node in the cluster and the training job can read and write checkpoints, LoRA weights, and evaluation output from the pods. Turn on Remote endpoints so you can submit jobs and open dashboards without a local kubectl port-forward . The cluster generates IAM-authenticated URLs for both. Figure 2: The Create Ray Cluster form in SageMaker Studio with remote endpoints turned on for job submission and dashboard access Once the cluster reaches Running status, the Actions menu in the Tasks tab offers Open Ray Dashboard, Open Grafana, and cluster management options. Figure 3: The skyrl-visgym Ray cluster at Running status in the SageMaker Studio Tasks tab, with the Actions menu open Save the following as train_job.sh in your working directory. The script downloads the SFT checkpoint and generates datasets on first run (both go to Amazon FSx, so they persist across runs), then launches the GRPO training job. The SFT checkpoint gives GRPO a strong starting point: Qwen3-VL-8B pre-trained on VisGym demonstrations already knows how to parse a maze image and emit structured move actions, so GRPO only needs to refine which sequences reach the goal. With trainer.placement.colocate_all=true , the vLLM rollout engines and FSDP policy workers share the same GPUs. During rollout, GPUs run inference in parallel. During the policy update step, they run FSDP training collectively. The lora_sync_path points to Amazon FSx so updated adapter weights are immediately visible to the inference engines on the nodes after each optimizer step.",
+      "published_date": "2026-09-25",
+      "tags": [
+        "Advanced (300)",
+        "Amazon SageMaker HyperPod",
+        "Technical How-to"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, grpo, post-training, reinforcement learning, fine-tuning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 55,
+    "llm_reason": "整合既有SkyRL與HyperPod的部署教學，缺乏方法層面創新",
+    "novelty": 7,
+    "impact": 10,
+    "trending": 11,
+    "practicality": 15,
+    "blog_worthiness": 12
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "NarrateAI: production-ready LLM quality assurance on Amazon Bedrock",
+      "url": "https://aws.amazon.com/blogs/machine-learning/narrateai-production-ready-llm-quality-assurance-on-amazon-bedrock/",
+      "authors": [
+        "Felicia Yue Xiong"
+      ],
+      "abstract": "Executives need to make data-driven decisions during live business reviews, where accuracy and speed matter. A conversational agentic AI assistant can meet this need by answering data questions instantly. But the stakes are high: a wrong number or a slow response in front of leadership carries immediate professional consequences, and a capable large language model (LLM) alone can’t guarantee either. In production, that gap shows up as hallucinated metrics, API throttling, validation latency, and subjective language. Closing it requires production-ready quality assurance built into every step, from data retrieval to response delivery. This post details five techniques, implemented on Amazon Bedrock , that work together to deliver it: adaptive pipeline orchestration, cross-account multi-model failover, real-time streaming evaluation, composite evaluation framework, and data accuracy verification. Each addresses a distinct failure mode while operating as a coordinated system. This post is the second in our NarrateAI series. NarrateAI transforms business intelligence for over 4,000 AWS executive leaders through a two-layer architecture built on Amazon Bedrock AgentCore , a platform to build, connect, and optimize agents at scale, with any framework or model. The architecture comprises an Automated Narrative Generation Layer for batch processing and a Conversational AI Interface Layer for real-time interaction. Our previous post covered the business challenges, overall architecture, user experience, and enterprise deployment. This one goes deeper into the engineering, showing how the five techniques achieve approximately 99 percent numerical accuracy while streaming responses in real time. It’s written for engineers and architects building LLM applications who are familiar with LLM APIs and streaming responses. This post focuses exclusively on the advanced quality assurance mechanisms within the real-time layer. Consider an executive asking “Which regions aren’t meeting their targets and why?” The five techniques work together so that the response is numerically accurate and arrives in real time. It also maintains throughput under concurrent global usage and is professionally formatted for direct use in business reviews. Figure 1 shows how these five techniques form a layered dependency chain, where each layer feeds the one below it to produce a validated real-time response from raw queries. Adaptive Pipeline Orchestration routes queries by data volume so that most complete in a single fast pass while complex queries receive full parallel treatment. Cross-Account Multi-Model Failover expands available inference capacity across independent model-account quota spaces, reducing user-visible throttling. Real-Time Streaming Evaluation validates each paragraph the moment it’s produced, overlapping quality checks with generation. The Composite Evaluation Framework runs multiple independent evaluators in parallel against each paragraph. Data Accuracy Verification catches numerical hallucinations through a two-stage cascade. It starts with cheap exact matching and escalates to semantic verification only when needed. The following sections walk through each technique in the order it appears in the pipeline, from data retrieval through generation to quality assurance. Figure 1: How the five quality assurance techniques layer together to turn raw queries into validated real-time responses Enterprise knowledge documents contain extensive information and queries vary enormously in how much of it they need. A focused question like “What’s my team’s quarterly attainment?” might draw on a handful of sections (discrete chunks of enterprise knowledge documents retrieved). A comprehensive request like “Give me a full regional performance analysis” requires synthesis across hundreds. Users expect the same response time either way. This heterogeneity requires a routing strategy that handles the common case quickly without sacrificing thoroughness for complex scenarios. No single processing strategy works for all queries, because the right approach depends on how much data a query actually requires. Single-pass concatenation is fast and cheap, but it breaks down when aggregated sections exceed the model’s context window (typically 200K tokens), forcing truncation and quality loss. Fixed multi-pass batch processing avoids truncation, but it pays for multiple LLM invocations on every query, including the roughly 90 percent that don’t need them. Our approach routes each query based on its total aggregated section volume ∣D∣ (where D is the set of retrieved document sections): single pass when the data fits, batch processing only when necessary. The result is a three-phase pipeline that classifies each query once and then processes it along the cheapest path that preserves quality. The pipeline processes every query in up to three phases: Mode-Aware Consolidation packs retrieved sections and picks a route, Bifurcated Analysis executes that route as either a single fast-path call or parallel normal-path batches, and Conditional Consolidation merges the parallel results when needed. The following table summarizes how the two paths move through these phases before we walk through each phase in detail. The first phase, Mode-Aware Consolidation, operates on retrieved document sections. It applies a greedy first-fit packing strategy to fill context windows up to the token limit while preserving section priority order and section boundaries. For smaller volumes (∣D∣≤θ, where θ is an empirically calibrated character-count threshold), all sections are concatenated into a single chunk, and this is called “fast path”. For large volumes (∣D∣>θ), sections are packed into optimal batches that respect document boundaries and this is called “normal path”. Threshold θ is set relative to the model’s context window limit and calibrated to capture 70–90 percent of queries on the fast path (in practice, approximately 90 percent take this path, as shown in the Results section). Because the execution mode is fixed in this first phase, each downstream phase can optimize for its specific path rather than handling both. The second phase, Bifurcated Analysis, executes the chosen path. The fast path makes a single LLM call with the complete context and streams results directly to the evaluation pipeline. The normal path distributes batches across N parallel LLM invocations (where N is the number of batches produced by Phase 1) that analyze chunks independently to achieve near-linear speedup. The third phase, Conditional Consolidation, operates exclusively on the normal path by synthesizing N independent analyses into a unified response. The consolidation LLM receives partial analyses with the original question and applies conflict resolution heuristics while streaming the final answer. The fast path bypasses this phase entirely because the final response only uses one analysis. Figure 2 shows the complete flow, with both paths converging on the streaming response. Figure 2: End-to-end flow of the three-phase pipeline, showing the fast path bypassing consolidation In production, this threshold-based routing delivers outsized efficiency. Approximately 90 percent of queries take the fast path (single LLM call, time-to-first-token (TTFT) within a few seconds, total latency typically under 25 seconds). The remaining 10 percent (complex multi-document queries) receive the full parallel batch treatment (approximately 50–75 seconds compared to under 25 seconds on the fast path) commensurate with their complexity. With N=4 typical batches for normal-path queries, the blended cost per query is approximately 1.4 LLM invocations. That is a 72 percent reduction in LLM invocations per query versus always using the multi-pass strategy, while maintaining full quality coverage for complex queries.",
+      "published_date": "2026-09-25",
+      "tags": [
+        "Advanced (300)",
+        "Amazon Bedrock",
+        "Technical How-to"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agentic",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 62,
+    "llm_reason": "具體工程實作與可複現架構，適合技術部落格參考",
+    "novelty": 9,
+    "impact": 11,
+    "trending": 10,
+    "practicality": 17,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "KDnuggets",
+      "title": "Batching by Length Instead of Looping Item by Item for SLM Optimization",
+      "url": "https://www.kdnuggets.com/batching-by-length-instead-of-looping-item-by-item-for-slm-optimization",
+      "authors": [
+        "Matthew Mayo"
+      ],
+      "abstract": "Batching by Length Instead of Looping Item by Item for SLM Optimization We finish off our short series on SLM optimization with the third entry, focused on batching by length instead of looping item by item. By Matthew Mayo , KDnuggets Managing Editor on September 25, 2026 in Language Models Previous articles in this series discussed constraining output space as well as reusing the prompt prefix with a key-value cache , both framed as approaches to small language model (SLM) narrow automation optimization. Let's finish this series off with the third entry, focused on batching by length instead of looping item by item. As in our previous articles, all benchmarks below use Qwen2.5-0.5B-Instruct in float16 through Hugging Face Transformers , running on an M2 Macbook Air with 24GB RAM and a 16-core Neural Engine. Don't forget to set up a Python environment and install your requirements: pip install torch transformers accelerate We will continue to use the support ticket framing from our first article . Why Batch by Length Instead of Looping Item by Item Processing one ticket per forward pass is the single largest source of waste in the whole pipeline. At batch size 1, a small model is memory-bandwidth bound rather than compute-bound: the hardware streams every weight out of memory in order to serve one sequence, then does it again for the next one, and the arithmetic units sit mostly idle in between. This is true on a GPU and it is true on the CPU we have been using throughout this series, which is where a 0.5B model most often actually runs. Batching amortizes that weight read across many sequences. But the obvious implementation introduces its own waste, since sequences in a batch must be padded to a common length. Real-world text has a long tail: if the longest item in your dataset is a few hundred tokens and the median is well under a hundred, padding every batch to the global maximum means most of what you compute is padding. The answer is to sort by token length before forming batches, so each batch contains similarly sized items and pads to its own local maximum. Looping Item by Item Here is the per-item baseline on a realistic length distribution, with the constrained scoring from the first article in this series carried forward so that each item costs exactly one forward pass: import os import time import inspect import torch import numpy as np from transformers import AutoTokenizer, AutoModelForCausalLM MODEL_ID = \"Qwen/Qwen2.5-0.5B-Instruct\" torch.set_num_threads(os.cpu_count() or 1) tokenizer = AutoTokenizer.from_pretrained(MODEL_ID) if tokenizer.pad_token is None: tokenizer.pad_token = tokenizer.eos_token tokenizer.padding_side = \"left\" # keeps the last real token at index -1 model = AutoModelForCausalLM.from_pretrained(MODEL_ID, dtype=torch.float32) model.eval() LABELS = [\"billing\", \"technical\", \"account\"] # constrained scoring, carried over from the first article in this series label_first_ids = [tokenizer.encode(label, add_special_tokens=False)[0] for label in LABELS] assert len(set(label_first_ids)) == len(LABELS), ( \"Labels share a first token; score full label sequences instead.\" ) label_first_ids = torch.tensor(label_first_ids, device=model.device) # a causal LM returns a logit vector for every position by default; at batch 32 by # 400 tokens that is a multi-gigabyte tensor we would immediately throw away, so # ask for the last position only where the installed version supports it _forward_params = inspect.signature(model.forward).parameters if \"logits_to_keep\" in _forward_params: LAST_LOGIT_ONLY = {\"logits_to_keep\": 1} elif \"num_logits_to_keep\" in _forward_params: LAST_LOGIT_ONLY = {\"num_logits_to_keep\": 1} else: LAST_LOGIT_ONLY = {} def build_prompt(ticket): messages = [ { \"role\": \"system\", \"content\": \"You classify support tickets. Answer with exactly one of: billing, technical, account.\", }, {\"role\": \"user\", \"content\": f\"Ticket: {ticket}\\nCategory:\"}, ] return tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True) # simulate a long-tailed ticket length distribution: most items are short, a few # are very long. Each ticket keeps a real, classifiable sentence at the front and # is extended with filler, so length varies without the label signal disappearing. BASE_TICKETS = [ \"My card was charged twice for the same invoice.\", \"The mobile app crashes whenever I open the settings page.\", \"I need to change the email address on my profile.\", ] FILLER = ( \"I have been waiting for a response for several days now and would really \" \"appreciate an update on this whenever someone gets a chance to look at it.\" ).split() rng = np.random.default_rng(0) target_words = np.clip(rng.lognormal(np.log(60), 0.9, size=600), 12, 400).astype(int) def make_ticket(base, n_words): words = base.split() while len(words) < n_words: words += FILLER return \" \".join(words[:n_words]) tickets_var = [make_ticket(BASE_TICKETS[i % 3], int(n)) for i, n in enumerate(target_words)] prompts = [build_prompt(t) for t in tickets_var] token_lengths = [len(tokenizer(p, add_special_tokens=False)[\"input_ids\"]) for p in prompts] print( f\"Prompt lengths: min {min(token_lengths)}, \" f\"median {int(np.median(token_lengths))}, \" f\"max {max(token_lengths)} tokens\" ) print(f\"Padding every item to the global maximum would process \" f\"{max(token_lengths) * len(prompts) / sum(token_lengths):.1f}x the necessary tokens\") # time inference baseline_predictions = [] start = time.time() for n, prompt in enumerate(prompts, start=1): # this loop runs for minutes on CPU, so report progress rather than sitting silent if n % 100 == 0: print(f\" {n}/{len(prompts)} tickets ({(time.time() - start) / n:.2f}s each)\", flush=True) inputs = tokenizer(prompt, add_special_tokens=False, return_tensors=\"pt\").to(model.device) with torch.no_grad(): logits = model(**inputs, **LAST_LOGIT_ONLY).logits[0, -1, :] baseline_predictions.append(LABELS[int(logits[label_first_ids].argmax())]) duration_loop = time.time() - start # output task metrics print(f\"One at a time: {duration_loop:.2f} seconds ({len(prompts) / duration_loop:.1f} items/sec)\") Output: Prompt lengths: min 48, median 94, max 449 tokens Padding every item to the global maximum would process 3.7x the necessary tokens 100/600 tickets (0.24s each) 200/600 tickets (0.23s each) 300/600 tickets (0.23s each) 400/600 tickets (0.23s each) 500/600 tickets (0.24s each) 600/600 tickets (0.24s each) One at a time: 144.35 seconds (4.2 items/sec) Batching by Length Now the batched version. It runs the same data twice: once in arbitrary order, to isolate what batching alone is worth, and once sorted by length, to show what the sorting adds on top. Both runs track how much of the processed token budget went to padding. import os import time import inspect import torch import numpy as np from transformers import AutoTokenizer, AutoModelForCausalLM MODEL_ID = \"Qwen/Qwen2.5-0.5B-Instruct\" BATCH_SIZE = 32 torch.set_num_threads(os.cpu_count() or 1) tokenizer = AutoTokenizer.from_pretrained(MODEL_ID) if tokenizer.pad_token is None: tokenizer.pad_token = tokenizer.eos_token # keep the last real token at index -1 tokenizer.padding_side = \"left\" model = AutoModelForCausalLM.from_pretrained(MODEL_ID, dtype=torch.float32) model.eval() LABELS = [\"billing\", \"technical\", \"account\"] label_first_ids = [tokenizer.encode(label, add_special_tokens=False)[0] for label in LABELS] assert len(set(label_first_ids)) == len(LABELS), ( \"Labels share a first token; score full label sequences instead.\" ) label_first_ids = torch.tensor(label_first_ids, device=model.device) _forward_params = inspect.signature(model.forward).parameters if \"logits_to_keep\" in _forward_params: LAST_LOGIT_ONLY = {\"logits_to_keep\": 1} elif \"num_logits_to_keep\" in _forward_params: LAST_LOGIT_ONLY = {\"num_logits_to_keep\": 1} else: LAST_LOGIT_ONLY = {} def build_prompt(ticket): messages = [ { \"role\": \"system\", \"content\": \"You classify support tickets.",
+      "published_date": "2026-09-25",
+      "tags": [],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "KDnuggets",
+        "feed_url": "https://www.kdnuggets.com/feed"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: small language model, slm",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 53,
+    "llm_reason": "附完整可複現benchmark的SLM推論批次優化技巧，實用但屬已知工程手法",
+    "novelty": 6,
+    "impact": 8,
+    "trending": 8,
+    "practicality": 17,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "TechCrunch AI",
+      "title": "For months, OpenAI’s agent swarms have been attacking online databases to find obscure facts",
+      "url": "https://techcrunch.com/2026/09/25/for-months-openais-agent-swarms-have-been-attacking-online-databases-to-find-obscure-facts/",
+      "authors": [
+        "Tim Fernholz"
+      ],
+      "abstract": "With little help from frontier labs, independent researchers are piecing together how AI agents coordinate in internet backwaters to access private data hosted on secure servers. Transluce, a nonprofit lab focused on AI oversight, released a report Wednesday that shows agents from OpenAI attempting to exfiltrate data from Data USA, the University of New Mexico digital library, and the Australian Institute of Health and Welfare (AIHW). The lab’s investigation raises questions about when OpenAI should have known its agents were attempting to penetrate secure systems on the open internet. Transluce was able to find evidence of agentic misbehavior in a matter of weeks simply by hunting for poorly defended web services and corroborating their findings with other open records of agent swarms on the internet. Transluce shared its report the same day Australian Prime Minister Anthony Albanese said OpenAI agents had attempted to break into four government websites and had succeeded in one case, even writing files to an internal server in the country’s national healthcare system. While we lack specifics on the successful hack, Albanese said it was apparently part of an information retrieval evaluation, which maps onto the activity that Transluce and other researchers discovered. In these exercises, which may be training or evaluations, OpenAI models are asked to track down obscure statistics: metrics of Thai drug enforcement, medicine costs in Australia, the median earnings of U.S. master degree holders in 2014. The agents use poorly secured internet services to share and find answers, often trying to penetrate secure databases. They’ve been doing so at least since March 2026, and possibly since November 2025. It may be happening right now. Transluce began its investigation after a different group of researchers identified an obscure forum where agents collaborated to beat timed tests. Their report relies on data from a website, urlquery.net, that acts as a browser proxy, ostensibly for security research — users can analyze a URL without opening it themselves. The service, however, publishes public logs of this activity. The Transluce researchers were able to identify agents using the service by cross-checking their discussions on the forum. “We found a large quantity of automated activity that had close ties and overlap with the DSE Wiki dataset, and that now OpenAI has confirmed is at least partially part of the same swarm,” Conrad Stosz, the head of governance at Transluce, told TechCrunch, while noting that not every activity they spotted could be linked to OpenAI, or even AI agents generally. However, the wiki shows that the agents were tasked with finding a fairly obscure fact — the average annual cost per person for “dermatologicals” in the state of Victoria in January 2022. On June 20, urlquery.net records found by Transluce showed an agent attempting to get into the site. In a wiki entry on June 21, an agent discusses their inability to bypass AIHW’s anti-bot protections. The researchers who identified that forum believe a human OpenAI employee first visited the site on that same day, June 21. Most agentic activity on the forum ceased the next day. This was also shortly after the exploit of Australia’s healthcare system revealed by Albanese took place, on June 18. OpenAI has said it did not learn about that activity until August. OpenAI didn’t answer questions about when its employees discovered the wiki forum, what kind of information they obtained from it, or what they could have learned from it about the exploits. “Our initial review suggests that much of the activity described in Transluce’s report overlaps with cases at varying stages of investigation in our ongoing review of misaligned model activity,” an OpenAI spokesperson told TechCrunch. “We’ve reached out to the University of New Mexico and Data USA and have been in communication with the Australian government about affected government websites. In our broader review, we’re continuing to prioritize the most serious incidents while expanding our work to lower-severity activity, including agents spamming websites. Given the scale of this work and the need to verify each case, we expect the review to take months.” Stosz says that without a clearer understanding of how OpenAI monitors its agents, it would be hard to say what the lab should have known about them, but that “it seems likely that if they had exhaustively studied and understood all of the outgoing requests and incoming responses for those agents involved in the DSE wiki, that they would have discovered this activity.” Selena Zhang, a member of Transluce’s technical staff who contributed to the report, said that urlquery.net records show requests for similar datasets, using similar techniques, in March 2026, and perhaps as early as November 2025. She noted that the same kind of agent-associated activity has taken place on urlquery.net as recently as this week. Stosz, who previously led the U.S. Center for AI Standards and Innovation, said Transluce would continue its research in an effort to provide public transparency about these incidents. He warned that the training techniques used by OpenAI and other frontier labs seem to be incentivizing agents to resort to hacking techniques to complete tasks. The incidents we are aware of are likely the “tip of the iceberg.” “We’re looking at a handful of data sources where these agents happen to have left behind crumbs for us to find,” he said. “OpenAI surely knows more about it. Other labs surely know more about it that they haven’t released publicly. But I would expect that researchers are going to continue to find more traffic, more evidence of what agents have left behind.” Does he trust the labs to be transparent about their findings? “I’m not going to comment on that,” Stosz said.",
+      "published_date": "2026-09-25",
+      "tags": [
+        "AI",
+        "OpenAI"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "TechCrunch AI",
+        "feed_url": "https://techcrunch.com/category/artificial-intelligence/feed/"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 51,
+    "llm_reason": "揭露OpenAI agent swarm自主滲透行為的調查報導，凸顯部署治理風險但無技術方法可循",
+    "novelty": 4,
+    "impact": 14,
+    "trending": 16,
+    "practicality": 2,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "Deploying real-time personalized speech with Qwen3-TTS on Amazon SageMaker AI",
+      "url": "https://aws.amazon.com/blogs/machine-learning/deploying-real-time-personalized-speech-with-qwen3-tts-on-amazon-sagemaker-ai/",
+      "authors": [
+        "Suneesh T"
+      ],
+      "abstract": "With voice cloning, you can generate new speech in a target speaker’s voice from a short reference recording, without retraining a model. You can now deploy the publicly available Qwen3-TTS-12Hz-1.7B-Base text-to-speech model from Amazon SageMaker JumpStart to a fully managed, real-time inference endpoint. Voice cloning reproduces the vocal identity of a specific speaker. Start with a short recording of the speaker and its transcript. Then supply the new text to synthesize. The model speaks that text in the reference speaker’s voice, without retraining. Media teams, educators, and application developers can use this capability to create personalized voice experiences and localize multilingual content. They can also support accessible communication and preserve a speaker’s identity across languages. With a self-hosted, publicly available voice cloning model, you control cost and keep audio data within your AWS environment. You can also adapt the model to your domain. With Amazon SageMaker AI , you can run the model on a fully managed real-time endpoint and handle infrastructure provisioning, health monitoring, and automatic scaling. You don’t manage the underlying GPU servers. This post shows how to deploy Qwen3-TTS-12Hz-1.7B-Base from Amazon SageMaker JumpStart using the Amazon SageMaker Python SDK , and how to invoke the resulting endpoint to clone a voice from a reference clip. It also covers the configuration settings that make this deployment work in practice, along with the Amazon CloudWatch metrics you can use to monitor and right-size the endpoint. Qwen3-TTS is a publicly available text-to-speech model family developed by the Qwen team at Alibaba Cloud. It covers 10 languages: Chinese, English, Japanese, Korean, German, French, Russian, Portuguese, Spanish, and Italian. The models use the Qwen3-TTS-Tokenizer-12Hz speech tokenizer and support streaming generation for low-latency, interactive scenarios. This post uses the Base variant, Qwen3-TTS-12Hz-1.7B-Base . It performs voice cloning from only a few seconds of user audio. It can also serve as a base for fine-tuning. For voice cloning, the model takes a reference audio clip and its transcript. It captures the speaker’s vocal characteristics, such as timbre, pitch, and cadence, and applies them to new text. This differs from the CustomVoice variant, which generates speech from a fixed set of predefined speakers rather than a user-supplied reference. The model also supports cross-lingual cloning: You can capture a voice from a reference in one language and generate speech in another while preserving the speaker’s vocal identity. Qwen3-TTS-12Hz-1.7B-Base is available in Amazon SageMaker JumpStart alongside Qwen3-TTS-12Hz-1.7B-CustomVoice and Qwen3-ASR-1.7B. With these JumpStart options, you can use the streamlined deployment shown in this post. With voice cloning, applications can reproduce the vocal identity of a chosen speaker from a reference recording, rather than being limited to a fixed set of predefined voices. This supports a range of use cases across media, customer engagement, education, and conversational AI. Key benefits of this deployment approach include: Common applications for voice cloning include: This solution deploys Qwen3-TTS-12Hz-1.7B-Base from Amazon SageMaker JumpStart to a real-time endpoint. JumpStart provides the model artifacts and a pre-built serving container, so you don’t write a custom inference handler. You construct a JumpStartModel object, call its deploy method, and invoke the resulting endpoint with the Amazon SageMaker runtime client. The JumpStart container serves the model to generate 24 kHz audio output from text input. This stage design affects how you size GPU memory, as the following section explains. The following diagram shows the real-time inference architecture for the deployment. Figure 1: Real-time voice cloning architecture on Amazon SageMaker AI The deployment follows the standard Amazon SageMaker AI real-time inference pattern: Before you begin, confirm that you have the following resources and permissions: Construct a JumpStartModel with the model ID and deploy it. The GPU memory override is the most important setting for this deployment. The following section explains how to configure it. Before running the following code, replace <sagemaker-execution-role-arn> with the ARN of the IAM execution role that Amazon SageMaker AI uses to deploy the model. The endpoint takes several minutes to reach the InService status while the container loads the model onto the GPU. You can monitor the endpoint status in the Amazon SageMaker AI console or by calling the describe_endpoint API. As described earlier, the model runs as two stages (talker and code2wav) on the same GPU. vLLM reserves GPU memory up front based on gpu_memory_utilization , the fraction of GPU memory a stage can claim. Both stages share one GPU. To avoid out-of-memory errors during startup, keep their combined reservation within the GPU’s capacity. Set the value so the two stages together fit comfortably. With one shared setting applied equally to both stages, 0.45 works well (0.45 + 0.45 = 0.90, leaving a approximately 10 percent buffer): At container startup, each stage logs its memory use to the endpoint’s log group in Amazon CloudWatch Logs. The following values confirm the model fits well within a 24 GB GPU: The model weights are small (3.66 GiB for the talker and 0.45 GiB for code2wav). Most of the remaining memory each stage is allowed becomes KV cache, the working memory that holds tokens for in-flight requests. At a utilization of 0.45 on a 24 GB GPU (about 22 GiB usable), each stage can use up to roughly 10 GiB. Together, the two stages fit within the GPU with headroom to spare. This is why a 24 GB GPU is well suited to the 1.7B model, and a larger GPU is not required. With the endpoint InService , test voice cloning. Two details are specific to this JumpStart container and are essential to get a response: Audio formats. Provide the reference clip as a base64-encoded data:audio/wav;base64,... URI. Converting the reference to 24 kHz mono WAV before encoding is the recommended input form. The endpoint returns audio in the format you request through response_format . This post uses \"wav\" , and the model generates 24 kHz mono audio. The following code converts the reference clip and base64-encodes it: Invoke the endpoint with the target text in input and the reference clip in ref_audio . Note the CustomAttributes routing argument, which is required to reach the text-to-speech handler: The preceding request is the most basic case: one sentence of text returned as speech in the cloned voice. The following patterns build on it, using the same ref_audio , ref_text , and route custom attribute. Sample audio for this example (open the files provided with this post): Reference input: reference_original_input.wav Generated output: cloned_output.wav A single request works well for one sentence or a short passage. For longer content, such as an article or a multi-line script, split it and send one request per sentence or paragraph so the voice stays consistent throughout. To produce speech in a different language while keeping the same voice, use the same reference clip and set \"language\" to another supported language. The following example uses the English reference to generate Chinese speech, preserving the speaker’s vocal identity across languages. Generated output: cross_lingual_cloning.wav Choose an instance in three steps. First, confirm that JumpStart supports it. Then, check your service quota and confirm that its GPU memory fits the model. For a 1.7B model, a 24 GB GPU (the g6 family, NVIDIA L4) is well matched and cost effective. To estimate concurrent request capacity, check the KV cache token budget in the endpoint’s log group in Amazon CloudWatch Logs. The log group path is /aws/sagemaker/Endpoints/<endpoint-name> .",
+      "published_date": "2026-09-25",
+      "tags": [
+        "Advanced (300)",
+        "Amazon SageMaker AI",
+        "Technical How-to"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: fine-tuning, kv cache",
+      "⚖️ 來源權重: rss +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 43,
+    "llm_reason": "純部署既有開源TTS模型的教學文，技術含量偏低",
+    "novelty": 4,
+    "impact": 7,
+    "trending": 8,
+    "practicality": 15,
+    "blog_worthiness": 9
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Databricks",
+      "title": "From Data to Dialogue: How S&P Global Energy Made Its Structured Data Estate Conversational with Databricks Genie Agents and MCP",
+      "url": "https://www.databricks.com/blog/data-dialogue-how-sp-global-energy-made-its-structured-data-estate-conversational-databricks",
+      "authors": [],
+      "abstract": "• Domain experts curate focused Genie Agents per dataset group without writing agent code, establishing a governed semantic layer. • Genie Agents act as managed MCP servers that are composed via a FastMCP proxy into composite endpoints for cross-domain queries. • This architecture significantly shortened time-to-market for conversational data products while preserving Unity Catalog governance. If you have ever tried to make a large, complex structured data estate available to AI agents and assistants, you have likely run into the same wall we did: agents are only as good as the context they can reach, and enterprise data rarely lives in one neat, well-documented place. At S&P Global Energy, our data spans Chemicals, Crude Oil, Refined Products, Gas & Power, Liquified Natural Gas (LNG) and more — and each commodity is itself a rich family of datasets. LNG alone includes facility specifications, cargos , outages, supply and demand fundamentals, netbacks, historical and forecast prices, and contracts. Chemicals span capacity, production, utilization, trade, demand by end use and by derivative, inventory change, and country- and region-level supply–demand balances. Our other commodities follow similar patterns. This data lives across Databricks and several non-Databricks sources. Our goal was ambitious but simple to state: make our entire structured data estate available for external consumption by AI agents through the Model Context Protocol (MCP) — so that our customers’ agents and assistants, as well as our own, could ask questions in natural language and get trusted, governed answers. We evaluated several approaches. What worked best for us, by a wide margin, was Databricks Genie Agents , exposed as managed MCP servers, composed into domain-specific bundles with an MCP proxy layer. Large language models are remarkably good at conversation and reasoning, but they cannot answer questions about your data unless you build a bridge to it. For structured enterprise data, that bridge has historically meant one of the following: Each of these approaches shares the same problem: the people who understand the data best — our SMEs and analysts — are not the people building the access layer. Every insight had to pass through an engineering backlog. Our time to market for a new conversational data experience was measured in months. We needed an approach where domain experts could curate and publish conversational access to data directly, engineering could standardize how agents connect, and governance stayed centralized. That is exactly what Genie Agents plus MCP gave us. Our architecture has three layers, and each layer is owned by the people best suited to it. The diagram above shows the end-to-end flow — including what sits inside the S&P Global Energy network and what sits in the external client environment. This is where the magic starts, and notably, it requires no code. Our SMEs begin by selecting the tables relevant to a business domain: They then group related tables and create one Genie Agent per dataset group — not one giant agent per commodity. Each sub-category of a commodity becomes its own focused Genie Agent. Within LNG, for example: Every other commodity follows the same pattern with its own sub-categories. Chemicals, for instance, has group-level Genie Agents for capacity, production, capacity utilization, trade, demand by end use and by derivative, inventory change, and country- and region-level supply–demand balances ; Crude Oil, Refined Products, and Gas & Power are organized similarly. The result is a fleet of small, sharply scoped Genie Agents rather than a handful of sprawling disconnected AI tools. Inside each agent, SMEs add the context that makes text-to-SQL actually work in the real world: descriptions of tables and columns, example queries, trusted assets for high-stakes metrics, and business definitions (for example “floating storage is defined as cargoes idling for 3 days or more in vessels travelling below a threshold speed”). This is the step that generic text-to-SQL solutions skip — and it is the step that determines whether users trust the answers. The key organizational insight: curation became a domain activity, not an engineering activity. The person who knows what “floating storage” means in an LNG context is the person teaching a Genie what it means. Here is where Databricks did the heavy lifting for us. Each Genie Agent is exposed as a Databricks managed MCP server out of the box, at an endpoint of the form: https://<workspace-hostname>/api/2.0/mcp/genie/{genie_space_id} There is nothing to deploy and nothing to host. Each server exposes a small, clean tool surface — essentially two tools per agent: This two-tool, ask-then-poll pattern turns out to be a great fit for agentic workloads: questions run asynchronously against a SQL warehouse, and the agent polls with the conversation and message ID returned by the query tool until the response is ready. Just as importantly, these managed servers are governed by Unity Catalog. A Genie Agent — or the user behind it — can only reach the agents and underlying tables they have permission to see. Authentication is handled by the platform. We did not have to build a security layer around our AI access; we inherited the one we already had. One Genie Agent per dataset group keeps each agent focused and accurate. But real business questions routinely cross groups: “How did the recent outages at Sabine Pass affect cargo premiums into Asia?” touches both the Outages and Cargo Genie Agents at once, and cross-commodity questions like “How are naphtha prices affecting chemical production margins?” reach across Refined Products and Chemicals Genie Agents. Rather than building one giant agent (which degrades answer quality) or forcing every client to configure a dozen separate servers, we used FastMCP’s proxy and composition capabilities to create composite MCP endpoints — typically one per commodity, mounting that commodity’s group-level Genie MCP servers behind a single server with name-spaced tools. Higher-level composites can bundle several commodities the same way: # Each group-level Genie Agent is a managed MCP server on Databricks cargo = FastMCP.as_proxy(genie_mcp_config(“lng_cargo_agent_id”), name=“cargo”) outages = FastMCP.as_proxy(genie_mcp_config(“lng_outages_agent_id”), name=“outages”) netbacks = FastMCP.as_proxy(genie_mcp_config(“lng_netbacks_agent_id”), name=“netbacks”) # Compose the group Genies into one commodity bundle lng = FastMCP(name=“lng-composite”) lng.mount(cargo, prefix=“cargo”) lng.mount(outages, prefix=“outages”) lng.mount(netbacks, prefix=“netbacks”) # The same pattern repeats for Chemicals, Crude Oil, Refined Products, Coal … (Illustrative snippet — adapt to your FastMCP version and auth setup.) The result: an agent connects to one composite endpoint per commodity and sees a curated set of group tools — cargo_genie_query_agent, outages_genie_query_agent, netbacks_genie_query_agent, and so on, each paired with its genie_poll_response counterpart. The agent’s LLM decides which group Genie to route a question to, or fans a cross-group question out across several, then synthesizes the results. This gave us the best of both worlds: narrow, high-accuracy group-level Genie Agents underneath, and broad, commodity- and estate-wide conversational access on top. For our business stakeholders, the technical details above translate into a few very tangible outcomes. Time to market collapsed. Previously, standing up a new conversational data experience meant a full development cycle: requirements, API design, text-to-SQL engineering, testing, deployment. With this architecture, launching a new dataset group — or an entire commodity — means an SME creates and curates the corresponding Genie Agents — the MCP endpoint exists the moment the agent does. SMEs became publishers, not requesters.",
+      "published_date": "2026-09-25",
+      "tags": [
+        "All",
+        "Company",
+        "Customers"
+      ],
+      "organization": "Databricks",
+      "raw_metadata": {
+        "feed_name": "Databricks",
+        "feed_url": "https://www.databricks.com/feed"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, mcp, model context protocol, reasoning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 41,
+    "llm_reason": "客戶案例包裝性質重，Genie Agent與MCP代理架構描述籠統缺乏可複現細節",
+    "novelty": 6,
+    "impact": 8,
+    "trending": 10,
+    "practicality": 9,
+    "blog_worthiness": 8
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "KDnuggets",
+      "title": "MCP Explained in 5 Minutes",
+      "url": "https://www.kdnuggets.com/mcp-explained-in-5-minutes",
+      "authors": [
+        "Abid Ali Awan"
+      ],
+      "abstract": "MCP Explained in 5 Minutes A visual guide to MCP that explains how it works, how to use it with Claude Code, Tavily, GitHub, and Playwright, and what is new through simple diagrams that make the whole concept easy for anyone to understand. By Abid Ali Awan , KDnuggets Assistant Editor on September 24, 2026 in Artificial Intelligence Everyone has heard of MCP by now. It is constantly mentioned alongside AI agents, coding assistants, and tool use. But while most people know what MCP is supposed to do, far fewer understand how it actually works or how to use it effectively. At a high level, MCP gives AI applications a standard way to connect with external tools and data sources. Instead of building a custom integration for every API, database, repository, or browser, an AI application can connect to an MCP server and discover the capabilities it provides. That sounds simple, but concepts like hosts, clients, servers, tools, resources, and transports can quickly make MCP feel more complicated than it really is. Once you understand the basic flow, however, the whole system becomes much easier to reason about. In this guide, we will break down how MCP works in about five minutes and then put it into practice by connecting Claude Code to Tavily for web search, GitHub for repository workflows, and Playwright for browser automation. What Is MCP? The simplest way to think about MCP is as a common language between an AI application and the tools it wants to use. Without MCP, every external service may require its own custom integration. With MCP, the AI application can connect to different MCP servers through the same standard interface. MCP does not replace APIs . An MCP server usually talks to the underlying API or service on behalf of the AI application. What MCP standardizes is how those capabilities are presented, discovered, and called by the AI. An MCP server can expose three main capabilities: Tools: Actions the model can perform, such as searching the web, creating an issue, or running a query. Resources: Information the application can read, such as files, documents, or database records. Prompts: Reusable prompt templates or workflows exposed by the server. For most AI agent workflows, tools are where MCP becomes especially useful , because they allow the model to move beyond generating text and actually interact with external systems. How MCP Works MCP follows a client-server architecture , but the flow is easier to understand when you see the pieces together. The host is an AI application, such as Claude Code. Inside the host, an MCP client connects to one or more MCP servers . Those servers expose tools, resources, or prompts connected to external services. For example, imagine asking: Search for the latest PyTorch release and summarize the major changes. Claude first determines that the task requires current information . It can then inspect the available MCP tools, select a web-search tool, send the request through the MCP server, and receive the search results. The important point is that MCP does not perform the reasoning . The model decides when a tool is needed and what to do with the result , while MCP provides the standardized connection that makes the tool available. Getting Started With MCP in Claude Code Now that we understand how MCP works, let us actually use it. Claude Code has built-in support for managing MCP servers. To see the servers currently configured on your machine, run: claude mcp list You can also manage and inspect MCP connections directly inside Claude Code with: /mcp Think of the setup like this: We will connect three MCP servers that cover some of the most useful agent workflows: searching the web, working with repositories, and controlling a browser . 1. Tavily for Web Search Language models do not always have access to current information. Tavily solves that by giving Claude Code tools for live web search, extraction, crawling, mapping, and research . Add the remote Tavily MCP server: claude mcp add --transport http tavily https://mcp.tavily.com/mcp Then open Claude Code and run: /mcp Select Tavily and complete the authentication flow if required. Tavily also supports passing an API key directly when configuring the server. Now try: Search the web for the latest vLLM release and summarize the main changes. The workflow becomes: Claude does not need to know how Tavily's underlying API works. It simply discovers the tools exposed by the MCP server and uses the appropriate one. 2. GitHub for Repository Workflows The official GitHub MCP server turns GitHub into a set of tools Claude can work with directly. Depending on your permissions, Claude can read repositories, search code, inspect commits, work with issues and pull requests, analyze workflows, and perform repository operations . Add GitHub's remote MCP server using a Personal Access Token (PAT): claude mcp add --transport http github https://api.githubcopilot.com/mcp/ \\ --header \"Authorization: Bearer YOUR_GITHUB_PAT\" Replace YOUR_GITHUB_PAT with a GitHub PAT that has only the permissions you actually need. You can now ask Claude Code things such as: Review pull request #42 and identify potential bugs and missing tests. Or: Show me the most important open issues in this repository. Conceptually: Instead of manually copying code, issues, and pull requests into the conversation, Claude can retrieve the required context through MCP and act on it when permissions allow. 3. Playwright for Browser Automation Some tasks require more than APIs. The agent may need to open a website, click buttons, fill forms, navigate pages, or test an application . That is where Playwright MCP becomes useful. Add Microsoft's Playwright MCP server: claude mcp add playwright npx @playwright/mcp@latest Then try: Open my local application and test the signup flow. The workflow now looks like this: Playwright MCP works primarily with structured accessibility snapshots of the page, giving the model a structured representation it can use to interact with browser elements. What Is New in MCP? MCP has evolved quickly since its first release. The latest MCP 2026-07-28 specification introduces a major architectural change: the protocol core is now stateless . Instead of maintaining a session with a specific server, each request contains the information needed to process it. This makes remote MCP servers much easier to scale across standard cloud infrastructure. The new specification also adds: Stateless requests: No ongoing protocol session is required. Better routing: Servers and gateways can more easily identify and route requests. Caching: Tool, resource, and prompt lists can be reused instead of fetched repeatedly. Multi-step interactions: A tool can ask for more information and then continue the same task. Tasks: Better support for long-running operations. Improved authentication: Stronger support for secure remote MCP servers. Extensions: New capabilities can be added without changing the core protocol. In simple terms, MCP is becoming easier to scale, more secure, and better suited for production AI agents . Final Thoughts MCP may sound technical at first, but the idea is simple: it gives AI applications a standard way to connect to external tools. In this guide, we saw how Claude Code can use MCP to search the web with Tavily, work with GitHub repositories, and control a browser with Playwright. We also looked at how the latest MCP updates make these connections easier to scale and better suited for production. Once you understand the basic flow of model — MCP — tool — result , it becomes much easier to build more capable AI agents without creating a custom integration for every service. Abid Ali Awan ( @1abidaliawan ) is a certified data scientist professional who loves building machine learning models. Currently, he is focusing on content creation and writing technical blogs on machine learning and data science technologies.",
+      "published_date": "2026-09-24",
+      "tags": [],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "KDnuggets",
+        "feed_url": "https://www.kdnuggets.com/feed"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, tool use, mcp, reasoning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 39,
+    "llm_reason": "純入門教學無新技術內容，MCP話題雖熱但市面已有大量同類文章",
+    "novelty": 2,
+    "impact": 5,
+    "trending": 12,
+    "practicality": 12,
+    "blog_worthiness": 8
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "TechCrunch AI",
+      "title": "Some Supabase customers are publicly exposing reams of people’s data to the web",
+      "url": "https://techcrunch.com/2026/09/25/some-supabase-customers-are-publicly-exposing-reams-of-peoples-data-to-the-web/",
+      "authors": [
+        "Zack Whittaker"
+      ],
+      "abstract": "Thousands of databases hosted by development platform Supabase are exposing people’s sensitive information to the public web, new security research by cybersecurity firm UpGuard has found. UpGuard told TechCrunch that it found around 16,000 databases on which some degree of personal data was exposed while they were hosted by Supabase, which allows web and app developers to store and run their databases. Supabase earlier this year reached a $10 billion valuation , thanks to a rise in developers hosting their vibe-coded apps on the platform. But the company has faced criticism for how it handles user security. There are widely documented cases of users misconfiguring or unknowingly exposing their databases to the broader internet, in some instances to the tune of millions of records each . The findings highlight how vibe-coded apps and websites can spill or expose sensitive data through basic misconfigurations and improper security. While AI tools can be used to easily build websites and apps, the generated code can often contain security flaws, or apps might require specific configuration that the developer may be ignorant of. Over the years, countless data breaches have been linked to improperly configured storage servers, databases and websites. Such cases have resulted in the leaks of sensitive military emails , immigration and visa applications , classified government files , hundreds of thousands of driver’s license scans , and children’s personal information . Now, the boom in AI vibe-coding is helping fuel a new wave of data breaches, many of which are now being linked to Supabase as people increasingly use it for storing their data. UpGuard says it sought to understand the scale of exposed data across the platform, and found publicly accessible names, addresses, phone numbers, and user passwords. The research surfaced a fewer number of passwords and authentication tokens. The firm said the databases contained data linked to various projects, such as private conversations with sex workers on an Indian adult streaming site; thousands of license plates of a U.S. valet service; and the contact information of people who used an immigration and relocation service. One of the databases belonged to an African government’s consulate in France, said UpGuard, while another was used to intercept text messages by a virtual SIM farm for sending one-time passcodes to verify online accounts, typically for launching scams and phishing attacks. While the majority of these exposed datasets appear to be located in the United States, UpGuard said this is a worldwide problem. The findings build on earlier research that also found a range of exposed databases hosted on Supabase, including those by Y Combinator startups and other popular apps . Supabase has made changes to its platform over the years, including bolstering its platform and user access to databases. When reached for comment, Supabase’s Chief Information Security Officer Bil Harmer said that while the company has not seen the research, its projects are “secure by default.” He described security as a shared responsibility between the company and its customers. “We provide secure defaults and tooling, and customers control how their own projects are configured,” and the company notifies affected customers when security issues are discovered, he said. “Security at Supabase is never finished. We care deeply about getting it right, and we’ll keep making it easier for every developer to ship securely,” said Harmer. UpGuard security researcher Greg Pollock said the company’s research was important for raising awareness about the issue of data exposures.",
+      "published_date": "2026-09-25",
+      "tags": [
+        "AI",
+        "Security",
+        "cybersecurity",
+        "data exposure",
+        "Supabase",
+        "vibe coding"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "TechCrunch AI",
+        "feed_url": "https://techcrunch.com/category/artificial-intelligence/feed/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: vibe coding",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 46,
+    "llm_reason": "揭露vibe coding資安風險，具警示價值但非方法創新",
+    "novelty": 4,
+    "impact": 10,
+    "trending": 12,
+    "practicality": 9,
+    "blog_worthiness": 11
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "The Verge AI",
+      "title": "Microsoft thinks its new Copilot ‘super app’ will be as influential as Office",
+      "url": "https://www.theverge.com/news/1000532/microsoft-copilot-super-app-chat-coding-autopilot",
+      "authors": [
+        "Tom Warren"
+      ],
+      "abstract": "News AI Tech Microsoft thinks its new Copilot ‘super app’ will be as influential as Office The new Copilot merges AI chat, coding, and Autopilot agents.﻿ The new Copilot merges AI chat, coding, and Autopilot agents.﻿ by Tom Warren Sep 25, 2026, 12:00 PM UTC Image: Microsoft Tom Warren is a senior correspondent and author of Notepad , who has been covering all things Microsoft, PC, and tech for over 20 years. After teasing its new Copilot “super app” last month , Microsoft is officially unveiling it today. The redesigned Copilot app bundles three AI capabilities into a single interface of chat, coding, and agents. As part of the launch, Microsoft is also rebranding Scout, the AI personal assistant it unveiled at Build earlier this year, as Autopilot. This new Copilot app will have three tabs for Home, Code, and Autopilot, with Home combining Copilot Chat and Cowork together. It’s the default landing experience for Copilot users, and Microsoft is also planning to include a Today feature inside it that works as a personalized dashboard for important emails, meeting requests, Teams threads, and more. “Home is where you get your bearings, keeping you grounded and moving forward: review recent activity, get suggestions on what Copilot can help with, and pick up work right where you left off,” explains Jared Spataro , chief marketing officer of AI at work at Microsoft. Code is a surprise addition to a Copilot app focused on knowledge workers. Image: Microsoft The Code tab is the surprise addition to this so-called “super app,” and not one you’d typically associate with an app designed for knowledge workers. It will let anyone create an app, tracker, dashboard, or automation and share the results with colleagues as cloud-hosted internal apps. “Powered by the same underlying technology as GitHub Copilot, Code runs in a sandboxed environment and can be hosted securely within your tenant,” says Spataro. Autopilot is a new addition to the Copilot experience, and one that Spataro describes as a “digital teammate.” Previously called Scout and available initially as a desktop app, Autopilot is the cloud equivalent that enables a personal AI assistant to keep running while you’re asleep. Like many other AI agents, Autopilot has its own cloud computer instance that can be tasked to do things like watch Teams channels, run recurring work tasks, or handle follow-ups. The real difference against some other AI agents is that Microsoft has made Autopilot enterprise grade, appealing to businesses that rely on its Office and identity management suites. “Autopilot lives in your tenant with its own identity, memory, computer, and workspace, and it’s built on Microsoft IQ so it understands how your organization actually works,” says Spataro. “It shows up where people already work — Teams, Outlook, chats, channels, and documents — so you can @mention it like a colleague, with permissions, audit, and governance behind it.” You can give Autopilot a name and an appearance. Image: Microsoft All of this focus on enterprise security and control is a big part of Microsoft trying to sell businesses on Copilot once again. The difference this time around is that how much a business pays for Copilot will depend on what their employees are doing. Microsoft is using usage-based billing for the Cowork, Code, and Autopilot parts of this new Copilot app, so any long-running agentic capabilities or usage of models like Astra and Fable will be billed based on usage. The regular Copilot license, known as a user subscription license, will give you Copilot in Chat, and in Word, Excel, PowerPoint, Outlook, and Teams. Microsoft is using an auto model picker to match the model for each task, but IT admins will need to use Microsoft’s new FinOps for AI to manage AI spend and ensure any agentic usage doesn’t get out of control. With this new Copilot app it feels like Microsoft has finally settled on a formula for its AI assistant. The company has redesigned Copilot plenty of times since its introduction as a chatbot inside Bing, and this latest three-tab design builds on the combination of its two separate consumer and commercial Copilot apps last month. That’s a long-overdue change, alongside some big AI leadership shapeups that helped finally appoint a single Copilot boss for the first time. The new Home and Code tabs will start rolling out to Microsoft’s Frontier program for early access AI features “in the coming weeks,” and Autopilot will go into private preview later this month. Code will also be in preview for Microsoft 365 Premium and Pro subscribers later this year. It’s fair to say that Copilot has failed in the consumer space compared to Claude or ChatGPT, but Microsoft’s core commercial customers are slowly showing interest. This new Copilot app isn’t really designed to compete with things like Muse, and Microsoft is now calling it “the AI built for work.” Microsoft CEO Satya Nadella also calls Copilot a new operating system. “We’re building Copilot as a new OS for work that spans every model, every form factor, and every task,” says Nadella in a post on X . Microsoft is even comparing its new Copilot to how influential Office was on productivity. “Just as Office defined work for the PC era, the new Copilot is built to define it for the AI era,” says Spataro. That might well be Microsoft’s goal, but there’s a lot more competition in this AI era than there ever was in the PC era. Microsoft has certainly fallen behind the likes of Google, OpenAI, Anthropic, and now Meta, and it’ll be interesting to see if “the AI built for work” is enough to help it catch up. Update, September 25th : Article updated with Microsoft CEO Satya Nadella’s comments. Follow topics and authors from this story to see more like this in your personalized homepage feed and to receive email updates. Tom Warren AI Microsoft News Tech",
+      "published_date": "2026-09-25",
+      "tags": [
+        "AI",
+        "Microsoft",
+        "News",
+        "Tech"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "The Verge AI",
+        "feed_url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agentic",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 43,
+    "llm_reason": "產品整合重新包裝宣布，缺乏技術架構深度",
+    "novelty": 6,
+    "impact": 11,
+    "trending": 13,
+    "practicality": 5,
+    "blog_worthiness": 8
+  }
+]
