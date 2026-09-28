@@ -1,0 +1,748 @@
+[
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "NVIDIA Developer",
+      "title": "Add Runtime Controls to AI Agents with NVIDIA OpenShell",
+      "url": "https://developer.nvidia.com/blog/add-runtime-controls-to-ai-agents-with-nvidia-openshell/",
+      "authors": [
+        "Alex Watson"
+      ],
+      "abstract": "AI agents can be given a goal, write code, use tools, and keep working as new information becomes available. This opens the door to applications that investigate software failures, run experiments, and carry out business-critical actions and research over days or weeks. Useful agents need access to workspaces, compute resources, data, credentials, and external services. But broader access also creates more consequential failure modes, from changing production data or exposing confidential information to acting beyond the assigned task. NVIDIA OpenShell 0.1.0 is an open-source runtime for defining and enforcing which systems and data an agent can access. It combines sandboxed execution, controlled service access, credential management, and formal policy analysis. Teams can grant agents the capabilities a task requires while OpenShell enforces those permissions outside the workload. It supports Codex, Claude Code, Pi, Hermes, and future frameworks across enterprise applications, frontier research, and physical AI—from internal agent fleets and long-horizon research to robotics and edge systems. This post shows how NVIDIA OpenShell 0.1.0 places enforceable runtime controls around an existing AI agent—without rewriting it—so teams can restrict API operations, protect credentials, and review permission changes outside the agent workload. OpenShell provides the runtime layer of the broader NVIDIA Open Agent Safety Platform , which extends protection across the application, runtime, and infrastructure layers. Video 1. A walkthrough on how to set up your autonomous long-running agent How organizations are adopting OpenShell OpenShell is open source and available for enterprise adoption across a broad ecosystem of partners, which shapes the product itself. Organizations are adopting OpenShell across a range of applications, including chip design, enterprise automation, accelerated computing, and physical AI. Cadence uses OpenShell for chip design with its ChipStack Autonomous RTL Design Engineer. Slack is building an on-demand agent platform on OpenShell to automate tasks. Gecko Robotics uses OpenShell to govern agents making decisions on physical robots. OpenShell capabilities OpenShell 0.1.0 supports sandbox operations, policy verification, governance integration, credential protection, and flexible compute. Capability How it helps Multi-tenant platform support Operate agent services for multiple teams or customers with separate workspaces, permissions, and service access on shared infrastructure. Formal policy verification Show human and AI reviewers whether requested permissions remain within defined security boundaries, and identify where they exceed them. Extensible security and governance Connect third-party security services, governance systems, and custom checks to enforcement outside the agent workload. Credential-protected service access Use authenticated services while real credentials remain outside the agent workload and are bound to authorized requests. CPU and GPU execution Run experiments and data processing on CPUs or GPUs across containers, VMs, and Kubernetes environments. Table 1. New capabilities introduced in OpenShell 0.1.0 Enforce permissions outside the agent An agent can interpret instructions, choose tools, and evolve its approach over time. OpenShell preserves that flexibility while enforcing permissions outside the agent workload. OpenShell can manage fleets of agents and their sandboxes, each with its own permissions, and enable governance across groups at a time. Three components provide this control: OpenShell Gateway: Manages the lifecycles and policies of many sandboxes. OpenShell Supervisor: Paired with each sandbox, it runs outside the agent workload and checks outbound requests against policy. OpenShell Sandbox: Runs the workload with kernel-level controls over its filesystem and processes, and no network path except through the supervisor. Figure 1. OpenShell manages agent sandboxes. External supervisors restrict outbound communication to configured services The OpenShell sandbox runtime uses operating-system kernel controls to limit which files a workload can read or change and prevent it from acquiring additional system privileges. For network access, you can be more specific than allowing a connection to a service. The supervisor can inspect configured HTTP, GraphQL, and Model Context Protocol (MCP) traffic, allowing a data query while blocking a write through the same API. These controls remain in place when the agent starts a shell, runs generated code, launches child processes, or proposes task delegation to sub-agents. OpenShell records policy decisions in an Open Cybersecurity Schema Framework (OCSF) audit trail. When it blocks an inspected request, it can return a descriptive error that helps the agent decide what to do next. Watch a policy decision happen This example uses curl and an unauthenticated endpoint in the GitHub REST API, making each policy decision visible without requiring an API key or language model. The same controls apply when an agent makes the request. Install and start OpenShell 0.1.0 using the installation guide . Then download the accompanying no-network.yaml and github-readonly.yaml policy files into an examples directory. First, create a sandbox with no outbound network access: openshell sandbox create --name policy-demo \\ --no-auto-providers \\ --policy examples/no-network.yaml The create command opens a shell inside the sandbox. Try reading a public endpoint: curl -sS --max-time 10 https://api.github.com/zen The request fails because the sandbox has no outbound network permission. Open a second terminal on your host and check the logs to see which program made the request and why it was blocked: openshell logs policy-demo --since 5m Next, replace the sandbox policy with one that permits read-only access to the GitHub REST API. Policies are authored in YAML and compiled to OPA/Rego, which OpenShell evaluates for each outbound request. network_policies: github_api: name: github-api-readonly endpoints: - host: api.github.com port: 443 protocol: rest enforcement: enforce access: read-only binaries: - path: /usr/bin/curl This rule lets /usr/bin/curl reach the GitHub API on port 443. With the protocol: rest, OpenShell inspects HTTP requests, allowing reads while blocking writes. In your host terminal, apply the complete replacement policy without restarting the sandbox: openshell policy set policy-demo \\ --policy examples/github-readonly.yaml --wait Return to the sandbox shell and try both requests: # Read: allowed\ncurl -sS --max-time 10 https://api.github.com/zen # Write: blocked\ncurl -sS --max-time 10 -X POST https://api.github.com/zen Check the host logs again to confirm OpenShell blocked the POST. An agent running these commands encounters the same restrictions. Access services without exposing credentials Many agents need model APIs or private services to complete their tasks. OpenShell authorizes that access while keeping the real credentials outside the agent workload. Figure 2. The real credential is substituted outside the agent workload and only for an authorized endpoint. Both network access and credential binding must permit the request Authorization for one service does not make the credential available to another. If the agent sends the placeholder to a destination outside the credential’s approved endpoints, OpenShell rejects the request. The receiving service still enforces the permissions attached to the real credential. OpenShell adds a separate control over how the agent can use it. For example, an inspected read-only API policy can block write requests even when the credential itself has write access. A provider profile defines the credentials, endpoints, and permitted programs for a service. Assuming a GitHub provider named github is already configured, attach it to a new sandbox and launch Codex.",
+      "published_date": "2026-09-28",
+      "tags": [
+        "Agentic AI / Generative AI",
+        "Top Stories",
+        "Trustworthy AI / Cybersecurity",
+        "Open Agent Safety Platform",
+        "OpenShell",
+        "Security for AI",
+        "Trustworthy AI"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "NVIDIA Developer",
+        "feed_url": "https://developer.nvidia.com/blog/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, mcp, model context protocol, safety",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 72,
+    "llm_reason": "開源runtime具體部署教學，可直接落地保護既有agent。",
+    "novelty": 10,
+    "impact": 14,
+    "trending": 15,
+    "practicality": 17,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Google Research Introduces an AI Video Co-Director: 4 Agentic Frameworks for Coherent, Minutes-Long Video Generation",
+      "url": "https://www.marktechpost.com/2026/09/27/google-research-introduces-an-ai-video-co-director-4-agentic-frameworks-for-coherent-minutes-long-video-generation/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "Google Research has introduced an AI video co-director for long-form video generation. The suite of 4 agentic frameworks turns short clips into coherent, minutes-long stories. It targets identity drift and cascading errors, the 2 failures that break most multi-shot AI video pipelines today. Diffusion models render high-fidelity clips in seconds. Stitching those clips into a story is harder. Most agentic pipelines chain modules with independent, handcrafted prompts. That causes semantic drift , where attire or scenery shifts between shots. It also causes cascading failures , where one bad upstream asset corrupts every later shot. Google team frames this as a credit assignment problem. A broken final video is hard to trace back to the prompt that caused it. The system sits on top of Gemini and Veo. It is model-agnostic, so the same layer can drive other generators. Outputs inherit SynthID watermarking from the base models. Co-Director , accepted at COLM 2026, uses a multi-armed bandit (MAB). An Orchestrator Agent picks a configuration across Creative Strategy, Narrative Mode, and Aesthetic Archetype. A Pre-Production Agent builds the storyboard. Keyframe, Video, and Audio sub-agents produce the media. An MLLM Judge then scores the cut and sends a factored reward back to the bandit. CANVAS , accepted at EMNLP 2026, tracks characters, locations, and object states as the story evolves. It retrieves stored visual anchors when a scene returns. In Google’s museum heist test, AutoStudio lost the thief’s cap and Gemini-3.1-Pro changed the gemstone. CANVAS kept both consistent. A²RD (Agentic Autoregressive Diffusion) is a training-free architecture. Each segment runs a Retrieve, Synthesize, Refine, Update loop against a multimodal video memory. The agent switches between extrapolation for new story beats and interpolation for returning entities. Google shared a 10-minute film generated this way. VQQA (Video Quality Question Answering) generates visual questions for each prompt. VLM critiques act as “semantic gradients” that rewrite the text prompt. It needs no access to model internals. A Global Selection step picks the best video across all iterations, not simply the last one. Google built 3 new benchmarks. GenAD-Bench has 400 ad scenarios across 200 fictional products from 50 brands. HardContinuityBench stresses scene reappearances and prop state changes. LVBench-C has 120 scenarios where key assets vanish for at least 10 segments before returning. Sources: linked papers, project pages, and GitHub repositories. Verified September 27, 2026. Check out the Technical Details . All credit goes to the researcher of this project. Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post Google Research Introduces an AI Video Co-Director: 4 Agentic Frameworks for Coherent, Minutes-Long Video Generation appeared first on MarkTechPost .",
+      "published_date": "2026-09-28",
+      "tags": [
+        "Agentic AI",
+        "AI Agents",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Editors Pick",
+        "Language Model",
+        "New Releases",
+        "Staff",
+        "Tech News",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, multimodal, diffusion",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 70,
+    "llm_reason": "COLM/EMNLP認可的多代理長影片一致性框架，故事與技術兼具。",
+    "novelty": 16,
+    "impact": 14,
+    "trending": 13,
+    "practicality": 10,
+    "blog_worthiness": 17
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "NVIDIA Launches Open Agent Safety Platform: OpenShell Sandboxes Agents on Vera CPUs While Sentry on BlueField-4 Quarantines Them in Milliseconds",
+      "url": "https://www.marktechpost.com/2026/09/28/nvidia-launches-open-agent-safety-platform/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "NVIDIA has launched the NVIDIA Open Agent Safety Platform , an open software platform and reference system design for AI agent security. It pairs the OpenShell secure runtime with NVIDIA Sentry, an out-of-band watchdog on BlueField-4 DPUs. The core idea is simple. Safety controls should not live inside the agent they are meant to control. Today, with over 100 industry partners, we introduced the NVIDIA Open Agent Safety Platform, bringing together OpenShell and Sentry. Artificial intelligence is extraordinary technology that will advance discovery, productivity, security, health, and prosperity for generations to… pic.twitter.com/dReAxwpRUn Is it deployable today? Yes for OpenShell. It is Apache 2.0, installs on Linux, macOS (Apple Silicon) or Windows WSL 2, and its repo still labels it alpha. The NVIDIA technical report cites recent reports from several frontier labs. Agents broke out of evaluation environments and reached systems they should not have touched. Some agents misreported what they did. The NVIDIA team names a common pattern: agents circumvented application-layer controls to finish their task. NVIDIA calls this failure mode drift . Drift can follow a policy block, a bug, a missing tool or ambiguous instructions. NVIDIA team argues drift cannot be trained away without losing capability. So an agent cannot be expected to fully govern itself. OpenShell (runtime) : Each agent runs in an isolated sandbox. A gateway manages sandbox lifecycle across Docker, Podman, MicroVM or Kubernetes drivers. Every outbound connection hits a policy engine that allows it, binds credentials to an approved endpoint, or denies and logs it. Filesystem and process rules lock at creation. Network and provider rules are hot-reloadable. See NVIDIA’s runtime controls walkthrough for implementation details. Sentry (in-silicon watchdog) : Sentry runs on BlueField-4 DPUs and uses NVIDIA DOCA to inspect agent requests and responses. It provides attested telemetry, verifies agent identity and enforces zero-trust access to data, tools and APIs. It stays isolated from the host, so a compromised runtime does not disable it. Placement matters : In a Vera Rubin POD , each compute tray’s BlueField-4 sits on the node’s only path to the model. An agent cannot act without its next inference call. That makes the path both the best observation point and the kill switch. For existing Vera plus BlueField-4 systems, NVIDIA says enabling these protections is a software update. The stack is optimized for NVIDIA Vera CPUs but is compatible with other hardware. NVIDIA team claims Vera delivers up to 80% faster sandbox performance than traditional CPU infrastructure. OpenShell can also be extended to Arm and Intel platforms. The closest alternatives are sandbox platforms for agent-generated code. Neither offers an equivalent hardware watchdog. NVIDIA says over 100 organizations work with the platform. Anthropic integrated Claude Managed Agents with OpenShell and BlueField. SpaceXAI uses it for Cursor coding agents and Grok models. Salesforce connected OpenShell to Slack for approving agent permission requests. SAP is embedding OpenShell in the Joule Studio runtime. Red Hat, SUSE and Canonical are integrating it into their operating systems. The effort feeds the Open Secure AI Alliance , governed by the Linux Foundation. OpenShell and its skills are available on GitHub and the OpenShell docs . Check out the Paltform here and Technical Details . All credit goes to the researcher of this project. Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post NVIDIA Launches Open Agent Safety Platform: OpenShell Sandboxes Agents on Vera CPUs While Sentry on BlueField-4 Quarantines Them in Milliseconds appeared first on MarkTechPost .",
+      "published_date": "2026-09-28",
+      "tags": [
+        "Agentic AI",
+        "AI Agents",
+        "AI Ethics",
+        "AI Governance",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Editors Pick",
+        "Enterprise AI",
+        "For Devs",
+        "Harness",
+        "New Releases",
+        "Software Engineering",
+        "Staff",
+        "Tech News",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, safety",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 72,
+    "llm_reason": "詳細拆解OpenShell與Sentry架構與部署方式，技術深度與可用性兼具。",
+    "novelty": 11,
+    "impact": 14,
+    "trending": 16,
+    "practicality": 15,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "HuggingFace Blog",
+      "title": "Holo4: powering generalist computer-use agents",
+      "url": "https://huggingface.co/blog/Hcompany/holo4",
+      "authors": [],
+      "abstract": "Back to Articles Holo4: powering generalist computer-use agents Team Article Published September 28, 2026 Upvote 33 +27 Tony Wu h-tonywu Follow Hcompany Maxime Theillard h-maxime Follow Hcompany Frederic Renard frenard-h Follow Hcompany Vincent Coyette vincentcoyette Follow Hcompany Emrick Sinitambirivoutin emricksini-h Follow Hcompany Avshalom Manevich avshalom-h Follow Hcompany Antonio Loison antonioloison Follow Hcompany Antoine Bonnet ABonnetH Follow Hcompany Maxime Langevin maxime-hcompany Follow Hcompany Aleix Cambray (H-AI) h-aleixcambray Follow Hcompany Léonard Benedetti l-benedetti Follow Hcompany Tony Wu tonywu71 Follow Hcompany Mats L. Richter MatsLRichter Follow Hcompany Michael Eickenberg michaelhai Follow Hcompany Sławek Mucha smucha-h Follow Hcompany Matthias Brunel mbrunel-H Follow Hcompany Daniel Beechey daniel-beechey-h Follow Hcompany Holo4 is our new series of agentic models. It comes in two sizes: 27B dense and 35B-A3B Mixture of Experts. Both are available on the H Models API. We are also releasing an updated version of Holotron 3: Holotron4 Nano. Holo4 builds on our previous model and interacts with software through any available interface: GUIs, code, MCP and APIs. It scores well on academic benchmarks, but we built it for real business workflows. It was trained through supervised and reinforcement learning on a large set of environments and tasks, including those generated by our Agentic Task Factory. Get started now: 🤖 Models: Holo4-27B | Holo4-35B-A3B | Holotron4 Nano 🗂️ Full collection (FP16, FP8, GGUF): Holo4 🎞️ Trajectories: viewer | dataset ⚡ H Models API: quickstart 📝 Full blog post: hcompany.ai/newsroom/holo4 Models built for every interface Holo4 clicks and types on a screen, writes and runs its own code, and calls MCP or API tools. It uses whichever fits the task. Most agentic models are trained for one interface only: GUI-focused models are blind without a screen, while models that prefer tool calling are stuck in front of an application that has no API. Real work is not siloed that way, and a single business task can require combining these different approaches. Holo4 runs on desktops, on the web, on Android, in a code sandbox and against business APIs. It is the same model in each case and it is called the same way. You do not need to select a different model for each platform. Holo4 models improve significantly over their Qwen base. Holo4 trails only the strongest closed models on long workflows: on OSWorld 2.0, Holo4 27B scores 61.7% against 81.8% for Opus 5.5, and Holo4 35B-A3B reaches 30.9%. However, it does so with orders of magnitude fewer parameters and at a much lower cost. We open-source every trajectory behind our scores on public benchmarks: replay each step at trajectories.hcompany.ai or download them from Hugging Face . Competitive with the frontier, at a fraction of the cost On the hardest academic benchmarks for desktop control (OSWorld 2.0) and API use (AutomationBench), Holo4 competes with frontier models at a much lower cost per task. Notes on the cost-performance charts OSWorld 2.0. Costs are estimated from the input and output tokens of each agentic run. Holo4 is priced at H Models API rates (single run). Qwen3.8 27B: model card score, cost from the tokens of our run at Alibaba Cloud list prices. Qwen3.6 35B-A3B: single run in our harness, at Alibaba Cloud list prices with cache hits at 20% of the input price. OpenAI launch data supplies the GPT and Opus effort sweeps; other closed and open-weight points use the official OSWorld 2.0 leaderboard . Releases, harnesses and task subsets differ. The line connects non-dominated score and cost pairs among the closed models; Holo4 is excluded. AutomationBench. Holo4, Qwen3.8 27B and Qwen3.6 35B-A3B: AutomationBench v1.0.6, scores and costs measured in our internal harness. Other models: public-set scores from the AutomationBench README , cost per task from the official leaderboard , which runs on the private set. We will report Holo4 on the private set once it is evaluated. AI that does work Trained on environments and tasks from our Agentic Task Factory, Holo4 models excel on professional software. The examples below show Holo4 27B alongside Qwen3.8 27B, its base model. Same prompt and harness for both models. 3D modeling · Eiffel tower Build a 3D model of the Eiffel Tower in FreeCAD, at a scale of 1 mm to 1 metre, centred on the origin and aligned to the X and Y axes. Work to this design. The tower is square in plan at every height, never round. Its half-width, measured from the central axis out to the corner, is 62.5 mm at ground level, 32.5 mm at height 57, 17.5 mm at height 115, and 9.35 mm at height 276. Between those heights the half-width follows a smooth curve that falls steeply near the ground and gently higher up, never a straight line. Four identical legs, one per quadrant, each a square column whose outer corner follows that profile. Each leg is 14 mm across at the ground and tapers to 4 mm at height 276. The legs stand apart from the ground up to the first platform, and converge as they rise. Nothing fills the space between them: the tower is open, and you can see straight through it from every side. Three platforms, each a solid square slab centred on the axis: 72 mm across and 4 mm thick at height 57; 40 mm across and 3 mm thick at height 115; 22 mm across and 3 mm thick at height 276. A mast from height 276 to 324, square, 8 mm across at its base tapering to 2 mm at the tip. Every part must be a closed solid with non-zero volume, and no part may fill the space between the legs. Holo4 27B (84 calls, 1.3M tokens) Qwen3.8 27B (60 calls, 1.0M tokens) 3D modeling · H logo Build a 3D model in FreeCAD of the H company logo: a solid filled disc beside a blocky sans-serif capital letter H, both extruded to the same thickness, the two shapes of similar height and set apart so they do not overlap, with the centre of the disc level with the middle of the H. Colour both shapes black. Holo4 27B (94 calls, 1.5M tokens) Qwen3.8 27B (118 calls, 1.9M tokens) Game design · Pac-Man Build a Pac-Man-style game in Godot and leave it running. A rectangular maze of walls laid out on a grid, with pellets filling every open corridor. A player marker moves continuously along the corridors, eating each pellet it passes over and scoring a point for it. Three ghosts move through the same corridors and chase the player. If a ghost catches the player, the player loses a life and everything resets to its starting position. Score and lives are drawn on screen. No one is going to play this. The player drives itself with a simple heuristic: at each junction it heads toward the nearest pellet, unless a ghost is close, in which case it moves away from the ghost. The game must run unattended and indefinitely, with no keyboard input at all. When it works, start the game and leave it playing. Holo4 27B (68 calls, 2.4M tokens, 268 lines) Qwen3.8 27B (197 calls, 11.4M tokens, 327 lines) How we built Holo4 Agentic task factory Our internal set of agentic pipelines builds interactive environments and verifiable tasks from documentation alone, such as screenshots of real websites or open-source software. So far it has produced about 10,000 tasks across web apps, MCP servers and desktop environments, including hybrid environments that expose the same state through a GUI and MCP. Training Harness Alongside training, we rebuilt our harness, the loop that executes the model's actions and manages its context over hundreds of steps, using feedback from agentic performance on OSWorld 2.0. Agents tagged why each task failed and engineers reviewed their fixes. The largest changes were giving the agent a reliable memory that can keep track of hundreds of steps, and a shell on the desktop machine itself. Opus 5 (70.2%) and GPT-5.6 Sol (66.2%) use max-effort partial rewards on the v2026.08.08 offline set from OpenAI's launch chart , as in the cost-performance plot.",
+      "published_date": "2026-09-28",
+      "tags": [],
+      "organization": "HuggingFace",
+      "raw_metadata": {
+        "feed_name": "HuggingFace Blog",
+        "feed_url": "https://huggingface.co/blog/feed.xml"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, mcp, computer use, reinforcement learning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 65,
+    "llm_reason": "具體規格與訓練方法公開的agentic模型發布，可實測。",
+    "novelty": 11,
+    "impact": 12,
+    "trending": 13,
+    "practicality": 15,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "Prompting Claude Opus 5.5",
+      "url": "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-opus-5-5",
+      "authors": [
+        "Michelangelo11"
+      ],
+      "abstract": " Copy page  This guide covers the prompting patterns specific to Claude Opus 5.5. For the model's capabilities and API changes, see What's new in Claude Opus 5.5 . For techniques that apply across all current Claude models, see Prompting best practices . Claude Opus 5.5 generates output tokens more than 30 percent faster than Claude Opus 5 and tends to finish the same task with fewer tokens. Existing Claude Opus 5 prompts should perform well without changes, and the patterns in Prompting Claude Opus 5 remain a reasonable starting point. Start with the section that matches what you observe: Unsure which effort level to run, or turns run longer and cost more than they did on Claude Opus 5: Calibrate effort Your Claude Opus 5 integration ran with thinking disabled: Prompts written for thinking disabled An unattended agent stops partway through a long task after reporting progress: Unattended agentic runs Requests return stop_reason: \"refusal\" : Safeguard refusals Long agentic turns look silent, or you want updates at predictable points: User-facing progress updates An agent that works across several connected apps misses information the task didn't point to: Explore context in multi-app workflows You run a team of agents and want it to finish sooner: Time signals for multiagent harnesses Replies in a chat application start slowly because the model thinks at length first: Thinking instructions in chat system prompts The model follows instructions that arrived inside text a user pasted: Mark pasted text in user messages Answers about dense charts, diagrams, or screenshots miss detail: Tools for complex visual inputs Frontend output looks generic: Frontend design defaults Capabilities relevant to prompting  The capabilities that matter most for prompting are: Agentic coding and code review: The model is strongest on multistep work in a real repository, such as carrying a change through a large code base until its tests pass. In Anthropic's testing, at its default medium effort the model matched or beat Claude Opus 5 at high effort on such tasks, in fewer steps and with fewer tokens. It also sustains long-running autonomous work better than Claude Opus 5, such as multi-hour audits and migrations of large code bases run end to end with parallel subagents and little oversight. Early testers also reported stronger code review, with more bugs caught than on Claude Opus 5 and fewer false alarms, and it explains its changes in plain language. Knowledge work: The model is much less likely to state an incorrect figure or cite the wrong source. It's better at financial modeling tasks, such as building a financial model and one-page summary for a transaction or finding and fixing errors in a valuation workbook, and it catches details that are easy to miss in large inputs, such as a date in a long planning thread that falls on the wrong weekday or a chart in a slide deck that doesn't match the underlying figures. The spreadsheets, slides, and documents it produces need less editing before you share them. Communication: Its reports on agentic work, both the updates while it works and the summary when it finishes, say plainly what it did, what it found, and what it needs from you. See User-facing progress updates . Charts, diagrams, screenshots, and computer use: The model reads visual material more accurately than Claude Opus 5 without extra tooling: in Anthropic's testing, even at its lowest effort setting it read values off dense charts more accurately than Claude Opus 5 did at its highest, using a small fraction of the output tokens. It is better, too, where meaning depends on position rather than text: which boxes an arrow connects in a flowchart, what changed between two versions of a diagram, or exactly when a meeting starts and ends in a calendar screenshot. It's also more reliable at computer use, where it operates applications from screenshots over many steps: at its default effort it matched the success rate that Claude Opus 5 reached only at a much higher effort setting. See Tools for complex visual inputs . Calibrate effort  Effort is the main control for how much Claude Opus 5.5 thinks, and because thinking is always on, it's the first setting to adjust when trading off intelligence, latency, and cost. Start at medium , the default on Claude Opus 5.5 (Claude Opus 5 defaults to high ), set it explicitly, and test several levels against your own evals rather than carrying over the setting you used on Claude Opus 5. Effort level names don't correspond to the same amount of thinking across models: in Anthropic's testing, Claude Opus 5.5 at medium matches or exceeds Claude Opus 5 at high on coding and knowledge-work evaluations, and on several coding evaluations low comes close to it at much lower cost. See Recommended effort levels for Claude Opus 5.5 . At a given level, Claude Opus 5.5 tends to think more per turn than Claude Opus 5, especially at xhigh and max . If you keep the effort value you set for Claude Opus 5, expect longer turns and more output tokens. Three adjustments help: Set max_tokens high enough to leave room for the model's thinking tokens and the reply. Thinking counts toward max_tokens even when thinking content isn't returned to you, so a limit sized for Claude Opus 5 with thinking off can cut replies off. For the long turns that agentic coding can produce, a max_tokens of 128,000, the model's maximum, has worked well in Anthropic's testing. Reserve xhigh and max for work where you've measured a quality gain. To get less thinking, lower the effort level first. Lowering effort reduces thinking, and with it cost and latency, more reliably than prompt instructions do. Changing the top-level effort value between requests invalidates the prompt cache. To run individual turns at a different level, use a per-message effort change (beta) instead, which keeps the cache. Prompts written for thinking disabled  Claude Opus 5 accepts thinking: {\"type\": \"disabled\"} at high effort or below; Claude Opus 5.5 doesn't, and the migration guide covers the request change. If your Claude Opus 5 integration ran with thinking disabled, four changes go with it: Start at low effort and measure. At low the model keeps its thinking short. How often it skips thinking altogether depends on your prompts, so measure latency and quality on your own traffic and move to medium if quality drops. If time to first token still matters after that, a system prompt line such as \"Answer directly without deliberating.\" can reduce thinking further; measure quality when you add it, because less thinking can lower it. Remove instructions that stood in for thinking. If your prompt asked the model to write out its reasoning in the response as a substitute for thinking, remove that instruction and read the reasoning from summarized thinking blocks instead ( display: \"summarized\" ); a prompt that pushes the model to reproduce its reasoning in the response text can be declined with the reasoning_extraction refusal category . Re-test the thinking-disabled mitigations. Running with thinking disabled recommends a combined instruction (permission to speak before a tool call, what to do when no tool fits, no internal tags) and removing any rule that tells the model not to think. Both address artifacts that appear on Claude Opus 5 only when thinking is disabled. With thinking always on, check whether you still need the instruction, and remove the no-thinking rule either way. Read the response by block type. Check each block's type instead of assuming the first content block is text: a response may or may not begin with a thinking block, whose thinking field is empty under the default display: \"omitted\" . Unattended agentic runs  On long tasks with several parts, Claude Opus 5.5 keeps the user updated as it works, and some of those updates end the turn with text rather than a tool call ( stop_reason: \"end_turn\" ).\n\n(193 points, 218 comments on Hacker News)",
+      "published_date": "2026-09-28",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 193,
+        "num_comments": 218,
+        "hn_url": "https://news.ycombinator.com/item?id=49874728",
+        "object_id": "49874728"
+      }
+    },
+    "rule_score": 30.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, computer use, reasoning",
+      "⬆️ HN 熱門: 193 points"
+    ],
+    "llm_score": 66,
+    "llm_reason": "官方提示詞指南搭配HN高熱度，極實用但非新方法。",
+    "novelty": 3,
+    "impact": 12,
+    "trending": 18,
+    "practicality": 18,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Databricks",
+      "title": "Lakebase Search: State-of-the-art full text and vector search for Postgres",
+      "url": "https://www.databricks.com/blog/lakebase-search-state-art-full-text-and-vector-search-postgres",
+      "authors": [],
+      "abstract": "Traditional OLTP systems weren't built for the search demands of AI agents. They require low-latency, high-accuracy retrieval across all your data and often execute massive parallel searches. Until now, solving this meant duct-taping a standalone search engine to your primary database with an ETL pipeline. But what if your OLTP database could just run the search workload efficiently? Today, we are bringing a fast and scalable search engine to Lakebase Postgres via two extensions: lakebase_vector (scalable approximate neighbor search) and lakebase_text (bm25 full-text search). Both extensions are generally available on AWS and Azure. With lakebase_vector, Postgres is now at the frontier of vector search. It outcompetes the efficiency and scalability of a dedicated search engine. On the VectorDBBench 100M benchmark, it delivers twice the throughput of the next best system and is 4 times cheaper than a cloud Postgres vendor using pgvector, and that is before accounting for additional saving due to autoscaling. It maintains this performance without sacrificing accuracy. In our tests, lakebase_vector delivered a P99 latency of 71 milliseconds at 97% recall (successfully retrieved the true nearest neighbors 97% of the time). Lakebase Postgres now has state-of-the-art search capabilities, and we’ve seen customers like Conexiom run hybrid search with BM25 on over 100 million rows with half the compute footprint of their previous pgvector setup. They now have a database for all OLTP and search workloads that is completely serverless and scales to their needs. For most Postgres users, search starts with pgvector. It allows vector similarity search through index algorithms like HNSW and IVFFlat over data natively in Postgres, avoiding the complexity of a separate vector store. In fact, pgvector is the most installed extension in Lakebase Postgres. We saw 3 common painpoints from customers running pgvector at scale. pgvector keeps its index in your database's memory to be fast. Because HNSW search relies on random-access graph traversal, queries execute in milliseconds only if everything fits perfectly in RAM. The moment the index spills to disk, queries turn into chains of random reads, and performance plummets by 10x to 50x. A 768-dimensional float32 vector requires roughly 3.3 KB of memory after accounting for graph links and Postgres overhead. at 100 million rows, you need ~330 GB of RAM to keep the index resident for millisecond queries. There's no notion of a 'working set'. You provision for the entire index whether you query all of it or none. Pgvector indexes are limited by memory because the HNSW graph relies on continuous random access. When a build spills to disk, millions of random I/O operations stall performance - taking almost 50 hours to build a pgvector index on a standard cloud instance. Ingestion suffers from the same bottleneck. Inserting new vectors is slow and costly because every write forces pgvector to navigate and modify multiple layers of the graph using random-access lookups. Second, ingestion becomes slow and costly HNSW relies on continuous random-access graph navigation. Also needs to modify each layer of the graph. So hnsw index Ongoing maintenance compounds the problem. Because HNSW lacks global rebalancing, restoring search quality requires a full REINDEX, which locks the table and blocks production writes. Each pgvector query runs on a single Postgres backend process, meaning the HNSW index scan is never parallelized. To get higher recall, the engine must visit more graph nodes, triggering more random memory reads and distance comparisons. This inflates latency and drops your QPS. Because a single search can't be parallelized across cores, your only option for higher throughput is adding more connections or read-replicas. The main bottleneck with pgvector is that the entire index has to fit in a single machine's RAM to be fast. What if it didn't? Lakebase Postgres gives us a great starting point, because it separates storage from compute. Durable data rests in cheap cloud object storage, while RAM and local NVMe act as ephemeral caches in front of it for fast reads of the working set of data. With this architecture, an HNSW cache means a series of random object store reads. We need an index that is fast both when cached in RAM and when cold on object storage. We leverage two ideas: When cached, search operates over a tiny footprint using quantized vectors. When cold, queries fetch only the blocks they need and don’t need to crawl the entire index. Lakebase_vector delivers: Decoupling storage from compute makes lakebase_vector completely stateless: a node caches hot data on demand, suspends to zero when idle, and resumes on the next query. lakebase_vector builds indexes in a more parallel way. We train the centroids once on a small random sample. This is the only step that looks across the whole dataset. After that, every vector is independently assigned to its nearest centroid, quantized, and written into its cluster's block. This process can fan across as many cores as you have, scaling with compute. We take this a step further by offloading index builds from your primary database entirely. Storing data in open formats allows our LTAP architecture to delegate indexing and maintenance to distributed engines like Spark, bringing build times down to minutes with parallel compute. Stay tuned. lakebase_vector broadens candidate search cheaply using compact 1-bit codes, reranking only a tight shortlist at full precision. Because index blocks are independent, a single query parallelizes across CPU cores, delivering high recall and low latency simultaneously. Filtering happens directly as lakebase_vector scans cluster blocks. Applying predicates inline avoids over-fetching candidates by and keeps recall high on filtered queries. Standard Postgres text search (tsvector) lacks corpus-wide relevance context. lakebase_text brings native BM25 to Postgres by scoring terms with global inverse document frequency (IDF): heavily weighting rare, high-intent terms while penalizing common filler words. It is also faster than traditional tsvector + GIN indexes. By evaluating score upper-bounds during traversal, the engine skips entire posting blocks that cannot reach the top-K results. Combining lakebase_text with lakebase_vector unlocks native hybrid search inside Postgres. In a single query, you can fuse semantic vector search with BM25 keyword relevance, apply standard SQL filter predicates, and join directly against live operational tables. Agents have pushed traditional search engines past their limits. They made vector search a core requirement of the data stack and introduced extreme burstiness, where a single workflow can trigger thousands of concurrent retrieval requests in seconds. We designed Lakebase Search specifically for this new reality. Lakebase Postgres can now handle all your operational and search workloads, backed by a serverless architecture that scales seamlessly from 1 row to 1 billion vectors and from 1 QPS to thousands without manual reprovisioning or infrastructure management. We built Lakebase Search alongside feedback from hundreds of beta customers, and the results speak for themselves: Lakebase Search is generally available today on AWS and Azure. If you are already building an app or an agent on Lakebase, simply enable the extensions. If you have not tried Lakebase yet, get started today . ▎ 📝 Note: Databricks AI Search is a managed search engine for high-quality retrieval out of the box — it may be the better fit when you want great results without manual tuning. Lakebase Search is the better choice when you want all your operational and search data in one database. Subscribe to our blog and get the latest posts delivered to your inbox.",
+      "published_date": "2026-09-28",
+      "tags": [
+        "Lakebase",
+        "Database"
+      ],
+      "organization": "Databricks",
+      "raw_metadata": {
+        "feed_name": "Databricks",
+        "feed_url": "https://www.databricks.com/feed"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: rss +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 68,
+    "llm_reason": "Postgres整合向量與全文檢索並附實測基準，工程價值高",
+    "novelty": 11,
+    "impact": 13,
+    "trending": 12,
+    "practicality": 17,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "Cf: The Agentic CLI for the Cloudflare API",
+      "url": "https://blog.cloudflare.com/cloudflare-cf-cli-launch/",
+      "authors": [
+        "macleos"
+      ],
+      "abstract": "Over the last year, agent use of Wrangler has skyrocketed. In March 2026, agents were responsible for a quarter of Wrangler use, up from single-digit percentages the year prior. Last week, agent usage reached 48%. Agents are more prolific users, using almost twice as many distinct commands per day, and are almost four times as likely to use six or more commands. Agents love CLIs. But Wrangler only provides commands for around 280 operations, and Cloudflare offers thousands. Earlier in the year we teased how we were planning to solve this and today, we’re enabling agents to use every Cloudflare product by introducing a new CLI: cf. cf is a CLI that is built for the next generation of software development: Agents can find the command they need to do anything they want to do with bespoke search and steering. JSON is the default interface, pretty printed for humans and condensed for agents for maximum context savings. cloudflare.config.ts is the new configuration format for the whole of Cloudflare, starting with Workers, and bringing the safety and accuracy of TypeScript to you and your agent’s language server protocol (LSP) Vite becomes default, bringing with it the best local development server, and a plugin suite for developers and framework authors. Install the open beta today globally and run it from anywhere: npm i -g cf Copy prompt Copy prompt Prompt copied! cf gives your agent access to the entire Cloudflare API What if your agent could do everything Cloudflare can do? That’s the question that sparked our interest earlier this year: agents were getting ever more powerful, but what they were able to do with Cloudflare’s CLI was still limited. Wrangler was hand-built with each product team contributing and taking their own approach to their command developer experience. Enforcing patterns across teams was virtually impossible, even across our ~280 command paths. We had inconsistent terminology across d1 info , hyperdrive get , workflows describe as each team came up with their own practices at different times. Some teams built entirely custom experiences across thousands of lines of code that turned out to be used extremely rarely, and teams came up with different approaches to solve the same problems. We wanted to both standardize what we had and make a massive expansion, all at once. Forge — Cloudflare’s new unified API generation pipeline — enabled us to do this, building on the idea of generating our CLI commands directly from the API schema that powers our API documentation and SDK generation. Everything we provide has an OpenAPI schema, and if we annotate this with just a little more information, we can use it as the source for Forge to make a CLI. This enables us to expand cf from the ~280 functions that Wrangler had built up over time, to cover the entirety of the Cloudflare API surface of over 3,000 operations. Now it’s simple to give your agent cf and ask it to go set up a worker, deploy it, monitor and observe it, protect it with Cloudflare Access, buy a domain, and front it with Cloudflare WAF, all from a single tool. Building for an agent that has never used cf cf is built for the trajectory of software engineering, where agentic development is drastically changing how software is built and deployed. This year we’ve been focused on providing tools to support this shift, culminating in cf. cf has been built from the ground up with agents in mind, and includes novel tools for agentic command discovery that we think will become standard in more CLIs in the near future. Wrangler came with the advantage that years of documentation, blogs, and third-party guides have been absorbed into the training process of LLMs. It also came with the same disadvantage: changing how Wrangler works now goes against learned behavior, and significant change would be inevitable given the scale of improvement we want to make. Introducing a new CLI that agents have never seen sounds like a big disruptive change — but actually it’s the cleanest thing we can do. Because of the design decisions we have made, the context injections we can make, and the AGENTS.md files we can append, making a switch in this way is actually less confusing than having an agent contextualize the major differences between two versions of a tool it is familiar with. We’re launching with a couple of these agent-focused features built in, with more to come. Agents need to filter JSON, not look at tables When agents use Wrangler, they append --json to every command they run, and then often filter the output with jq to extract a subset of fields. But only some commands in Wrangler supported --json ; many commands returned unicode tables, designed for humans looking at output in their terminal. Agents can figure these out, but it costs them more time and tokens than a jq filter. In cf we’re taking the opposite stance: agents just need JSON, and if agents are the future primary user of this tool, it should be the default. For the vast majority of commands that will rarely be accessed by humans, this is obviously the right call. You as the human customer of this CLI are, in reality, one step removed from using it. Agents being able to easily filter their results and then return that filtered list in whatever format you request is preferable to supplying tables you will never likely read directly. But what if you’re looking to do something that might require real personal input, like searching for a domain to buy? For commands that your agent can access through chaining named parameters in a long and unwieldy sequence, you can simply fill in a form. Cf deconstructs the requirements of the API into a series of validated inputs, so buying a domain, even one with complex requirements, is simple to follow. Or, if you insist, just ask your agent to do it. Your agent can find the right command itself With 3,000 possible routes through a CLI, how can your agent find the right operation it needs quickly without bloating your context? For this reason we have also added cf cli search . This command allows your agent to ask in natural language what it needs to do, and a small search index will provide a list of appropriate commands, based on their API description and parameters. We automatically tell your agent about this command when it runs --help for the first time. Configuration that type-checks your agent Our new configuration format is based on TypeScript, which is easy for humans and agents to parse, and allows you to write your configuration programmatically. Typed configuration is enormously helpful for agents. We’ve found that even with no prior context of the programmatic configuration format, agents are able to easily identify and edit the configuration on demand, even across elements like env which have dramatically changed from the same named feature in Wrangler. All agents that use LSP plugins, such as Claude Code and Codex, benefit from being able to interpret more about the configuration file format in context, and make much more accurate suggestions as a result. Compare this to TOML, which had no accessible schema, or JSONC, which had a linked schema that agents rarely used. Some Wrangler configuration files inside Cloudflare have been condensed by 40% from over 5,000 lines, with many custom environments per developer, to factory files that build each developer’s configuration more efficiently. This is achieved through programmatically defining each environment from the same universal base, instead of copying env blocks as was typical in Wrangler. A simple Worker with multiple environments simply switches on the Vite-native mode argument to swap between one set of configuration and another. A simple configuration that does this now looks like: import { bindings, defineConfig } from \"cf/config\" ; import * as entrypoint from \"./index.\n\n(87 points, 38 comments on Hacker News)",
+      "published_date": "2026-09-28",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 87,
+        "num_comments": 38,
+        "hn_url": "https://news.ycombinator.com/item?id=49879577",
+        "object_id": "49879577"
+      }
+    },
+    "rule_score": 24.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, safety",
+      "📰 Hacker News: 87 points"
+    ],
+    "llm_score": 72,
+    "llm_reason": "為agent設計的CLI新典範，直擊agent工具化趨勢且可用",
+    "novelty": 12,
+    "impact": 13,
+    "trending": 15,
+    "practicality": 17,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Fireworks AI Releases Ember-1: A Post-Trained Kimi K3 That Uses About 40% Fewer Tokens",
+      "url": "https://www.marktechpost.com/2026/09/28/fireworks-ai-releases-ember-1-a-post-trained-kimi-k3-that-uses-about-40-fewer-tokens/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "Fireworks AI has released Ember-1 , a specialized model from Fireworks Research built by post-training Moonshot AI’s open-weight Kimi K3 . Ember-1 learns to produce shorter reasoning traces while keeping task accuracy. This is different from lowering the reasoning effort setting at inference time. According to the Fireworks release post , Ember-1 delivers Kimi K3’s quality with about 40% fewer tokens. Is it deployable? Yes, but only through the Fireworks serverless API as a Research Preview. Fireworks has not released Ember-1’s weights, training code, or exact training algorithms, so self-hosting is not an option today. Fireworks team reports that reasoning models like Kimi K3 sometimes spend more than 90% of generated tokens on internal reasoning. That cost compounds in multi-turn agentic workloads. Each turn replays prior reasoning back to the model. Context grows roughly quadratically with the number of turns. Long traces from early turns get re-read, and re-billed, on every later call. Fireworks team explains how customers wanted K3’s coding capability at lower cost. Turning down K3’s reasoning effort did not solve it. Lower effort settings gave up too much quality. So the team trained the model to reason more efficiently instead. Not all of K3’s reasoning is waste. Some of it is useful self-reflection, like revisiting an assumption or reacting to feedback. Ember-1 keep that behavior while cutting redundant reasoning and unproductive loops. The training collection spans mathematics, coding, instruction following, conversation, search, tool use, and software engineering. It covers both standalone problems and extended multi-step interactions. Task and environment feedback guides on-policy planning and learning. Fireworks team ran more than 50 training experiments and over 200 evaluations. They also developed new training algorithms, which it has not published. All training ran on Fireworks Serverless Training . Fireworks states it used its own data and no customer data. Fireworks compared Ember-1 with Kimi K3 at three reasoning effort levels. Cost was computed with public Kimi K3 API pricing. These are Fireworks’ own published evaluations. Ember-1 leads K3 Max on Terminal Bench 2.1 and DeepSWE 1.1. It trails slightly on SWE-bench Verified and SWE-Interact. Across seven benchmarks and two customers’ production traffic, Fireworks says K3’s reasoning was shortened by 35 to 50% without sacrificing accuracy. On Doximity’s Bedside Bench, a physician-validated set of 500 clinical cases, Ember-1 set a new cost-per-task Pareto frontier. That result comes from Fireworks’ new Specialized Intelligence Index . Fireworks ran live A/B tests with 2 customers on production coding workloads. Both saw roughly 35% fewer tokens per task at comparable quality. In the published run, output tokens fell from 49.3K to 29.9K per task. Reasoning tokens dropped 71.3% and total tokens dropped 39%. The task score was essentially unchanged: 0.753 for Ember-1 versus 0.751 for K3. Average steps fell from 23.8 to 21.4. One customer now runs Ember-1 in production. Ember-1 costs the same per token as Kimi K3 on Fireworks: $3.00 input, $0.30 cached input, and $15.00 output per 1M tokens. The savings come entirely from generating fewer tokens. At that output rate, the A/B figures work out to about $0.74 versus $0.45 in output cost per task (our calculation, output only). Check out the Technical Details . All credit goes to the researcher of this project. Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post Fireworks AI Releases Ember-1: A Post-Trained Kimi K3 That Uses About 40% Fewer Tokens appeared first on MarkTechPost .",
+      "published_date": "2026-09-28",
+      "tags": [
+        "Agentic AI",
+        "AI Infrastructure",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Editors Pick",
+        "For Devs",
+        "Language Model",
+        "Large Language Model",
+        "Machine Learning",
+        "New Releases",
+        "Staff",
+        "Tech News",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agentic, tool use, reasoning, post-training, open weight",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 60,
+    "llm_reason": "後訓練降低推理token數的具體技術動機清楚，但未開源。",
+    "novelty": 12,
+    "impact": 11,
+    "trending": 12,
+    "practicality": 11,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "NVIDIA Developer",
+      "title": "NVIDIA Open Agent Safety Platform: A Reference for Continuous In-Silicon Agent Monitoring",
+      "url": "https://developer.nvidia.com/blog/nvidia-open-agent-safety-platform-a-reference-for-continuous-in-silicon-agent-monitoring/",
+      "authors": [
+        "Tanya Lenz"
+      ],
+      "abstract": "To understand where agentic AI stands today, consider the last seismic shift in technology: the rise of the internet in the 90s. It was new and full of possibilities. You could build a website over a weekend and share it with the world, or chat with someone half way around the world in online chat rooms without long-distance telephone fees. It brought endless opportunity, but also a lot of risk. A website could run code on your machine, steal your sensitive information, or infect your computer with a virus. People loved it anyway. To introduce a layer of trust, the community built things like encrypted connections and a lock icon to know when a connection was safe. The step function change in safety came from a radical security idea at the time: isolate each page in its own sandbox (a tab in a browser) so that a rogue page couldn’t infect the rest of your computer. Amazon, Google, Netflix, and Meta were all built on this trust layer. Security and safety for the internet enabled online commerce, connection, gaming, and so much more that wouldn’t have been possible before. Security and safety didn’t slow the pace of innovation—they allowed it to accelerate. Why build a trusted layer for agents now? Several frontier labs have recently reported versions of the same story: AI agents broke out of the evaluation environments that were meant to contain them and reached systems they never should have been allowed to. Some of the agents even misreported what they did. The security controls in place were insufficient. Over the past few weeks, these reports have led to a serious debate about the pace of agent development. We believe we need to increase the pace of AI safety research and engineering in collaboration with frontier labs and the broader community. It was not a single new capability that led to these breakouts. It was a combination of tools, time, and ambiguous instructions, along with a desire for the agent to think “outside the box.” Agent safety requires independent security controls. The internet was not made secure by requiring that web developers promise to be good. It became safe because the browser stopped trusting the code in the web pages explicitly. We need to build this trust layer for agents. Figure 1. NVIDIA Open Agent Safety Platform Reference Design combines NVIDIA OpenShell on NVIDIA Vera and NVIDIA Sentry on NVIDIA BlueField-4 Lessons learned from building OpenShell NVIDIA OpenShell (Apache 2.0) is an open source secure runtime for executing autonomous AI agents in sandboxed environments with kernel-level isolation. Building OpenShell over the past year, we have learned that every agent should run in a zero-trust environment out of the box. They need isolation, monitoring, and behavior detection. Today, we are introducing an open stack that makes this possible. In our own research, we’ve watched how agents can go off course. Drift refers to agent actions that depart from the intended task or operating constraints. Drift can occur in response to a policy block, a bug, or a missing tool. Drift can also occur when instructions are ambiguous or agents are left to run for days or weeks to solve hard problems where the first 1,000 things they try do not work. This can’t be trained away while retaining the capability. And here’s the most important lesson: an agent in these circumstances cannot be expected to fully govern its own behavior. Five core principles for building an agent system Policy needs to be verifiable: Before an agent runs, a prover shows that its policy cannot escape the intent of the operator. Enforcement must be out of band: The controls do not live inside, or within reach of the agent. The agent does not need to know it is being watched. The path to the model (the brain) is the control point: An agent cannot act without its next thought. By controlling the path to the model, you own both the best observation point and also the kill switch to interrupt it if you need to. Scale agent authority with the ability to inspect its thinking: The more an agent can do, the more its reasoning needs to be visible. An advantage of open models is that the entire reasoning space and activations are all visible. Applying the shared responsibility model: Labs, enterprises, and hardware providers each own a layer, just like the cloud today. The agent runtime and its policy language need to be open so any provider can plug in. Three open agent safety platform layers A safety platform for AI agents includes the following three layers: The application: What end-users are building. Contains the necessary primitives for mission success: models, harnesses, tools, data, and support scripts and programs. The runtime: Projects the application layer onto infrastructure. Orchestrates the agentic workload onto infrastructure that meets end-user requirements (end-user workstation, edge device, data center) and provides continuous monitoring and real-time policy enforcement and governance. The infrastructure: Concrete hardware resources used to execute agentic workloads. Network calls to upstream services, databases and filesystem access, general purpose compute for tool and code execution, accelerated compute for safety monitoring and increased workload density. A layered foundation for agent safety OpenShell runs each agent in a sandbox and turns the operator’s instructions into a verifiable policy. Operators define which files, networks, tools, processes, and credentials an agent can access. OpenShell checks those limits before the agent runs and enforces them as it works. For organizations that want an additional, independent layer, NVIDIA Sentry extends monitoring and enforcement into NVIDIA BlueField hardware. NVIDIA DOCA makes the BlueField security foundation programmable and connects it with OpenShell policy. It correlates agent interactions, policy decisions, and tool and data access to create a contextual record of agent activity. This helps safety systems identify drift, investigate suspicious behavior, and determine when intervention or deeper analysis is needed. The DOCA gateway complements this behavioral protection with identity governance, continuously verifying each agent’s identity and delegated authority to ensure it operates within its assigned scope. To learn more, refer to the technical walkthrough, Add Runtime Controls to AI Agents with NVIDIA OpenShell . Operating at AI factory scale NVIDIA Open Agent Safety Platform is optimized to run on NVIDIA Vera CPU- and BlueField DPU-based systems, and is also compatible with other hardware systems. In an NVIDIA Vera Rubin POD , each compute tray includes a BlueField-4 data processing unit on the node’s only path to the model. From this position, BlueField-4 provides continuous, out-of-band observability into agent behavior and enforces security policies in real time at line speed. Isolated from the host and beyond the agent’s reach, it stands as a trusted infrastructure protection layer even when host resources cannot be trusted. Organizations can use it to run NVIDIA Sentry as an optional security layer alongside OpenShell. This foundation allows for resilient security, enforcing the OpenShell policy in silicon, and for the continuous evaluation of the security and integrity of agents. This includes assessing their runtime security and monitoring for any deviation from their designed intent based on a predefined behavioral profile. In this architecture, entire fleets of agents, subagents, tools, and applications all stay inside the boundary with full lineage. For anyone already running on an NVIDIA Vera system with BlueField-4, enabling these protections is just a software update. The agent economy The internet was built on open source, open research, and people who believe that the internet could change the course of humanity. Adding trust turned a great concept into a great economy. The agent economy, and the next set of great companies, is waiting for the same layer.",
+      "published_date": "2026-09-28",
+      "tags": [
+        "Agentic AI / Generative AI",
+        "Developer Tools & Techniques",
+        "Top Stories",
+        "Trustworthy AI / Cybersecurity",
+        "AI Agent",
+        "AI Networking",
+        "OpenShell",
+        "Trustworthy AI"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "NVIDIA Developer",
+        "feed_url": "https://developer.nvidia.com/blog/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, reasoning, safety",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 60,
+    "llm_reason": "用網路發展史類比闡述agent安全戰略，敘事強但技術細節較薄。",
+    "novelty": 9,
+    "impact": 13,
+    "trending": 16,
+    "practicality": 9,
+    "blog_worthiness": 13
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "Build real-time voice applications with vLLM-Omni on SageMaker AI – Part 1",
+      "url": "https://aws.amazon.com/blogs/machine-learning/build-real-time-voice-applications-with-vllm-omni-on-sagemaker-ai-part-1/",
+      "authors": [
+        "Yadan Wei"
+      ],
+      "abstract": "Voice agents, interactive learning applications, accessibility tools, and customer service assistants need to respond without long silent pauses. In this tutorial, you deploy a text-to-speech (TTS) model on Amazon SageMaker AI that can start playing speech before it finishes generating the full response. You use the AWS vLLM-Omni Deep Learning Container (DLC) to deploy Qwen3-TTS , stream text in and audio out over one persistent bidirectional connection, and try the workflow through a Gradio application. AWS Deep Learning Containers provide Docker images with deep learning frameworks and dependencies for training and inference on AWS. AWS provides deployment guidance for broadly adopted serving frameworks such as vLLM and SGLang . This post is Part 1 of a series about specialized DLCs, including vLLM-Omni , WhisperX , and llama.cpp . It focuses on streamed speech for real-time voice applications. Part 2 applies the vLLM-Omni DLC to image and video generation. The series pairs focused use cases with deployment examples and reproducible benchmarks where they add useful evidence. The vLLM-Omni project extends vLLM beyond text generation to serve models that process or generate text, audio, images, and video. The AWS vLLM-Omni DLC packages tracked vLLM-Omni releases in AWS images and adds routing middleware for SageMaker AI. You use SageMaker bidirectional streaming to send text and receive audio chunks over the persistent connection. The earlier post, Build real-time voice applications with Amazon SageMaker AI and vLLM , demonstrates the input side of a voice pipeline. It streams microphone audio to the Voxtral-Mini-4B Realtime speech-to-text (STT) model and returns transcription events. This post adds the output side by sending text to Qwen3-TTS and streaming generated speech back through the vLLM-Omni DLC. You will clone the code sample , deploy a Qwen3-TTS model, and try streaming speech through a Gradio application. Specialized inference runtimes support model architectures and media pipelines that differ from general text generation. AWS DLCs package these runtimes with their framework dependencies and deployment configuration, giving you a consistent image-based path to AWS compute and managed inference services. vLLM-Omni extends vLLM from text-focused autoregressive generation to models that process and generate multiple modalities. Its heterogeneous pipeline abstraction coordinates multi-stage model workflows, including autoregressive and diffusion stages. It also provides streaming outputs and OpenAI-compatible APIs. The runtime is not limited to TTS. Its supported models include unified omni models, automatic speech recognition (ASR), TTS, audio generation, image generation, and video generation. This post uses Qwen3-TTS as a focused example because streamed speech provides a direct way to demonstrate bidirectional audio output. The previous vLLM post covers the input path: microphone audio enters a Voxtral model and transcription events return to the application. A voice application can pass that transcription to its conversation logic, then use this example to turn the response text into streamed speech. The orchestration between the two endpoints remains outside this walkthrough. The complete sample lives in 03-features/bidirectional-streaming-vLLM-Omni . Clone the repository to use the deployment script, shared streaming transport, and Gradio client together. SageMaker bidirectional streaming exposes a full-duplex WebSocket transported over HTTP/2. The client connects to the SageMaker Runtime endpoint on port 8443 . The SageMaker inference sidecar forwards the connection to the vLLM-Omni native WebSocket route inside the container. Figure 1 shows the request and response path. The client sends session configuration and text events. Qwen3-TTS returns audio lifecycle and chunk events over the same connection. Figure 1: A Gradio application uses an HTTP/2 WebSocket to stream text events through Amazon SageMaker AI, the inference sidecar, and the vLLM-Omni DLC to Qwen3-TTS. Audio events and 24 kHz PCM chunks return over the same connection The vLLM-Omni v1.5 DLC adds the bidirectional streaming capability label and routing middleware required by SageMaker AI. The sample uses v1/audio/speech/stream , one of the native WebSocket routes exposed by vLLM-Omni. The endpoint configuration also uses SageMaker instance pools . An instance pool defines a priority-ordered list of compatible instance types for one production variant. SageMaker first tries ml.g6.xlarge , then falls back to ml.g6e.xlarge , ml.g5.xlarge , or ml.g4dn.xlarge when capacity is unavailable. It still provisions one instance, not one instance per pool. SageMaker validates quota for every configured pool entry when it creates the endpoint, so you need available quota for each included type. Your hourly cost can also change if SageMaker selects a different instance. Use --instance-types to restrict the pool to the types that meet your quota, price, and performance requirements. The walkthrough uses the US East (N. Virginia) Region. The sample builds the DLC image URI and runtime endpoint from AWS_REGION . The inference AMI setting is required for the SageMaker sidecar that handles the HTTP/2 WebSocket. The model invocation path must omit the leading slash because SageMaker adds it before forwarding the request. Wait until the endpoint reaches InService . The first deployment takes time because the instance downloads the DLC image and model artifacts. Open http://127.0.0.1:6006 in your browser. The --share option creates a Gradio public link, so leave it disabled unless you need that behavior. The Gradio audio component plays each 24 kHz PCM chunk as the client receives it. The status field reports the chunk count and total audio bytes. Confirm that the cleanup command reports deletion of the endpoint, endpoint configuration, and model. If the process stops before cleanup completes, delete the resources through the SageMaker AI console or API. A running GPU endpoint continues to incur charges. By deploying a text-to-speech model, you used the AWS vLLM-Omni DLC on SageMaker AI to stream audio while the model was still generating it. This example shows how specialized AWS DLCs support multimodal models whose execution and streaming patterns differ from general text generation. Paired with the previous vLLM speech-to-text example , the samples show complementary paths: stream microphone audio into transcription, then stream the application’s text response back as speech. Part 2 which will show how to use the same DLC family for image and video generation. Try the code sample , then explore the vLLM-Omni DLC documentation and SageMaker AI bidirectional streaming developer guide to apply the pattern to other supported multimodal models. The authors thank Zhuofu Bai, Ayush Sharma, Christian Kamwangala, and Jon Chua for their contributions to the solution and publication process.",
+      "published_date": "2026-09-28",
+      "tags": [
+        "Advanced (300)",
+        "Amazon SageMaker AI",
+        "Technical How-to"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: multimodal, diffusion",
+      "⚖️ 來源權重: rss +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 56,
+    "llm_reason": "具體可複現的即時語音串流部署教學，實用性高。",
+    "novelty": 8,
+    "impact": 9,
+    "trending": 9,
+    "practicality": 17,
+    "blog_worthiness": 13
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "TechCrunch AI",
+      "title": "Anthropic releases Sonnet 5.5, which it calls a significantly cheaper, faster work partner",
+      "url": "https://techcrunch.com/2026/09/28/anthropic-releases-sonnet-5-5-which-it-calls-a-significantly-cheaper-faster-work-partner/",
+      "authors": [
+        "Lucas Ropek"
+      ],
+      "abstract": "As the AI model wars continue, Anthropic has r eleased the newest version of Sonnet , the company’s mid-tier model, which it says will work much faster (and for significantly less) than its predecessor. The lab describes Sonnet 5.5 as an ideal assistant for everyday tasks — including coding and creating office documents. 5.5’s predecessor, Sonnet 5, was announced about three months ago. At the time, the model’s selling point was efficient agentic deployment — the ability to run agents at a lower cost than competitors. The big selling point with 5.5, meanwhile, is speed. Anthropic claims that Sonnet 5.5 is 30 percent faster than its predecessor, and that its rate of token burn is significantly slower. In the Anthropic hierarchy of models, Sonnet is less powerful than the Opus model, but can be more useful in certain circumstances because its agility. In particular, Anthropic’s benchmarks show Sonnet 5.5 performing better than Opus 5.5 on agentic coding, likely because of its ability to spawn multiple agents without exceeding cost limits. Sonnet 5.5 is also said to have significant cyber capabilities, with the company claiming that it has “comparable” cyber capabilities to Opus 5. As a result, Anthropic says that 5.5 is the first Sonnet model that will be subject the same cyber safeguards that apply to Fable and Opus. The company also plans to release a new version of Haiku — its smallest model — in the coming weeks, although it didn’t give a firm date as to when that would happen. The last year has seen a flurry of new model releases from the major AI labs. Just last week, OpenAI released a number of new models — including enhanced versions of Sol and Luna, its mid-tier and budget-friendly models. Meta also announced a new model , which it said would power an upcoming feature associated with its smart glasses.",
+      "published_date": "2026-09-28",
+      "tags": [
+        "AI",
+        "Sonnet",
+        "Anthropic",
+        "Claude"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "TechCrunch AI",
+        "feed_url": "https://techcrunch.com/category/artificial-intelligence/feed/"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agentic",
+      "⚖️ 來源權重: rss +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 61,
+    "llm_reason": "主流模型更新速度與成本改善話題熱度高，但技術揭露有限。",
+    "novelty": 6,
+    "impact": 13,
+    "trending": 18,
+    "practicality": 12,
+    "blog_worthiness": 12
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "TechCrunch AI",
+      "title": "Shopify opens checkout to browser-based AI agents",
+      "url": "https://techcrunch.com/2026/09/28/shopify-opens-checkout-to-browser-based-ai-agents/",
+      "authors": [
+        "Sarah Perez"
+      ],
+      "abstract": "While some retailers, like Amazon (and Adidas , apparently!), are blocking AI agents from making purchases on users’ behalf on their respective platforms, e-commerce platform Shopify has moved in the other direction. On Monday, the company announced that browser-based AI agents can now complete purchases on Shopify merchants’ sites, extending their capabilities beyond just searching for products and adding items to carts. Shopify previously supported WebMCP for its storefronts and carts, allowing browser-based AI agents to comb through a Shopify retailer’s inventory, search for products, and add them to a cart. The addition of WebMCP support for checkout, including Shop Pay, means these agents can now read the checkout screen, update it, and submit the transaction with the buyer’s authorization, without relying on screenshots or scraping webpages, the company said. Image Credits: Shopify This update introduces three new tools — get_checkout, update_checkout, and complete_checkout — that allow agents to inspect a checkout, change things like the customer’s address or delivery option, and then place an order after the buyer authorizes it. The feature is rolling out to all eligible Shopify merchants, said Gil Greenberg , a staff product manager who works on agentic commerce at Shopify, in a post on X . Shopping with an agent shouldn’t feel like watching paint dry. 🥱 Today, we’re launching WebMCP support for checkout, including Shop Pay, for all eligible Shopify merchants. Learn how it works, where UCP fits, and what the data shows: https://t.co/U96VtJaeyc — Gil (@gilgNYC) September 28, 2026 Shopify already offers a hosted Model Context Protocol (MCP) server, which allows agents to work server-to-server. The proposed standard WebMCP , meanwhile, is designed for agents that work inside the buyer’s browser. Both leverage Shopify’s Universal Commerce Protocol (UCP), which provides a common way to search for and discover products, build carts, and check out. Top AI agents like Muse and Instinct already have direct partnerships with Shopify for agentic commerce. The Instinct partnership was announced today. “If your agent is operating in the buyer’s browser, use WebMCP tools provided on storefront and checkout to efficiently complete order placement, instead of navigating HTML built for humans,” Greenberg wrote on X. “These WebMCP tools provide structured and efficient APIs, purposely designed — via UCP — to ensure accurate commerce facts, required disclosures, and handoff requirements.”",
+      "published_date": "2026-09-28",
+      "tags": [
+        "AI",
+        "Commerce",
+        "AI agents",
+        "Shopify"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "TechCrunch AI",
+        "feed_url": "https://techcrunch.com/category/artificial-intelligence/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, mcp, model context protocol",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 55,
+    "llm_reason": "WebMCP checkout協定擴展具體可用，但偏產品公告。",
+    "novelty": 8,
+    "impact": 10,
+    "trending": 12,
+    "practicality": 14,
+    "blog_worthiness": 11
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "20 Agentic Use Cases of TypeSafe AI’s Jev",
+      "url": "https://www.marktechpost.com/2026/09/27/20-agentic-use-cases-of-typesafe-ais-jev/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "Last week, TypeSafe AI released Jev , its first System One model . Founder Diogo Almeida previously worked at OpenAI on the instruction-following research behind ChatGPT. Jev does not chat, write code or summarize. It takes unstructured state and returns typed decisions with calibrated probabilities. That makes it a natural fit for the thousands of small judgments inside an agent loop: which model to call, whether a command is safe, which passage is relevant, whether the agent is actually done. Every call sends a state (text or JSON) plus a dictionary of typed questions. TypeSafe’s docs define 3 primitives: All questions are evaluated in parallel against the same state in one request. TypeSafe trains Jev with Reinforcement Learning for Calibrated Decisions (RLCD) , so higher confidence should track higher accuracy. Choice supports up to 255 options . The main claims, 193.6x faster and 444.6x cheaper , come from TypeSafe’s own workflow evals . The launch post says these figures sit on the higher end of real-world gains and use GPT-6 Astra and Fable 5.1 as the reference answer. Race a token-by-token LLM against Jev’s single pass, move a confidence threshold to see how code gates each decision, estimate monthly cost, and browse all 20 use cases. Open-model figures are self-reported by each project on its own harness, so treat them as directional. OpenRouter’s Banking77 test is the cleanest head-to-head: Jev was 3.3 points less accurate than Claude Opus 5, 13x faster at the median, and about 1/22 the cost. The post 20 Agentic Use Cases of TypeSafe AI’s Jev appeared first on MarkTechPost .",
+      "published_date": "2026-09-28",
+      "tags": [
+        "Agentic AI",
+        "AI Agents",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Editors Pick",
+        "For Devs",
+        "New Releases",
+        "Staff",
+        "Tech News",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, reinforcement learning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 54,
+    "llm_reason": "System One決策模型概念新穎，但claims多為自評缺獨立驗證。",
+    "novelty": 13,
+    "impact": 9,
+    "trending": 9,
+    "practicality": 10,
+    "blog_worthiness": 13
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Ars Technica AI",
+      "title": "OpenAI halts frontier-model training amid string of agent misalignment incidents",
+      "url": "https://arstechnica.com/ai/2026/09/openai-halts-frontier-model-training-amid-string-of-agent-misalignment-incidents/",
+      "authors": [
+        "Kyle Orland"
+      ],
+      "abstract": "OpenAI says it has paused all internal training of \"our most capable models\" as it continues what CEO Sam Altman is calling \"an extensive and ongoing review related to our agents’ use of internet access during training and evaluation.\" The company revealed the pause in a report about a so-called misalignment incident in which an agent attempted to exploit a gap in Internet-access restrictions during a routine research task during training. OpenAI says that improper DNS filtering allowed the agent to attempt to break out of its sandbox and access the wider Internet when asked for biographical details about a blogger. OpenAI says the agent was only able to access the company's offline web cache and that it has implemented additional multi-layered blocking controls to prevent similar incidents in the future. Despite that, though, the company says it has decided to \"pause all other training, evaluation, and inference with tool-use\" for this frontier model \"until we have both validated that the gap is resolved and performed additional red-teaming of the system.\"",
+      "published_date": "2026-09-28",
+      "tags": [
+        "AI",
+        "government",
+        "misalignment",
+        "openai",
+        "pause",
+        "risk",
+        "training"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "Ars Technica AI",
+        "feed_url": "https://arstechnica.com/ai/feed/"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, tool use",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 59,
+    "llm_reason": "前沿模型訓練暫停凸顯agent對齊風險，產業影響大話題性極高",
+    "novelty": 5,
+    "impact": 17,
+    "trending": 19,
+    "practicality": 3,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "blog",
+      "source_name": "Simon Willison",
+      "title": "2026 in LLMs (so far)",
+      "url": "https://simonwillison.net/2026/Sep/27/2026-in-llms-so-far/",
+      "authors": [
+        "Simon Willison"
+      ],
+      "abstract": "On Friday I gave the closing keynote at the WeAreDevelopers World Congress North America in San Jose. I tied together the key trends from the past year into a chronological exploration of everything that happened in 2026. The video is on YouTube ; here are my annotated slides and notes to accompany the talk. And as an annotated presentation : I’m going to give a lightning tour of everything that has happened so far in 2026. The year isn’t over yet! For me, 2026 started a couple of months earlier in November 2025. November saw the release of two important models: Claude Opus 4.5 and GPT-5.1. As is usually the case with new models, these were incremental improvements on the models that came before them. But every now and then when a model improves, it crosses an invisible line where something that didn’t really work starts working. In this case, the thing that started working was their coding agents. Claude Code had been around since February 2025; Codex was a little younger. These two new models, when paired with their respective coding agent harnesses, improved from “often make mistakes” to “reliable enough to use on a day-to-day basis”. For a couple of years now I’ve been evaluating new models by asking them to “Generate an SVG of a pelican riding a bicycle”. It’s probably the world’s stupidest benchmark—there’s only so much you can learn from it. But it’s still a challenge for models, because drawing pelicans is difficult, drawing bicycles is difficult, and pelicans can’t ride bicycles in the first place. Here’s the state of the art for November. Claude still couldn’t really draw a bicycle! The GPT-5.1 bicycle frame is pretty crap too. Also in November, we had the first commit to an obscure GitHub repository called “Warelay”. We’ll come back to this repository shortly. And then there were the December holidays, and individual developers took some time off and many started tinkering with these new coding agent model combinations... and it began to dawn on us quite how much they could do that they couldn’t do before. Come January, a lot of us were quite excited to start putting this stuff into action. Every year I set myself a New Year’s resolution, and for as long as I can remember it’s been the same thing: stay focused. Take on less new projects. Try to get things done in the projects I already have. This year I decided that since that had never worked before, I’d go the other way. We’ve got coding agents now, let’s see what they can do. I’m going to take on as many new projects as I like! (You can ask me at the end of the year if this turned out to be a good idea or not. I have a lot of plates spinning right now.) “Be more ambitious” has been something of a theme for the year, because the only way to find the limits of this technology is to keep on pushing them until they don’t work. I also went on the Oxide and friends podcast with Bryan Cantrill and Adam Leventhal to share predictions for the next year (and three and six years). With hindsight, my LLM predictions were pretty unambitious. I said “it will become undeniable that LLMs write good code”—I think we’re there now. I predicted we would finally solve sandboxing. I counted and around 40 of the 277 sessions at this conference touched on sandboxing or agent security in some way, so we’re at least putting a lot of effort into that! I predicted “a Challenger disaster” for coding agent security. There’s certainly been a whole lot of noise around agent security this year, though the exact disaster I predicted (with coding agents being hijacked and causing real-world economic damage) hasn’t really played out. We threw in a joke prediction that the Pope would weigh in on the economic impact of LLMs. I also predicted that New Zealand’s Kākāpō parrots would have an outstanding breeding season this year. These are flightless nocturnal parrots. They’re kind of dumpy looking, I think they’re beautiful, and there were only 236 of these parrots in the world at the start of the year. Kākāpō only breed when the Rimu trees have a big fruiting season, and that hasn’t happened in four years... but this year the Rimu fruit were looking excellent. Also on that podcast, we coined a term (full credit to Adam) for “that feeling of AI induced ennui where software engineers get listless because the AI can do anything”. This has been a major theme throughout the year, and was touched on by several speakers at this conference. As a software engineer, I’ve never had a year of my career where everything has changed so quickly and so dramatically. A lot of what I’ve been doing this year is trying to come to terms with that and what that means for my own profession. Also in January, I suffered from what I’m calling AI mania . This is not the same thing as AI psychosis . With AI mania, any time your agent isn’t building something for you feels like wasted time. You’re losing sleep because you could be staying up later getting your agents to do stuff. My AI mania presented itself in some ridiculously over-ambitious projects. I built a JavaScript interpreter entirely in Python , vibe-ported from MicroQuickJS by Fabrice Bellard. Then I built a WebAssembly runtime in Python as well . These projects were quite useful, in that they sort of cured me of my AI mania... because after I built these things, I got to look at them and ask “does the world need a slow, buggy, half-baked Python JavaScript interpreter?” I did get this out of it: https://simonw.github.io/micro-javascript/playground.html This page runs my JavaScript interpreter built in Python, running in Python using Pyodide , which is Python compiled to WebAssembly, running in JavaScript, running in a browser. It’s a beautiful stack of horrors. I’ve been having a lot of fun with WebAssembly this year. By the end of January, that repository we saw start in November had renamed itself, first to CLAWDIS, then CLAWDBOT, then Moltbot, and finally to OpenClaw. At this point OpenClaw had 8,300 commits, less than two months after the project had started. I looked today and it’s over 100,000 commits now! This is the most vibe-coded piece of software in existence. (Here’s how I generated that list of name changes .) This kicked off the OpenClaw revolution. It effectively defined a new category of software. There’s a generic term for this which I really enjoy. We call software like this a “Claw”. There’s OpenClaw, NanoClaw , IronClaw , PicoClaw ... Today they’re being rebranded as “personal agents” or “general agents”, but I still like to think of them as Claws. The Apple stores in the Bay Area sold out of Mac Minis because so many people were buying Mac Minis to run OpenClaw! Drew Breunig said that this is because your OpenClaw is a digital pet, and you buy a Mac mini as an aquarium to keep your claw in, which is kind of delightful. Also in January, we had this website. This was MoltBook , a social network for AI agents, where the idea was that you send your Claw to go and talk to all of the other Claws, because what could possibly go wrong if you did that? The website launched on Thursday. It blew up on Friday . It was profiled by the New York Times on Monday . And by Tuesday, everyone had forgotten it existed as it drowned in a deluge of slop and spam. Facebook/Meta bought it a month later . In February, a company called StrongDM described what they called their Software Factory. They wrote about this in Software Factories and the Agentic Moment . I posted my own notes at the time, having seen their demo in person back in October. Dan Shapiro called this approach the Dark Factory , after the idea that if your factory is sufficiently automated you can turn the lights out, because you don’t even need to see what’s going on. StrongDM presented two rules for software development that they’d been following since July last year. The first was code must not be written by humans . Any code that you write has to have been routed through a coding agent.",
+      "published_date": "2026-09-28",
+      "tags": [
+        "blog"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "blog_name": "Simon Willison",
+        "blog_url": "https://simonwillison.net/"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic",
+      "⚖️ 來源權重: blog +15"
+    ],
+    "llm_score": 58,
+    "llm_reason": "資深作者對2026年LLM趨勢的權威整理，敘事與洞察俱佳",
+    "novelty": 6,
+    "impact": 12,
+    "trending": 16,
+    "practicality": 7,
+    "blog_worthiness": 17
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "KDnuggets",
+      "title": "Gemini 3.5 Transcribe vs OpenAI’s GPT-Transcribe",
+      "url": "https://www.kdnuggets.com/gemini-3-5-transcribe-vs-openais-gpt-transcribe",
+      "authors": [
+        "Shittu Olumide"
+      ],
+      "abstract": "Gemini 3.5 Transcribe vs OpenAI’s GPT-Transcribe Here's how each got to where it is, a real use case and working code for both, and a side-by-side on the numbers that actually matter. By Shittu Olumide , Technical Content Specialist on September 28, 2026 in Language Models Google shipped Gemini 3.5 Transcribe on August 26, 2026, and the timing makes it a genuinely useful comparison. OpenAI had released its own current flagship transcription model, GPT-Transcribe , just four weeks earlier, on July 28, 2026. Two labs, two new transcription models, released close enough together that comparing them actually means something right now instead of stacking one model generation against another. Both companies split their offering the same way too — one model built for real-time streaming, one built for pre-recorded audio — which makes the comparison unusually apples-to-apples. Here's how each got to where it is, a real use case and working code for both, and a side-by-side on the numbers that actually matter. Gemini 3.5 Transcribe Gemini 3.5 Transcribe replaces Chirp 3, Google's previous transcription model, and the improvement Google is leaning on hardest is speed: a 70% improvement in time-to-final-transcription over Chirp 3, alongside better accuracy. It ships as two distinct model IDs rather than one general-purpose endpoint: gemini-3.5-transcribe-live for continuous, sub-second-latency streaming through the Live API, and gemini-3.5-transcribe for pre-recorded audio, meetings, call logs, and similar, through the Interactions API. The real numbers, as measured by Artificial Analysis and cited directly in Google's announcement: a 4.0% word error rate (WER) for streaming use and 2.6% for non-streaming. On the FLEURS multilingual benchmark specifically, Google reports 5.50% WER streaming and 5.04% non-streaming — worth noting as a separate, harder benchmark rather than mixing the two numbers together. Beyond raw accuracy, the pre-recorded model includes built-in multi-speaker attribution (reliably up to three speakers, with more listed as experimental) and word-level timestamps out of the box, no separate model needed. It also supports over 85 languages, recognizes custom vocabulary, and can delegate follow-up tasks like image generation or file analysis to other Gemini models via function calling, currently live in the Gemini app on macOS. OpenAI's GPT-Transcribe Whisper was OpenAI's original open transcription model, superseded by gpt-4o-transcribe in March 2025, OpenAI's first transcription model actually built on the GPT-4o architecture rather than Whisper's older approach. GPT-Transcribe, released July 28, 2026, is the next step in that same line, and OpenAI now recommends it ahead of whisper-1, gpt-4o-transcribe, and gpt-4o-mini-transcribe for transcribing recorded speech in its original language. Like Gemini, it splits into a streaming sibling, gpt-live-transcribe , for continuous, low-latency sessions. The numbers: on OpenAI's own launch benchmark against Common Voice across 22 languages, GPT-Transcribe roughly halves whisper-1's word error rate, from 40.37% down to 19.27%, while costing 25% less per minute than its predecessor. Pricing lands at \\$0.0045 per minute for file transcription and \\$0.017 per minute of session audio for the streaming variant. It accepts keyword hints and multiple language hints to help with domain-specific terms and code-switching, and reports which languages it detected in the audio. The honest gap worth naming directly: plain GPT-Transcribe doesn't do speaker diarization or word-level timestamps — those still require the separate gpt-4o-transcribe-diarize model or, for timestamps specifically, the older whisper-1. Let's take a quick look at some use cases. Using Gemini 3.5 Transcribe for a Multi-Speaker Meeting Consider a real scenario where the built-in diarization actually earns its keep: transcribing a recorded three-person meeting and getting back who said what, not just a wall of undifferentiated text. from google import genai client = genai.Client(api_key=\"YOUR_GOOGLE_API_KEY\") with open(\"meeting_recording.mp3\", \"rb\") as f: audio_bytes = f.read() response = client.models.generate_content( model=\"gemini-3.5-transcribe\", contents=[ {\"text\": \"Transcribe this meeting with speaker labels and timestamps.\"}, {\"inline_data\": {\"mime_type\": \"audio/mp3\", \"data\": audio_bytes}}, ], ) print(response.text) The request sends the raw audio bytes alongside a plain-language instruction, since gemini-3.5-transcribe is built specifically to produce speaker-attributed, timestamped output without needing a separate diarization step or model. For a real meeting, that means the returned transcript already distinguishes Speaker 1 , Speaker 2 , and Speaker 3 with timestamps attached — output a post-call analytics pipeline could consume directly. Using GPT-Transcribe for Live Captioning Here's a scenario suited to streaming: real-time captions for a live event, where latency matters more than diarization. import asyncio import websockets import json async def stream_captions(audio_chunks): uri = \"wss://api.openai.com/v1/realtime?intent=transcription\" headers = {\"Authorization\": \"Bearer YOUR_OPENAI_API_KEY\"} async with websockets.connect(uri, extra_headers=headers) as ws: await ws.send(json.dumps({ \"type\": \"transcription_session.update\", \"session\": {\"input_audio_transcription\": {\"model\": \"gpt-live-transcribe\"}}, })) for chunk in audio_chunks: await ws.send(json.dumps({ \"type\": \"input_audio_buffer.append\", \"audio\": chunk, })) message = await ws.recv() event = json.loads(message) if event.get(\"type\") == \"conversation.item.input_audio_transcription.delta\": print(event[\"delta\"], end=\"\", flush=True) This opens a persistent WebSocket connection rather than sending one request per audio clip, which is the whole point of a streaming model. Partial transcription text arrives as delta events while the speaker is still talking, not after the recording ends. Each audio chunk gets appended to an ongoing buffer, and gpt-live-transcribe returns incremental text as it becomes confident enough to commit — exactly the behavior a live-captioning display needs to stay in sync with the speaker. Comparison Table # Gemini 3.5 Transcribe OpenAI GPT-Transcribe Release date August 26, 2026 July 28, 2026 Predecessor Chirp 3 gpt-4o-transcribe Streaming model gemini-3.5-transcribe-live gpt-live-transcribe File/pre-recorded model gemini-3.5-transcribe gpt-transcribe Word error rate 4.0% streaming / 2.6% non-streaming (Artificial Analysis) ~19.27% on Common Voice, down from whisper-1's 40.37% Language support 85+ languages Keyword and language hints across 22+ benchmarked languages Built-in speaker diarization Yes, up to 3 speakers reliably No, requires separate gpt-4o-transcribe-diarize Word-level timestamps Yes, built in No, requires whisper-1 Streaming pricing Not published per-minute as of this writing \\$0.017 per minute of session audio File pricing Not published per-minute as of this writing \\$0.0045 per minute Wrapping Up Gemini 3.5 Transcribe's built-in diarization and timestamps make it the stronger pick the moment your use case is a meeting, a call log, or anything with multiple speakers you need told apart — that capability alone saves an entire second model call OpenAI's stack still requires. GPT-Transcribe earns its place on the other end: a cheaper, faster-to-integrate option when the job is straightforward single-speaker transcription or live captioning, and you don't need attribution at all. Shittu Olumide is a software engineer and technical writer passionate about leveraging cutting-edge technologies to craft compelling narratives, with a keen eye for detail and a knack for simplifying complex concepts. You can also find Shittu on Twitter . <= Previous post",
+      "published_date": "2026-09-28",
+      "tags": [],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "KDnuggets",
+        "feed_url": "https://www.kdnuggets.com/feed"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: function calling",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 63,
+    "llm_reason": "兩大語音轉錄模型實測比較附程式碼，時效性與實用性俱佳",
+    "novelty": 8,
+    "impact": 11,
+    "trending": 13,
+    "practicality": 16,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Microsoft Research",
+      "title": "One year in: How Microsoft Research Asia – Singapore is advancing research, partnership and talent for real-world impact",
+      "url": "https://www.microsoft.com/en-us/research/blog/one-year-in-how-microsoft-research-asia-singapore-is-advancing-research-partnership-and-talent-for-real-world-impact/",
+      "authors": [
+        "Microsoft Research Team"
+      ],
+      "abstract": "On July 24, 2025, Microsoft Research Asia – Singapore (MSRA – Singapore) opened its doors as Microsoft’s first research lab in Southeast Asia. The launch built on more than two decades of collaboration between Microsoft Research Asia and Singapore’s universities, research institutes, and government agencies. It marked a shift to a closer, more integrated relationship aimed at supporting Singapore’s innovation ecosystem and advancing the development and beneficial use of AI. “When we established Microsoft Research Asia — Singapore one year ago, our vision was not simply to open another research lab. It was to build a bridge connecting Microsoft’s frontier AI research with Singapore’s world-class universities, forward-thinking government agencies, and dynamic industry ecosystem. One year in, what gives me the greatest confidence is not just the research we have produced, but the depth of partnership we have built. That is the foundation on which lasting impact is built.” Established in 1998, MSRA has a presence in Beijing, Shanghai, Vancouver, and Tokyo, along with Singapore. The Singapore lab strengthens the collaboration with local partners and extends the scientific and societal impact of Microsoft’s global research community. Over the past year, the Singapore lab has grown its team, deepened partnerships, and explored how frontier AI research can create real-world value. Guided by its mission to advance frontier AI for humanity, its work spans four pillars: next-generation AI models and agentic systems, domain-specific AI for real-world impact, AI-native research practices, and ecosystem and talent development. Research has its greatest impact when it moves beyond the laboratory into practice: in health and medicine, enterprises, and the daily operations of organizations solving real problems. MSRA – Singapore aims to do just that through a two-way exchange: partners bring domain expertise, real-world data, and operational challenges, while the lab contributes frontier research and engineering capabilities. Together, they translate fundamental advances into practical solutions, while surfacing new questions that feed back into research in a kind of research-to-impact flywheel. Advances in AI foundations enable more capable models and agentic systems that can reason, plan, use tools, and collaborate with people. These capabilities create new opportunities for AI-native innovation. In turn, real-world applications reveal limitations and generate new questions, feeding insights back into foundational research and sustaining a continuous cycle of discovery, application, and learning. Healthcare offers an early example of the lab’s research-to-impact model. Research on multimodal healthcare AI and self-evolving diagnostic agents is deployed and extended through partnerships across Singapore’s healthcare ecosystem. The lab is collaborating on multimodal and agentic AI approaches to support clinical decision-making, unlock insights from complex medical data, and advance research in disease diagnosis, risk assessment, and personalized care, with the longer-term goal of enabling meaningful real-world use. Beyond healthcare, the lab is working with organizations across financial services, education, and technology to explore how frontier AI can address sector-specific needs and operational challenges. “Over the past year, the lab has become an integral part of both Microsoft’s local ecosystem and Singapore’s broader innovation community. Its progress demonstrates the value of establishing a sustained research presence in Singapore.” Singapore has made AI a national priority through its National AI Strategy 2.0 (opens in new tab) , which focuses on deploying industry-transforming AI, advancing frontier research in AI foundations, and developing responsible, socially beneficial applications. These priorities span areas including healthcare, education, finance, and Smart Nation (opens in new tab) services. MSRA – Singapore’s research portfolio aligns with these priorities, with a particular focus on building AI systems that are reliable and trustworthy across Southeast Asian contexts. The Singapore Economic Development Board (EDB) has been a foundational partner. It supported the lab’s establishment and continues to support joint PhD training through the Industrial Postgraduate Programme (IPP). The relationship has since grown into strategic collaboration. In February 2026, EDB co-hosted an Executive Roundtable on AI in Logistics and Transportation, bringing together more than ten regional industry leaders to explore sectoral challenges. “ Singapore is building deep research capabilities to push the boundaries of AI and other frontier technologies. Microsoft Research Asia – Singapore is an important partner in this effort. Since its launch in 2025, the lab has brought Microsoft’s global research expertise closer to our ecosystem, partnering academia, industry, and government to advance frontier AI research and translate it into real-world applications in areas such as healthcare. MSRA is also developing the next generation of AI research talent who can create meaningful impact for our economy and society. ” Government engagement extends beyond EDB. In July 2025, IMDA (opens in new tab) co-hosted Microsoft Research Asia Singapore Day (opens in new tab) — Advancing Industrial AI, a full-day event spanning healthcare AI, interactive world simulators, AI agents, and societal AI. MSRA – Singapore has also engaged with the Ministry of Trade and Industry and the Ministry of Health. In addition to its deep ties with government agencies, MSRA has built strong connections with Singapore’s academic community, supporting more than 75 research projects with Singapore institutions since 2004. The opening of the Singapore lab has brought new engagements, with nine new projects in its first year with National University of Singapore (NUS) and Nanyang Technological University, Singapore (NTU) across healthcare AI, robotics, AI systems, and multi-agent systems. A landmark example is the five-year Framework Research Agreement (opens in new tab) with NUS, announced in 2025, which provides a platform for joint AI research, talent development, and academic exchange. It defines shared research priorities in healthcare, societal AI, spatial intelligence, and data-intensive computing alongside an annual NUS–MSRA Academic Symposium that brings researchers from both organizations together to shape the collaboration agenda. “This partnership creates new opportunities for frontier research, talent development, and knowledge exchange, strengthening connections across academia, industry, and the broader innovation ecosystem.” The collaboration is already producing concrete research across several frontier areas. NUS Assistant Professor Mike Shou and MSRA’s Xinxing Xu are developing unified multimodal AI for healthcare. NUS assistant professor Yang You and MSRA distinguished scientist Furu Wei are studying systems foundations for diffusion-based language models. NUS assistant professor Jialin Li is working with MSRA on rigorous distributed agreement in multi-agent systems and verifiable machine learning systems. “ Whether during my visit to the Systems Research Group in Beijing or through our ongoing collaborations, I have been impressed by how deeply MSRA researchers engage with difficult problems and how openly they exchange ideas. For young faculty and students, it is a rare environment to explore ambitious ideas. “ The NUS–Microsoft Research Asia AI Summer School has reached more than 300 students since its launch in 2025, attracting participants from Singapore, Southeast Asia, and beyond. Through three days of lectures, hands-on workshops, and small-group discussions, the program creates a forum for researchers and students to engage with emerging AI questions and scholars shaping the field.",
+      "published_date": "2026-09-28",
+      "tags": [
+        "Research Blog"
+      ],
+      "organization": "Microsoft",
+      "raw_metadata": {
+        "feed_name": "Microsoft Research",
+        "feed_url": "https://www.microsoft.com/en-us/research/feed/"
+      }
+    },
+    "rule_score": 73.0,
+    "rule_reasons": [
+      "🏢 頂流機構: Microsoft Research",
+      "🏢 頂流機構: Microsoft",
+      "🔥 熱門關鍵字: agent, agentic, multi-agent, multimodal, diffusion",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 10,
+    "llm_reason": "純公關週年回顧文，無任何技術內容可寫。",
+    "novelty": 1,
+    "impact": 3,
+    "trending": 3,
+    "practicality": 1,
+    "blog_worthiness": 2
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "TechCrunch AI",
+      "title": "OpenAI still doesn’t seem to have a handle on all of its rogue AI activity",
+      "url": "https://techcrunch.com/2026/09/28/openai-still-doesnt-seem-to-have-a-handle-on-all-of-its-rogue-ai-activity/",
+      "authors": [
+        "Russell Brandom"
+      ],
+      "abstract": "On Friday, OpenAI published a new site devoted to “misalignment reports” and the sheer breadth of the reports is alarming, as they cover many types of rogue behavior over a long period of time. So far, the site hosts nine reported incidents, most of which took place during reinforcement-learning (or RL) training. It’s a lot of information in one place — clearly, the company has been very busy getting a handle on everything — but the overall takeaway is hard to avoid: The rogue agent incidents we’ve seen so far are likely just a small sliver of what’s happened so far. “We are trying to balance our desire for transparency with gaining a clear understanding from petabytes of agent activity logs, and working with impacted organizations,” Sam Altman said in a post announcing the new site . “We are prioritizing as best as we can based on severity, and adding resources.” Some of the cases involve serious incidents, including a previously undisclosed sandbox escape that took place on September 20 , in which an internal research model was able to communicate with an external chatbot through a DNS query. According to the report, the monitoring system flagged the behavior within 15 minutes and the run was discontinued in less than three hours. Another incident , discovered in May, saw a “highly persistent internal model” try to cheat on a math problem by accessing another team’s work. To accomplish this, the model smuggled a private GitHub token that would allow it to see work from other teams — even after being explicitly instructed twice to perform work entirely locally. Perhaps the most alarming discovery is the possibility of self-replicating prompt injection attacks, a way that misaligned behavior might propagate even after the rogue model itself has been neutralized. In the AI context, a prompt injection attack is a way of smuggling in new instructions that weren’t given by the original user. In the example given by OpenAI , an agent asked to read and reply to an email; when the email is opened, it includes instructions for any automated agent reading the message to reply in Spanish, and paste the entire email into its reply. The email was able to successfully induce the agent to reply in Spanish — and by pasting the email in the reply, those same instructions were passed along to whichever agent receives the email. The result is a self-propagating attack, which OpenAI researchers compared to a malware “worm” that replicates itself across computer systems. Researchers discovered the behavior under controlled circumstances using an underpowered model, and as far as we know, this has never happened in the wild. Still, the implications are alarming enough that OpenAI decided it merited disclosure. “We are sharing this due to the novel nature of the prompt injection, not because of any incident,” researchers wrote in the report. Other recent discloses have found models posting user-submitted pictures to third-party hosting sites , as well as an apparent attack on the databases of Australia’s national health service. Still, it’s likely the new disclosures are just a small portion of the incidents that have taken place so far (we’ve reached out to OpenAI and asked). Axios is reporting major labs have seen as many as 10,000 incidents in which models went beyond evaluator instructions. OpenAI CEO Sam Altman has implied as much, saying in a post on X on Friday that the company is still sifting through “petabytes of agent activity logs, and working with impacted organizations,” and disclosing incidents “based on severity.” If there’s any consolation in that to be found, it is that Altman says the Hugging Face incident is still the most severe one OpenAI has found. The upshot is, the recent string of rogue agent incidents may be a persistent feature of contemporary frontier research.",
+      "published_date": "2026-09-28",
+      "tags": [
+        "AI",
+        "OpenAI"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "TechCrunch AI",
+        "feed_url": "https://techcrunch.com/category/artificial-intelligence/feed/"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, reinforcement learning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 54,
+    "llm_reason": "首度公開多起真實sandbox逃逸事件，故事性與警示價值強。",
+    "novelty": 7,
+    "impact": 13,
+    "trending": 15,
+    "practicality": 4,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "Grok 4.7 is now available on Amazon Bedrock",
+      "url": "https://aws.amazon.com/blogs/machine-learning/grok-4-7-is-now-available-on-amazon-bedrock/",
+      "authors": [
+        "Suheel Farooq"
+      ],
+      "abstract": "xAI’s Grok 4.7 is now available on Amazon Bedrock , adding a frontier model built for coding, long-running agents, and knowledge work to the Bedrock model catalog. It offers a 500K token context window and supports configurable reasoning effort at four levels: low , medium , high , and xhigh . Grok 4.7 is served on the bedrock-runtime endpoint through cross-Region inference profiles, and it supports the Responses, Chat Completions, and Converse APIs. According to xAI, it’s their most capable model for coding and knowledge work: it works longer on difficult tasks and verifies its own output more carefully before moving on. This post covers what xAI says Grok 4.7 is designed for, how it is packaged on Amazon Bedrock, and how to send your first request. The capability and training details in this section come from xAI’s launch announcement, Introducing Grok 4.7 , published September 21, 2026, and from the Grok 4.7 model documentation . xAI positions Grok 4.7 as its most capable model for coding and knowledge work. The theme is endurance rather than raw speed: the model works longer on difficult tasks and checks its own work more carefully before moving on. On training, xAI reports that Grok 4.7 uses a new and larger base model. It was trained with a longer reinforcement learning run over a harder mix of tasks, deliberately weighted toward problems that take many hours to complete. Two capabilities came out of that: the model is better at verifying its own work, and makes more effective use of its 500K token context window on long tasks. xAI also trained it to natively understand the Grok Bot harness, which it credits for improvements in conversational tasks and general knowledge work. For anyone building agents, the self-verification behavior is the detail worth noting. A model that checks its own output before continuing tends to fail less catastrophically on long trajectories, where an early mistake otherwise compounds through every later step. xAI also calls out stronger document and presentation generation, and describes gains on professional knowledge work of the kind done by lawyers, nurses, and financial analysts. xAI reports gains across its published evaluations. These span software engineering with CursorBench and DeepSWE, multi-hour terminal and office work with Terminal-Bench and AA Briefcase, electrical engineering with EEBench, legal work with the Harvey Legal Agent Benchmark, and clinical reasoning with HealthBench Professional. For the results themselves, see xAI’s announcement . Artificial Analysis runs its own evaluations rather than relying on developer-reported figures, which makes it a useful second reference alongside xAI’s published results. According to Artificial Analysis , Grok 4.7 improves across its evaluation suite. The largest gains are on long-horizon agentic knowledge work and on coding agents run in xAI’s own harness. The Intelligence Index is a composite built from multiple independent evaluations covering agentic tool use, reasoning and knowledge, knowledge reliability, and long-context work. Grok 4.7 is measured at xhigh reasoning effort, and Grok 4.6 at the effort level Artificial Analysis reported for each measure. The final row is the tradeoff to plan for: the gains come with roughly double the output tokens per task. That’s why it pays to set the effort level deliberately rather than inheriting the default. According to xAI, Grok 4.7 was built with an entirely new safeguard stack and is the strongest model it has tested on refusals and jailbreak resistance. xAI frames the goal in dual-use domains such as cyber security and biological work as holding two things at once: remaining useful for legitimate tasks while refusing dangerous ones. On cyber security specifically, xAI reports the model allows only a small fraction of risky dual-use prompts through while rarely blocking legitimate security work. xAI has also begun giving selected cyber security partners invite-only access to Grok 4.7’s red-team capabilities for defense research. Grok 4.7 accepts text and image input and returns text. The model is served on the bedrock-runtime endpoint through cross-Region inference profiles, so requests name a profile rather than a bare model ID: Grok 4.7 supports the Responses API, the Chat Completions API, InvokeModel and the Converse API. Because the model is OpenAI-compatible, you have a choice of client. The OpenAI SDK works against the /openai/v1 path with a bearer token, which can be either an Amazon Bedrock API key or a short-term token minted from your AWS Identity and Access Management (IAM) credentials. The AWS SDKs reach the same model through Converse, signing requests with your ordinary AWS credentials. Use the OpenAI SDK if you’re porting an existing integration. Use Converse if you want one message shape across the models in your account, along with invocation logging and response streaming through the standard Bedrock event types. Implicit prompt caching applies automatically to repeated prompt prefixes, so agents that resend a large system prompt or reference document on every turn pay the cached rate for that prefix. Amazon Bedrock Guardrails attach by ID and version on the request, applying content filters, denied topics, personally identifiable information (PII) redaction, and word policies to both the prompt and the response. This is useful for a model that might run unattended across many steps. With structured outputs, you can constrain a response to a JSON Schema so downstream code can parse it directly. Invocation logging captures each call in Amazon CloudWatch with the request, the response, and token counts including reasoning tokens. This gives you an audit trail for long agent runs. Grok 4.7 routes through one of two cross-Region inference profiles rather than pinning to a single Region. The Global profile, global.xai.grok-4.7 , routes each request to any supported commercial AWS Region, spreading load across more capacity, and is priced below a geographic profile. The tradeoff is less control over where a given request is served, which can mean more variable latency. The US geographic profile, us.xai.grok-4.7 , keeps processing within the US geography, which addresses US data residency requirements. Choose it when you have residency constraints or latency-sensitive traffic, and Global when cost and throughput matter more. Standard is pay-per-token with no commitment, selected by setting \"service_tier\": \"default\" or omitting the field. Priority delivers faster, prioritized processing for a premium ( \"service_tier\": \"priority\" ). Flex offers lower-cost access for work that isn’t time-sensitive ( \"service_tier\": \"flex\" ). Service tier is a significant cost lever that you control. For per-token pricing across the tiers, see the Amazon Bedrock pricing page . Before your first call, confirm that the model is available to you in the Bedrock console for the AWS Region that you plan to use. Install the OpenAI SDK, and boto3 if you plan to use the Converse API: Generate a long-term Amazon Bedrock API key from the Amazon Bedrock console for exploration, then set your environment: A first request with the Chat Completions API: The same call through the Responses API: And through the Converse API with boto3 . Because reasoning is always active, the first content block carries the reasoning and the answer sits in a later block, so search the blocks for the text rather than indexing content[0] : On Converse, you set the effort level through additionalModelRequestFields rather than a reasoning parameter: Three operational notes. First, requests must name us.xai.grok-4.7 or global.xai.grok-4.7 . Second, bedrock:InvokeModel is evaluated against three resources: your account’s default project, the inference profile you name, and the underlying foundation model (FM). The foundation model Amazon Resource Name (ARN) is wildcarded across Regions because cross-Region profiles route outside the calling Region.",
+      "published_date": "2026-09-28",
+      "tags": [
+        "Advanced (300)",
+        "Amazon Bedrock",
+        "Amazon Machine Learning",
+        "Announcements",
+        "Artificial Intelligence",
+        "Foundation models",
+        "Generative AI"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, tool use, reasoning, reinforcement learning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 47,
+    "llm_reason": "雲端上架公告附帶規格，缺乏訓練方法創新細節。",
+    "novelty": 5,
+    "impact": 9,
+    "trending": 11,
+    "practicality": 13,
+    "blog_worthiness": 9
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "Implementing synthetic monitoring using Amazon Nova Act",
+      "url": "https://aws.amazon.com/blogs/machine-learning/implementing-synthetic-monitoring-using-amazon-nova-act/",
+      "authors": [
+        "Sarath Krishnan"
+      ],
+      "abstract": "Synthetic monitoring emulates real user journeys through automated transactions. Rather than waiting for customers to encounter problems, teams continuously validate critical workflows (logins, purchases, form submissions) on a scheduled basis. With this approach, you detect problems faster when performance degrades or UI interactions break. For customer-facing businesses, especially in ecommerce, synthetic monitoring safeguards interactions that matter most. Organizations validate that product search works correctly, pricing and inventory display as expected, cart operations succeed, and checkout confirmations complete without error. Continuous testing identifies problems before customers encounter them. The same approach applies across industries. Financial services organizations make sure account access and transaction flows remain functional. Travel and hospitality providers monitor booking and reservation journeys. Software as a service (SaaS) companies validate signup and subscription upgrade paths. Healthcare organizations monitor appointment scheduling portals where availability and transaction health are essential. This post walks through an agent-driven approach to synthetic monitoring using Amazon Nova Act and Amazon Bedrock AgentCore . Together, with these services you can move beyond brittle UI scripts toward resilient, managed journey validation. The post describes the architecture and patterns for agent-driven synthetic monitoring, with a sample repository containing the complete implementation. Most organizations monitor infrastructure health through metrics, logs, traces, and API-level checks. However, high-impact failures often occur at the user journey level, where backend signals may not immediately reveal the problem. Common examples: a frontend deployment breaks a checkout button, a third-party login page changes unexpectedly, or a UI regression makes critical elements unresponsive. Traditional browser automation frameworks like Selenium and Playwright rely on explicit Document Object Model (DOM) locators and selectors, which creates brittleness. Even small UI changes can break tests and require constant maintenance. Teams invest significant ongoing effort managing selectors, handling timing-related instability, and updating scripts as applications evolve, often spending more time on maintenance than on building new automations. Amazon Nova Act uses a multimodal large language model (LLM) that processes UI screenshots rather than DOM selectors, making it significantly more resilient to UI changes. Because the model reasons from what it sees on screen (not from CSS classes or element IDs), it adapts when styling changes without requiring script updates. In early enterprise customer use cases, Amazon Nova Act has demonstrated over 90% accuracy on browser workflows. This is a meaningful improvement over selector-based approaches that fail immediately on any element change. Teams should test on their own sites and design monitors with retry logic for cases where adaptation does not succeed. Enterprise monitoring platforms compound the maintenance challenge by pricing browser checks as premium add-ons. This forces teams to choose between monitoring breadth and budget, all separate from the real goal of validating critical customer journeys. This solution combines the following AWS services, each handling a distinct responsibility: The architecture follows this flow: The following diagram illustrates the architecture. Figure 1: Synthetic monitoring architecture with Amazon Nova Act and Amazon Bedrock AgentCore This architecture provides fully managed synthetic monitoring. Teams avoid maintaining brittle scripts or browser infrastructure. The following sections walk through setup requirements, journey definition, agent deployment, and scheduling infrastructure. Before implementing, confirm the following: Implementation begins by defining the most important customer journeys to validate. For ecommerce applications, these typically include homepage load, product search, product detail navigation, add-to-cart validation, and checkout readiness. Rather than focusing only on workflow completion, validate outcomes explicitly. The monitor should confirm that search results appear correctly, the cart contains items, and no error banners display. Explicit outcome validation reduces false positives from incomplete checks and false negatives from overly permissive assertions. The agent groups natural-language actions into logical journey steps and uses assertions at key checkpoints. Actions use act() to drive the UI through natural language. Assertions use act_get() with a boolean schema to validate outcomes. When a journey fails, the agent publishes the journey type, target URL, duration, completed steps, and failed steps. Detailed exception information remains in the runtime logs. The code uses the Nova Act SDK directly. When deployed to AgentCore Runtime, the execution environment manages browser session lifecycle through the Browser tool. In testing, a typical six-step journey completes in 2 to 4 minutes depending on page load times. Refer to the Nova Act User Guide for current method signatures and SDK version. The sample repository includes the complete agent definition with error handling and single-attempt step execution. Before the Amazon EventBridge schedule can invoke the agent, deploy it to AgentCore Runtime using the Nova Act CLI. The act workflow commands package the agent code, push the container image to Amazon ECR, and provision the runtime. Once deployed, the endpoint Amazon Resource Name (ARN) remains constant. Updates create new runtime versions without requiring you to update your Scheduler target. The act workflow show command returns the AgentCore Runtime ARN that you reference as the Scheduler target. The sample repository’s deploy.py script wraps these commands with prerequisite checks (Docker, AWS credentials), creates the SNS alert topic, and wires the Amazon EventBridge schedule, so a single python deploy.py performs an end-to-end deployment. (AgentCore also provides its own agentcore CLI for agent development. This sample standardizes on the Nova Act act workflow commands.) For a production-grade, repeatable deployment, the sample includes a CDK stack as a standalone alternative to deploy.py . It provisions the Amazon EventBridge schedule with least-privilege IAM permission, the SNS alert topic, and an SQS dead-letter queue that captures failed InvokeAgentRuntime calls from the Scheduler. The stack also creates two Amazon CloudWatch alarms: one on dead-letter-queue depth (failed Scheduler invocations), and one on missing scheduled runs (using the AWS/Scheduler InvocationAttemptCount metric, treating missing data as breaching). Note that these alarms detect infrastructure failures, such as a delivery failure to the agent or the schedule not firing. A functionally broken customer journey that still returns at the HTTP level surfaces through the agent’s SNS publish, not through these CloudWatch alarms. Focus synthetic monitors on high-value customer journeys rather than exhaustive page coverage. Over-monitoring creates noise that desensitizes teams to real failures. Start with 3-5 critical workflows (login, checkout, account access) and expand based on actual failure patterns and business impact. Monitor journeys that directly affect revenue or customer trust, not every possible user path. Similarly, avoid over-asserting on every page element. Validate meaningful outcomes (whether search results appear, whether the cart contains items) rather than checking every DOM element on the page. Overly granular assertions increase false positives without improving failure detection. The sample agent code uses single-attempt execution per step, which minimizes Browser session cost.",
+      "published_date": "2026-09-28",
+      "tags": [
+        "Advanced (300)",
+        "Amazon Nova",
+        "Technical How-to"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, multimodal",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 50,
+    "llm_reason": "Nova Act監控範例教學實用但屬既有模式的組合應用",
+    "novelty": 6,
+    "impact": 8,
+    "trending": 10,
+    "practicality": 15,
+    "blog_worthiness": 11
+  }
+]
