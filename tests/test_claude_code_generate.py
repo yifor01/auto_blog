@@ -54,6 +54,14 @@ class TestSuccess:
         assert argv[argv.index("--model") + 1] == "opus"
         assert m.call_args.kwargs["timeout"] == 123
 
+    def test_logs_resolved_model_id_in_message(self, caplog):
+        """config 只寫別名 sonnet，實際模型隨 Actions 每天裝的最新 CLI 漂移。
+        Actions 用 Rich log，extra 欄位不顯示，模型 ID 必須在訊息本文。"""
+        payload = _payload("ok", modelUsage={"claude-sonnet-5-5": {"outputTokens": 100}})
+        with caplog.at_level("INFO"), patch("subprocess.run", return_value=_completed(payload)):
+            claude_code_generate("prompt")
+        assert any("claude-sonnet-5-5" in r.getMessage() for r in caplog.records)
+
 
 class TestFailuresReturnEmpty:
     """所有失敗都回 ""，不 raise——上層據此 fallback，不該讓 pipeline 整個炸掉。"""

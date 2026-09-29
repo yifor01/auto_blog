@@ -948,8 +948,11 @@ def claude_code_generate(
         _logger.error("claude CLI 回傳空內容")
         return ""
 
+    # 別名（sonnet）實際解析成哪個模型隨 CLI 版本漂移；Actions 的 Rich log 不顯示 extra，
+    # 所以實際模型 ID 放進訊息本文。
+    resolved = ",".join(payload.get("modelUsage") or {}) or "unknown"
     _logger.info(
-        "claude CLI 批次生成完成",
+        f"claude CLI 批次生成完成（{resolved}）",
         extra={
             "model": model,
             "cost_usd": payload.get("total_cost_usd"),
