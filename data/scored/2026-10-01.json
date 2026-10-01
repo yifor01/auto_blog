@@ -1,0 +1,709 @@
+[
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "HuggingFace Blog",
+      "title": "Introducing Olmo-core 3: Open, scalable training infrastructure for large MoEs",
+      "url": "https://huggingface.co/blog/allenai/olmocore3",
+      "authors": [],
+      "abstract": "Back to Articles Introducing Olmo-core 3: Open, scalable training infrastructure for large MoEs Enterprise Article Published October 1, 2026 Upvote 9 +3 Kyle Wiggers Ai2Comms Follow allenai 📄 Tech Report | 💻 Code | 🧩 Interactive demo Today we’re releasing Olmo-core 3 , a significant upgrade to our framework for developing large language models featuring a redesigned open mixture-of-experts (MoE) training system. Olmo-core 3 is designed to scale MoE training into the trillion-parameter range while preserving computational efficiency. It’s one of the core systems behind the next generation of Olmo, and part of our ongoing commitment to open up the tools and training infrastructure behind each new model. Training large AI models takes a lot of compute, driving up costs and energy use and putting advanced model development out of reach for many academic researchers and smaller labs. MoE models offer a more efficient approach—they can contain many more learned components, or parameters, without requiring every input to use all of them. But the full model still has to be stored across GPU memory and updated during training, and directing inputs to the right experts – the specialized components within an MoE – across a cluster creates its own communication and coordination costs. As MoEs grow, those costs can erode much of the computational advantage of using only part of the model for each input. Olmo-core 3 is built to close that gap. In one benchmark, we increased the expert pool from 8 to 128 while still selecting only four experts per token – the small units of text a language model processes – keeping the number of active parameters per token roughly fixed at about 3.2B. Total parameter capacity grew from 4.6B to 47B, while training throughput fell by less than 5%. The same infrastructure has been benchmarked at over one trillion total parameters. Building a training stack around how MoEs actually work Olmo-core has evolved with each generation of Olmo. Our work on sparse models goes back to OlmoE , which used an MoE architecture with 64 routed experts. Olmo 3 , by contrast, used a dense architecture, meaning nearly all of the model was active for every token and its training stack was built around that design. Olmo-core 3 extends the framework with a training system designed for much larger MoE models. Our earlier MoE implementation in Olmo-core used fully sharded data parallelism (FSDP), configured to gather and reshard model weights for each small batch of training data. Olmo-core 3 switches to a system based on distributed data parallelism (DDP) . It keeps experts resident on GPUs and routes the relevant data to them, avoiding that repeated weight gathering. NVIDIA’s Megatron-Core is an established option for training large MoEs. Olmo-core 3 brings an integrated MoE training stack to the framework behind Olmo, with a redesign that improves throughput over our earlier FSDP-based implementation. In a preliminary test on eight NVIDIA B300 GPUs, a 47-billion-parameter MoE processed 52,000 tokens per second per GPU with the new stack, compared with 19,400 using our earlier implementation—about 2.7× the throughput. Scaling and optimizing MoE training Olmo-core 3 combines several techniques for distributing large MoEs across GPU clusters with optimizations that make routing and computation more efficient. Three techniques determine how the model and its training state are split across hardware: Expert parallelism spreads the experts across GPUs, so each GPU stores only part of the full expert pool. Pipeline parallelism splits the model’s layers – the successive stages that transform an input – across groups of GPUs, reducing how much of the model each GPU needs to keep in memory. A distributed optimizer spreads the optimizer state – the additional data used to calculate and apply updates during training – across GPUs instead of storing a full copy on every GPU. Together, these techniques allow an MoE to scale without requiring every GPU to keep the entire model and its training state in memory. Olmo-core 3 also reduces the cost of routing data to the right experts and running their computations. Rowwise expert parallelism places routed data directly into expert input buffers, minimizing the extra work needed to rearrange it. GPU-resident routing keeps routing metadata on the GPUs, so the CPU can queue work without waiting for that information to be copied back. And grouped GEMM combines many small expert computations so GPUs can execute them more efficiently. Finally, Olmo-core 3 supports MXFP8 , a lower-precision number format that represents some values with fewer bits. This can reduce computation and the amount of data moved between GPUs, as long as those savings outweigh the cost of converting between number formats. We measured MXFP8’s effect on end-to-end training throughput in a controlled benchmark on four NVIDIA B300 GPUs, with work distributed uniformly across experts. With MXFP8 enabled across the parts of the system where it helped most, training throughput was about 21% higher than with BF16, the higher-precision format we used as our baseline, while peak active memory fell from 103 GiB to 95 GiB. Most of the gain came from feed-forward computation and moving data between experts rather than attention alone. These techniques and optimizations have to work together. Speeding up one part of training can create costs elsewhere; faster computation may require more data movement, while moving fewer bits may not help if converting the data takes too long. Olmo-core 3 is built around those trade-offs across the full training process, giving us – and researchers using the open stack – control over how the pieces fit together. Explore our interactive walkthrough to see how data, expert, and pipeline parallelism work together to scale MoE training—from a single GPU to many. Scaling into the trillion-parameter range We’ve benchmarked Olmo-core 3 across a range of configurations on NVIDIA B300 GPUs, including a 1.2-trillion-parameter model with 58.36 billion parameters active per token across 512 GPUs. Its highest observed throughput was 858 TFLOP/s/GPU—a measure of useful model computation per second on each GPU. These tests used random routing to measure system performance, rather than the quality of a trained model. We’ve also experimented with DeepEP v2, an alternative way of handling communication between experts across GPUs, reaching a configuration with 2.38 trillion total parameters. This was a short-capacity test rather than a full training run, so it demonstrates the scale Olmo-core 3 can reach rather than sustained training performance. At these scales, systems performance is only part of the picture. Our technical report also documents experiments that informed how we train MoEs and measure their performance. For example: A score intended to encourage balanced routing could improve even as the actual workload became less balanced. We call this failure token gerrymandering . Lowering experts’ learning rates – the size of their training updates – because they process fewer tokens did not improve results in the model family we tested. GPU calculations took different amounts of time when the values being processed changed, even with the same matrix dimensions. Performance comparisons therefore need matching input values as well as matching shapes. Overlapping communication and computation on separate GPU streams did not always make training faster. In some tests, it slowed end-to-end execution—a reminder that more overlap does not necessarily mean higher throughput. The report explains these findings alongside the approaches we tested and chose not to adopt. Built for the next generation of Olmo, open for everyone Olmo-core 3 is the foundation for what we’re building next.",
+      "published_date": "2026-10-01",
+      "tags": [],
+      "organization": "HuggingFace",
+      "raw_metadata": {
+        "feed_name": "HuggingFace Blog",
+        "feed_url": "https://huggingface.co/blog/feed.xml"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: moe, mixture of experts",
+      "⚖️ 來源權重: rss +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 76,
+    "llm_reason": "重新設計的開源MoE訓練系統，瞄準兆參數規模並開放程式碼",
+    "novelty": 14,
+    "impact": 14,
+    "trending": 15,
+    "practicality": 16,
+    "blog_worthiness": 17
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "量子位",
+      "title": "何愷明團隊新作：看貓片就能學會ARC挑戰",
+      "url": "https://www.qbitai.com/2026/10/499812.html",
+      "authors": [
+        "鹭羽"
+      ],
+      "abstract": "何愷明團隊新作：看貓片就能學會ARC挑戰 鷺羽 2026-10-01 23:06:30 來源： 量子位 用ImageNet訓練encoder 克雷西 發自 凹非寺 量子位 | 公眾號QbitAI 教會AI做ARC抽象推理題的，竟然是貓貓？ 何愷明團隊最新論文提出了 NAT-ARC，一套純視覺的ARC解題方案。 它不靠LLM，用ImageNet上的貓狗花草做預訓練，讓模型學會「看」，再遷移到抽象格子推理上。 結果，NAT-ARC表現最好的單模型在ARC-1上跑出了63.4%的pass@2分數，整合後達到70.2%。 這是純視覺方案首次 逼近專用LLM系統 的水平。 ARC，公認最難的AI視覺智力測驗之一，給你幾個彩色格子的輸入輸出示例，讓你推斷背後隱藏的變換規則，再應用到新格子上。 過去的主流解法清一色把格子翻譯成文字或符號，交給LLM推理。 這篇論文偏不，甚至預訓練階段連ARC格子都沒用上。 模型看真實世界學來的視覺能力，就水靈靈地遷移到了完全抽象的彩色格子推理上。 ARC賽道，視覺方案崛起 ARC全稱Abstraction and Reasoning Corpus，由Keras之父François Chollet在2019年提出。 ARC裡每道題的格式很統一，一塊最大30×30的二維格子，最多10種顏色，題目給2到5組輸入輸出示例，挑戰者需要從示例中推斷出隱藏的變換規則，再把這條規則應用到一個全新的輸入格子上，預測它的輸出。 這些問題聽起來像看圖找規律的兒童智力題，但ARC對AI來說極難。 一方面，每道題的變化規則都不一樣，沒有固定模板可背。 還有就是資料量極少，兩三個示例就要歸納出抽象規則，並且精確執行。 這種組合讓ARC成了 測量AI抽象推理能力的標杆 。 目前ARC賽道上佔據統治地位的幾乎全是大語言模型方案，這些方案的共同思路都是把格子翻譯成文本或符號序列，交給語言模型處理。 視覺路線後來才開始崛起。 一批研究者走了一條完全不同的路，他們不把格子翻譯成文字，改成了用視覺模型直接處理格子影像。 其中最重要的一步來自同一個MIT團隊提出的 VARC ，這個方法把ARC重新定義為條件圖生圖翻譯任務，用19M參數的視覺模型跑到54%。 LoopViT在這個框架上加入迴圈推理機制，18M參數達到65.8%。 Loop-OWM用影片預訓練模型做few-shot，10.6M參數達到68.5%。 這些模型的參數量比LLM方案小了幾個數量級，但效果已經開始追平。 但視覺路線依然有一個結構性短板。 LLM之所以能在ARC上越做越好，核心原因之一是它們通過海量語料預訓練，積累下了通用能力，模型越大、預訓練越充分，在下游任務上的scaling就越明顯。 而多數視覺ARC方案的模型從隨機初始化開始訓練，沒有吃到預訓練的紅利。 在此基礎上，NAT-ARC的目標就是給視覺路線補上預訓練這一步，試著打通它的scaling瓶頸。 看完貓貓，挑戰ARC NAT-ARC的核心思路，是 在VARC的視覺流程前面插入一步ImageNet MAE預訓練 。 MAE，Masked Autoencoder，是何愷明在FAIR時期2022年提出的自監督視覺預訓練方法。 其訓練過程，是把一張圖片遮住大部分割槽域，讓模型從剩下的碎片裡把原圖復原出來。 通過這個任務，模型就可以理解物體的形狀、結構和空間關係。 NAT-ARC的做法是把MAE在ImageNet（包含約130萬張貓狗花草等自然影像的資料集）上訓出來的encoder權重直接拿來初始化視覺編碼器，decoder則從隨機初始化開始訓練。 整個流程分三步。 第一步，用ImageNet上的MAE預訓練encoder； 第二步，在ARC訓練集上離線訓練整個編解碼器； 第三步，在測試時對每道題單獨做LoRA微調。 微調階段，每道題只有2到5組示範對，模型用這幾組示範試圖從中“學會”這道題的規則。 有個細節值得注意，NAT-ARC直接用了MAE的公開checkpoint，沒有額外花一分錢預訓練。 不過，這個checkpoint原本是為更大尺寸的ImageNet圖片設計的，而ARC格子只有64×64畫素，尺寸差異很大。 為了適配，NAT-ARC丟棄了原始的patch embedding和位置編碼，只保留backbone權重，換成2D RoPE作為位置編碼。 簡單說，NAT-ARC只保留了MAE在ImageNet上學到的視覺特徵提取能力，而把與ImageNet影像尺寸綁定的空間感知部分全部丟掉，用更靈活的方式重新學習。 但為什麼看貓狗照片學到的東西，能幫到抽象格子推理？ 論文用注意力視覺化給出了一條線索。 研究人員把三種初始化方式（無預訓練、ImageNet MAE預訓練和ARC風格格子MAE預訓練）的模型放在同一道ARC題前，觀察它們在還沒開始訓練ARC之前的注意力分佈。 結果很明顯，隨機初始化的模型注意力均勻分散，毫無重點；而ImageNet預訓練過的模型已經能區分前景和背景，注意力自動聚焦到格子中有意義的圖案區域上。 這個模型從來沒見過ARC格子，它在ImageNet上學到的「把物體從背景裡認出來」的能力，在ARC格子上天然生效了。 研究人員進一步做了任務級拆解。 他們篩出了15道預訓練後顯著提升的ARC題目，手動標註後發現這些題集中在兩類任務上。 其中6道屬於match-and-copy，模型需要識別出匹配的物件、顏色或圖案，再把對應的結構複製到輸出中； 另外6道屬於connected-component reasoning，模型需要識別、填充或重新著色空間上連通的區域。 這兩類能力恰好對應自然影像裡的視覺先驗。 在ImageNet上看貓學到的「把貓從草地背景裡分出來」，到了ARC裡變成了「把這塊連通的彩色區域從格子裡認出來」。 視覺世界和抽象世界的底層邏輯，在物體分組、圖案匹配、區域分割這些操作上，原來共享同一套表徵。 從貓貓中來，到貓貓中去 NAT-ARC最終在ARC-1上的成績如下。 表現最好的單模型採用huge尺度，參數量0.6B，pass@2成績達到63.4±0.7%。 整合時，研究人員把三種不同預訓練策略（無預訓練、ImageNet MAE預訓練、ARC風格格子MAE預訓練）分別訓出的模型池化在一起做多數投票，拿到70.2±0.6% pass@2，總參數量約2B。 作為參照，專門針對ARC微調的The ARChitects拿到71.6%，用的是8B的語言模型。 視覺路線用四分之一的參數量，打到了專用LLM系統的城下。 數字之外，這篇論文最重要的一個發現，就是預訓練打通了視覺路線的scaling瓶頸。 沒有預訓練時，模型越大效果反而越差；加上預訓練後，scaling才開始代理正收益。 先看訓練曲線。在離線訓練階段，用了ImageNet預訓練的模型收斂速度明顯更快，在base、large、huge三個尺度上都是如此，最終精度也更高。 但最有意思的發現藏在scaling曲線裡。 沒有預訓練時，模型從base到large效能還能漲，但從large到huge反而掉點了。 模型變大，效果變差，這在深度學習裡不是常見現象，說明ARC這個任務的資料量實在太少，模型容量增長帶來的不是更強的泛化而是過擬合。 而加上ImageNet預訓練後，scaling曲線變得健康了，base、large、huge三個尺度一路向上，模型越大效果越好。 論文裡最酷的一個實驗是一個視覺化驗證。 研究人員訓了一個autoencoder，把ImageNet影像對映到一個60×60、10種顏色的離散格子表示上，相當於把一張貓片「翻譯」成了ARC格子。 然後，他們用NAT-ARC對這個格子執行ARC變換，旋轉180°、加一圈藍色邊框，再解碼回畫素。 結果，貓確實被轉了，邊框也確實加上了。這個從貓貓裡訓練出的模型，又在任務裡回到了貓貓之中。 這個實驗把「自然影像和ARC格子共享同一套表徵空間」從統計數字變成了視覺化證據。 在ARC格子上學會的變換規則，可以直接應用到自然影像的潛在表示上，反過來也一樣。 抽象規則和視覺表徵之間的連線，是這兩個世界本來就有的。 作者簡介 論文一作Xiaoman Delores Ding，MIT CSAIL成員，來自何愷明組。 她同時也是VARC的一作，這篇NAT-ARC相當於在自己上一篇工作的基礎上繼續往前推。 其餘作者包括胡珂雅（Keya Hu），是何愷明首批女弟子之一，本科畢業於 上海交通大學 。 還有Katelyn Gan和Victor Yin，同樣來自MIT，兩人都是本科生，且均在CSAIL擔任student researcher。 通訊作者何愷明不必多說，他是ResNet和MAE的作者，從這兩個工作幾乎可以串起近十年視覺AI的主線。 他從進入MIT後持續產出視覺基礎工作，這篇論文用的正是他自己四年前提出的MAE作為預訓練工具，等於用自己的舊武器打通了一條新路。 VARC已被CVPR 2026接收，NAT-ARC是它的直接後續。 這個團隊連續兩篇論文堅持純視覺路線解ARC，在LLM大行其道的賽道上，它們正在用實驗資料不斷突破視覺路線的天花板。 論文地址： https://eccv.ecva.net/virtual/2026/poster/5527 版權所有，未經授權不得以任何形式轉載及使用，違者必究。 何愷明 貓 鷺羽 谷歌Gemini 4突然釋出！RSI加持，GPT和Opus都讓讓 2026-10-01 Qwen一號位定了！劉大一恆接棒 2026-09-23 通用能力不打折，空間具身智慧斷層領先！ZDTaichu5.0-9B國產開源，躋身全球多模態第一梯隊 2026-09-16 今年外灘最特別Agent：能幹活，能陪聊，還會朋友圈拉黑你 2026-09-13 相關閱讀",
+      "published_date": "2026-10-01",
+      "tags": [
+        "資訊",
+        "何愷明",
+        "貓"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "量子位",
+        "feed_url": "https://www.qbitai.com/feed"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: reasoning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 84,
+    "llm_reason": "何愷明團隊用貓狗影像預訓練遷移至ARC抽象推理，純視覺逼近LLM水平",
+    "novelty": 18,
+    "impact": 16,
+    "trending": 17,
+    "practicality": 14,
+    "blog_worthiness": 19
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Apple ML",
+      "title": "RLTL;DR: Self-Improvement by Internalizing Self-Generated Feedback",
+      "url": "https://machinelearning.apple.com/research/rltl-dr-self-improvement",
+      "authors": [],
+      "abstract": "research area Methods and Algorithms conference NeurIPS content type paper published October 2026 RLTL;DR: Self-Improvement by Internalizing Self-Generated Feedback Authors Michael Kirchhof, Eleonora Gualdoni, Andrew Szot, Khashayar Gatmiry, Aryo Lotfi, Abbas Kazerouni, Omar Attia, Sanjoy Chowdhury, Alexander Toshev View publication Copy Bibtex The common paradigm of reinforcement learning with verifiable rewards (RLVR) is to let agents make multiple attempts at a task, and optimize towards the successful ones. This becomes problematic in the realms of self-improvement, where tasks are so difficult that the agent has a low or even no chance of success, and where there are no teacher models or example solutions to distill from. In this paper, we introduce RLTL;DR. After each failed attempt, we show the policy the verifier outputs and let it write its own feedback, in the form of a single TL;DR insight. The next rollout is conditioned on all previous insights, and we sequentially sample rollouts until a solution is found. Moreover, we enable backpropagation on the in-context insights to internalize a direct task → insight mapping. On challenging tool-calling and coding datasets (filtered to Pass@128 = 0), standard GRPO training of a Qwen 3.5 9B Thinking policy stays flat at a Pass@1 of 0% to 1%. RLTL;DR breaks through this learning barrier, achieving a Pass@1 of 14–31% with insights in context during training and, crucially, 12–13% when no insight is in context at eval time. We identify that the key is the task → insight internalization. To study this further, we reduce our approach to SFTL;DR, training only on (task, insight) tuples, without showing or backpropagating on any rollouts. Training on only 4k of these tuples recovers almost the full performance of RLTL;DR and classical SFT on full rollouts. This demonstrates a promising compacted training paradigm of the form “on this sort of task, keep this sort of thing in mind”, which we hope to inspire future research on. Related readings and updates. DR-MPC: Deep Residual Model Predictive Control for Real-World Social Navigation March 6, 2025 research area Computer Vision , research area Methods and Algorithms conference IEEE Robotics and Automation Letters How can a robot safely navigate around people with complex motion patterns? Deep Reinforcement Learning (DRL) in simulation holds some promise, but much prior work relies on simulators that fail to capture the nuances of real human motion. Thus, we propose Deep Residual Model Predictive Control (DR-MPC) to enable robots to quickly and safely perform DRL from real-world crowd navigation data. By blending MPC with model-free DRL, DR-MPC overcomes… Read more Apple Workshop on Machine Learning for Health 2023 November 8, 2023 research area Health Earlier this year, Apple hosted the Workshop on Machine Learning for Health. This two-day hybrid event brought together Apple and the academic research community and clinicians to discuss state-of-the-art machine learning (ML) research in health. Read more Discover opportunities in Machine Learning. Our research in machine learning breaks new ground every day. Work with us",
+      "published_date": "2026-10-01",
+      "tags": [],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "Apple ML",
+        "feed_url": "https://machinelearning.apple.com/rss.xml"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, grpo, rlvr, reinforcement learning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 73,
+    "llm_reason": "自生成回饋內化突破RLVR學習瓶頸，實驗結果顯著且有新範式",
+    "novelty": 17,
+    "impact": 14,
+    "trending": 15,
+    "practicality": 10,
+    "blog_worthiness": 17
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Apple ML",
+      "title": "How Much of a Harness Does a Strong Agent Need for Autonomous ML Engineering?",
+      "url": "https://machinelearning.apple.com/research/harness-autonomous-ml-engineering",
+      "authors": [],
+      "abstract": "research area Methods and Algorithms content type paper published October 2026 How Much of a Harness Does a Strong Agent Need for Autonomous ML Engineering? Authors Kirill Brilliantov†‡, Alejandro Hernández-Cano†‡**, Emmanuel Abbé† View publication Copy Bibtex Recent autonomous machine learning engineering (MLE) agents have made significant progress on public leaderboards. Often motivated by progress stagnation over long-horizon cycles and limited Large Language Model (LLM) primitives, modern MLE agents are deployed on top of increasingly elaborate machinery: multi-agent orchestrators, dedicated retrieval subagents, and more. While such harnesses expand, the use of more primitive but improved coding agents—where LLMs have direct access to the execution environment through read, write, and bash primitives—has received little attention in the field. In this paper we find that, under an equal time budget and the same frontier LLM backbone, open-source state-of-the-art harnesses provide no advantages over a single session of a minimal-harness coding agent baseline, pointing to the backbone as the primary driver for performance. Via a series of large-scale systematic ablation studies, we argue that the machinery layers become redundant in the coding agent setting. We conclude that the effort spent elaborating hand-crafted harnesses around strong models yields poor returns for current MLE benchmarks. † EPFL ‡ Equal contribution ** Work done while at Apple Related readings and updates. SCLATE: A Substrate for Continual-Learning Agent Training and Evaluation September 30, 2026 research area Methods and Algorithms , research area Tools, Platforms, Frameworks Continual-learning agents are systems of models, harnesses, and memory operating over long multi-session horizons. Evaluating and training them requires interleaving tasks with agent-side events such as session stop and start, crons, and memory consolidation. Yet existing benchmarks and training frameworks schedule only the benchmark’s own events, leaving each benchmark and agent pair to build a custom scheduling loop. We present SCLATE, an… Read more AgentBuilder: Exploring Scaffolds for Prototyping User Experiences of Interface Agents January 9, 2026 research area Human-Computer Interaction Interface agents powered by generative AI models (referred to as “agents”) can automate actions based on user commands. An important aspect of developing agents is their user experience (i.e., agent experience). There is a growing need to provide scaffolds for a broader set of individuals beyond AI engineers to prototype agent experiences, since they can contribute valuable perspectives to designing agent experiences. In this work, we explore the… Read more Discover opportunities in Machine Learning. Our research in machine learning breaks new ground every day. Work with us",
+      "published_date": "2026-10-01",
+      "tags": [],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "Apple ML",
+        "feed_url": "https://machinelearning.apple.com/rss.xml"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, multi-agent",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 73,
+    "llm_reason": "系統性消融實驗挑戰複雜multi-agent harness迷思，結論反直覺有力",
+    "novelty": 15,
+    "impact": 14,
+    "trending": 16,
+    "practicality": 10,
+    "blog_worthiness": 18
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Google DeepMind Unveils Gemini 4 Argon with 1M Output Tokens for Coding, Knowledge Work and Cyber Defense",
+      "url": "https://www.marktechpost.com/2026/09/30/google-deepmind-unveils-gemini-4-argon-with-1m-output-tokens-for-coding-knowledge-work-and-cyber-defense/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "Google DeepMind has just announced Gemini 4 Argon , its new frontier model and the first model of the Gemini 4 generation. It targets long-horizon software engineering, enterprise knowledge work in legal and finance, and cybersecurity defense. The biggest technical change is output length. Argon can generate up to 1M tokens in a single response, up from 64K on earlier Gemini models. Google DeepMind described Argon as built for complex workflows across coding, enterprise knowledge work and cybersecurity defense. Google is taking a phased approach. It is participating in the U.S. government’s voluntary process for pre-release model access. It will gather feedback from early testers and iterate on guardrails before a wider release. Pricing is already public. Argon launches at an introductory $2 per 1M input tokens and $10 per 1M output tokens. Cached input tokens get a 95% discount, which works out to $0.10 per 1M. After the introductory period, pricing moves to $4 input and $20 output. Logan Kilpatrick confirmed the introductory $2 in and $10 out pricing. Current frontier APIs cap a single response far lower. Claude Opus 5.5 , Claude Fable 5.1 and GPT-6 Astra each allow 128K output tokens. Google team states that Argon can think deeply and generate hundreds of thousands of tokens in one trajectory. For developers, that means large refactors or long reports without splitting work across turns. The cost is real, though. A full 1M output tokens costs $10 at introductory pricing and $20 after. Google has not disclosed Argon’s input context window. Google compared Argon against GPT-6 Astra, Claude Opus 5.5 and Claude Fable 5.1. Argon leads outright on 12 of 18 benchmarks and ties for first on 1. Artificial Analysis reported that Argon equals GPT-6 Astra on its Intelligence Index at 60% of the cost per task, using discounted prices. Google trained Argon to autonomously find, validate and patch critical software vulnerabilities. Trusted defenders and internal Google teams receive it without cyber guardrails. On CWE-bench v1 , which tests vulnerability remediation, Argon ties for first at 68%. The rival models on that leaderboard run inside their own agent harnesses. Wiz is already using Argon through its Scan for Good initiative. The model found a critical vulnerability in healthcare software used by hospitals worldwide. Google says previous frontier models had missed it. Before broad release, Google is strengthening safeguards in 4 areas: Thousands of Googlers already use Argon. Google shared 4 internal results: Sources: Google , Anthropic Opus pricing , Anthropic Fable 5.1 docs , OpenAI GPT-6 Astra docs , OpenRouter . Benchmark scores are from Google’s published comparison. GPT-6 Astra prices are its short-context tier. Check out the technical details . All credit goes to the researcher of this project. Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post Google DeepMind Unveils Gemini 4 Argon with 1M Output Tokens for Coding, Knowledge Work and Cyber Defense appeared first on MarkTechPost .",
+      "published_date": "2026-09-30",
+      "tags": [
+        "Agentic AI",
+        "AI Infrastructure",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Comparison",
+        "Editors Pick",
+        "Enterprise AI",
+        "For Devs",
+        "Guardrail",
+        "Harness",
+        "Language Model",
+        "Large Language Model",
+        "Machine Learning",
+        "New Releases",
+        "Software Engineering",
+        "Staff",
+        "Tech News",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 74,
+    "llm_reason": "1M輸出token具工程意義，附定價與對比具體可用",
+    "novelty": 11,
+    "impact": 15,
+    "trending": 18,
+    "practicality": 15,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Perplexity Releases pplx-embed-v2-context-9b-preview: A Contextual Embedding Model That Retrieves Answers and Their Supporting Evidence",
+      "url": "https://www.marktechpost.com/2026/09/30/perplexity-releases-pplx-embed-v2-context-9b-preview-a-contextual-embedding-model-that-retrieves-answers-and-their-supporting-evidence/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "Perplexity Research and turbopuffer have released pplx-embed-v2-context-9b-preview , a contextual embedding model for RAG pipelines. Each chunk is embedded with the full document in view. The real change is the training signal. The model learns to retrieve the answer along with the context needed to verify it, not one ‘gold passage.’ P Is it deployable? Yes, as a self-hosted preview. Weights are on Hugging Face under the MIT license. Loading requires transformers>=5.4.0 with trust_remote_code=True . It is not yet on the Perplexity API. The model card notes that weights and interface may change without backward compatibility. RAG systems split long documents into chunks. A chunk often depends on an entity, heading, or definition stated elsewhere. Contextual models address this with late chunking . The document is encoded in one pass, then pooled per chunk. Training, however, usually marks one gold chunk per query. Every other chunk becomes a negative, including the sentences that make the answer checkable. Perplexity lists 3 more problems. Binary labels give a coarse signal. LLM annotation cost grows linearly with dataset size. Labels are also tied to one chunking strategy. The teacher is Perplexity’s query-aware context compression model . It reads the query and document together and scores every token. Each batch samples a random chunking strategy. Chunks are separated by a learned <|chunk_sep|> token and mean-pooled. The teacher runs only during training, so inference adds no latency or storage. The model starts from an in-house 9B ColBERT retrieval model. A linear projection outputs 2048 dimensions. Matryoshka training also supports 1024 dimensions. Quantization-aware training enables native int8 embeddings. The release is a model soup of several checkpoints. Training used roughly 430 datasets covering over 50 languages, with no ConTEB data. An interactive walkthrough of Perplexity’s contextual embedding preview: why isolated chunks fail, how teacher distillation replaces the single gold passage, and what the reported numbers mean. Three lease files share the sentence “Monthly rent is …” . Only one belongs to 5 Park Avenue. Switch modes and run retrieval. Illustrative example modeled on the lease scenario in Perplexity’s post. Scores are for explanation only, not model outputs. A context compression model acts as teacher. It scores every token for the query. Those scores are pooled per chunk (mean of the top n tokens) and turned into a soft target, instead of a one-hot gold label. Teacher target (soft, from token scores) Change the boundaries: the same token scores re-aggregate without re-annotation. That is the “flexible chunk boundaries” property Perplexity describes. Token scores here are illustrative. context-bench (2,099 queries, 38,894 documents, 2,458,072 sentence chunks, exhaustive ranking). Numbers below are as reported by Perplexity at K = 10. Voyage values are computed as Perplexity’s figure minus the stated gap (14.4 and 5.0 points). Other Voyage metrics appear only in Perplexity’s chart and are not shown here. Contextual embeddings store one vector per chunk, same as a normal chunk index. Cost depends on vector size. Perplexity reports that 1024-dim int8 (1 KB) slightly exceeds voyage-context-4 at 2048-dim float32 (8 KB) on its chunk-retrieval suite. Bytes = dimensions x bytes per value. Sensitivity is mean nDCG@10 across 74 MTEB tasks, as reported by Perplexity.",
+      "published_date": "2026-10-01",
+      "tags": [
+        "Agentic AI",
+        "AI Infrastructure",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Context Engineering",
+        "Editors Pick",
+        "Enterprise AI",
+        "For Devs",
+        "Language Model",
+        "Large Language Model",
+        "Machine Learning",
+        "New Releases",
+        "Open Source",
+        "Tech News",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: distillation, quantization, rag",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 62,
+    "llm_reason": "訓練信號設計新穎，解決單一金標段落的檢索缺陷，權重已開放",
+    "novelty": 13,
+    "impact": 10,
+    "trending": 11,
+    "practicality": 14,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "TechCrunch AI",
+      "title": "Amazon releases its own Jev clone as decision models flood the web",
+      "url": "https://techcrunch.com/2026/10/01/amazon-releases-its-own-jev-clone-as-decision-models-flood-the-web/",
+      "authors": [
+        "Tim Fernholz"
+      ],
+      "abstract": "Amazon Web Services released an open source decision model inspired by TypeSafe’s Jev , with AI developers increasingly seeking intelligence that is more suited to computer automation than frontier LLMs. Amazon’s Strands Decider 2B, released the same week OpenAI announced a similar offering , is a high-speed, low-cost way to sort between pre-decided options and deliver a measure of how confident it is in its choice. The model is fully open sourced, available now, and small enough to run locally. Amazon distinguished engineer Marc Brooker came up with the project after seeing Jev and trying to build his own take on such a model. The homebrew project was successful enough — it briefly reached the top spot on the Jevbench ranking for models of its size — that Amazon engineers cleaned it up and released it as an offering from their Strands Labs , an organization developing new tools and protocols for deploying AI agents. Brooker says the need for a tool like this emerged in conversations with AWS customers, whose agentic workflows didn’t always require the capability or cost of a fully featured LLM all the time. “What originally piqued my interest in this class of models was that they make a perfect decider for a workflow step — ‘what is the next thing for me to do here, based on where I am?’” Brooker told TechCrunch. He said it offers customers “a workflow step that can be structured in a way that is more reliable, thanks to the confidence scores, thanks to the closed domain of answers, [and is] lower latency, potentially lower cost.” Like other decision models, Strands Decider is built on the “torso” of an LLM, in this case Qwen3.5-2B, but instead of generating text, it delivers calibrated choices. TypeSafe named their model Jev after the economist William Stanley Jevons, with hopes of invoking his theory that the falling cost of something — like computer intelligence — can, in fact, increase its demand. The fact that dozens of similar models have been produced by researchers since TypeSafe debuted its idea shows the wide interest, but also raises the question of how valuable they can be. Brooker suggests that the challenge will be in optimizing the model’s speedy decision-making without compromising its intelligence. “There is a very careful balance to be found where you want to push its performance on accuracy and calibration on these kinds of tasks, without degrading its performance on understanding different languages, on having the kind of knowledge it has, which is what makes it general purpose and interesting and useful,” he told TechCrunch. Still, he doesn’t necessarily expect the frontier labs to dominate the space, especially since, with smaller markets, the cost to build something interesting is in the hundreds or thousands of dollars. For their part, TypeSafe executives say they are keeping their heads down and improving future models. “I get that people think it’s a gold rush, but they might be underestimating the difficulty of making the models actually smart,” CEO and founder Diogo Almeida told TechCrunch, saying that for now, he didn’t see real competition for his company emerging yet. “The current batch seems more like ML people wanting to implement a cool architecture than a team deeply dedicated to making intelligence useful.”",
+      "published_date": "2026-10-01",
+      "tags": [
+        "AI",
+        "AWS"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "TechCrunch AI",
+        "feed_url": "https://techcrunch.com/category/artificial-intelligence/feed/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agentic",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 72,
+    "llm_reason": "AWS開源小型決策模型，呼應agent工作流程輕量化趨勢",
+    "novelty": 13,
+    "impact": 12,
+    "trending": 15,
+    "practicality": 17,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "blog",
+      "source_name": "Hamel Husain",
+      "title": "Claude’s new auto eval tool",
+      "url": "https://hamel.dev/blog/posts/claude-auto-evals/",
+      "authors": [
+        "Hamel Husain"
+      ],
+      "abstract": "Anthropic released new eval tooling for Claude Code . Their claude-api plugin now includes a new build_eval and hill-climb command that helps you build evals, check the graders, and improve your application against them. I usually don’t review eval tools because software changes so often that reviews have a short shelf life. But a first-party tool from Anthropic is likely to influence how people approach evals, so I wanted to try it and share what I found. Isaac Flath and I livestreamed ourselves using it on conversation traces from an apartment leasing assistant. Here’s what we found: Claude started by suggesting several potential failures, then asked us to pick one straight away to turn into an eval. It gave us the below menu of options, with call-transfer rules as the recommended choice. We hadn’t yet reviewed the conversations ourselves, so it was hard to know if this was a real failure or worth prioritizing. Despite this, we went ahead with the recommended choice, because we figured that’s what typical users would do. I believe you should be looking at data first to inform your understanding and prioritize which evals to write. An agent can help you find issues, but you still should do error analysis to decide which failures deserve attention before proceeding. Next, Claude created Markdown files for looking at data associated with the call-transfer failure. In the screenshot below, Claude asks us to skim inputs.md and “tell it” which labels are wrong. That meant reading long conversations in an editor and reporting corrections separately in a chat. We found this very silly as we were using a coding agent, so it should have built an annotation app that made the conversations easy to read and let us leave feedback in-situ. We eventually asked Claude to build a web app for us and used that instead. Later in the workflow, Claude made an initial attempt at creating an evaluator for the call-transfer failure. It presented aggregate label counts and asked us, “Would you have scored any case differently?” without giving us enough information to know if the labels were correct. A recurring theme of the workflow was to jump too fast into creating artifacts or asking us for approval without helping us understand the data. Next, the tool created a call-transfer evaluator that checked four different failures at once: There were too many things bundled into this evaluator. I would prefer to scope the eval to focus on one error at a time, or at the very least separate the evals into those that needed a code-based eval vs a LLM as a Judge. Claude’s description of the evaluator was also confusing: protocol_ok is the headline. A case passes only if all four checks pass. On “should not transfer” calls, protocol_ok is 1 if no transfer happened. This AI slop is hard to read. I’d much rather see the code or the judge prompt so I can understand whats being created. I’ve found that it always pays to read the prompt , especially for something as important as an eval. Below is a screenshot of what this part of the workflow looked like: I was impressed by this plugin’s out-of-the-box ability to discover issues that other auto-eval approaches haven’t been able to find! It found issues with human handoff, formatting, voice agents, and more. It’s still better to look at your data iteratively with an agent, but this was the strongest performance I’ve seen with a more “one-shot” issue discovery approach. Anthropic’s blog post introducing this tool broadly conveys thinking that I agree with, such as the importance of looking at data, sampling intelligently, not saturating your own evals, etc. I’m really happy more people are thinking about evals this way. I’d hold off for now. I’d want the workflow to help me explore the data before committing to an evaluator, with a better review interface from the start. Additionally, I’m already quite happy with what coding agents can do using these Eval skills Shreya and I put together which is less opinionated (but more flexible). I’ve since spoken with the author of the Claude eval plugin. He was appreciative of the feedback and said he’d update the plugin accordingly, so I expect it to change soon. It could be worth revisiting in the future. Even as this plugin changes, I hope this walkthrough helps you assess other eval tools. Make sure the tool helps you understand your data before choosing evals and inspect its judgments carefully. I believe much of the eval workflow should happen in a web application rather than chat to remove friction from data exploration and annotation. Remember, if an eval tool doesn’t put looking at data at the center of your workflow, it’s not worth using. Thanks to Isaac Flath for reviewing this article and joining me for the livestream .",
+      "published_date": "2026-09-30",
+      "tags": [
+        "blog"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "blog_name": "Hamel Husain",
+        "blog_url": "https://hamel.dev/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: blog +15"
+    ],
+    "llm_score": 70,
+    "llm_reason": "資深從業者實測Anthropic新eval工具並提出批判性觀察",
+    "novelty": 10,
+    "impact": 13,
+    "trending": 14,
+    "practicality": 16,
+    "blog_worthiness": 17
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "NVIDIA Developer",
+      "title": "Build Applications on NVIDIA BlueField Faster with NVIDIA DOCA Agent Skills",
+      "url": "https://developer.nvidia.com/blog/build-applications-on-nvidia-bluefield-faster-with-nvidia-doca-agent-skills/",
+      "authors": [
+        "Tanya Lenz"
+      ],
+      "abstract": "AI agents are becoming a standard part of development workflows, but general-purpose agents weren’t built with specialized infrastructure software such as NVIDIA DOCA in mind. Without domain-specific knowledge, agents may fall back on guesswork. This is an issue in infrastructure development because every correction cycle takes time away from deployment. DOCA is the unified software platform that unlocks the full potential of NVIDIA BlueField data processing units (DPUs) for agentic AI infrastructure. It spans accelerated networking, AI-native storage, in-silicon security , telemetry, and lifecycle management. It’s the development platform for teams building on NVIDIA BlueField. DOCA AI agent skills are now available on GitHub. These skills provide a structured, verified foundation to address where general-purpose AI agents fall short on DOCA development. They provide agents with verified API signatures, hardware capability requirements, and build constraints. This post explains what DOCA AI agent skills are and how they perform across four impactful DOCA development scenarios. It includes a side-by-side demo and how to get started using DOCA agent skills to build faster and ship more stable code on BlueField infrastructure. What are DOCA AI agent skills? DOCA AI agent skills are a standardized way to give AI agents new capabilities and expertise. The lightweight, open format is built around a SKILL.md file containing real API signatures, hardware capability requirements, and build constraints. Together, the skills provide agents with a reasoning and operational framework for DOCA. Skills span the full DOCA library, including Flow, GPUNetIO, PCC, and more. They don’t replace the agent, but give it the domain knowledge to reason like an experienced DOCA developer. Each skill is scoped to a specific DOCA component or workflow. When an agent loads a skill for DOCA Flow, for example, it gets the real function signatures, the correct pkg-config module names, the build-container constraints, and the common failure modes and their mitigations. The skills are not just a summary of documentation, but a machine-readable specification the agent can reason against directly. Why do AI agents need a foundation for DOCA development? When you ask a general-purpose AI agent to set up a DOCA Comch (Comm Channel), configure an RDMA context, or debug a link failure in a DOCA Flow program, the agent is working from pattern-matching across general training data—not from verified DOCA API contracts, hardware capability manifests, or build system specifications. The DOCA library surface is large, rapidly evolving, and hardware-specific in ways that general training data does not capture. There is no machine-readable contract for agents to reason from, no guaranteed stable interface between what the agent knows and what the hardware and software actually support. To quantify the gap, the NVIDIA team ran 65 real DOCA developer prompts comparing agent performance with and without the skills. These prompts ranged from a one-line question to detailed multi-requirement prompts, graded against a required-answer checklist (a specific set of pass/fail criteria for each task). Without the skills, agents consistently made the same mistakes, including: Misuse of APIs and flags : 59/65 prompts Hardware capability not verified : 46/65 prompts Wrong tool routing : 39/65 prompts Skipped smoke tests : 34/65 prompts Guessed versions : 30/65 prompts These are consistent failures. Without skills, agents satisfied only 19% of graded checklist items on real DOCA tasks. With skills, they satisfied 100% across all 65 prompts. Without the skills, every agent mistake becomes a developer debugging session, and a longer path to working code. What are the benefits of DOCA agent skills for developers? DOCA agent skills allow you to equip agents with domain expertise. This means you can build faster, ship more stable code, and deploy with fewer unknowns. Build faster: Skills give the agent verified API calls from the start, so you can focus on writing code, not corrections. Ship more stable code: With skills, the agent checks what the device actually supports before writing a single line, not after running it on real hardware. Deploy with fewer unknowns: The agent applies preflight checks, rollback plans, and cold power-cycle awareness before touching hardware, not after something goes wrong. The combined effect is fewer correction cycles between task and working code. For teams using AI agents on DOCA applications at scale, that reduction compounds across every developer, task, and deployment. Use agent skills to accelerate DOCA development Each of four capabilities are detailed in the following sections. Each capability is illustrated with a real prompt from our 65-prompt evaluation and the benefits of using the skill. Build faster with real APIs What DOCA AI agent skills address: Misuse of APIs: agents inventing functions, flags, and image tags that don’t exist. This was the most frequent failure mode in our evaluation, affecting 59 of 65 prompts. Without skills, agents generate code referencing DOCA functions that don’t exist in the library, flags with incorrect names, and image tags that fail at runtime. As the developer, you end up debugging an error you didn’t introduce (the agent’s invention). Prompt: “I have a host with a BlueField-3 DPU and DOCA installed. I want to set up a DOCA Comch (Comm channel) between a host-side process and a DPU-side agent so they can exchange small control messages (under 4 KiB each, a few times per second).” The AI agent with skills uses only real DOCA Comch API calls: correct argument order, verified flags and lifecycle sequence, nothing invented. When the agent’s first response uses the correct API surface, you can move directly to integration rather than starting with a debugging session. Across 63 prompts that tested API accuracy, the with-skills result was better every time. Verify hardware before writing any code What DOCA AI agent skills address: Agents writing code for features the device doesn’t support. Hardware capability verification was missed in 46 of 65 prompts without skills. The failure pattern is consistent: the agent assumes a capability is present, generates code against it, and the developer discovers the mismatch only when running on real hardware. At that point, the fix requires understanding which capability check was skipped, reworking the code path, and retesting. Prompt: “I have two hosts wired together with a high-speed InfiniBand fabric. Each host has one NVIDIA GPU and one ConnectX NIC, and DOCA is installed on both. I want to measure the latency of an RDMA WRITE work request when the WR (work request) is posted from a CUDA kernel on the GPU (not from a host CPU thread) so I can decide whether to commit my application to the GPUNetIO Verbs interface.” The AI agent with skills checks what the device actually supports before writing any code. It verifies GPU-NIC PCIe topology, confirms GPUNetIO support before committing, and names alternative API surfaces and when each applies. The AI agent with skills validates the preconditions for the answer against the actual hardware in use, before any code is written. Ship code that compiles and links What DOCA AI agent skills address: Agents producing code that won’t compile or link in the DOCA container. Build correctness was tested on 10 of 65 prompts. This is a smaller subset, but when it applies, development cannot proceed. Prompt: “I’m trying to build a DOCA Flow program from one of the shipped samples. The compile step works but the link fails: undefined reference to doca_flow_init. How do I debug this?” The AI agent with skills identifies the undefined reference as a link-time failure, uses the build tool (pkg-config) to look up the correct linker flags for doca-flow. An agent that generates an incorrect linker flag sends the developer down a path that won’t resolve.",
+      "published_date": "2026-10-01",
+      "tags": [
+        "Agentic AI / Generative AI",
+        "Data Center / Cloud",
+        "Developer Tools & Techniques",
+        "Agent Skill",
+        "AI Agent"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "NVIDIA Developer",
+        "feed_url": "https://developer.nvidia.com/blog/feed/"
+      }
+    },
+    "rule_score": 38.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, reasoning",
+      "⚖️ 來源權重: rss +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 52,
+    "llm_reason": "Agent Skills標準化DPU開發知識，開源可用但應用場景窄",
+    "novelty": 8,
+    "impact": 6,
+    "trending": 11,
+    "practicality": 15,
+    "blog_worthiness": 12
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Cohere Releases Embed 5: How It Compares to Voyage 4 Large, Gemini Embedding 2, and OpenAI",
+      "url": "https://www.marktechpost.com/2026/10/01/cohere-releases-embed-5/",
+      "authors": [
+        "Sana Hassan"
+      ],
+      "abstract": "Cohere has released Embed 5 , a new embedding model family. It targets enterprise search, RAG, and agentic retrieval. The model family ships in 2 tiers. Embed 5 Pro targets maximum retrieval quality. Embed 5 Fast targets latency and cost on the live query path. Both accept text, images, and fused text plus image inputs. Both cover 100+ languages and read up to 128K tokens. The key design choice: Pro and Fast share 1 embedding space. You can index with one and query with the other. Is it deployable today? Yes, both tiers are generally available on the Cohere API and Model Vault , Microsoft Foundry , and Amazon SageMaker . Private VPC or on-prem serving runs through vLLM. The API model IDs are embed-v5.0-pro and embed-v5.0-fast , per Cohere’s model docs . Both output 2048, 1536, 1024, 768, 512, or 256 dimensions, with 2048 as default. Embeddings come back as float, int8, or binary. Pro costs $0.12 per 1M text tokens. Fast costs $0.08. Image inputs cost $0.40 per 1M tokens on both. Embed 5 can embed a page image directly. It can also fuse an image with its metadata into a single vector. That is important for scanned pages, slide decks, schematics, and charts, where text extraction drops information. Cohere tested every corpus and query pairing across 40 development datasets. Normalized to Pro plus Pro at 100, a Pro index queried with Fast scored 98.4. An all-Fast setup scored 96.6. Cohere’s recommended pattern is to index with Pro and query with Fast. One constraint: both sides must use the same output dimension. The split targets agentic workloads. An agent may issue dozens of searches per task, and query latency compounds. Cohere team reports Fast processed 377.3 documents per second versus 159.7 for Pro. On ViDoRe V3 , Embed 5 Pro averages 85.8, an 8.8-point gain over Embed 4. Fast averages 84.5. Voyage 4 Large scores 83.7, Gemini Embedding 2 scores 83.2, and OpenAI text-embedding-3-large scores 75.5. On Cohere’s parsed-PDF suite, Pro leads at 84.8 against Voyage 4 Large at 83.6. Finance is the strongest showing. Pro ranks first on FinanceBench (80.1), FinQA (90.0), and ViDoRe V3 Finance (85.0). Fast ranks second on all 3. Multilingual results are mixed. Pro leads the European-language average at 77. However, Gemini Embedding 2 beats Pro on 9 of 10 further languages in Cohere’s own results table . Those include Japanese, Arabic, Hindi, and Telugu. One important thing to note . Most numbers use RCP-nDCG@10 , a new Cohere metric. It reorders a fixed candidate set, so it measures reranking quality more than first-stage retrieval. Cohere published the evaluation code , but independent replication is still pending. Embed 5 uses Matryoshka representation learning plus lower-precision outputs. A 2048-dim float32 vector needs 8 KB. A 1024-dim int8 vector needs 1 KB. A 256-dim binary vector needs 32 bytes. Across 100M chunks, raw storage drops from about 819 GB to 3.2 GB. Cohere recommends 1024-dim int8 as the default, citing near-full-precision quality. Text goes in, a vector of numbers comes out. Search then ranks documents by how close their vectors sit to the query vector. Press the button to watch it run. Documents ranked by cosine similarity Documents come from Cohere’s launch code sample. Vector bars and similarity scores here are illustrative, not real model output. Pro and Fast write vectors into the same space. Pick which model indexes the corpus and which one embeds the query. Quality is normalized so Pro plus Pro equals 100. Cohere’s recommended pattern: index with Pro, query with Fast. Ring zoomed to the 90 to 100 range so small gaps are visible. Document throughput (docs per second, Cohere-measured) Price per 1M text tokens: Pro $0.12, Fast $0.08. Images cost $0.40 per 1M tokens on both tiers. Matryoshka training lets you truncate dimensions. Lower precision outputs cut bytes further. Change the settings and watch storage move. Chunks in your index: 100,000,000 Math: dims x bytes per value (4, 1, or 1/8). Cohere recommends 1024-dim int8 as the default sweet spot. Binary trades some accuracy and suits a first pass before reranking. Cohere-reported averages using its new RCP-nDCG@10 metric. Treat these as vendor numbers until independent runs land. Source: Cohere Embed 5 launch post, Sep 30 2026. RCP-nDCG@10 reorders a fixed candidate set, so it reflects reranking quality more than first-stage recall. A longer context means fewer chunks for long filings and manuals. Press play to compare maximum input length per call. Limits taken from each vendor’s model docs. 128K is shown as 131,072 tokens for bar scale. Both tiers are generally available. Tap a route to see what it gives you.",
+      "published_date": "2026-10-01",
+      "tags": [
+        "Agentic AI",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Editors Pick",
+        "Embedding Model",
+        "Enterprise AI",
+        "For Devs",
+        "Language Model",
+        "Large Language Model",
+        "New Releases",
+        "Staff",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, rag",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 57,
+    "llm_reason": "新嵌入模型家族發布，共享嵌入空間設計實用但屬漸進式改良",
+    "novelty": 8,
+    "impact": 10,
+    "trending": 11,
+    "practicality": 16,
+    "blog_worthiness": 12
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "Building ambient agents with Amazon Bedrock AgentCore: From event-driven signals to human-in-the-loop workflows",
+      "url": "https://aws.amazon.com/blogs/machine-learning/building-ambient-agents-with-amazon-bedrock-agentcore-from-event-driven-signals-to-human-in-the-loop-workflows/",
+      "authors": [
+        "Juan Albarran"
+      ],
+      "abstract": "Teams that process documents at scale know the routine: files land in storage, someone notices, opens each one, decides what it needs, and routes it for review. Monitoring alerts queue up the same way, waiting for a person to act on them. The hours lost to manual triage are the operational problem ambient agents solve. Imagine a document lands in your Amazon Simple Storage Service (Amazon S3) bucket and within seconds a job appears on your Jobs page, ready to run (or already running if you configured it that way). The agent analyzes the file, surfaces the findings, and asks you for approval before taking the next step. The event itself is the prompt. That is an ambient agent: it responds to event streams, pauses for human input through a single ask_human tool when it needs to, and resumes from where it left off once the human answers. Figure 1: Overview of an ambient agent responding to an event on AgentCore Runtime and pausing for human input Most AI agent experiences today follow a different pattern: a user opens a chat interface, types a prompt, and waits for a response. That works for one-time questions, but it limits the agent to one conversation at a time and requires a human to describe what happened before anything can act on it. For scenarios where agents should react to events happening across your infrastructure (file uploads, database changes, scheduled tasks, system alerts), that chat-only model breaks down. Ambient agents describe a different paradigm, one that LangChain among others has articulated. Instead of waiting for users to initiate conversations, ambient agents listen to an event stream and act on it, potentially handling many events in parallel. They aren’t solely triggered by human messages, and multiple agents can run simultaneously. Crucially, they aren’t fully autonomous: a production design pays careful attention to when the agent pauses to interact with humans. When a signal fires, the agent executes its workflow and only interrupts a human when clarification, approval, or review is needed. This human-in-the-loop component lowers the stakes for deploying agents to production, builds user trust, and lets agents learn and improve over time through feedback. Organizations running on AWS already have the event-driven infrastructure in place: Amazon S3 event notifications, Amazon EventBridge rules, AWS Lambda triggers, and Amazon DynamoDB streams. The missing piece is connecting those event sources to intelligent agents that can reason about what happened, act, and loop in humans when the situation calls for it. Fully automated pipelines like AWS Step Functions can orchestrate workflows but can’t reason through ambiguity or ask clarifying questions. Chat-based agents can reason but require someone to start the conversation. Ambient agents bridge this gap. Amazon Bedrock AgentCore is a platform to build, connect, and optimize agents at scale, with any framework or model. AgentCore Runtime provides the execution environment that makes this pattern work: container-based agent hosting with support for long-running workloads, built-in session isolation, and integration with Amazon Bedrock foundation models. AgentCore Runtime supports sessions long enough to cover the signal → agent → human-in-the-loop (HITL) flow shown here. The reference implementation caps each agent turn at the Lambda 15-minute timeout, which is more than enough headroom in practice. Combined with AWS Lambda for event processing and Amazon DynamoDB for state management, the result is a fully serverless ambient-agent platform. In this post we walk through the pattern end-to-end on Amazon Bedrock AgentCore. You will come away understanding: Before deploying the reference implementation, make sure you have the following in place: Before we get into the architecture, it helps to look at what makes an ambient agent different from a typical chatbot and at the building blocks the rest of the post relies on: the event-driven trigger model, the ambient signal abstraction, and the single human-in-the-loop tool that ties them together. User-initiated agents follow a request-response pattern: Ambient agents follow an event-driven pattern: The key difference is the trigger mechanism. Ambient agents are activated by system events rather than explicit user requests, which makes them a natural fit for document-processing pipelines, monitoring and alerting, scheduled analysis, and multi-step workflows that need approval gates along the way. An ambient signal is a configuration that maps an event source to an agent. When the event occurs, the platform automatically creates a job for the agent. What happens next depends on one setting on the signal: The pattern covers several signal event sources. The reference sample ships the first two. The rest are extension points you add by writing a new handler Lambda function and a corresponding form field on the Signals page: Ambient agents need structured ways to interact with humans. In this sample the agent surfaces those interactions through a single tool ( ask_human ) and returns a canonical response envelope. In that envelope, status is one of completed , interrupted , or error , and the matching field is result , question , or error . The platform additionally threads session_id and job_id through every response so continuation turns can be correlated. Those are correlation metadata, not part of the core contract your agent must implement. When the agent returns interrupted , the platform moves the job into interrupted status and sets its requiresAction flag to true . The reference React frontend surfaces these on the Interrupted tab of the Jobs page with a warning indicator on each row, so there is no separate review queue to poll. The same Jobs view shows pending questions, proposed actions awaiting approval, final results, and failed jobs, giving a user one place to see everything their agents are doing instead of monitoring multiple chat windows or email threads. The same mechanism supports several prompting patterns that a reader may recognize from the wider agents literature: a Notify turn where the agent simply reports a result, a Question turn where it asks for clarification, a Review turn where it proposes an action and waits for APPROVE / REJECT / MODIFY , and an Error turn where the failure is captured on the job record and the user decides whether to retry. These are conventions for how the agent writes its question, not separate runtime modes. At the platform level there is exactly one code path and exactly one envelope. Figure 2: The Notify, Question, and Review human-in-the-loop patterns, all surfaced through the ask_human tool The platform is a small set of serverless components stitched together by an event pipeline. This section walks through the end-to-end flow first, then describes each component in turn. Events flow through the platform end-to-end as follows. Amazon S3 emits an s3:ObjectCreated notification, which a Signal Processor Lambda function receives. The Signal Processor queries a global secondary index (GSI) on the ambient-signals table to find any matching signal for the event bucket, then creates a job record for each match. The API tier (or the scheduler) enqueues the job onto an Amazon SQS queue. The same Job Execution Lambda function that serves the API path also drains the queue through an attached SQS event source, invokes the agent on Amazon Bedrock AgentCore Runtime, and writes results (and any human-input requests) back to Amazon DynamoDB. A React frontend served from Amazon S3 through Amazon CloudFront polls a small Amazon API Gateway and Lambda tier for updates and lets the user respond to pending interactions. Figure 3: Event flow from Amazon S3 through Amazon SQS and AWS Lambda to AgentCore Runtime, with state in Amazon DynamoDB and a React frontend With the architecture in mind, the next step is wiring up the event source that turns an Amazon S3 upload into an agent job.",
+      "published_date": "2026-10-01",
+      "tags": [
+        "Amazon Bedrock",
+        "Amazon Bedrock AgentCore",
+        "Intermediate (200)",
+        "Technical How-to"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 66,
+    "llm_reason": "提出事件驅動ambient agent架構模式，具實作參考價值",
+    "novelty": 11,
+    "impact": 12,
+    "trending": 14,
+    "practicality": 15,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Amazon Science",
+      "title": "Graph-centric agentic intelligence",
+      "url": "https://www.amazon.science/blog/graph-centric-agentic-intelligence",
+      "authors": [],
+      "abstract": "Graphs encode relationships. In a world where AI agents need to reason about complex systems, not just retrieve information, graph structure provides the scaffolding for causal inference, dependency tracking, and compositional reasoning. Unlike tabular or unstructured data, graphs preserve the topology of real-world systems: what connects to what and how influence flows. For networks, this is not a metaphor. Networks are natively graphs. Every device, link, open communication channel, and service dependency is a vertex or edge in a structure that can span millions of elements. The question facing operational teams today is not whether to represent networks as graphs but how to let AI agents reason over that structure autonomously, adaptively, and at speed. This post traces how graph intelligence evolved across scientific research on networks, from passive modeling to active agentic reasoning, and demonstrates agentic reasoning through cascaded graph analytics for root cause identification. For the solution architecture and a guide to common routines (a runbook), see our companion post, “Beyond correlation: Finding root causes using a network digital twin graph and agentic AI”. Graphs for networks The earliest use of graphs for networks was to represent topology — to model physical connectivity so that operators could compute paths and isolate failures in seconds rather than hours. Knowledge graphs and ontologies enhanced topological models by adding semantics, defining, for instance, what a \"cell\", an \"SLA breach\", or an \"escalation procedure\" is and how these concepts relate to each other across vendors and network generations. This enabled machine-readable operations and multivendor interoperability. Once the graph carried both structure and semantics, the next step was encoding causation. Alarm correlation graphs, which map relationships among network-generated alerts about phenomena like lost connections or network breaches, introduced hierarchical relationships between network events. Walking upstream through the graph condensed tens of thousands of raw alarms into a single causal chain within minutes, a significant advance over manual correlation but one that required predefined alarm hierarchies. Dependency graphs removed that requirement: autogenerated in real time from software-defined-networking (SDN) and network functions virtualization (NFV) controllers, they enabled Bayesian fault localization at 95% accuracy in under 30 seconds with no manually authored rules. Causal subgraphs answered not just where but why. Live alarms converted into directed acyclic graphs revealed the propagation paths of key performance indicators (KPIs), giving operators evidence rather than predictions. Graph neural networks (GNNs), which produce vector representations of graph nodes for use in downstream applications, learned what topology and causal structure alone could not show: hidden intercell dependencies, data patterns that would have emerged had failed nodes not stopped reporting, and spatiotemporal dynamics. These were sequential scientific advances, each addressing a limitation of its predecessor. Today they converge. A single network can be simultaneously represented as a topology graph, enriched with ontology semantics, annotated with temporal KPIs, and reasoned over by GNNs, all coordinated by an agentic layer that selects the right graph tool for each failure pattern. The graph went from a passive data model to an active agentic reasoning substrate. Root cause analysis Root cause analysis is the natural proving ground for graph intelligence. When a network fails, finding the root cause can take hours. For complex multilayer failures, remediation in traditional network operations centers (NOCs) averages four to five hours and can extend to days. The bottleneck is not engineering expertise; it is cognitive overload. Human operators cannot correlate hundreds of alarms, configuration files, and telemetry data across thousands of nodes faster than customer impact accumulates. Traditional approaches rely on temporal correlation: if alarm A precedes alarm B, the system infers that A caused B. This heuristic fails in complex topologies where failures propagate through multiple parallel paths, polling intervals (i.e., intervals between regular system state queries) make timing unclear, and the true root cause may generate no alarm at all. To address the problem of root cause analysis in complex networks, we designed and developed an approach combining cascaded graph algorithms with agentic-AI execution. The graph algorithms provide mathematical precision in the analysis of network topology; the agentic layer provides adaptive intelligence for applying those algorithms correctly across diverse failure scenarios. We demonstrated our approach with NTT DOCOMO at the Mobile World Conference (MWC) earlier this year, achieving root cause analysis in minutes on commercial networks. Three pillars underpin our design: graph modeling, graph-centric analytics, and agentic orchestration. 1. Graph modeling: The digital twin We represent the network as a continuously synchronized graph whose vertices are devices with attributes and whose edges represent connections. This “digital twin” of a physical or software-defined network ingests network dependencies, live alarms, and KPIs from multiple data sources across network segments and layers, transforming them into a topology-aware data structure that all analytics operate on. 2. Graph-centric analytics: The cascaded pipeline Against this graph, the system orchestrates a three-stage cascade of graph algorithms, each stage narrowing the search space for the next: Stage 1, decomposition Based on the number and strength of connections, we identify the most-connected parts of the topology. When failures sever links, the network may fragment into disconnected subgraphs, which allows us to immediately localize analysis to boundary nodes and prevent wasted computation on unaffected regions. This narrows the candidate set from thousands of nodes to hundreds. Stage 2, clustering Within the affected components, community detection algorithms (Louvain or label propagation) group nodes that frequently interact or share dependencies. This process reveals functional groupings and distinguishes failures affecting a single cluster from those propagating across cluster boundaries. The number of candidates narrows from hundreds to tens. Stage 3, centrality ranking Within the identified clusters, a suite of centrality algorithms ranks candidates according to the likelihood that they are the root cause. Standard centrality algorithms measure structural importance: PageRank determines which node is most central within the subgraph; degree centrality determines which node has the most connections; and closeness determines which node is nearest to everything. These answers are static; they don't change when a failure occurs. For root cause analysis, the question is fundamentally different: which node is most important relative to this particular failure? The alarming nodes define the reference frame. Every centrality measure must be recomputed, not against the full graph, but against the failure set. We apply this principle, conditioning on the alarm set, across three centrality algorithms in the suite. Personalized PageRank works by performing a random walk along network paths, evaluating the number and importance of each node’s connections. Our version of the algorithm seeds the random walk from nodes that are issuing alarms (“alarming nodes”). The ranking component of the algorithm concentrates on common ancestors of alarming nodes, tracing faults upward in hierarchical topologies. Our algorithm for computing degree centrality counts only edges to alarming nodes: a gateway with 50 total connections but zero to alarming nodes scores zero; a switch with five alarm connections scores five.",
+      "published_date": "2026-10-01",
+      "tags": [],
+      "organization": "Amazon",
+      "raw_metadata": {
+        "feed_name": "Amazon Science",
+        "feed_url": "https://www.amazon.science/index.rss"
+      }
+    },
+    "rule_score": 48.0,
+    "rule_reasons": [
+      "🏢 頂流機構: Amazon",
+      "🔥 熱門關鍵字: agentic, reasoning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 38,
+    "llm_reason": "概念性闡述圖譜+agent用於網路維運，缺乏技術細節與程式碼",
+    "novelty": 6,
+    "impact": 7,
+    "trending": 10,
+    "practicality": 6,
+    "blog_worthiness": 9
+  },
+  {
+    "item": {
+      "source": "blog",
+      "source_name": "Simon Willison",
+      "title": "Claude Opus 5.5, GPT-6 Sol, GPT-6 Luna, and a new price war",
+      "url": "https://simonwillison.net/2026/Sep/22/opus-and-sol-and-luna/",
+      "authors": [
+        "Simon Willison"
+      ],
+      "abstract": "Yesterday was Grok 4.7 ( pelicans ) and MiMo v2.6 Flash/Pro ( more pelicans ). Today Anthropic released Claude Opus 5.5 , and around an hour later OpenAI released GPT-6 Sol and GPT-6 Luna . It’s going to take a while to get a good read on all of these new models, but here are my impressions so far. GPT-5.6 Luna was already my favorite model for building applications against, because it combined excellent performance with being really cheap . Somehow GPT-6 Luna is half the price of that again—and GPT-6 Sol had a similar reduction compared to GPT-5.6 Sol. Here’s what the pricing landscape looks like today: Note that GPT-5.6 has a scheduled 25% price increase for November, so GPT-6 is half the price of the promotional pricing for those models. (With GPT-5.6 Terra priced the same as GPT-6 Sol, any remaining reasons to use Terra just evaporated.) It’s hard to overstate how competitive this pricing is. Grok 4.7 priced itself at $2/$6, less than half the price of GPT-5.6 Sol, but is now equally priced to GPT-6 Sol on input and closer on output. At $0.10/$0.50 GPT-6 Luna is one of the cheapest models OpenAI have ever released, beaten only by the far weaker GPT-4.1 Nano ($0.10/$0.40, April 2025) and GPT-5 Nano ($0.05/$0.40, August 2025). I rendered pelicans for GPT-6 Luna and for GPT-6 Sol , then I combined them all together in this comparison grid along with the GPT-5.6 pelicans. I like how you can instantly see that the 5.6 family chose bolder, brighter colors, while the 6 family is a lot more muted. I still think GPT-6 Astra on max produced the best pelican. Opus 5.5 looks like it addresses the biggest complaints people had about Opus in terms of its communication style. Thariq Shihipar : Opus 5.5 is the result of your feedback. It communicates clearly, it’s cheaper per token than Opus 5.0 with the intelligence of Fable 5.1 it’s very token efficient and works across every effort level. It’s also meant to be better at Blender . I’m looking forward to putting it through its paces there. Opus 4.5, 4.6, 4.7, 4.8, and 5 all shared the same price: $5/million tokens for input and $25/million for output. 5.5 is a 20% reduction—$4/million and $20/million. The price for cache reads fell 60%. That’s significant for longer agentic conversations, where 90%+ of input tokens are processed at cached token prices. The new price for Opus 5.5 is the same as the price for GPT-5.6 Sol, but that was before OpenAI dropped their Sol prices by half. GPT-6 Astra and Claude Fable 5.1 are both priced at $10/million input and $50/million output. The price war currently affects the next tier of models below that. Anthropic say that Sonnet 5.5 and Haiku 5.5 are coming soon. It’s going to be interesting to see if Haiku can regain its price competitiveness at the lower end, given current Haiku 4.5 is $1/$5 while the latest GPT-6 Luna is one tenth of that price at $0.10/$0.50. In a first for my \" Generate an SVG of a pelican riding a bicycle \" test, Claude Opus 5.5 at \"max\" thinking level failed to return a response! It started by calling this “a classic test request”, and then thought really, really hard about what it was doing: This is a classic test request, so I want to plan out a well-composed pelican with its distinctive beak and pouch riding a bicycle with proper wheels, frame, and pedals, set against a simple sky and ground backdrop. [...] Verifying the shin length checks out at roughly 95.2, close enough. Now I’m working out the near leg path from hip to knee to ankle, then sketching the foot shape resting on the pedal — outlining the heel, toe tips, and sole contour with a path using lines and curves to sit naturally on the pedal surface around y=478-494. [...] I like the fish sticking prominently out of the basket with the pelican eyeing it as a fun detail worth keeping. I’m also confirming the eye placement near the bill base matches typical pelican anatomy, and considering giving it a slightly happier expression. [...] The far leg reads correctly as passing behind the frame, so I’m moving on to check the chainring teeth and confirm layer ordering—the far crank arm should be mostly hidden by the seat tube and chainring. I’m settling on the final SVG’s width and height attributes alongside the viewBox to ensure proper scaling, noting there’s no text so no font-family is needed. [...] I was so excited to see this pelican... but then it stopped . Opus 5.5 has a 128,000 maximum output token limit (as do the other Claude models), and it hit that while it was still reasoning about the SVG! I tried a second time and got the same result. This makes me suspect that “max” is effectively useless—if it over-thinks to breaking point on a stupid SVG prompt I don’t trust it not to do the same for more interesting work. (Those two failures each cost me $2.56 and took nearly 20 minutes.) Fable 5.1 on “max” didn’t over-think and did give me the best pelican I’ve seen from any Anthropic model. Here are the Opus 5.5 pelicans , excluding 5.5 max. I also built this comparison grid comparing them with pelicans by Opus 5, Fable 5.1, and Sonnet 5: Comparing different model vendors by how well they draw a pelican riding a bicycle may not make much sense now (if it ever did), but I’m still finding value in using them for comparisons of the same model families at different reasoning levels. I’m now using GPT-6 Sol and Claude Opus 5.5 as my default models in Codex and Claude Code. I’ve upgraded the Datasette Agent demo at agent.datasette.io to use GPT-6 Luna, and it seems to be fast and competent at both SQL queries and building HTML and JavaScript for Datasette Apps . This is Claude Opus 5.5, GPT-6 Sol, GPT-6 Luna, and a new price war by Simon Willison, posted on 22nd September 2026 . Previous: Jev introduces a new shape of LLM - System One, aka Decision Models Sponsor me for $10/month and get a curated email digest of the month's most important LLM developments.",
+      "published_date": "2026-10-01",
+      "tags": [
+        "blog"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "blog_name": "Simon Willison",
+        "blog_url": "https://simonwillison.net/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, reasoning",
+      "⚖️ 來源權重: blog +15"
+    ],
+    "llm_score": 53,
+    "llm_reason": "新模型定價戰比較詳實，話題熱但偏向市場觀察而非技術",
+    "novelty": 4,
+    "impact": 10,
+    "trending": 18,
+    "practicality": 8,
+    "blog_worthiness": 13
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "Build agent memory with NVIDIA NeMo Agent Toolkit and Amazon S3 Vectors",
+      "url": "https://aws.amazon.com/blogs/machine-learning/build-agent-memory-with-nvidia-nemo-agent-toolkit-and-amazon-s3-vectors/",
+      "authors": [
+        "Venkata Sistla"
+      ],
+      "abstract": "In my previous post: Building persistent memory for multi-agent AI systems with Amazon S3 Vectors , we explored why memory engineering is the foundational discipline for production multi-agent systems. We showed how Amazon S3 Vectors , a capability of Amazon Simple Storage Service (Amazon S3), meets the architectural requirements for agent memory: semantic retrieval, rich metadata, strong consistency, and elastic scale. In this post, we move from architecture to implementation. We show you how to use Amazon S3 Vectors as the persistent memory layer within the NVIDIA NeMo Agent Toolkit (NAT) , deployed on Amazon Elastic Kubernetes Service (Amazon EKS) for full operational control. By the end of this post, you will understand how NAT’s memory subsystem works and how to implement Amazon S3 Vectors as a custom memory provider. You will also learn how to deploy the stack on Amazon EKS, using a multi-agent investment research use case as the running example. NVIDIA NeMo Agent Toolkit (NAT) is an open source framework for building, profiling, and optimizing AI agents. It’s framework-agnostic, working with Strands Agents, LangChain, LlamaIndex, CrewAI, and custom implementations. NAT provides four capabilities relevant to production agent systems: NAT includes a dedicated memory subsystem designed to store and retrieve conversation history, user preferences, and long-term knowledge across agent invocations. The memory module is extensible: you create custom memory providers (backends) by implementing NAT’s plugin interface. Key components include: NAT currently has these built-in memory providers: Mem0, MemMachine, Redis, and Zep. These cover common use cases. However, for production multi-agent systems that require elastic vector storage, strong write consistency, and cost-efficient scaling to billions of vectors, a custom provider backed by Amazon S3 Vectors is the right fit. Building persistent memory for multi-agent AI systems with Amazon S3 Vectors covers the architectural rationale in depth. The following table summarizes the properties that make S3 Vectors the right fit for NAT’s memory layer: To follow along with the implementation in this post, you need: The implementation has three steps: Step 1: Create the S3 Vectors infrastructure Step 2: Implement a custom MemoryEditor plugin Step 3: Configure the agent workflow Figure 1: The three steps to implement Amazon S3 Vectors as a NAT memory provider The following code creates a vector bucket and an index with a metadata schema designed for agent memory. The index uses 1024 dimensions to match the output of Amazon Titan Text Embeddings V2, and it marks the large content field as non-filterable metadata: After creating the bucket and index, you can implement the memory provider that reads from and writes to them. The following code implements the MemoryEditor interface as an Amazon S3 Vectors backend and registers it so that NAT can discover it: The plugin generates embeddings with Amazon Titan Text Embeddings V2, stores each memory as a vector with scoped metadata, and translates search filters into Amazon S3 Vectors metadata queries. With the plugin defined, configure it in NAT’s YAML config and wire it into an agent workflow: With the auto_memory_agent wrapper, you can capture and retrieve memory automatically. User messages and agent responses are stored, and relevant context is injected before each agent call. This design removes the need for the LLM to explicitly invoke memory tools. Because this solution persists conversation history and user memory, plan for how that data is retained and accessed. Set a retention policy for stored memories, and use the memory consolidation and removal paths in this post to expire data you no longer need. Avoid storing personally identifiable information (PII) in memory metadata, and redact or tokenize sensitive fields before you embed them. Scope access with per-tenant indexes and least-privilege IAM policies so that each agent reads and writes only the memory it owns. The following use case demonstrates this pattern in practice. Consider three specialized agents collaborating on an investment research tool: With persistent memory, each agent builds on prior work. The Research Agent recalls previously collected data, avoiding redundant API calls. The Analysis Agent builds on patterns identified in prior sessions. The Synthesis Agent accesses cumulative findings to produce progressively richer reports. Each agent uses the same S3 Vectors index but writes with its own agent_id in the metadata. Agents retrieve shared knowledge using metadata filters: NAT’s built-in multi-tenant memory isolation uses user_id to scope memory per user. For multi-agent team coordination, the team_id metadata field provides an additional grouping dimension within the same S3 Vectors index. Over time, episodic memories accumulate. Periodically consolidating them into semantic memories (generalized knowledge) keeps retrieval precise and efficient. You can trigger consolidation through a scheduled cron job, a vector count threshold, or an agent-initiated signal after a configurable number of research cycles: Amazon EKS is a deliberate choice for teams that need full operational control over their agent workloads. With Amazon EKS, you control scaling, networking, and lifecycle management, and you integrate natively with AWS Identity and Access Management (IAM) for Amazon S3 Vectors access. If you prefer a fully managed runtime, Amazon Bedrock AgentCore provides a managed alternative that removes this operational overhead. You run NAT agents as containerized services using nat serve . Each agent type is a Kubernetes Deployment with IAM access granted through IAM Roles for Service Accounts (IRSA). The following Dockerfile packages the agent with its configuration and memory plugin: The following manifests deploy the Research Agent with autoscaling: The following IAM policy grants scoped access to the memory layer. Attach it to the IAM role associated with the agent-sa service account through IRSA: After building and pushing the container image, deploy the agents: S3 Vectors provides strong write consistency. Pods and agent types can immediately see memories that agent pods store, with no cache invalidation required. The HorizontalPodAutoscaler scales agent replicas based on CPU utilization. Each replica connects to the same S3 Vectors index through IRSA, supporting consistent memory access regardless of which pod handles a given request. With NAT’s evaluation harness ( nat eval ), you can quantify the effect of memory on agent performance. Configure two evaluation runs: one with memory enabled and one without, using the same dataset: Based on the architectural properties of this design, you can expect the following qualitative outcomes when comparing these runs. These are directional expectations, not benchmarked measurements: The magnitude of these effects depends on your workload: how much context is reused across sessions, how many agents coordinate, and how large your retrieval budget (top-k) is. NAT’s hyperparameter optimizer can systematically tune top_k and similarity threshold to find the optimal cost-quality trade-off for your use case. To avoid ongoing charges from resources created in this walkthrough, delete the following: This post showed how to implement a custom NAT memory provider backed by Amazon S3 Vectors and deploy it on Amazon EKS. The key building blocks: These patterns apply to domains where agents benefit from accumulated knowledge. They include classifying memory as episodic, semantic, or procedural, sharing memory across agents with metadata filtering, and consolidating memory with an LLM. Examples include customer support, DevOps automation, legal research, and scientific discovery. For the memory architecture foundations referenced throughout this post, see Building persistent memory for multi-agent AI systems with Amazon S3 Vectors .",
+      "published_date": "2026-10-01",
+      "tags": [
+        "Advanced (300)",
+        "Amazon Simple Storage Service (S3)",
+        "Technical How-to"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, multi-agent",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 58,
+    "llm_reason": "agent記憶層實作教學具體且踩中熱門agent memory議題",
+    "novelty": 7,
+    "impact": 9,
+    "trending": 13,
+    "practicality": 16,
+    "blog_worthiness": 13
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "Uplifting conversion across the acquisition funnel with personalization using contextual bandits on AWS",
+      "url": "https://aws.amazon.com/blogs/machine-learning/uplifting-conversion-across-the-acquisition-funnel-with-personalization-using-contextual-bandits-on-aws/",
+      "authors": [
+        "Chidi Prince John"
+      ],
+      "abstract": "Generative AI has made it possible to produce large amounts of personalized content quickly and at low cost. In our previous post , we showed how generative AI on Amazon Bedrock can produce personalized content at scale while staying within brand guidelines and guardrails. The new challenge is now one of selection. Among all of those options, which one do you show each customer, and how long does it take to learn the answer? This post tackles the selection challenge that follows the proliferation. In this post, we share how Amazon Payments applied AI-based personalization to a product acquisition funnel, using a multi-objective contextual multi-armed bandit (MAB) on Amazon SageMaker AI . In a seven-week online A/B test we currently see a high single-digit percentage relative lift in final-funnel conversion for one customer population, while another saw no improvement over the existing experience. The problem turned out to be the content, not the model. We cover the intuition behind bandits, our extension to optimize an entire conversion funnel, and the AWS architecture behind the solution. We also share a code repository that you can use to test this approach on synthetic data and understand the method hands-on using Amazon SageMaker AI. A multi-armed bandit (MAB) is a reinforcement learning method built for settings with many options and limited traffic. It learns which option performs best while continuing to serve customers. It treats each content variation as an “arm,” tries each against live traffic, and steadily shifts impressions toward the arms that perform, while holding a fraction back to keep testing the rest. This is the fundamental trade-off between exploitation (serve the current best arm) and exploration (try less-certain arms to gather evidence). Because a bandit never stops doing both, it keeps improving as new variations are added, and it never has to wait for a test to conclude. A/B/n testing still has its place, but as generative AI accelerates the number of variations to learn from, we expect bandits to play a growing role. There are several bandit selection strategies in the literature: epsilon-greedy, Upper Confidence Bound (UCB), Thompson sampling, among others. For a deeper introduction to these methods and their deployment on AWS, see our earlier post Dynamic A/B testing for machine learning models with Amazon SageMaker MLOps Projects . In Amazon Payments, we chose UCB, a strategy that selects the arm with the highest estimated reward plus an uncertainty bonus, naturally balancing exploitation and exploration. Its deterministic selection rule gives an auditable, reproducible decision for every impression, which makes sure every serving decision can be explained and reproduced if needed. However, a standard bandit learns one best arm for the entire audience. Personalization requires conditioning on who the visitor is, and that is what contextual bandits provide. Instead of asking “which content is the best overall?,” a contextual bandit conditions its decision on signals about the visit. Segmented bandits run a separate instance per hand-defined group, but the groups are arbitrary and each needs its own traffic. Contextual bandits condition directly on a feature vector (a numeric representation of attributes), so a pattern learned in one context transfers to every similar visit without separate per-group traffic. Our production system represents each customer as a context vector of behavioral signals (payment behavior, transaction mix, and similar features) in place of a fixed segment. The entity ID (an opaque key such as entity_id ) is used only to route the learned recommendation back to the right visitor. It is never a model input. For a contextual approach, we selected Linear UCB (LinUCB), introduced by Li et al. (2010) . While newer bandit algorithms exist, LinUCB remains a battle-tested method that is computationally efficient, auditable (deterministic arm selection), and naturally handles a large arm space with limited warm-start data. Its key assumption is that the expected reward for an arm is a linear function of the context vector, which lets it generalize to visitors it has not seen before. Each arm keeps two running tallies updated on every impression: Dividing reward by experience gives the estimate (θ = A⁻¹·b). The experience ledger also shrinks the exploration bonus as evidence grows. The arm’s score is: The bonus is context-dependent. It’s large for a kind of visitor the arm has rarely seen, and small for one it has seen often. A plain bandit explores at a single global rate, while LinUCB adjusts how much it explores for every visitor it scores. The customer journey in our use case comprises three steps: application start, submission, and approval. The objective is therefore a multi-stage outcome, not a single metric. These stages do not move in unison. Content optimized for starts tends to attract a broad audience, yet approval depends on whether the offer genuinely suits the applicant. Optimizing one stage in isolation can degrade another. We refer to this as the seesaw problem. Conversely, optimizing solely for approvals starves the model of signal, because approvals are rare and delayed. Our approach optimizes the entire funnel simultaneously by running one LinUCB model per stage (start, submit, approve) and combining their UCB scores through a linear combination: The stage weights can be assigned based on business priorities or learned by a separate calibration step. We used approximately equal weights. In practice, one could weight approvals more heavily once the model is warmed or use a Pareto frontier if the trade-off is genuinely contested. Here’s the core of the model in Python. Each LinUCBDisjoint maintains independent parameters per arm, and MultiObjectiveLinUCB composes three of them: We built a quick start Jupyter notebook to test this approach on Amazon SageMaker AI. The repository also includes a command-line demo and unit tests. Tuning the alpha. The α parameter controls the exploration-exploitation balance. Higher values encourage exploration of under-tested arms, and lower values favor exploitation. A value of α = 1.0 is a reasonable default (Li et al., 2010). In practice, start higher when the arm space is large and history is limited, then reduce α as evidence accumulates. A typical range is 0.1 to 2.0. Values that are too high waste traffic on weak arms, and values that are too low risk locking onto a suboptimal arm. Because α is a single scalar, a grid search is straightforward. Handling delayed feedback. In our setting, approval decisions lag by days, so the reward for the final funnel stage isn’t observed until well after the impression. We address this with an attribution window. Starts and submissions update the model immediately, while approval outcomes are held back until the subsequent batch cycle, avoiding downward bias from pending applications. This aligns naturally with our weekly processing cadence. A bandit is only as good as the pool of arms. Building a rich arm pool responsibly is the next problem to solve at scale while maintaining content oversight. The key idea is to compose many variations from a small set of reviewed building blocks. Our content was assembled from two kinds of parts: industry-themed images and benefit-focused taglines . The arm space is the Cartesian product of these parts, so each arm is one (image, tagline) pairing and a modest number of building blocks produces a large pool of distinct page variations. Figure 1: Building blocks are vetted individually, then combined into the full arm pool That structure also makes the approach scalable without sacrificing oversight, through a few layers of control. Vetting the parts, not the combinations. Some content elements are fixed by stakeholder requirements. Rather than reviewing every possible combination, which would be impractical as the space grows, we vet each individual building block up front.",
+      "published_date": "2026-10-01",
+      "tags": [
+        "Amazon SageMaker AI",
+        "Customer Solutions"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: reinforcement learning, synthetic data",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 57,
+    "llm_reason": "多目標情境式bandit實戰案例附A/B測試數據與程式碼",
+    "novelty": 10,
+    "impact": 10,
+    "trending": 8,
+    "practicality": 15,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "blog",
+      "source_name": "Latent Space",
+      "title": "[AINews] Gemini 4 Argon: GDM’s answer to Astra/Fable, with 1M output",
+      "url": "https://www.latent.space/p/ainews-gemini-4-argon-gdms-answer",
+      "authors": [
+        "Latent Space"
+      ],
+      "abstract": "GDM last shipped a larger-than-Flash model in February ( 3.1 Pro ), and after successive incremental 3.x Flash versions and the big GDM management shakeup last month, the largest question for GDM was when they would catch up to peers who have in the meantime launched Fable and Astra class models. Well, Argon’s here , with VERY respectable benchmarks (SOTA in 13 of 19 credible benchmarks)… but only accessible in limited cybersecurity preview, though access is promised “ as soon as possible ”: We like the experimental Long Decode Continuation , which increases output tokens up to 1M as an industry first. AI News for 9/29/2026-9/30/2026. We checked 12 subreddits, 544 Twitters and no further Discords. AINews’ website lets you search all past issues. As a reminder, AINews is now a section of Latent Space . You can opt in/out of email frequencies! Gemini 4 Argon: Google Returns to the Frontier Launch : Google DeepMind introduced Gemini 4 Argon for coding, enterprise knowledge work and cyber defense ( @GoogleDeepMind , @sundarpichai ). Availability : Access starts with government users and trusted cyber defenders in the Fairwind Program. Google says it will refine guardrails before opening access to developers, enterprises and consumers ( @Google , @demishassabis ). Output limit : Google cites an industry-leading 1M-token output limit, up from 64K ( @GoogleAI , @TheRundownAI ). Measurement note : Vals lists 262K max output. Artificial Analysis reached 1M output tokens through Long Decode Continuation, a new API feature that pauses long responses and resumes them across calls ( @ValsAI , @ArtificialAnlys ). Pricing : Standard pricing is $4/$20 per 1M input/output tokens. A 50% introductory discount brings it to $2/$10, with no end date announced. Cached input gets a 95% discount ( @_philschmid , @ArtificialAnlys ). Google’s claimed results : Argon takes first place on 13 of 19 published benchmarks against GPT-6 Astra and Claude Opus 5.5. On DeepSWE it scores 77.9%, versus 74.2% for Opus 5.5 and 74.1% for Astra ( @TheRundownAI ). Internal deployments : Google reports that Argon agents freed more than 300 TiB of data-center memory and are migrating more than 800K lines of C/C++ kernel code to Rust ( @kimmonismus ). Video decoder : Agents replaced 32K lines of SIMD code with safe Rust, making the existing Rust port 2.7x faster with identical output. Research use : The team says internal agent loops built on Argon helped complete the CK conjecture ( @mirrokni ). Artificial Analysis evaluation : Argon scores 53 on the Intelligence Index, matching GPT-6 Astra (53) and edging GPT-6.1 Sol (52) ( @ArtificialAnlys ). Cost per task : At discounted pricing it costs $1.99 per task versus $3.26 for Astra; standard pricing would raise this to $3.98. Token use : The savings come from price, not efficiency. Argon averages 62K output tokens per task against Astra’s 27K. Agentic work : It ranks #1 on AutomationBench-AA at 77.5% and scores 57% on Terminal Bench 4, behind Sonnet 5.5, Opus 5.5 and Astra. Hallucination : Its 15% rate on AA-Omniscience compares with 51% for Astra. The tradeoff is lower accuracy: 50% versus Astra’s 63% ( @aipulseda1ly ). Vals evaluation : Argon is #1 on the Vals Index at 68.9%, at an average $15.68 per task ( @ValsAI , @ValsAI ). Coding : It built 30 Vibe Code Bench apps perfectly, against 25 for Opus 5 and 24 for Astra ( @ValsAI ). Terminal and security : Terminal-Bench 4.0 rose from 19.0% to 57.6%. It scores 70% on CyberBench proof-of-concept tasks and 100% on IOI 2024–2026 ( @ValsAI ). Efficiency : It uses about a quarter of Sonnet 5.5’s output tokens on Vals Index tasks ( @ValsAI ). Arena and other evals : Argon is #1 in Text Arena at 1525 and #8 in Code Arena WebDev at 1679 ( @arena ). Agent Arena : It ranks #8 overall and #1 for steerability on a preliminary 3K sessions ( @arena ). PostTrainBench : It scores 45.3%, up from 21.99% for Gemini 3.1 Pro ( @karinanguyen ). Skepticism : Some observers questioned the published numbers. Legal benchmark : Argon’s reported 19.6% on Harvey’s legal benchmark trails Muse Spark 1.2’s listed 25.42% ( @BlackHC ). Other critiques : Commentators raised possible preference-data benchmaxxing and objected to some figures, including DeepSWE ( @teortaxesTex , @teortaxesTex ). GPT-6.1 Sol and OpenAI’s DevDay Agent Stack Independent evals : GPT-6.1 Sol is the new #1 on MathArena ( @j_dekoninck ). Code Arena : It ranks #3 on WebDev at 1759, 70 points above GPT-6 Sol for the same $2/$10 pricing ( @arena ). Cost per task : Artificial Analysis measures $0.72 per task at max effort, versus $3.26 for Astra and $1.04 for GPT-6 Sol ( @ArtificialAnlys ). Source of savings : Sol uses fewer turns and has a lower cache-read price ( @ArtificialAnlys ). Luna bug fix : OpenAI fixed an image-encoding bug, adding 1 Intelligence Index point to GPT-6 Luna. Ultrafast inference : OpenAI quotes up to 300 tok/s. SemiAnalysis reports it runs on NVIDIA GPUs at low batch sizes, not on Cerebras ( @kimmonismus ). Hands-on report : Generation is about 8x faster, but end-to-end agent tasks speed up only 2–4x because tool latency dominates ( @sayashk ). Computer use : Gains are largest here, since UI actions respond in milliseconds. Cost : The tester exhausted a weekly limit in about 2 hours. Product layer : DevDay introduced dots (persistent agents with their own cloud computers), a Decisions API and computer use ( @latentspacepod ). Sites : ChatGPT Sites can now host MCP servers and turn them into installable plugins ( @mxstbr ). Usage limits : Users report one-off credits worth about $2,500. Others complain that usage limits were cut ( @kimmonismus , @kimmonismus ). Other Releases: Embeddings, Image/Video and Open Models Perplexity contextual embeddings : pplx-embed-v2-context-9b-preview is open on Hugging Face ( @perplexity_ai ). Method : The model encodes the whole document once and pools chunk vectors afterward. Training distills relevance from a context-compression model instead of using single gold-chunk labels ( @denisyarats ). Results : It sets a new state of the art on ConTEB. On turbopuffer’s private context-bench it beats voyage-context-4 by 14.4 points in answer recall@10, using 1 KB int8 vectors against 8 KB ( @turbopuffer ). Cohere Embed 5 : The family has Pro and Fast variants in a shared embedding space, so you can index with one and retrieve with the other ( @cohere ). Fast tier : Cohere says it beats other fast-tier models by at least 6 points at a third less cost than Pro. Evaluation uses its new RCP-nDCG@10 metric ( @cohere ). Ideogram 4.5 : The editing model targets artifact-free multi-turn edits, with open weights promised ( @ideogram_ai ). Edit fidelity : Over ten consecutive edits, 94–99% of untouched content stays identical ( @fal ). Ranking : It is #18 in Image Edit Arena at 1351 ( @arena ). Video benchmark : Artificial Analysis launched AA-Video-T2V v2.0, judged at 1080p with more than 68K human votes ( @ArtificialAnlys ). Leaders : Wan 3.0 is #1 at $12/min. Seedance 2.5 is #2 at $34.12/min, and MiniMax H3 is statistically tied at $4.80/min. Utopai X : This post-train of MiniMax H3 debuts at #2 ( @ArtificialAnlys ). Ling-3.1-flash : A 500B model reported close to GPT-5.6 Sol and Opus 5 ( @kimmonismus ). It ranks #2 among open-weight models in Mobile App Arena ( @DesignArena ). Praxis-1 : Runway released an open-weight world-action model and says robotics policy performance scales predictably with third-person video ( @agermanidis ). Solar Mini 4 : Upstage reports 35B total / 3B active parameters. It scores 24 on the Intelligence Index at $0.10/$0.40 ( @ArtificialAnlys ). Caching penalty : It still costs about 5x Luna per task, because only 48% of its repeated context hits cache versus 99% for Luna ( @ArtificialAnlys ).",
+      "published_date": "2026-10-01",
+      "tags": [
+        "blog"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "blog_name": "Latent Space",
+        "blog_url": "https://www.latent.space/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, mcp, computer use, open weight",
+      "⚖️ 來源權重: blog +15"
+    ],
+    "llm_score": 50,
+    "llm_reason": "Gemini新模型新聞彙整，百萬輸出token具話題性但無法驗證",
+    "novelty": 6,
+    "impact": 10,
+    "trending": 18,
+    "practicality": 5,
+    "blog_worthiness": 11
+  },
+  {
+    "item": {
+      "source": "blog",
+      "source_name": "Latent Space",
+      "title": "Why Dwarkesh is Wrong about Computer Use + How OpenAI shipped its Jev competitor in 1 Week",
+      "url": "https://www.latent.space/p/devday-2026",
+      "authors": [
+        "Latent Space"
+      ],
+      "abstract": "Three months ago Dwarkesh, who has been posting incredible blogs and episodes about RL, posted a framing question for his video essay on RLVR which upset a lot of Computer Use folks: We are no strangers to learning in public and are no strangers to the stress of getting things wrong when you have a big platform. However, we were at Anthropic for the Computer Use launch , there for Claude Cowork with the first big podcast on it, organized the first Computer Use track at AIE presenting the state of the art, and were close to the OpenAI-Sky Software acquisition that now powers the complete domination of computer use that Codex enjoys today. This is why we’re excited to bring you today’s first guest, Ari Weinstein , cofounder of Sky and now leading all the amazing CUA progress that casuals might miss: Ari explains why Computer Use is now “180 degrees different” from where it was months ago, how agents are learning to debug and recover from failures, why combining screenshots with accessibility data, the DOM, Playwright, and generated code changes the speed equation, and why the next frontier is making agents literally superhuman at using software. In the second half, Nikunj Handa from OpenAI’s API team breaks down the new developer stack: async tool calling, mid-turn steering, WebSockets, UltraFast inference, the Decisions API, prompt caching, pre-warming, compaction, and the Agents API . Given that we were the first Jev podcast , we particularly focus on the unusually fast sprint on the Decisions API: And why it is just a Luna wrapper for now but the team is motivated and egoless enough to clone what they consider to be good patterns. Why OpenAI thinks Computer Use has changed dramatically in just the last few months Dots and what changes when every agent gets its own Linux computer Why Computer Use can now complete some tasks faster than the average human The path from human-level to “literally superhuman” computer use Why modern agents are much better at debugging and recovering from failure How screenshots, accessibility trees, the DOM, Playwright, and generated JavaScript work together App Shots and why they give models much richer context than ordinary screenshots Why Computer Use can close the loop between writing software and testing it Trust, permissions, and safety when agents can make payments and operate websites Async function calling and why models no longer need to stop reasoning while tools run Mid-turn steering, WebSockets, and the architecture behind more responsive agents UltraFast inference and how OpenAI is pushing frontier models toward much lower latency The rapid internal story behind the Decisions API Why Decisions API is more than structured outputs at low latency GPT Live, fast tool calling, and real-time computer control How OpenAI is already using Decisions API for support classification and internal workflows Longer prompt caching, cache pre-warming , and cache-aware applications Server-side compaction vs manual compaction for long-running agent threads What should live inside an Agents API versus a developer’s own harness OpenAI as an “AI cloud” and the search for higher-level primitives beyond raw model APIs Product & Engineering, Computer Use at OpenAI LinkedIn: https://www.linkedin.com/in/weinsteinari/ LinkedIn: https://www.linkedin.com/in/nikunjhanda/ 00:00:00 OpenAI DevDay: Dots, GPT-6.1, Agents API, and Decisions API 00:02:52 Dots and Personal Cloud Computers 00:04:59 Why Computer Use Is “180 Degrees Different” 00:06:04 From Sky to Self-Debugging Computer Use Agents 00:09:24 How Computer Use Sees and Operates Software 00:12:09 From Faster Than Humans to Superhuman Computer Use 00:16:03 Agents API: Trust, Permissions, and Safety 00:17:31 Computer Use for Coding, Testing, and QA 00:19:14 GPT-6 APIs, Async Tool Calling, and UltraFast Inference 00:23:21 The Rapid Story Behind Decisions API 00:25:32 What Decisions API Is and How It Works 00:30:24 What OpenAI Is Building With the New APIs 00:32:23 Prompt Caching, Pre-Warming, and API Performance 00:35:20 Context Compaction for Long-Running Agents 00:37:13 Memory, Higher-Level APIs, and the AI Cloud Vibhu [00:00:00]: Okay. We’re very excited to be here. Today is OpenAI DevDay. Special podcast Swyx [00:00:08]: We’re the first podcast after your livestream. Vibhu [00:00:10]: First podcast. We have Ari here, who leads the product and engineering team for Computer Use agents. Before we kick in and dive deep on Computer Use, you wanna give a quick recap? What was announced? What’s the quick slew of announcements you guys had today? Ari Weinstein [00:00:24]: Yeah. yeah, it was a super exciting day. we just got out of the keynote. It was really sick. there were a bunch of Computer Use announcements that I think are worth thinking about. We have, Dots, which is the new, sort of personal assistant product, and, that has some really exciting Computer Use features. There’s GPT-6.1 Sol, which is this amazing new model, that I think is particularly great for Computer Use ‘cause of, sort of the cost and speed, advantages. I think, I think we shared that it’s, a fifth of the cost of Astra and a seventh of the cost if you’re looking at Computer Use specifically, which is really amazing. sorry, there were so many things. I’m trying to sort through it. Ari Weinstein [00:01:03]: Agents API, which now has Computer Use in it, which is really cool, ‘cause now developers can build on the same Computer Use, that is part of Codex, and ChatGPT. and then there were some demos of our existing Computer Use features, like app shots, where you can take the context of something you’re doing on your computer and bring it into Codex and ChatGPT really fast. And then, like, native Computer Use on your Mac, where Roman had it taking screenshots of his app, automatically, and he could do other things on his computer while Computer Use was using his applications. so yeah, really exciting keynote. Swyx [00:01:35]: And not to mention the Decisions API. Ari Weinstein [00:01:37]: Decisions API. Swyx [00:01:38]: Off the bat, are they all the same model? Like, this is. Or the same dataset distilled to different models? Swyx [00:01:44]: Like, basically, like, is Computer Use using Decisions API, or are they, like, kinda separate? Ari Weinstein [00:01:49]: So what’s really cool about the Decisions API is it, you know, it has all these new capabilities. It does inference in parallel. it doesn’t have reasoning. It’s a smaller model, than the ones we use for Computer Use. and so those capabilities make it really fast. Ari Weinstein [00:02:07]: They also make it a little bit less good at doing, like, long horizon, sort of sophisticated tasks. And so I think I would say it’s still an open area of research for how we, like, bring those approaches together. But, yeah, I’m really excited to see what people build with the Decisions API. Vibhu [00:02:24]: One of the interesting things is Dots now have attached personal computers. Ari Weinstein [00:02:28]: Yeah. Vibhu [00:02:28]: So it seems like they’re very much more persistent. You’ve been using them for a while. How should people push the bounds? Like, what should people aim for? What should they try? Personally, right now I use it for a lot of customer service. Like Ari Weinstein [00:02:41]: Cool Vibhu [00:02:41]: “Oh, this was wrong. I don’t wanna sign in. I don’t wanna authenticate.” Find whatever and just get it fixed. Ari Weinstein [00:02:45]: Yeah. Vibhu [00:02:46]: How should we push further? What should people try? Ari Weinstein [00:02:50]: Dots Are a really cool product because each Dot has access to its own Linux virtual computer in the cloud, which is different from our other products. you know, traditionally, we’ve have access to a browser in the cloud, or it has access to your own computer, but now you get your own entire Linux computer in the cloud. And so it can run full desktop applications, and it can also use a web browser.",
+      "published_date": "2026-09-30",
+      "tags": [
+        "blog"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "blog_name": "Latent Space",
+        "blog_url": "https://www.latent.space/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, function calling, computer use, reasoning, rlvr",
+      "⚖️ 來源權重: blog +15"
+    ],
+    "llm_score": 48,
+    "llm_reason": "Computer Use技術討論有深度但屬播客筆記二手整理",
+    "novelty": 7,
+    "impact": 9,
+    "trending": 14,
+    "practicality": 6,
+    "blog_worthiness": 12
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Apple ML",
+      "title": "SCLATE: A Substrate for Continual-Learning Agent Training and Evaluation",
+      "url": "https://machinelearning.apple.com/research/sclate-agent-training-evaluation",
+      "authors": [],
+      "abstract": "research area Methods and Algorithms , research area Tools, Platforms, Frameworks content type paper published September 2026 SCLATE: A Substrate for Continual-Learning Agent Training and Evaluation Authors Youngmok Jung, Sirajul Salekin, Henry Tran, Javier Movellan, Zhao Huang, Manjot Bilkhu View publication Copy Bibtex Continual-learning agents are systems of models, harnesses, and memory operating over long multi-session horizons. Evaluating and training them requires interleaving tasks with agent-side events such as session stop and start, crons, and memory consolidation. Yet existing benchmarks and training frameworks schedule only the benchmark’s own events, leaving each benchmark and agent pair to build a custom scheduling loop. We present SCLATE, an execution substrate where benchmarks and unmodified agents each add their events to one open event scheduler through an adapter. A hybrid simulated clock runs these events on a shared timeline, flowing in real time while the agent works and skipping idle gaps, which compresses a month-long scenario into hours. SCLATE also serves as a rollout engine that runs any agent’s harness and memory unmodified, recording the tokens and log probabilities of every model call through an in-container proxy. We port seven benchmarks to SCLATE and compare ten unmodified harness and memory configurations head to head on ten models. The comparison shows that an added memory system does not reliably beat the harness’s native memory and that models differ widely in how they use the same harness and memory. We then post-train Qwen3.5-4B through unmodified harnesses and memory systems. The model learns to use both, reading 6.8× fewer file lines with a 16.7-point higher SWE-bench Verified pass rate, and writing richer memory records, while its held-out MetaClaw accuracy rises by up to 11.8 points. Related readings and updates. How Much of a Harness Does a Strong Agent Need for Autonomous ML Engineering? October 1, 2026 research area Methods and Algorithms Recent autonomous machine learning engineering (MLE) agents have made significant progress on public leaderboards. Often motivated by progress stagnation over long-horizon cycles and limited Large Language Model (LLM) primitives, modern MLE agents are deployed on top of increasingly elaborate machinery: multi-agent orchestrators, dedicated retrieval subagents, and more. While such harnesses expand, the use of more primitive but improved coding… Read more AgentBuilder: Exploring Scaffolds for Prototyping User Experiences of Interface Agents January 9, 2026 research area Human-Computer Interaction Interface agents powered by generative AI models (referred to as “agents”) can automate actions based on user commands. An important aspect of developing agents is their user experience (i.e., agent experience). There is a growing need to provide scaffolds for a broader set of individuals beyond AI engineers to prototype agent experiences, since they can contribute valuable perspectives to designing agent experiences. In this work, we explore the… Read more Discover opportunities in Machine Learning. Our research in machine learning breaks new ground every day. Work with us",
+      "published_date": "2026-09-30",
+      "tags": [],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "Apple ML",
+        "feed_url": "https://machinelearning.apple.com/rss.xml"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, multi-agent",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 52,
+    "llm_reason": "連續學習agent訓練評估基礎設施，解決調度痛點但受眾較窄",
+    "novelty": 12,
+    "impact": 9,
+    "trending": 10,
+    "practicality": 10,
+    "blog_worthiness": 11
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "NVIDIA Developer",
+      "title": "Build Local AI Apps with C++ and NVIDIA TensorRT RTX Samples",
+      "url": "https://developer.nvidia.com/blog/build-local-ai-apps-with-c-and-nvidia-tensorrt-rtx-samples/",
+      "authors": [
+        "Luca Spindler"
+      ],
+      "abstract": "Adding AI models to local applications requires a portable model format, a reliable runtime, and acceleration that works across target systems. Do Inference Now (DIN) Deploy is an open-source collection of practical C++ samples that bridges that gap. It combines ONNX Runtime with the NVIDIA TensorRT RTX execution provider to help developers move from a model checkpoint to a native, hardware-accelerated application on Windows and Linux. The same ONNX Runtime API can also be accessed through WinML 2.0 . From ONNX export to C++ implementation Each DIN Deploy sample starts with a Python exporter that downloads a model checkpoint from Hugging Face and converts it into an ONNX artifact. The application side is a native C++ CLI built on ONNX Runtime (ORT). That split keeps model conversion separate from deployment logic, and developers can take an exported model into a local application without requiring a model-specific runtime. Most sample code uses ONNX Runtime session and tensor APIs in C++. Vendor-specific code, including CUDA APIs and kernels, appears only in optional accelerated paths. Execution providers that support the required ONNX Runtime tensor APIs can run the shared code. ORT’s copy tensor API keeps data locality manageable without dedicated vendor API usage in shared code. For preprocessing and postprocessing around exported model inference, the FLUX.2 sample uses ONNX Runtime’s graphics interop capability , introduced in version 1.25, with Vulkan and DirectX for sampling. The repository provides CMake presets for Windows and Linux, including Arm64 variants. DirectX is available only on Windows. AI tasks supported by DIN Deploy For automatic speech recognition (ASR), DIN Deploy supports offline and streaming pipelines. OpenAI Whisper covers offline transcription across model sizes, while NVIDIA Parakeet TDT and NVIDIA Nemotron ASR Streaming provide streaming pipelines. The samples show how to move audio through a native application and return transcription results while using GPU acceleration where it is available. Meta SAM 2.1 samples support interactive masking for images and video. They turn model outputs into segmentation masks that native applications can use for selection, tracking, and other computer-vision workflows. Table 1 compares GPU and CPU performance for selected DIN Deploy workloads measured on DGX Spark. Model GPU (DGX Spark) CPU (DGX Spark) openai/whisper-large-v3-turbo 58.5x 3.8x nvidia/nemotron-3.5-asr-streaming-0.6b 39.01x 3.24x nvidia/parakeet-tdt-0.6b-v3 206.41x 14.44x facebook/sam2.1-hiera-base-plus 38.3 FPS 0.5 FPS Table 1. DGX Spark GPU and CPU performance for selected DIN Deploy workloads. Results for audio are reported as multiples of real time (higher is faster) The FLUX.2-klein-4B sample provides prompt-driven image generation. The sample includes graphics-API interops with Vulkan and DirectX, allowing applications to integrate GPU-resident resources with a cross-vendor shader interface. It also shows how post-training quantization (PTQ) with NVIDIA Model Optimizer produces a quantized ONNX model. Quantization is hardware-dependent, but due to ONNX interfaces remaining unchanged, the quantized model is a drop-in replacement requiring no application-code changes. Figure 1. Quantization can drastically accelerate models on recent tensor core hardware Get started with DIN Deploy Start with the repository’s CMake presets for Windows, Linux, x86-64, and Arm64. After configuring and building the project, export a model to ONNX and run the CLI with TensorRT RTX, or copy the code into your own application and use the pipeline implementations. CMake downloads ONNX Runtime and TensorRT RTX by default. Learn more about TensorRT for RTX , NVIDIA Local AI , and the DIN Deploy repository , and the NVIDIA blog series on model quantization .",
+      "published_date": "2026-10-01",
+      "tags": [
+        "Developer Tools & Techniques",
+        "C++",
+        "CUDA",
+        "DGX Spark",
+        "featured"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "NVIDIA Developer",
+        "feed_url": "https://developer.nvidia.com/blog/feed/"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: post-training, quantization",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 51,
+    "llm_reason": "開源C++本地AI部署範例，實用但屬工程整合非演算法創新",
+    "novelty": 7,
+    "impact": 8,
+    "trending": 9,
+    "practicality": 16,
+    "blog_worthiness": 11
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "TechCrunch AI",
+      "title": "Google releases Gemini 4 Argon, called its most powerful model yet",
+      "url": "https://techcrunch.com/2026/09/30/google-releases-gemini-4-argon-called-its-most-powerful-model-yet/",
+      "authors": [
+        "Lucas Ropek"
+      ],
+      "abstract": "Google parent company Alphabet has launched Gemini 4 Argon, a new AI model built to handle a variety of tasks such as coding, research, and writing. But it’s cybersecurity that Gemini 4 Argon is supposed to have a particular knack for, according to Google. Argon is only being rolled out to a select group of the company’s cyber partners through its Fairwind Program, Google’s security initiative. The model was trained specifically for defensive cyber work, and the company says it can “autonomously find, validate, and patch critical software vulnerabilities.” Argon is also said to be good at coding and engineering, with the company noting that its own staff have already been using the model for their daily work, including debugging and codebase migrations. Google also touts Argon’s ability to parse visuals — whether that’s analyzing the contents of long videos or charts. “Built to sustain deep reasoning across complex, long-horizon workflows, Argon is fundamentally changing the way we work and build at Google,” the company said in a blog post Wednesday. Top AI labs have rushed to release increasingly powerful models, attempting to outdo each other even as those very same firms warn that AI could spin out of control. Not long ago, OpenAI released Astra — which it hailed as its best model yet. Earlier this year, Anthropic’s Fable was also released with similar rhetoric from the company. Firms have done their best to market their services as superior to their competitors. In its blog, Google claims that Argon scored significantly higher than OpenAI’s GPT-6 Astra and Anthropic’s Fable and Opus models across a variety of AI benchmarks. It cites Vals — an increasingly popular AI benchmarking startup — to show that Argon is currently the leading model on the company’s AI model index. Once considered “ behind ” in the AI race, Google has recently enjoyed success with Gemini. The company announced in August that its app had over a billion users per month , a metric that makes it competitive with OpenAI, which also recently announced that ChatGPT had reached a billion monthly users.",
+      "published_date": "2026-09-30",
+      "tags": [
+        "AI",
+        "gemini",
+        "Google"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "TechCrunch AI",
+        "feed_url": "https://techcrunch.com/category/artificial-intelligence/feed/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: reasoning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 55,
+    "llm_reason": "前沿模型發布但報導偏業務面，缺乏技術細節",
+    "novelty": 9,
+    "impact": 14,
+    "trending": 18,
+    "practicality": 6,
+    "blog_worthiness": 8
+  }
+]
