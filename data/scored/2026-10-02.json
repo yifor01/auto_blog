@@ -1,0 +1,727 @@
+[
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "AWS Strands Labs Releases Strands Decider 2B: An Open Source Decision Model That Picks Options in About 115 ms",
+      "url": "https://www.marktechpost.com/2026/10/01/aws-strands-labs-releases-strands-decider-2b/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "AWS Strands Labs releases Strands Decider 2B , an open source decision model. It does not generate text. It reads a state and typed questions, then returns a choice, a yes/no probability, or a score with a calibrated confidence. The model has 1.9 billion parameters and runs locally on a CPU, a consumer GPU, or an Apple silicon Mac. Is it deployable? Yes, for local and self-hosted use. Weights are on Hugging Face under Apache-2.0, and pip install strands-decider gives a CLI and an HTTP server. The bundled server binds to 127.0.0.1 with no authentication, so production needs your own auth layer. No hosted inference provider serves it yet. Decision models, also called System One models, became a category after TypeSafe AI launched Jev last month. An LLM can produce arbitrary output. A decision model only picks between options or rates on a scale. Strands Decider supports 3 question types: Every answer comes from the allowed options and carries a confidence. The team states the model is worse than reasoning models on complex problems. It is unsuited for coding, chat, or summarization. The team starts from Qwen3.5-2B-Base and discards the language-modelling head. A small pointer head of about 1 million parameters replaces it. That head compares the hidden state at the <answer> position against the hidden state at each option’s last token. One forward pass yields the result, with no decoding loop. The torso uses a rank-16 LoRA, and the head runs in fp32. Label sets come from the request, so nothing caps the option count. The released checkpoint is v19. Asking several questions about one text is cheap. The state is read once, and each extra question adds only its own tokens. The team measures accuracy and calibration on the public set of JevBench , a third-party benchmark for Jev-class models. Published v19 figures: On the v1.4.2 board of September 25, v19 ranked 3rd of 33 in the 2B class. Excluding 3 models just over 2B, it ranked 1st of 30. The repo also flags a caveat. Mapika’s newer decider-2b v11 scores 175 of 231 on the Strands harness, 8 tasks ahead. Strands Decider was not on the newer v1.5.4 composite board at the time of writing. Calibration is the practical win. On unseen short classification tasks, answers at 0.9 confidence or higher were right about 95% of the time. The team advises confirming or escalating below that threshold. Sources: Strands JevBench comparison , Benchmark Heaven JevBench , Jev product page . Latencies come from different hardware and harnesses, so they are not directly comparable. The team reports early success in model routing, tool selection, argument checking, triage, guardrails, evals, and hybrid agents. In a hybrid agent, an LLM makes the hard calls and the decider handles rote ones. The repo example gates a weather tool call inside a Strands agent. A before_tool_call intervention asks 2 yes/no questions. Are the arguments grounded in what the user said? Is calling now premature? If the agent guessed a city, it asks the user instead. From the CLI, routing “Help! My payouts have been failing for 3 days!” across billing, sales and retail returns billing with confidence 0.768. Check out the technical details , GitHub repo and model weights . All credit goes to the researcher of this project. Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post AWS Strands Labs Releases Strands Decider 2B: An Open Source Decision Model That Picks Options in About 115 ms appeared first on MarkTechPost .",
+      "published_date": "2026-10-02",
+      "tags": [
+        "Agentic AI",
+        "AI Infrastructure",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Deep Learning",
+        "Editors Pick",
+        "Embedding Model",
+        "For Devs",
+        "Language Model",
+        "Large Language Model",
+        "Machine Learning",
+        "New Releases",
+        "Open Source",
+        "Software Engineering",
+        "Staff",
+        "Tech News",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 38.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, reasoning, lora",
+      "⚖️ 來源權重: rss +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 64,
+    "llm_reason": "延續System One決策模型潮流，架構與部署細節清楚但非原創概念",
+    "novelty": 11,
+    "impact": 9,
+    "trending": 14,
+    "practicality": 16,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Cloudflare Releases Clef and Clef-flash: Open-Weight Decision Models That Return Typed Probabilities Instead of Text",
+      "url": "https://www.marktechpost.com/2026/10/01/cloudflare-releases-clef-and-clef-flash/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "Cloudflare has released Clef and Clef-flash , the first models trained by its Workers AI team. They are decision models, not chatbots. Each reads an input state and a schema of typed questions. It returns a probability for every allowed answer, with no free-form text. Both are open-weight under Apache 2.0 and compatible with TypeSafe AI’s Jev API. Is it deployable? Yes, Both models run today on Workers AI , and the weights are on Hugging Face for self-hosting. An LLM generates tokens one at a time, and its output still needs parsing. A decision model only answers a fixed set of questions about an input. Clef supports 3 question types: On Workers AI, 1 request carries up to 64 questions and up to 4 images. TypeSafe AI launched Jev , its first ‘System One’ model, on September 15, 2026. Open alternatives like Kev-9B and Laya followed. Clef uses the same System One API. Switching from Jev means changing the endpoint and model name. Clef is post-trained from Qwen3.8-27B , and Clef-flash from Qwen3.5-9B . Both keep the backbone’s vision encoder. Inference has 2 stages. The backbone first runs a single prefill-only pass over the state and questions. A small transformer, the joint schema head, then reads the final hidden states. It routes evidence to each question, lets fields cross-attend, and scores all options jointly. A per-question softmax turns logits into probabilities. Training froze both backbones and jointly optimized the routing head with rank-256 low-rank adapters. The loss pairs label-smoothed cross-entropy with a Brier loss for calibration. A secondary objective, Reinforcement Learning for Calibrated Decisions (RLCD), gives partial credit to adjacent ordinal choices. On Cloudflare’s 10-benchmark shortlist from the Decision Index 0.2.1 suite, a Clef model scored highest on 7. Jev keeps clear leads elsewhere. The full model card shows Jev ahead on GPQA Diamond (78.3 vs 48.0). It also leads MMLU-Pro (82.7 vs 65.9) and BBH (92.9 vs 73.7). On TypeSafe’s own workflow evals , Clef beat Jev in 3 of 4 areas, by small margins. Invoice processing was 64.7 vs 61.8, customer service 76.3 vs 76.0, and security incidents 62.9 vs 61.7. Jev leads agent trace observability, 71.6 vs 68.5. In Cloudflare’s threat intelligence workflow, Clef classified a domain in 2.2 seconds. gpt-oss-120b took 4.7 seconds. All numbers are vendor-reported, with no independent replication yet. *Cloudflare’s internal Decision Index run. All 5 implement the System One API. Sources: Clef docs , Clef-flash docs , Clef card , Jev post , Kev-9B card , Laya card . Both models are callable through the Workers AI binding ( env.AI.run() ), the REST API, or AI Gateway . For self-hosting, the model cards list testing on a single H200 with BF16 weights. Cloudflare also announced a reinforcement learning service for tuning Clef on private data. It starts with Cloudflare’s forward-deployed engineers, with a self-serve platform later. The pipeline combines AI Gateway, Workers AI, Containers and a new Trainer component. Teams can apply via the design partner form . Check out the Model weight , Demo and Technical details . All credit goes to the researcher of this project. Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post Cloudflare Releases Clef and Clef-flash: Open-Weight Decision Models That Return Typed Probabilities Instead of Text appeared first on MarkTechPost .",
+      "published_date": "2026-10-02",
+      "tags": [
+        "Agentic AI",
+        "AI Agents",
+        "AI Infrastructure",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Comparison",
+        "Editors Pick",
+        "Embedding Model",
+        "For Devs",
+        "Harness",
+        "Language Model",
+        "Large Language Model",
+        "Machine Learning",
+        "New Releases",
+        "Open Source",
+        "Software Engineering",
+        "Staff",
+        "Tech News",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, reinforcement learning, open weight",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 67,
+    "llm_reason": "大廠跟進決策模型賽道，joint schema head與雙backbone設計技術細節豐富",
+    "novelty": 11,
+    "impact": 11,
+    "trending": 14,
+    "practicality": 16,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "Fine-tune a search agent with multi-turn RL on Amazon SageMaker AI",
+      "url": "https://aws.amazon.com/blogs/machine-learning/fine-tune-a-search-agent-with-multi-turn-rl-on-amazon-sagemaker-ai/",
+      "authors": [
+        "Huibin Shen"
+      ],
+      "abstract": "Search agents powered by large language models (LLMs) are transforming how enterprises retrieve information. Rather than requiring users to craft the perfect query, a search agent autonomously decides what to search for, which retrieval strategy to use, and when to stop searching. It does this across multiple rounds of interaction, refining its approach based on what it has already retrieved. However, getting this multi-step behavior to work well is hard. No base model arrives knowing your tools or your environment. Prompt a small model and you rarely get dependable multi-turn behavior. Prompt a frontier model and it often works, but you pay for that capability in latency and cost. Fine-tuning offers a third path: you teach a small model your tools and environment directly. The result is a small model’s speed and cost with the reliability that would otherwise require a frontier model. Even though fine-tuning is the natural next step, the traditional approaches each fall short. Supervised fine-tuning (SFT) depends on expert demonstrations of ideal multi-turn trajectories, which are costly to collect and usually don’t exist for your setup. Single-turn reinforcement learning (RL), such as RL with verifiable rewards (RLVR), scores one response at a time. But a search agent makes interdependent decisions across many turns, each one building on the context before it. Optimizing a single step in isolation misses those dependencies entirely. What you need is a training approach that optimizes the agent across the full multi-turn trajectory . The reward signal only needs to reflect whether the final outcome was good. That is exactly what multi-turn reinforcement learning (MTRL) provides. It trains the agent to make good decisions across a full sequence of steps, bakes in your environment-specific behavior, and gives you control over output quality. Because you run a smaller, specialized model, you also get faster, cheaper inference. In this post, we describe how we fine-tuned a search agent using Amazon SageMaker AI multi-turn reinforcement learning (MTRL) and share the results we observed in retrieval quality and reliability. We begin by explaining what Amazon SageMaker AI MTRL is and how it works. With Amazon SageMaker AI MTRL , you can fine-tune LLMs using reinforcement learning in multi-turn interaction settings. It frames an agentic task as a sequence of decisions, uses multi-turn rollouts to generate training data, and optimizes the model with policy gradient algorithms. Amazon SageMaker AI MTRL offers: This makes MTRL a natural fit for search agents: you have a clear reward signal (retrieval quality), a multi-turn interaction loop (the agent issuing queries and receiving results), and a well-defined environment (the search tools). Our setup relied on the following: In this post, we use Amazon SageMaker AI MTRL to fine-tune a Qwen3.6-27B model (supported in the US West (Oregon) Region (us-west-2)) for a search agent. The search agent is an LLM-powered system that autonomously uses search tools to find, gather, and synthesize information to answer a question or complete a task. We focus on an enterprise search setting where the agent has two tools available: We also limit the number of turns (one turn is one round of user-assistant interaction), preventing the agent from generating excessively long responses and encouraging efficient search behavior. This section walks through the three key components of our training setup: the datasets, the reward function, and the MTRL job configuration. We use the following datasets for training and testing: We preprocess the datasets into the format recognized by the MTRL service according to the documentation . We further reserve 5 percent of the training instances within each dataset as validation instances. Our main metric is nDCG@10 ( Normalized Discounted Cumulative Gain at rank 10 ). nDCG@10 is a standard information retrieval metric that measures how well the top 10 retrieved documents match the ideal ranking. It rewards systems that place highly relevant documents near the top of the list, with a score of 1.0 meaning perfect ranking and 0.0 meaning no relevant documents retrieved. We use nDCG@10 directly as the reward function in MTRL. This is a trajectory-level reward where the agent completes its full multi-turn search, and the reward reflects how well the final retrieved documents match the ground truth. When the agent reaches the maximum number of turns or the maximum sampling tokens in a single turn, we assign a reward of -1 to explicitly teach the model to avoid these failure modes. This kind of penalty-based reward design is effective at steering the model away from undesirable behavior without needing to hand-craft complex intermediate rewards. One of the appeals of Amazon SageMaker AI MTRL is how little you need to configure to get going. We change three hyperparameters and leave everything else at the default values. The following code snippet shows how to configure and launch the training job using the MultiTurnRLTrainer SDK: The key hyperparameters we change are: That’s the whole setup. The choices that usually demand RL expertise, the algorithm, the advantage estimator, the off-policy staleness bounds, all run on defaults. Getting from the base model to the results in the next section required nothing more than the preceding configuration. MTRL fine-tuning improved the search agent on three of four held-out benchmarks and made it substantially more reliable across all of them. The largest gains came on BrowseComp-Plus (+23.7 percent nDCG@10) and WixQA (+18.4 percent), with a smaller gain on Wands and a slight regression on FreshStack. The reliability improvement was the more striking result. On BrowseComp-Plus, the failure rate fell from 22.89 percent to 0.68 percent. This means the agent learned not only to search better but also to finish the task within its turn and token budget. The sections that follow walk through the training curves and the per-benchmark numbers. The following figure shows the reward (nDCG@10) on both training and validation instances over the course of training. The x-axis represents training steps and the y-axis shows the nDCG@10 score. Two lines track training and validation reward, both rising steadily before plateauing. MTRL training can span multiple days and the MTRL service has a default time limit of 24 hours, which is adjustable through the CreateJob JSON schema. If a job is stopped or has failed because of timeout or infrastructure error, you can continue training from a previous checkpoint with resume support . Figure 1: nDCG@10 reward on the training and validation sets over the course of training The figure plots nDCG@10 against training steps for both training and validation sets. Both curves increase steadily as fine-tuning progresses and saturate by the end of training, suggesting further training would not be beneficial. The following table compares the fine-tuned model against the original Qwen3.6-27B on four held-out test datasets. All metrics in the table are computed from our evaluation runs on the datasets listed in the preceding section. The results show that RL fine-tuning made a meaningful difference: If you do explore this approach, remember to clean up the resources afterward to avoid ongoing charges: In this post, we described our experience using Amazon SageMaker AI MTRL to fine-tune an LLM-powered search agent with reinforcement learning. With minimal configuration, the fine-tuned model showed substantial improvements in retrieval quality, failure rate, and turn efficiency (fewer turns per question). Key takeaways from our experience with Amazon SageMaker AI MTRL: If you want to apply this approach to your own agents, here are some useful starting points:",
+      "published_date": "2026-10-02",
+      "tags": [
+        "Advanced (300)",
+        "Amazon SageMaker AI",
+        "Technical How-to"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, rlvr, reinforcement learning, fine-tuning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 67,
+    "llm_reason": "多輪RL微調搜尋agent，切中agentic RL熱點且有具體訓練方法與平台",
+    "novelty": 11,
+    "impact": 12,
+    "trending": 14,
+    "practicality": 15,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "量子位",
+      "title": "openJiuwen X-Router自演進模型路由技術首發，昇騰親和，Agent越跑越省，實測減少50+%Token消耗",
+      "url": "https://www.qbitai.com/2026/10/500098.html",
+      "authors": [
+        "梦晨"
+      ],
+      "abstract": "openJiuwen X-Router自演進模型路由技術首發，昇騰親和，Agent越跑越省，實測減少50+%Token消耗 夢晨 2026-10-02 15:34:15 來源： 量子位 讓每一次請求選對模型，讓每一次反饋都成為下一次更優、更省的選擇 允中 發自 凹非寺 量子位 | 公眾號QbitAI 不是所有任務都需要最強的模型。讓每一次請求選對模型，讓每一次反饋都成為下一次更優、更省的選擇。 你有沒有想過，你的Agent可能一直在“用力過猛” 先做一個思想實驗。 你問AI助手一個再簡單不過的問題：“幫我把這句話翻譯成英文。” 它呼叫的，是一個參數量千億、跑在雲端最貴算力上的模型。你問它一個需要通盤推演、寫五十行程式碼、還要自己debug三輪的難題，它呼叫的還是同一個模型。 這是今天絕大多數AI應用的真實狀態： 一個模型包打天下 。 問題還不止於“貴”。真實場景裡，一個Agent往往同時握著本地模型、雲端模型，以及來自不同廠商的多種服務。當可選模型越來越多，新的麻煩隨之出現： 簡單任務用昂貴模型，帶來不必要的成本； 複雜任務交給輕量模型，效果不穩定； 依賴固定規則做選擇，很難跟上業務與模型的持續變化。 使用者真正需要的，不是一張需要反覆維護的模型路由表，而是讓Agent自己完成判斷： 這次請求該由誰處理，為什麼這樣選擇，下一次能否做得更好。 問題出在哪？出在我們 把“路由”這件事給忘了 。 從“一個模型包打天下”到“一支模型隊伍” 現實世界裡的排程智慧，隨處可見。 點外賣時，平臺不會派最近的騎手去送最遠的一單，也不會為了三公里的單子調動整個配送站；醫院分診臺不會讓所有人直接掛專家號，而是先判斷病情輕重，再決定看哪個科室、找哪位醫生；快遞分揀中心如果想要“送得快”，前提是“分得準”。 它們的共同點是： 手裡有一支隊伍，並且知道每一項任務該交給隊裡的誰。 Agent也該如此。 今天的Agent背後，現實已經是一支隊伍了：有的模型推理能力強但貴且慢，有的輕快便宜但只能幹簡單活，有的擅長寫程式碼，有的多模態理解更好。 每個模型各有所長，也各有所短。以PC辦公場景為例，刪除檔案和寫PPT，所需的能力顯然不同。 問題是： 誰來當這位排程員？ 這就是openJiuwen智慧路由要解決的事。 openJiuwen是由華為2012實驗室、華為雲、終端、計算、算力先遣隊等團隊聯合高校、企業等廣大開發者聯合構建的開源AI Agent平臺。 此次，openJiuwen團隊給出的答案是——在Agent與模型之間，增加一層面向請求的智慧決策能力，一個專門負責“ 這一輪任務，該用哪個模型、用什麼策略 ”的路由引擎。 一句話說清：智慧路由在做什麼 基於任務複雜度，動態決策與編排群智協同及最優模型選擇，實現成本-效果綜合最優。 翻譯成大白話：看菜下飯，量體裁衣。 簡單的問題，用輕快的模型快速回；複雜的問題，排程更強的模型深思考；需要多個模型互相印證的問題，組織多模型協同作戰、再統一彙總；而每一次決策的結果，都會變成經驗，讓下一次的判斷更準。 這裡的關鍵詞是“ 動態” 。它不是一個開關，不是一份寫死的配置表，而是一個會隨著任務、使用者、負載、成本即時變化的決策系統。 這套系統要有三個屬性，缺一個都不成立： 可配置 ——不同業務能帶著自己的偏好進來。這一輪要最省，還是這一輪要最快，由業務方說了算，而不是被一套寫死的規則綁住； 可演進 ——模型生態是流動的，新模型每個月都在冒出來，老模型在悄悄降價，同一模型迭代一個版本能力分佈就可能換個樣子。策略必須能跟著一起長； 可觀測 ——每一次決策的依據、每一次執行的反饋都要能看見、能回溯。一個說不清“為什麼選它”的路由器，使用者不敢把它放進生產。 那它到底怎麼做到的？ 三層能力，構成一個完整的路由體系 openJiuwen團隊把這套體系拆成三層，它們各自解決一個獨立的問題： 第一層負責“看得準”，第二層負責“選得對”，第三層負責“越用越好”。 第一層：精準畫像——“認識隊伍裡的每個人” 要做排程，首先得知道每個人擅長什麼。 模型的能力不是一張靜態標籤。說“這個模型程式碼能力強”不夠用——強到什麼程度？在什麼型別的題目上強？換個領域還強不強？模型還在迭代，能力還在變。 openJiuwen的做法是：基於歷史資料， 離線刻畫 每個模型的能力畫像，並 線上動態重新整理 ——當模型版本變動或表現發生變化時，畫像的更新時延優於1分鐘。 畫什麼？不只是“程式碼能力8分、數學能力7分”這種模糊打分，而是精細化的刻畫：不同任務型別上的表現、不同難度下的表現、時延和功耗特性、成本量級。 有了精準的畫像，路由才有一個可靠的起點—— 決策與執行分離 ，路由層只管判斷，具體呼叫交給宿主，兩者互不耦合。 △模型能力畫像——每個模型都有一份動態更新的能力檔案 第二層：決策——“這一輪，到底交給誰” 畫像有了，接下來是真正難的部分： 面對一個具體請求，怎麼選？ 先看請求本身。 Agent的任務是多輪的、有狀態的，複雜度判斷不能只看當前這一句，要看整條軌跡：我們走到哪了，接下來要做什麼，前面失敗過什麼。 openJiuwen把最近的對話視窗連同工具呼叫進展一起送進判斷，並專門做了一處處理—— Agent迴圈的尾部常被工具輸出佔滿，任務本身會被擠出視窗時，openJiuwen團隊特別保留了最近一次使用者訴求 ，確保排程員始終知道“僱主想要的是什麼”。 再看系統狀態。 這是純演算法視角容易漏掉、但對真實收益影響最大的一塊： KV快取親和 ：這個請求的上下文，跟哪個模型上已有的快取更“熟”？複用快取能省下大量重複計算—— 同樣的模型，快取命中與不命中，成本可以差出一截。 即時負載 ：此刻哪個模型更空閒、響應更快？同價位的兩個模型，負載不同，時延可能差一倍。 目標可用性 ：某個模型剛超時或被限流，這一輪就不該再往它身上撞。這類資訊會寫進狀態，成為下一次決策的排除項。 換句話說，路由的輸入不只是“這個問題的難度”，而是 “這個問題的難度+整個系統此刻的狀態” 。 最後才是決策本身。這本質上是一個 多目標最佳化問題 ：質量夠不夠、成本值不值、時延等不等得起、上下文和工具支不支援、使用者更看重速度還是質量。 openJiuwen的做法是基於候選模型能力、時延功耗、使用者偏好等約束，構建啟發式最佳化演算法，綜合選出最優模型—— 選的是“最優”的那一個，而不是“看起來最強”的那一個。 △動態路由決策——多路資訊匯聚後的即時權衡。系統按“請求分析 → 演算法判定 → 輸出選擇 → 宿主呼叫”的鏈路工作，模型池每次選其一 第三層：演進——“越用越準，而且要能跟著模型生態一起長” 前兩層解決的是“此刻怎麼選”。 但如前面所說，一套寫完就凍結的策略，三個月後必然過時。所以第三層解決的是： 這套系統能不能自己變聰明。 openJiuwen的做法，是把“學習”從“執行”裡拆出來—— 狀態解耦 。這一條是整套架構裡最不起眼、但決定性的設計： 演算法是純函式 ：給定同樣的請求和同樣的狀態快照，必須給出同樣的決策。決策邏輯裡不允許藏著跨請求的記憶，也不允許有隱藏的隨機性。 狀態是可丟棄的提示 ：所有跨請求的記憶——歷史結果、排除項、快取親和、經驗資料——全部外接到獨立的狀態層，演算法每一輪只讀它一眼。 反饋閉環 ：每次呼叫結束後，宿主把結果回報回來：成功還是失敗、用了多久、大概花了多少、這一輪做得好不好。這些反饋寫回狀態層，成為下一輪的輸入。 這三條合起來，產生了一個很實用的性質： 狀態丟了，只是降質為“冷路由”，不會讓請求失敗；而演算法要升級、要換一個新的學習模型，不用動狀態層，也不用動宿主。 從執行時的角度看，這條閉環長這樣：使用者請求進來 → 路由演算法分析請求、判定模型 → 宿主執行、呼叫選中的模型 → 返回使用者； 與此同時，執行結果被送去評估（質量評分、呼叫成本、成敗、時延，可接入後臺評分模型）→ 關聯請求、模型與反饋形成經驗積累 → 演進模組檢索相似經驗、權衡質量與成本 → 應用於下一次決策 。 系統在這裡有一個克制而重要的預設： 樣本不足或優勢不明顯時，保留原判定 ——不為了“演進”而演進。 △反饋驅動的路由自演進——將執行結果轉化為經驗，持續修正後續選模決策 正是這個設計，讓“演進”這條路真正走得通—— 演算法和狀態各自獨立，誰升級都不會拖住對方。 於是就有了兩條互不干擾的演進通路：一條在執行時自我學習，靠Contextual Bandit和輕量強化學習從真實反饋裡持續抽經驗；一條在邏輯上持續迭代，畫像更新、演算法替換、策略升級都是獨立模組。 為什麼這件事重要？ 因為它決定了這套路由是“一次性的工程”，還是“能活三年的基礎設施”。前者每次模型換代都要重做一遍，後者只需要換掉一個模組。 再進一步：從“選模型”到“編排協同” 三層能力之上，還有一個更大的空間。 一是多模型協同。 當一個問題確實很難、單模型不足以給出可信答案時，路由層可以排程 多個模型協同作答 ——讓不同的模型分別給出參考結果，再經過 語義去重、質量篩選、衝突消解、壓縮整理 ，最終聚合成一個更高質量的答案。 多模型協同天然昂貴，所以關鍵在於 能不能聰明地協同 ：重複的答案不必重複計算，站不住腳的答案及早淘汰，模型之間結論不一致時有機制判斷誰更可信。 這類能力，openJiuwen團隊已經在 WorkSwarm 的 MoA（多模型協同） 中做了實現，並支援通過路由框架統一接入—— 路由決定“這一輪要不要發動多個模型、發動哪幾個”，MoA負責“多個模型的結果怎麼收攏成一個”。 一個管派誰上場，一個管場上怎麼配合。 △MOA多模型協同——重點不是“多”，而是聚合得聰明 二是策略自編排。 不再侷限於“選模型”，而是把模型、Skill/Tool、SubAgent等多種能力放在同一個排程框架下統一編排——某一步交給模型推理，某一步交給工具執行，某一步派個子Agent去查證。 路由的粒度，從“選模型”升級為“編排整個執行策略”。 再加上 策略自閉環最佳化 ：通過構建反饋Hook點和Fallback機制，驗證並總結執行結果和錯誤根因，讓策略能夠自行最佳化——每一次失敗都不會被浪費。 關鍵難點：在四個目標之間走鋼絲 講到這裡，有必要單獨說說這件事真正的難點。 模型路由最難的，從來不是“能不能選”，而是 如何在成本、時延、質量、上下文/工具相容性之間做即時權衡 。 把成本壓到極致，質量可能就崩了，使用者轉頭就走； 把質量頂到最高，成本會失控，業務方不答應； 一味追求低時延，可能在關鍵問題上給出草率答案； 只看單次最優，忽略了快取複用，整體反而更貴。 這是一個典型的 沒有標準答案的多目標權衡問題 。理論上沒有免費的午餐，實踐中也沒有一個參數能適配所有場景。 openJiuwen的思路不是去找一個“萬能的最優解”，而是 把權衡這件事本身變成一個可配置、可演進、可觀測的系統 ：不同業務可以帶著自己的偏好進來；決策依據來自真實的執行反饋，而不是紙面上的假設；策略可以隨著資料積累持續演進，越用越準。 這套機制落到程式碼里長什麼樣？看這張圖。 △openJiuwen智慧路由整體架構——路由演算法（Algorithm）、狀態管理（State）、自演進（Evolving）三塊解耦，向上對接WorkSwarm/MoA的協同編排，向下對接候選模型池；對外是純函式介面呼叫，不產生無狀態之外的影響 架構裡的 Algorithm 一層，是把“怎麼判斷”做成可插拔的能力。 目前已經落地的演算法包括 x-router ：基於五檔複雜度分檔的路由演算法，支援端雲分級、本地能力邊界判斷、程序內小模型分類器、失敗降級永不升級，並用上下文Bandit做經驗修正。 同層還有其他路線——比如Rust版本的輕量前瞻路由，走的是高維特徵空間質量預測與任務軌跡預測、聯合最佳化的路子，靜態編譯、無執行時依賴、可直接嵌入宿主程序。 也就是說，x-router是這臺引擎裡的一個演算法模組，而不是引擎本身。 引擎提供的是那套“可配置、可演進、可觀測”的骨架；換演算法不改骨架，換骨架不動演算法。 下面的實測資料，用的就是x-router這條演算法通路。 實測：在哪些榜單上，拿到了什麼結果 技術講完了，看效果。 openJiuwen團隊想回答兩個最直接的問題： 啟用智慧路由之後，能否減少不必要的模型呼叫成本？開啟自演進之後，路由策略能否隨著真實使用持續最佳化？ 實驗設定 團隊把x-router接入 WorkSwarm ，使用 PinchBench 全量 147個任務 進行評測，任務覆蓋日誌分析、資料分析、編碼、研究等 11個類別 。 x-router的複雜度分類器採用本地部署的 Qwen3-0.6B ，直接跑在程序內，無需額外啟動獨立服務。五級模型池配置如下： △五級模型池配置——從SIMPLE到REASONING五檔，本地模型與雲端模型混合編隊 對應的能力分檔邏輯是：從 SIMPLE 到 REASONING ，簡單任務優先使用輕量模型，複雜任務按需升級能力——查詢“HTTP 429是什麼含義”走輕量模型，編寫資料處理指令碼走通用或高能力模型，多文件研究走研究型模型，數學證明與深度推理才交給推理模型。 △五級能力路由——根據任務複雜度匹配合適的模型能力，追求的不是“選更便宜的”，而是“能用輕量模型完成就不必呼叫強模型，能力不足時才讓更強模型接手” 三種執行模式 為保證對比公平，三組實驗使用相同的評測模型和評分標準，並統計不同模式下的 PinchBench得分 及 真實模型呼叫成本 ： 全雲基線（All Kimi-K2-Thinking） ：不使用智慧路由，所有請求統一交給指定的雲端強模型； x-router靜態路由 ：啟用x-router的複雜度路由，但不開啟自演進； x-router Bandit自演進 ：在靜態路由基礎上開啟Bandit自演進，根據相似任務的真實執行結果動態調整路由策略。 結果一：PinchBench——得分幾乎持平，成本降44.6% △PinchBench實測結果——橫軸為模型呼叫總成本，縱軸為PinchBench得分；越靠近左上角，代表以更低成本拿到更高任務質量 x-router靜態路由 取得 66.3% 的PinchBench得分，總模型呼叫成本 $8.25 。相比全量呼叫Kimi-K2-Thinking（ 71.36% 、 $11.11 ），得分下降5.1%，而模型呼叫成本 降低了25.7% 。 開啟Bandit自演進後 ，成本進一步從 $8.25 降至 $6.16 ，較靜態路由再降約 25.3% ；與此同時，PinchBench得分 提高4.4% ，達到 70.70% 。 與全雲基線相比 ：x-router Bandit自演進模式得分70.70% vs 71.36%，僅低 0.66個百分點 ，幾乎持平；而模型呼叫成本從 $11.11 降至 $6.16 ， 整體降低約44.6% 。 這組對比回答了兩個問題：靜態路由證明了“按需選模”本身就能砍掉不必要的強模型呼叫；自演進則證明了—— 反饋閉環帶來的不只是省錢，還有質量的回升 。成本降了25.3%的同時得分反升4.4%，這是“越用越準”最直接的證據。 結果二： Terminal-Bench/LLMRouterBench——成功率達Opus的95.2%，成本降51.4% openJiuwen團隊還在 Terminal-Bench/LLMRouterBench 上用 Opus4.8/Qwen3.5-122B/Qwen3.5-35B三檔位模型池 做了 單輪/多輪路由 測試： cost focused 模式下，降成本 51.4% ，成功率達Opus的 95.2% ； quality focused 模式下，降成本 15.7% ，成功率達Opus的 98.6% 。 △ Terminal-Bench/LLMRouterBench實測結果——橫軸為模型呼叫總成本，縱軸為任務成功率；基於Opus4.8/Qwen3.5-122B/Qwen3.5-35B三檔位模型池進行路由 兩個榜單、兩種偏好設定，指向同一個結論：接近頂配的質量，可以用大約一半的成本拿到。 而且“省多少、讓多少質量”是使用者自己選的——這正是“可配置”落到數字上的樣子。 快速上手 安裝 model-router的核心是Rust，Python側是PyO3擴展。 git clone https://gitcode.com/openJiuwen/model-router.gitcd model-routercargo build pip install maturinmaturin develop 如需使用x-router演算法，在已啟用的Python虛擬環境中執行： maturin develop –extras x-router 配置 路由的行為由一份TOML描述。最簡形態如下： config/edge.tomlalgorithm = “passthrough” [state]backend = “memory”ttl_secs = 300max_entries = 1024 [targets]models = [“local-default”] 切換到x-router只需改演算法名並補上模型池與分類器： algorithm = “x-router” [targets]models = [“model-a”, “model-b”, “model-c”, “model-d”, “model-e”] [x-router.classifier_model]model_path = “/path/to/qwen3-0.6b”local_models = [“model-a”] 呼叫 裝配路由，發起請求，拿到決策後 由宿主自己呼叫模型 ，再把結果回報回去——這就是前面說的“決策與執行分離”。 import openjiuwenfrom openjiuwen import Feedback, Router router = Router.from_config(“config/cloud.toml”) decision = await router.route({ “messages”： [{“role”： “user”, “content”： “hi”}], “session_id”： “s1”, “agent_id”： “host”,}) 宿主自行呼叫 decision.selected_model_id對應的模型 await router.report( Feedback.ok(decision, latency_ms=12, session_id=“s1”, agent_id=“host”)) x-router的呼叫方式在語義上一致，分類器直接執行在本地程序中： from openjiuwen import x_router router = x_router.build_router(“router.toml”) selection = x_router.",
+      "published_date": "2026-10-02",
+      "tags": [
+        "資訊",
+        "華為"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "量子位",
+        "feed_url": "https://www.qbitai.com/feed"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: reasoning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 73,
+    "llm_reason": "開源自演進模型路由技術實測省50%以上token，具體且貼近Agent成本痛點",
+    "novelty": 14,
+    "impact": 14,
+    "trending": 14,
+    "practicality": 15,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "blog",
+      "source_name": "Simon Willison",
+      "title": "Guides",
+      "url": "https://simonwillison.net/guides/",
+      "authors": [
+        "Simon Willison"
+      ],
+      "abstract": "Patterns for getting the best results out of coding agents like Claude Code and OpenAI Codex. See my introduction for more on this project. Patterns for getting the best results out of coding agents like Claude Code and OpenAI Codex. See my introduction for more on this project. 16 chapters: What is agentic engineering? , Writing code is cheap now , Hoard things you know how to do , AI should help us produce better code , Anti-patterns: things to avoid , How coding agents work , Using Git with coding agents , Subagents , Red/green TDD , First run the tests , Agentic manual testing , Linear walkthroughs , Interactive explanations , GIF optimization tool using WebAssembly and Gifsicle , Adding a new content type to my blog-to-newsletter tool , Prompts I use",
+      "published_date": "2026-10-02",
+      "tags": [
+        "blog"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "blog_name": "Simon Willison",
+        "blog_url": "https://simonwillison.net/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agentic",
+      "⚖️ 來源權重: blog +15"
+    ],
+    "llm_score": 73,
+    "llm_reason": "系統性整理Agentic coding實務模式，兼具深度與高度可操作性",
+    "novelty": 10,
+    "impact": 14,
+    "trending": 15,
+    "practicality": 17,
+    "blog_worthiness": 17
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "HuggingFace Blog",
+      "title": "AutoSynthData: Generating Training Data for Enterprise Agents",
+      "url": "https://huggingface.co/blog/ServiceNow-AI/autosynthdata",
+      "authors": [],
+      "abstract": "Back to Articles AutoSynthData: Generating Training Data for Enterprise Agents Enterprise Article Published October 2, 2026 Upvote 24 +18 Esakkivel Esakkiraja esakkivel Follow ServiceNow-AI Shruthan Radhakrishna shruthan-r Follow ServiceNow-AI Denis Akhiyarov dtanow Follow ServiceNow-AI Sagar Davasam davasam Follow ServiceNow-AI Enterprises need agents that work well in their own environments. The work they ask these agents to do is shaped by the systems they use, the rules they follow, and the state of their data. A model may be broadly capable and still struggle with a particular environment: a workflow it handles poorly, a combination of tools it misuses, or a constraint it fails to respect. Those are the weaknesses an enterprise needs to improve. The difficulty is turning those weaknesses into training data. An individual failure tells us something, but training a model requires many new tasks that exercise the same capability in different situations. Those tasks must also be possible to complete in the environment, resemble work someone would actually request, and have a reliable way to check whether the agent succeeded. At ServiceNow CoreAI, we built AutoSynthData to turn those capability gaps into training data. It uses a target model’s failures and a stronger teacher’s successes to decide what the model should learn next, then generates and validates new tasks that exercise those capabilities. As the model improves, the curriculum shifts toward what it still finds difficult. We illustrate the pipeline with EnterpriseOps Gym ( Malay et al., 2026 ), using the released dataset . We begin by describing the environment an agent operates in and what makes a task useful for training. What makes a useful agentic task? An agentic environment defines the world in which an agent operates: the state it can observe and modify, the tools and APIs it can invoke, and the state transitions produced by its actions. A task is instantiated within this environment. We use the following abstraction: task = (system specification, user prompt, verifier) System specification The system specification defines the constraints under which the agent operates, including system instructions, environment policies, and, when applicable, task-specific initialization such as a seeded database state or a set of knowledge articles. The specification must be compatible with the environment’s tools, state, and supported actions. Its instructions should be clear and avoid arbitrary constraints introduced solely to manufacture difficulty. Agent-facing task The user prompt specifies what the user wants the agent to accomplish, together with any user-level constraints. A generated task should satisfy three properties. Feasibility. There should exist at least one trajectory in the current environment that satisfies the user prompt while respecting the system specification. This rules out tasks that depend on unavailable tools, inaccessible knowledge, impossible state transitions, or actions prohibited by policy. Realism. The user prompt should resemble something a user would plausibly ask in the target environment. The space of executable behaviors is usually much larger than the space of realistic workflows. Difficulty. For training, the task should expose a weakness of the current agent. Tasks that are already solved reliably provide little new training signal. The useful region is therefore tasks that are feasible and realistic, but not yet consistently solved. Verifier The verifier determines whether the resulting trajectory successfully completes the task. It should satisfy three properties. Consistency. It should agree with the user prompt, the system specification, and the task-specific environment state. Soundness. It should reject trajectories that fail to satisfy the task or violate relevant constraints. Completeness. It should accept valid solutions rather than encode one particular reference trajectory. These properties matter directly during training. A lax verifier can reward incorrect behavior, while an overly restrictive verifier can penalize valid solutions. Overview Given an environment and a target model, AutoSynthData generates training tasks consisting of a system specification, user prompt, and verifier. The generated tasks are grounded in the environment and selected to provide useful training signal for the current model. AutoSynthData first evaluates the target model in the environment using diagnostic tasks and identifies patterns in the tasks it struggles to complete. A stronger teacher helps characterize which of those tasks are solvable and what successful behavior looks like. AutoSynthData turns the resulting capability gaps into new executable tasks, checks each task in the environment, and uses accepted samples for post-training. Evaluating the updated model reveals which gaps remain and can guide the next round of generation. From model failures to a curriculum AutoSynthData uses evaluation runs in the target environment to identify what the model needs to learn next. In our EnterpriseOps Gym experiment, we run both the target model and a stronger teacher on the evaluation tasks. We examine those runs to identify: the capability being tested; the tools and workflow structure involved; where the target model fails and how the teacher succeeds; the properties that a correct final state must satisfy; the dimensions that can vary while preserving the capability being tested. We distill these findings into sanitized capability specification cards. The evaluation tasks guide what the model should learn, but the generator does not receive their original prompts, entities, trajectories, or verifier details. It receives the cards and uses them to create new tasks with different prompts, states, and solution paths. Generating and scaling tasks Identifying a capability gap tells us what to teach, but training requires many varied tasks that exercise it. AutoSynthData uses the specification card to generate those tasks. Suppose the target model struggles with tasks that require the following workflow: The generator creates new tasks that exercise this workflow, varying the entities, initial environment state, workflow composition, tool combinations, wording, and difficulty. The stronger teacher then demonstrates a successful trajectory for each task. For supervised fine-tuning (SFT), these demonstrations teach the target model how to apply the capability in new situations. AutoSynthData builds the dataset in two phases: first generating and validating core samples, then expanding them into novel variants. Target The target phase creates the core set of training samples from the capability specifications. Workers generate independent tasks in parallel, picking up a new target when they finish. Each candidate goes through validation, execution, solver evaluation, and repair before acceptance. The result is a batch of vetted examples built around what the target model needs to learn. Multiply The multiply phase expands the dataset by creating novel variants of accepted target samples. Each variant has its own user request, environment state, entity configuration, reference trajectory, and verifier, and must pass the same validation and execution checks. A multiplied sample cannot seed another multiplied sample. This anchors expansion to the vetted target set and limits drift across generations. Implementation details To support both phases, AutoSynthData separates generation control from environment-specific execution. A shared controller coordinates generation, quality control, coverage, and dataset construction, while an adapter handles environment execution, task and state management, reference replay, deterministic verification, solver execution, and task profiling. Together, parallel target generation and multiplication provide a path to training-scale datasets.",
+      "published_date": "2026-10-02",
+      "tags": [],
+      "organization": "HuggingFace",
+      "raw_metadata": {
+        "feed_name": "HuggingFace Blog",
+        "feed_url": "https://huggingface.co/blog/feed.xml"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, post-training, fine-tuning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 61,
+    "llm_reason": "以失敗驅動課程生成企業agent訓練資料，方法設計具一定新意",
+    "novelty": 12,
+    "impact": 11,
+    "trending": 12,
+    "practicality": 13,
+    "blog_worthiness": 13
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "RIP, vector database",
+      "url": "https://turbopuffer.com/blog/rip-vector-database",
+      "authors": [
+        "razin"
+      ],
+      "abstract": "We are changing turbopuffer's storage architecture to take search to the next\nlevel. turbopuffer v3 changes how documents and indexes are laid out, written,\ncompacted, and queried in turbopuffer. It will allow us to make search faster in\nevery respect — including text, regex, and vector search — but it also lays the\nfoundation to move many more SQL queries to turbopuffer and make them fast. turbopuffer launched as a serverless vector database (v1) ,\nhighly specialized to the task of serving extremely cheap and reasonably fast\nvector searches. Object storage as the source of truth gave the economics, and\ntiered NVMe SSD/memory caches gave the performance. The value of these\nparticular tradeoffs was validated by our earliest customers, including Cursor\nand Notion. turbopuffer evolved to have very strong text and regex search (v2), and is being\nused for many non-search use cases, like Linear's syncing engine .\nThe query engine has evolved along the way to support all of these query plans,\nbut the storage architecture has remained largely unchanged: the ANN vector\nindex was and still is the primary index around which all other indexes and\nquery plans revolve. This design has constrained several query plans, like GROUP BY and aggregations. We've pushed the vector-primary architecture as far as we can, and it's time to\nmove on. We're in the process of moving to a new primary index, and making ANN\n\"just another\" secondary index. We thought it might be fun to open up the doors\nand let you follow along. For this first update, we'll set the stage with why we're doing this in the\nfirst place. Walk with me on a short journey from tpuf v1 to today. In the first version of turbopuffer, documents consisted of nothing but an ID\nand a vector. The prevailing wisdom at the time was graph-based vector indexes,\nbut a hierarchical clustering index plays better with object storage. We started\nwith SPANN , and eventually migrated to SPFresh to support incremental indexing.\nVectors are clustered into groups, whose centroids are clustered in turn,\nrepeated to form a tree with a single root. We implemented this on top of a storage layer presenting as a key-value map,\nwith sorted and unique keys. Each cluster is given a ClusterId , and vectors\nwithin each cluster are given a dense LocalId . As you can see above, everything is keyed by ClusterId and LocalId (e.g. C0L1 ), which together we call the ANN address . This is what we mean when\nwe say the ANN index is the primary index. Two new query plans marked the informal transition from turbopuffer v1 → v2:\nattribute filtering and full-text search. Naturally, customers wanted to be able to add attribute values and filter vector\nsearches on them. To make filtering fast and high-recall , we modeled these\nas an inverted index that maps an attribute value to the ANN address of the\ndocuments that contain it. For projections ( include_attributes ), we also stored the document attributes\nalongside the ID and the vector. BM25 full-text search was another obvious and much-demanded query plan. Similar\nto attribute search, full-text search works by first finding the documents that\nhave the query term present (commonly called \"postings\"). For an FTS index, we\nalso include the (term count, document length) metadata necessary for BM25\nscoring: Over time, we've shipped several other index structures and query engines: aggregations , regex search , fuzzy matching , sparse vector search , and attribute ordering — all built around the\nsame vector-primary storage layout. The ANN primary index has largely remained intact until today for one simple\nreason: it works really, really well for ANN search on object storage. On top of\nthis architecture, we've pushed vector search to single indexes of 100B+ vectors serving 200 ms p99 reads at 1k+ QPS .\nAny significant change here risks introducing regressions in ANN performance. However, this layout holds us back from being state-of-the-art for the\nnon-vector query shapes we support, in three main ways: storage amplification,\nwrite amplification, and limited vectorization. As described above, turbopuffer currently puts the full contents of each\ndocument under its ANN address. When there is only one vector, the non-vector\ndata is stored alongside the vector only once. However, for multi-vector representations of a document, such as document\nnesting or late interaction, this means we have to duplicate the contents for\neach vector. This is the reason for some of our more unfortunate limits . Any time a document is inserted, updated, or deleted, SPFresh may rebalance the\nvectors to ensure they remain well clustered (otherwise recall may suffer).\nBecause everything in a document is stored keyed by the ANN address of the\ndocument's vector, this rebalancing cascades to moving the full document\ncontents, as well as any inverted (attribute and FTS) indexes that reference it.\nUpdating just one vector can move hundreds of attributes and their indexes. This write amplification is large enough that our efforts to tune indexing\nthroughput have started to hit diminishing returns. Modern query engines are vectorized : they run tight\nloops over blocks of values, which amortizes fixed per-block costs, compresses\nbetter, keeps the CPU pipeline full, and unlocks SIMD. DuckDB, for example,\nworks in batches of 2,048 rows, ClickHouse up to ~65k, Lucene's posting blocks\nare 256 docs, and our ANN index works best with clusters of around 100–200\ndocuments. Every query plan has an optimal block size, but today they are all\nconstrained by the ANN primary index. A plan that wants blocks of thousands of\ndocuments to keep the CPU saturated is still stuck at 100–200. We've already documented how much this matters in turbopuffer. Our first version\nof full-text search partitioned posting lists along ANN cluster boundaries, and\nthe median block held just ~1.5 postings. FTS v2 reworked postings into fixed blocks of ~256, and the\nindex got 10x smaller and queries got up to 20x faster. Posting lists could do\nthat because they're stored separately and point at documents, so their layout\ndoesn't have to follow the clusters. Aggregations and other scans read the\ndocuments themselves, and those are stored one block per cluster. As long as the\nANN address is the primary key, their block size is constrained to the cluster\nsize, even if they'd prefer something larger. The solution to these problems is simple: don't key on the ANN address. That is\nprecisely the change turbopuffer v3 makes. As you can imagine, it is not a\ntrivial change. v3 is a new foundation that will unlock significant performance improvement on\nall query plans, and we hit a major milestone earlier this month: 100% of CI\npasses on turbopuffer v3. We started by focusing on correctness. Now we will\nmake it correct and fast. Watching benchmark numbers go down is great fun, so\nwe wanted to get you in at day zero of perf grinding. We will share the benchmarks in public over the coming weeks, as we work toward (and\nbeyond) performance parity before rolling out v3 to production. turbopuffer is a fast search engine that hosts 1T+ documents, handles 10M+ writes/s , and serves 25k+ queries/s . We are ready for far more. We hope you'll trust us with your queries.\n\n(374 points, 105 comments on Hacker News)",
+      "published_date": "2026-10-02",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 374,
+        "num_comments": 105,
+        "hn_url": "https://news.ycombinator.com/item?id=49923466",
+        "object_id": "49923466"
+      }
+    },
+    "rule_score": 21.0,
+    "rule_reasons": [
+      "🔥 HN 爆紅: 374 points"
+    ],
+    "llm_score": 73,
+    "llm_reason": "turbopuffer揭露v3儲存架構重設計，技術細節扎實且受矚目",
+    "novelty": 15,
+    "impact": 14,
+    "trending": 17,
+    "practicality": 10,
+    "blog_worthiness": 17
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "Lightweight PDF parser with layout, tables, formulas and bounding boxes",
+      "url": "https://github.com/beatrizalmeidaf/papero-pdf-text-extractor",
+      "authors": [
+        "beatrizalmeidaf"
+      ],
+      "abstract": "Document structure extraction without the heavyweight stack. PDF → Markdown · JSON · Word · Excel — with reading order, tables, formulas, figures and the position of every block. CPU only. No ML models. Runs in your browser, in Python, or as an API. ▶ Try it in your browser · Quick start · Benchmarks 30 seconds in the browser app: load a PDF, inspect any block, check tables and formulas, export to Word. Your PDF never leaves your machine. ( MP4 ) Why papero Getting the text out of a PDF is easy. Getting its structure back — which column comes first, which lines are a table, where the formula is — is what makes the output usable for RAG, search and LLMs. papero does that with plain geometry, so it stays fast on a laptop CPU. 📖 Reading order Two- and three-column papers read column by column. Headers, footers, page numbers and repeated logos are set aside. ▦ Real tables Ruled, borderless and LaTeX booktabs tables come back as rows and columns — multi-line cells included. Export to CSV or Excel. ∑ Formulas Exponents, indices, stacked fractions and drawn root signs are read as mathematics — 5/12 , 10√2 , CO₂(g) — and written as LaTeX ( \\frac{5}{12} , \\sqrt{2} ), plus a cropped image of the formula. 📍 Position of everything Every block has a bounding box — cite the exact spot in a RAG answer, draw over the page, or crop it. 🖼 Figures & charts Images and vector charts are cropped to PNG, with their caption, axis labels and legend kept together. 📝 Back to Word Columns, alignment, indents, line spacing, bold runs and fonts are kept, so a .docx or HTML export looks like the original page — two columns stay two columns. Also: accents drawn as separate glyphs in LaTeX PDFs ( Computa¸ca˜o → Computação ), invisible white text used by form generators is dropped, scanned pages go through OCR, and DOCX/PPTX/XLSX/EPUB/HTML are read through Apache Tika. Quick start pip install papero-extract from papero_extract import extract doc = extract ( \"paper.pdf\" ) print ( doc . to_markdown ()) Or skip the install: open the browser app , drop a PDF, export to the format you need. More Python — tables, formulas, positions, images, options from papero_extract import extract , extract_text doc = extract ( \"paper.pdf\" , images = True ) doc . tables [ 0 ]. rows # [[\"Model\", \"Accuracy\"], [\"Base\", \"0.81\"], ...] doc . formulas [ 0 ]. latex # \"E = mc^{2}\" doc . figures [ 0 ]. image . data # PNG bytes for block in doc . pages [ 0 ]. blocks : # reading order, with positions print ( block . type , block . bbox , block . text [: 60 ]) doc . to_html () # keeps alignment and indents doc . to_dict () # the full JSON # Math inside paragraphs as LaTeX, in Markdown or plain text — found by what it is made of # (operators, functions, exponents, roots), even when it is set in the text font: doc . to_markdown ( math = \"latex\" ) # \"Se $\\operatorname{tg} x - \\operatorname{cotg} x = 1$, então…\" doc . to_text ( math = \"latex\" ) # \"a) $1{,}035\\cdot 10^{9}$ e $5{,}5\\cdot 10^{7}$\" extract ( \"slides.pptx\" ). to_markdown () # any format Apache Tika reads extract_text ( \"contract.pdf\" ). text # fastest: clean text only Option Default pages all \"1-3,5,10-\" images False crop figures, tables and formulas to PNG tables / formulas True detection on/off ocr \"auto\" \"auto\" (scanned pages only), \"force\" , \"off\" ocr_language \"por+eng\" Tesseract languages tika True False runs the layout engine alone (no Java) workers 1 processes for long documents CLI papero-extract extract paper.pdf -o paper.md --images # Markdown + images/ folder papero-extract extract paper.pdf -o paper.json # format from the extension papero-extract extract paper.pdf -f csv -o tables.csv # tables only papero-extract extract paper.pdf -p 1-5 -f html\npapero-extract extract paper.pdf --math latex -o p.md # math in the text as $…$ papero-extract extract paper.pdf --fast # clean text only papero-extract batch ./documents -o ./dataset # a whole folder, for RAG papero-extract serve --port 8000 # API + browser app Batch & fidelity report — a folder of PDFs to a RAG dataset, and which ones to review papero-extract batch ./documents -o ./dataset dataset/\n├── documents/ one .md and one .json per PDF (same sub-folders)\n├── chunks.jsonl every chunk, cut at headings, tables kept whole\n├── manifest.json per document: pages, tables, chunks, fidelity scores\n└── fidelity/ ├── report.json totals, signals and every document's issues ├── summary.html the same, to open in a browser └── problematic/ one .json per document with warnings or errors Each chunk knows where it came from, so a retrieval hit can be shown on the page: { \"id\" : \" paper.pdf#12 \" , \"type\" : \" table \" , \"headings\" : [ \" 4 Results \" ], \"pages\" : [ 6 , 6 ], \"blocks\" : [ \" p6-b3 \" ], \"text\" : \" Table 2: Accuracy per model. \\n\\n | Model | Top-1 | … \" } The report checks every document against its own PDF — no ground truth, so read it as where to look , not as accuracy: Signal What is checked text the words PDFium reads on each page are all in the output reading_order no block is read after one below it in the same column tables every \"Table N\" caption has its table; each table is a clean grid figures every \"Figure N\" caption has its figure formulas each formula has LaTeX and no unmapped glyph The browser app runs the same checks on the PDF you drop: the fidelity figure sits next to the page count, and the Compare tab puts each page beside what was extracted from it, marking the PDF text that is not in the output and the blocks that failed a check. from papero_extract import extract from papero_extract . batch import run_batch from papero_extract . chunks import chunk_document from papero_extract . fidelity import assess , reference_text run_batch ( \"./documents\" , \"./dataset\" , workers = 8 )[ \"totals\" ] # {\"documents\": …, \"ok\": …, \"warning\": …, \"error\": …} doc = extract ( \"paper.pdf\" ) chunk_document ( doc , document = \"paper.pdf\" , max_chars = 1500 ) assess ( doc , reference_text ( \"paper.pdf\" )). issues # [Issue(code=\"table_not_detected\", pages=[5], …)] REST API & Docker docker compose up # API + Apache Tika + Tesseract + browser app on :8000 curl -F \" file=@paper.pdf \" \" localhost:8000/v1/extract?format=markdown \" curl -F \" file=@paper.pdf \" \" localhost:8000/v1/extract?format=zip&images=true \" -o paper.zip\ncurl -F \" file=@paper.pdf \" \" localhost:8000/v1/extract?per_page=true \" # blocks + positions One endpoint, POST /v1/extract ; interactive docs at /docs . Parameter Default mode structured structured (layout + Tika) or fast (text only) format json json , markdown , text , html , csv , zip pages all 1-3,5,10- per_page false include pages, blocks and positions in the JSON images false crop figures, tables and formulas ocr auto auto , force , off Configuration through environment variables — see .env.example . What comes out Every block knows what it is and where it was: { \"type\" : \" table \" , \"bbox\" : [ 56.7 , 294.8 , 481.9 , 374.2 ], \"rows\" : [[ \" Model \" , \" Accuracy \" ], [ \" Base \" , \" 0.81 \" ]], \"caption\" : \" Table 1: Comparison between models. \" } Output Python · CLI · API Browser app Markdown, plain text, JSON ✓ ✓ HTML (keeps alignment and indents) ✓ ✓ CSV of the tables, ZIP with images ✓ ✓ Word .docx that keeps the page's look — ✓ Excel .xlsx , one sheet per table — ✓ Full JSON schema and block types { \"schema\" : \" pdf-text-api/document@1 \" , \"engine\" : \" tika+pdfium \" , \"page_count\" : 12 , \"metadata\" : { \"title\" : \" ... \" , \"author\" : \" ... \" , \"language\" : \" en \" }, \"pages\" : [{ \"number\" : 1 , \"width\" : 595.3 , \"height\" : 841.9 , \"blocks\" : [{ \"id\" : \" p1-b4 \" , \"type\" : \" paragraph \" , \"bbox\" : [ 74.0 , 217.0 , 522.0 , 275.0 ], \"text\" : \" Atestamos que a estudante ... \" , \"style\" : { \"pt\" : 11.0 , \"font\" : \" Arial \" , \"bold\" : false }, \"format\" : { \"align\" : \" justify \" , \"first_line\" : 42.7 , \"line_spacing\" : 1.\n\n(86 points, 7 comments on Hacker News)",
+      "published_date": "2026-10-02",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 86,
+        "num_comments": 7,
+        "hn_url": "https://news.ycombinator.com/item?id=49923638",
+        "object_id": "49923638"
+      }
+    },
+    "rule_score": 24.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: alignment, rag",
+      "📰 Hacker News: 86 points",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 69,
+    "llm_reason": "純幾何法解析PDF結構免ML模型，對RAG實用且可複現",
+    "novelty": 12,
+    "impact": 12,
+    "trending": 13,
+    "practicality": 17,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "HuggingFace Blog",
+      "title": "Open-sourcing AstaBrief, the fast report-generation model in Asta",
+      "url": "https://huggingface.co/blog/allenai/astabrief",
+      "authors": [],
+      "abstract": "Back to Articles Open-sourcing AstaBrief, the fast report-generation model in Asta Enterprise Article Published October 2, 2026 Upvote 8 +2 Kyle Wiggers Ai2Comms Follow allenai 🤗 Model | 📊 Data Language models can already help researchers search the literature, synthesize evidence, and work through complex questions. But scientific work places particular demands on these models—answers need to stay grounded in evidence, the models need to preserve what the evidence actually supports rather than quietly broadening a study’s conclusions, and researchers need to be able to verify the final outputs. We see that in how scientists use Asta , our agentic platform for scientific work. Instead of simple keyword searches, users often bring substantial context and many constraints—for example, asking Asta to compare approaches across a body of literature while accounting for a particular method, population, or setting. Many also return to generated reports later, treating them as working research artifacts rather than one-off answers. We wanted to help scientists generate cited reports faster, with a model they could download and run themselves. To do that, we tested whether a small, open model trained specifically for scientific report generation could match the report quality of the proprietary models we were using, while reducing generation time and serving costs. We built AstaBrief 8B , a model that turns a research question and retrieved literature excerpts into a cited report. AstaBrief is available in Asta’s Generate a report feature today as Fast mode alongside Claude-powered Thinking mode, and we’re also open-sourcing it and the training data so others can study, reproduce, and build on our approach. Developing AstaBrief required tens of thousands of real research queries, citation-focused filtering, preference data, and a redesigned report-generation pipeline that writes the full report in one pass rather than section by section. The result is nearly an order-of-magnitude reduction in report generation time compared to the proprietary models we tracked—across the full Asta pipeline, Fast mode averages 51.1 seconds per report compared with 178.5 seconds for Thinking mode, about 3.5× faster. Together, those efficiency gains made AstaBrief a useful test case for a broader goal: building open language models that can be adapted to the specific demands of scientific work. Open weights will also let institutions run AstaBrief on their own infrastructure, which is necessary when research questions reveal sensitive or unpublished work. Alongside the model weights, we’re releasing an example workflow that researchers can adapt to create reports from their own PDFs , providing a starting point for local report generation This post covers how we trained AstaBrief, what we learned about grounding it in scientific evidence, and which parts of our approach we think can carry forward to future models for science. Most of the training and evaluation described was completed in 2025, so the proprietary models used to generate training data and as comparison points reflect the frontier at the time. We haven’t rerun the full evaluation against today’s frontier models; the results below are best read as evidence about the particular training and system design choices we tested. Training the model Our goal with AstaBrief was to build an open-weights model with all the qualities that matter most for long-form scientific synthesis: answer quality, relevance, structure, and citation grounding. We started from Qwen3-8B and focused most of our effort on the post-training data, evaluation, and surrounding report-generation scaffolding. Adapting general-purpose models for scientific work – and training new scientific models from scratch – is something we're exploring broadly across Ai2. Through NSF OMAI , a U.S. national initiative led by Ai2 to build fully open AI infrastructure and models for scientific discovery, our researchers are working directly with scientific communities to understand what they need from future open models and where today's general-purpose models fall short. That includes studying how needs differ across scientific fields and workflows, with more findings from that research to share in the future. Recent work, including our DR Tulu , has shown that reinforcement-learning-based (RL) methods can improve long-form report generation for open-weights models, especially when judge models are involved in the training loop. We considered that path for AstaBrief, but ultimately focused on a simpler recipe built around supervised fine-tuning (SFT) and direct preference optimization (DPO). RL-based training can be unstable and expensive. We wanted to see how far we could push report generation quality with a cheaper, more operationally manageable setup—one that's also easier to debug and iterate on. That made the quality of the training data especially important. Rather than relying on a more complex optimization method to compensate for noisy examples, we spent much of the project figuring out how to generate, select, and filter examples that actually demonstrated the report-writing behavior we wanted. We also wanted AstaBrief to be faster so that users could get preliminary reports quickly that they could then iterate over in subsequent turns. For speed improvements, we decided to train AstaBrief to directly generate the final report in one pass given a user query and relevant retrieved snippets, bypassing the expensive snippet summarization and clustering stages our Claude-based Thinking mode uses and not writing out the answer section-by-section. Interestingly, we found it was possible to do so without sacrificing performance. Collecting SFT training data The training pipeline began with real user queries submitted through the system described in our paper “ Synthesizing scientific literature with retrieval-augmented LMs ” and ScholarQA , the framework that now underpins Asta’s Generate a report feature. Rather than training only on synthetic prompts or benchmark-style tasks, we wanted AstaBrief to learn from real queries from real scientists. Our research suggests that scientists often ask different things of language models than users do of general-purpose chatbots or traditional search tools. In our analysis of hundreds of thousands of Asta queries , expert researchers frequently supplied substantial context, multiple constraints, and relationships between concepts rather than relying on short, keyword-style prompts. More recent Asta user studies have also surfaced differences in how researchers want AI involved in their work—some are comfortable using models for ideation or experimentation, while others prefer a narrower role in synthesis, literature surveillance, or pattern-finding. Across those differences, participants want clearer source traceability, more visibility into what a model is doing, and greater control over the context it uses. We filtered the user logs we collected for quality, relevance, and privacy, stripping out beta-tester and bot traffic, dropping queries that were too short to be meaningful, and using an LLM-based filtering pass to catch non-English queries, non-scientific requests, and prompts containing personal information. That left a pool of 90K research-focused queries. For SFT, we generated full-report target outputs from the filtered queries using the multi-step ScholarQA pipeline behind Asta's report generation. The pipeline retrieved relevant literature, organized the material into sections, and used a backing report-generating model to synthesize the evidence into a cited report. We drew on a mix of proprietary systems: Claude 3.5 Sonnet, Claude 3.7 Sonnet, o3, o4-mini, and GPT-4.1. After quality filtering, this yielded 47K usable training examples. Creating DPO pairs DPO required a different kind of training data. Instead of a single target report per query, we needed pairs of reports with one preferred over the other.",
+      "published_date": "2026-10-02",
+      "tags": [],
+      "organization": "HuggingFace",
+      "raw_metadata": {
+        "feed_name": "HuggingFace Blog",
+        "feed_url": "https://huggingface.co/blog/feed.xml"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agentic, dpo, post-training, reinforcement learning, fine-tuning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 59,
+    "llm_reason": "小模型取代專有模型做科研報告生成，開源且有明確落地場景",
+    "novelty": 10,
+    "impact": 10,
+    "trending": 10,
+    "practicality": 15,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Apple ML",
+      "title": "Limits of Confidence in Diffusion",
+      "url": "https://machinelearning.apple.com/research/limits-confidence-diffusion",
+      "authors": [],
+      "abstract": "research area Methods and Algorithms content type paper published October 2026 Limits of Confidence in Diffusion Authors Russ Webb, Amitis Shidani, Alice Bizeul, Dan Busbridge View publication Copy Bibtex Discrete diffusion, including remasking and uniform-state samplers, generate a sequence by writing multiple token positions per step, drawing each from a per-position distribution and choosing which positions to write from those same distributions. For domains of general interest (pixels, phonemes, or words) there are inherent dependencies between tokens. We show that a step matches the training distribution only when the positions it writes are conditionally independent given the tokens already fixed, that no product of per-position distributions can match a dependent group, and that per-position distributions do not determine whether a group is dependent: two joint distributions can have identical per-position marginals while differing in which combinations of values occur. On ScanAndAdd, a synthetic task whose joint distribution is available in closed form, we verify that every group of two or more undetermined positions a confidence ranking writes is dependent, and measure the generated distribution to be 29× the sampling-noise floor total variation while per-sample metrics are 1.0. Related readings and updates. Unmasking On-Policy Distillation: Where It Helps, Where It Hurts, and Why July 9, 2026 research area Methods and Algorithms , research area Speech and Natural Language Processing On-policy distillation offers dense, per-token supervision for training reasoning models; however, it remains unclear under which conditions this signal is beneficial and under which it is detrimental. Which teacher model should be used, and in the case of self-distillation, which specific context should serve as the supervisory signal? Does the optimal choice vary from one token to the next? At present, addressing these questions typically… Read more Position Prediction as an Effective Pre-training Strategy July 11, 2022 research area Methods and Algorithms conference ICML Transformers have gained increasing popularity in a wide range of applications, including Natural Language Processing (NLP), Computer Vision and Speech Recognition, because of their powerful representational capacity. However, harnessing this representational capacity effectively requires a large amount of data, strong regularization, or both, to mitigate overfitting. Recently, the power of the Transformer has been unlocked by self-supervised… Read more Discover opportunities in Machine Learning. Our research in machine learning breaks new ground every day. Work with us",
+      "published_date": "2026-10-02",
+      "tags": [],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "Apple ML",
+        "feed_url": "https://machinelearning.apple.com/rss.xml"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: reasoning, distillation, diffusion",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 54,
+    "llm_reason": "揭示離散擴散採樣的理論缺陷，數學論證嚴謹但落地價值有限",
+    "novelty": 16,
+    "impact": 11,
+    "trending": 8,
+    "practicality": 5,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "Scaling cloud migrations with agentic AI on Amazon Bedrock AgentCore",
+      "url": "https://aws.amazon.com/blogs/machine-learning/scaling-cloud-migrations-with-agentic-ai-on-amazon-bedrock-agentcore/",
+      "authors": [
+        "Nikhil Jha"
+      ],
+      "abstract": "October 2026: This post was reviewed and updated for accuracy. Scaling cloud migrations with agentic AI on Amazon Bedrock AgentCore raises a practical question. Which parts of a large migration program belong to a managed service, and which parts need custom automation? One enterprise program answered that question across 300+ applications and a fixed fiscal year deadline. The four-agent pattern in this post reduced infrastructure as code (IaC) development time from 3 to 4 weeks per application to minutes, based on internal project tracking data. This pattern runs alongside AWS Transform rather than in place of it, as a hybrid that adds custom agents where your program requires them. AWS Transform covers the migration and modernization work, and AWS Database Migration Service (AWS DMS) covers the database tier. The agents in this post attach to those services and carry one further requirement: sources and destinations reached through Model Context Protocol (MCP) tools that your organization builds and maintains. AWS Professional Services builds a suite of purpose-built AI agents for programs with that requirement. The agents use the Strands Agents SDK and run on Amazon Bedrock AgentCore, a platform to build, connect, and optimize agents at scale, with any framework or model. Each agent reaches its sources and destinations through MCP tools exposed by AgentCore Gateway. In this post, you explore the architecture of a four-agent pattern for MCP-connected environments. You also see the code that defines an agent, connects it to its tools, and applies responsible AI controls. The pattern includes four agents: To follow along, you need an AWS account with access to Amazon Bedrock AgentCore and to Amazon Bedrock foundation models. You also need familiarity with the Strands Agents SDK and MCP server patterns, plus the IaC tooling used by your organization. Confirm first that an AWS managed service does not already cover your migration path. AWS Transform covers migration and modernization for server, network, mainframe, .NET, and application code workloads as a managed service, and AWS DMS covers databases. This pattern adds agents for the requirements that stay specific to your organization. On the program described here, three conditions held together. This pattern uses four purpose-built agents. The architecture attaches to a migration program at three points: the systems holding migration inputs, IaC composition, and operations after cutover. The pattern applies security at each of those points. The following diagram shows how the agents, tools, and AWS services connect. Figure 1: How the agents connect across the migration and operations journeys through Model Context Protocol tool calling The pattern organizes agents into two journeys. The migration journey agents handle discovery through deployment. The operations journey agent handles post-migration monitoring. AWS managed services carry the migration and complement the custom agents: This section describes how the framework components interact at runtime. Each agent is a Strands agent, defined by a foundation model, a system prompt, and a set of tools. Amazon Bedrock AgentCore runtime hosts them in a serverless environment with session isolation and multi-agent orchestration. Amazon Bedrock foundation models power the reasoning that interprets documents, generates code, and drives multi-step workflows. For model availability by AWS Region, refer to Supported foundation models in Amazon Bedrock . Each agent calls MCP tools scoped to its function through AgentCore Gateway , a capability of Amazon Bedrock AgentCore, which converts your APIs, AWS Lambda functions, and existing services into MCP-compatible tools. AgentCore Identity , a capability of Amazon Bedrock AgentCore, authenticates each call through scoped AWS Identity and Access Management (IAM) roles and your identity provider. Amazon Bedrock AgentCore memory stores agent session state and shared context. Agents use this shared context to persist outputs and track migration progress across over 300 applications. When the Intake Agent completes discovery, it writes the target architecture and dependency mappings to AgentCore memory. The IaC Agent reads this shared context to begin code generation without manual handoff. The following Python example defines the IaC Agent and prepares it for Amazon Bedrock AgentCore runtime. The agent reaches your MCP tools through AgentCore Gateway, and it calls a foundation model through Amazon Bedrock with an Amazon Bedrock Guardrails policy attached. The entrypoint returns the generated IaC together with the policy set version that shaped it, so a reviewer traces the output back to a signed-off standard. AgentCore Runtime handles session isolation and scaling. For deployable examples, see the Amazon Bedrock AgentCore samples repository and the Strands Agents samples repository on GitHub. For the deployment steps, refer to Getting started with AgentCore runtime . The Intake Agent reads the migration inputs that live in your document and collaboration systems. On this program, those systems were reachable through MCP tools the delivery team built and maintained. The agent ingests architecture documentation, application inventory lists, intake questionnaires, and dependency records through those tools. It then produces a target AWS architecture with a recommended migration pattern, resource sizing specifications, and a compliance validation report. The output feeds directly into the IaC Agent, creating an automated handoff from intake to infrastructure provisioning. AWS Professional Services deployed the IaC Agent first in the portfolio, and it delivers the most immediately measurable impact. It generates IaC code adhering to your security best practices and standards. The agent workflow proceeds through five steps: Step 1: Ingest the steering document. The agent reads the steering document from the wave team. It extracts deployment scope, compliance constraints, and Security Office-approved wave-specific overrides. Step 2: Interpret the target state architecture diagram. Using the Intake Agent’s output, the IaC Agent identifies infrastructure components, their relationships, and dependencies. Step 3: Generate IaC. Based on this interpretation, the agent generates IaC using your defined and established patterns. It populates configurations with wave-specific parameters and configures remote state management. It then applies mandatory tagging and adds monitoring configurations required by organizational standards. Step 4: Validate through Policy in Amazon Bedrock AgentCore. Before execution, Policy in AgentCore evaluates each tool call against Cedar rules. It calculates the scope of potential change, checks dependency conflicts with concurrent waves, and confirms compliance window validity. Step 5: Execute and report. The centralized execution plane triggers the IaC, monitors deployment, and reports outcomes through AgentCore Observability, a capability of Amazon Bedrock AgentCore. Post-deployment validation runs automatically and compliance metrics update in real time. Each action passes through custom MCP tools exposed by Amazon Bedrock AgentCore Gateway and governed by AgentCore Identity and Policy in AgentCore. AgentCore Identity authenticates each agent action through scoped IAM roles with least-privilege access. The framework validates inputs against defined schemas and rejects malformed inputs at the boundary. No credentials or sensitive values pass through agent context, because AgentCore Identity resolves secrets at runtime from a centralized credential provider. AgentCore Observability and AWS CloudTrail write each agent action to an immutable, centralized audit trail. Policy in AgentCore enforces Cedar rules that help prevent a single operation from affecting more than a defined threshold. The security office curates the policy set, not the agent.",
+      "published_date": "2026-10-01",
+      "tags": [
+        "Advanced (300)",
+        "Amazon Bedrock AgentCore",
+        "Technical How-to"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, mcp, model context protocol, multi-agent",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 52,
+    "llm_reason": "企業級多agent雲遷移案例，實務效益明確但架構創新有限",
+    "novelty": 8,
+    "impact": 10,
+    "trending": 10,
+    "practicality": 13,
+    "blog_worthiness": 11
+  },
+  {
+    "item": {
+      "source": "blog",
+      "source_name": "Latent Space",
+      "title": "[AINews] Pi 1.0, Pi Durable, and AIE NYC",
+      "url": "https://www.latent.space/p/ainews-pi-10-pi-durable-and-aie-nyc",
+      "authors": [
+        "Latent Space"
+      ],
+      "abstract": "Last call for regular tickets for AI Engineer NYC ! See you in 2 weeks! As an exclusive for Latent Space subscribers, the first 30 of you can take a 30% off code if it helps (for new tickets only, no refunds). Pi is often mentioned in the same breath as OpenClaw, as we did earlier this year : but today is time for the increasingly well regarded Earendil , which Pi joined, to have its day in the sun, with both Pi 1.0 and Pi Durable hitting the front page of HN. Codemode (native support for MCP, Jev and image models) Extension support for virtual models Cache warming for anthropic models Mid-conversation system messages (transcript-aware prompt and tool changes) Pi Durable ports Pi to TypeScript and externalizes all stateful components of Pi: Crash Survival: Every step is recorded as a checkpointed task. If a process fails or restarts, agents and subagents automatically resume from their last exact state. Portability: It runs anywhere with a JavaScript runtime (like Node, Bun, or Cloudflare) and uses pluggable storage backends (Memory, SQLite, JSONL) and flexible remote or local execution environments. Concurrency: A single harness can run multiple parallel, branching conversations—such as a main channel and separate threads—without blocking one another. Extensibility: Developers can bundle custom system prompts, tools, hooks, and durable tasks (e.g., multi-step checkout processes with rollback capabilities) into installable “Extensions.” Context Management: Automatic background compaction summarizes older messages to maintain token limits without pausing the agent’s active work. Multiplayer & State Sync: Application state (like a to-do list) is stored in documents directly alongside the conversation transcripts, allowing multiple users or UIs to connect, watch, and steer the same agent simultaneously. Hot-Swapping: Tool and extension code can be updated dynamically while the agent is running, with the next tool call automatically picking up the new code. AI News for 10/01/2026-9/30/2026. We checked 12 subreddits, 544 Twitters and no further Discords. AINews’ website lets you search all past issues. As a reminder, AINews is now a section of Latent Space . You can opt in/out of email frequencies! Frontier and Multimodal Launches: Gemini 4 Argon, GPT-6.1 Sol and FLUX 3 Gemini 4 Argon : Google announced a new generation of Gemini, with contributors highlighting revised pretraining mixtures, long-horizon post-training data, and internal applications in memory optimization, code migration and mathematics. These are developer accounts of how the model was built and used—not independent evidence of general superiority ( Google researcher ). Validation : Google says new Gemini revisions now undergo weeks of testing by thousands of internal software engineers before release ( Logan Kilpatrick ). Contested readiness : A circulated Bloomberg report attributed coding weaknesses to anonymous insiders; a subsequent post reported a senior DeepMind engineer rejecting that account. Treat the practical coding-quality dispute as unresolved, rather than interpreting either benchmarks or employee reactions as decisive ( reported criticism , reported rebuttal ). GPT-6.1 Sol : OpenAI’s update is primarily an efficiency story. Sam Altman called it the company’s fastest-growing model and said serving performance had improved after launch-time load problems ( update ). Measured economics : Artificial Analysis reports $0.72 per Intelligence Index task at maximum effort, versus $1.04 for GPT-6 Sol and $3.26 for Astra. Fewer turns and cheaper cache reads—not simply fewer generated tokens—drive the improvement ( results , explanation ). Multimodal fix : OpenAI also corrected image encoding for Luna and Sol. Luna gained one Intelligence Index point, including improvements on visual-document and knowledge-work evaluations; Sol changed negligibly ( measurement ). Solar Mini 4 : Upstage’s proprietary text-only reasoning model reports 35B total/3B active parameters, a 1M-token context window and 262K maximum output. Weights are not released, so parameter counts remain vendor-reported ( analysis ). Pricing : $0.10/$0.40/$0.01 per million input/output/cache-hit tokens. Trade-offs : Artificial Analysis scores it 24 overall and 83% on long-context reasoning, but only 1% on Terminal-Bench 4.0. Despite 208 tokens/s output, approximately 88K output tokens per task produce a 7.1-minute average completion time and roughly five times Luna’s task cost. FLUX 3 Image : Black Forest Labs launched native generation up to 4K, up to ten reference images, bounding-box layout control and targeted multi-turn editing. Preserving every untouched pixel is a vendor capability claim, not independently established here ( announcement ). Availability : Commercial weights are available; an open-weight variant is promised in coming weeks. Hosted access includes fal and Krea ( fal , Krea ). Pricing : BFL announced a temporary 50% API discount through October 8, without supplying base prices in these posts ( details ). Interactive video agents : Tavus introduced Griffin, a video-to-video interaction model. It claims 48% of live participants mistook it for a human, versus under 3% for earlier systems; that result should not be generalized into an unrestricted “Turing test passed” conclusion without the test protocol ( announcement ). Enterprise deployment : Separately, Synthesia launched Sessions: conversational avatars for roleplay and survey interviews, extending its previous one-way training-video product ( launch ).",
+      "published_date": "2026-10-02",
+      "tags": [
+        "blog"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "blog_name": "Latent Space",
+        "blog_url": "https://www.latent.space/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, mcp, reasoning, reasoning model, post-training",
+      "⚖️ 來源權重: blog +15"
+    ],
+    "llm_score": 52,
+    "llm_reason": "Agent harness持久化執行架構的新聞彙整，技術描述具體但屬產品動態",
+    "novelty": 9,
+    "impact": 9,
+    "trending": 12,
+    "practicality": 11,
+    "blog_worthiness": 11
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "One month coding with GLM 5.3 Flash",
+      "url": "https://wagtail.org/blog/one-month-on-glm-53-flash/",
+      "authors": [
+        "ThibWeb"
+      ],
+      "abstract": "Setting a challenge to spend the whole of September on only one efficient open model felt like a great idea at the time. Turns out not so much in practice. 2B tokens later, here’s how it went. Where tokens went this month Here’s the tokens distribution according to AgentsView, one of our Agentic engineering recommendations to keep tabs on AI usage: Zooming in on the models split specifically: The goal was to spend the whole month on GLM 5.3 Flash pictured in teal. Here’s what went well: Successfully spent the first half of the month on just that model. That model’s usage was well within our budget ($68, about 4kWh of energy use / 365 grams of carbon emissions). The second half of the month didn’t go so well, with 1B tokens going to other models. Unexpected hurdles The cost of vibe coding We’re pretty transparent that our experimental Wagtail MCP server is a vibe-coded prototype . Vibe coding isn’t quite what we normally aspire to, but for a prototype it’s spot on. Unfortunately there are still consequences to it. I chose the 'wrong' model for the prototype, and we spent 450M tokens / $150 / 5kWh of energy use almost overnight. The MCP server itself works well and we now have a great demo of the capabilities, so it’s not for nothing: Nonetheless, it’s a good reminder to be careful with model selection and with agentic patterns. We could have achieved similar results for most likely 5x less cost with not that much more effort. Lessons learned! We need to budget for this, and be more careful. Could have seen it coming, but now we know. Infrastructure woes Another unexpected hurdle was infrastructure availability issues. We’ve written extensively about comparing inference providers . Our choices work really most of the times, but it turns out they’re very popular, and do not have the same capacity as the big labs who hoard all the GPUs. We noted degradation with the performance of GLM 5.3 Flash in particular, most likely because of it being so high up the Pareto frontier of relevant models for our work. This meant having to switch to other similar models (DeepSeek V4.1 Flash, Qwen 3.8 Flash). Which is very simple to do, but nonetheless unexpected! The cost of experimentation and R&D Last but not least, beyond using one model for day-to-day engineering, it felt essential to keep experimenting with a wide range of models, keeping up with what providers are releasing. This is particularly essential as we start to benchmark models’ performance on Wagtail tasks, where we need data across a wide range of models. Sneak peek of our benchmark: It’s much easier to guide people towards leaner options with this kind of concrete data. And for us to make those options even more viable with agent skills, or our new CLI prototype , which is intended to work well with agents. Takeways and what to do next So technically this challenge was a failure. Only 50% usage on the target model, 1B out of 2B tokens. About 35 kWh of energy use instead of 10. But we did learn a lot, which is crucial for the current moment. Reflecting on this for October, here’s what will make it work: Constant, local usage measurement and reporting . Looking not just at tokens but also energy use and spend, and ideally how well this all leads to concrete positive outcomes. Budgeting for experimentation, not just day-to-day tasks . Making more concerted decisions about which prototypes are worth building, and how. Better prompt selection and multi-agent techniques . Orchestrator vs. scout vs. implementer vs. reviewer agents. Bounded goals. Not rocket science but certainly one more thing to learn. Keep pushing for more efficient techniques and models . The Jev-style decision diffusion models look very promising if they can run so efficiently. Latest flagship models also look like a step in the right direction on that front. For day-to-day developer work, it’s totally viable to focus on one or two flash-tier cheap models. A viable target is probably that the majority of AI inference work should be done with such efficient models, measured in cost or energy use rather than meaningless tokens. That’s the goal for October! You should try it too, you’ll learn a lot in the process. And come say hi at Wagtail Space 2026 in November to hear how that all pans out!\n\n(63 points, 40 comments on Hacker News)",
+      "published_date": "2026-10-02",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 63,
+        "num_comments": 40,
+        "hn_url": "https://news.ycombinator.com/item?id=49934620",
+        "object_id": "49934620"
+      }
+    },
+    "rule_score": 24.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, mcp, multi-agent, diffusion",
+      "📰 Hacker News: 63 points"
+    ],
+    "llm_score": 61,
+    "llm_reason": "真實一個月開源模型實測含成本與教訓，故事性強且數據具體",
+    "novelty": 8,
+    "impact": 10,
+    "trending": 13,
+    "practicality": 14,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "blog",
+      "source_name": "Latent Space",
+      "title": "Academia is for Ambition — Alex Zhang, MIT",
+      "url": "https://www.latent.space/p/rlm",
+      "authors": [
+        "Latent Space"
+      ],
+      "abstract": "Last call for regular tickets for AI Engineer NYC ! As an exclusive for Latent Space subscribers, the first 30 of you can take a 30% off code if it helps - for new tickets only, no refunds! See you in 2 weeks! While we tend to cover industry on the pod, every so often we celebrate a clearly emerging superstar PhD. In 2024 we featured Shunyu Yao , who went on to build Operator at OpenAI and is now Chief AI Scientist of Tencent . In 2025 we featured Jack Morris , who went on to cofound Engram at $600m and is now a leading voice on continual learning . This year we are proud to feature the work of Alex Zhang of MIT. From GPU kernels and KernelBench to Recursive Language Models , Mismanaged Geniuses , and massive multi-agent swarms, Alex Zhang is exploring how much capability we’re leaving on the table by wrapping increasingly powerful models in primitive systems. RLMs took over the timeline early this year: and an RLM based harness was the first to ~solve ARC-AGI-3 before OpenAI’s Astra: and is even today, influencing new research that has more extreme implications than RLMs: We go deep on GPU Mode and AI-written kernels, research taste and why academics should take bets industry labs won’t, GEV and alternatives to the standard autoregressive language model, and the idea of harnesses as compositional generalizers. Alex explains RLMs, context offloading, programmatic subagent calling, Prime Agent, persistent subagents, and why the “language model” of the future may actually be an invisible swarm of agents underneath a simple interface. We also discuss OpenAI’s massive agent experiments, Kimi swarms, open-ended research at Sakana AI, speculative programmatic tool calling, capability overhang, Neuralese, and where Alex thinks the next big research opportunities may lie. Why AI-generated GPU kernels still leave substantial room for human expertise How one expert insight can potentially replace enormous amounts of brute-force token search Why PhD students should take research bets that initially look trivial, weird, or pointless What SWE-bench, RLMs, ReAct, and Quiet-STaR reveal about research taste GEV and why a language model does not have to mean an autoregressive text-to-text decoder Why Claude Code, Codex, and Pi are structurally more similar than they look How harness design can improve compositional generalization across tasks and domains RLMs: context offloading, code execution, recursive subagents, and shared memory Prime Agent, continual harnesses, and persistent agent-to-agent communication Why the model you query in the future may secretly be an entire swarm or scaffold OpenAI’s 10,000-agent experiment, 130B output tokens, and ~$40M-equivalent problem solving Why much of an agent swarm may be wasted search — and why convergence is still hard Kimi versus OpenAI and different approaches to multi-agent systems Open-endedness, Sakana AI , and finding hidden gems in enormous amounts of generated work Why current frontier models may already have a large capability overhang Speculative programmatic tool calling and overlapping tool execution with generation Whether English, code, or an entirely new “Neuralese” constrains how models reason AI for science , fast-moving benchmarks, and how Alex chooses what research problems to bet on Website: alexzhang13.github.io 00:00:49 GPU Mode, KernelBench, and AI-Written Kernels 00:07:38 Human Expertise vs. Brute-Force AI Search 00:13:20 Research Taste and Taking Big Bets 00:19:28 GEV and Rethinking the Language Model 00:29:03 Video Game Agents and the Harness Problem 00:31:01 Why Claude Code, Codex, and Pi Are So Similar 00:36:42 Harnesses as Compositional Generalizers 00:52:01 Prime Agent and Persistent Subagents 01:00:30 OpenAI Swarms and the Future of Language Models 01:07:26 Open-Endedness and Sakana AI 01:15:52 Kimi vs. OpenAI Agent Swarms 01:20:06 Capability Overhang and Speculative Tool Calling 01:28:19 Neuralese, Future Research, and AI for Science Swyx [00:00:00]: All right, we’re here in the studio with Alex Zhang, I guess most famously of, RLMs, but you have a few other affiliations. Welcome to the show. Alex Zhang [00:00:12]: Yeah. Thank you for having me. Swyx [00:00:13]: Yeah. I guess GPU Mode as well? Alex Zhang [00:00:15]: Yes, GPU Mode as well. Swyx [00:00:16]: You were shepherded in by Mark Saroufim. Not everyone gets that kind of welcome. Alex Zhang [00:00:19]: Yep. Yeah. Yeah. I’m very close to all the people in GPU Mode, so yeah Alex Zhang [00:00:23]: We often end up working together in various capacities, like even beyond just GPU Mode itself, so. Swyx [00:00:29]: Yeah. Can we explain, so people who are not that close Don’t know about this. It’s just a-- it’s a Discord. It used to be focused on, I guess, CUDA Mode, and then generalized a little bit. it was started by Mark. Swyx [00:00:42]: It was basically like. To me, it’s like the hiring pipeline of the PyTorch team. Swyx [00:00:45]: And then you left PyTorch. Alex Zhang [00:00:49]: Yeah. So it used to be, I think, it started actually around when I was in college, in like 2023. I think it was started by Mark, Andreas, and Jeremy Howard. The original premise was just like, it was a GPU-- or it was a Discord dedicated to learning how to write GPU kernels, and they had, like, lectures. That was basically the extent of it. and I got interested in it because I was writing GPU kernels. It was actually out of, like, pure chance. I was interning at Snapchat at the time, and Alex Zhang [00:01:23]: Yeah, I was very bored with Rexis. So, they had a project where, like, they were interested in writing. It was this paper called Infinite Attention. It was like a Google paper. Swyx [00:01:35]: Yes, we’ve covered it on Paper Club. Alex Zhang [00:01:36]: Yes, yeah. So I was interested in whether or not you could write specialized kernels for it at Snapchat. it didn’t. Nothing really came of it, but I joined GPU Mode. At the time, it was called CUDA Mode, I think for, like, legal reasons or something, they changed the name. But I met Mark, I met Matei, I met a bunch of other people that were very involved in the community. And then Mark had pitched this idea called Popcorn, which was now what you see as the leaderboard today. But the general idea was like. I think all of us had this, like, intuition that GPU programming is, like, very similar to if you guys have done, like, competitive programming. It’s a, it’s a not. I don’t mean to say, like, they’re transferable skills. Swyx [00:02:17]: You have constraints. You code golf a little bit. Alex Zhang [00:02:19]: Yeah. And there’s like. There’s actually a surprisingly small space of optimizations that people do. and there’s actually not that many kernels per se that people are interested in optimizing. And so we kind of had this thought that, like, if you had enough data, like, in the same way that Codeforces, there’s millions of problems. If you could do this with GPU code, like, you could scale and automate kind of GPU kernel development, which for researchers is a huge deal. ‘Cause I think one of the bigger bottlenecks. Like, if you look at, like, Mamba, for example, like, they release the paper with kernels because otherwise, like, you can’t really use it in any meaningful way? And not everyone has, like, a Tri Dao on their team. So we’re very interested in this. KernelBench kind of spawned from that too, of like, can we get LLMs to automate, GPU kernel code? And I think that was like a. It was a very fun time. It was like between college and my PhD, and yeah, I had a really pleasant time doing stuff with GPU Mode. Now I kind of just help with the lectures sometimes. I’m not as involved, and I think in general, like, we don’t have as many competitions as we used to. But, yeah, I still keep in touch a lot with everyone there. Swyx [00:03:27]: Is there a friendly rivalry? Because I think the previous community that used to do this was like MLSys, MLPerf Swyx [00:03:32]: Kind of thing.",
+      "published_date": "2026-10-02",
+      "tags": [
+        "blog"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "blog_name": "Latent Space",
+        "blog_url": "https://www.latent.space/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, multi-agent, mamba",
+      "⚖️ 來源權重: blog +15"
+    ],
+    "llm_score": 48,
+    "llm_reason": "學者專訪涉及RLM等前沿概念，具啟發性但非正式研究成果發表",
+    "novelty": 10,
+    "impact": 9,
+    "trending": 11,
+    "practicality": 6,
+    "blog_worthiness": 12
+  },
+  {
+    "item": {
+      "source": "blog",
+      "source_name": "Latent Space",
+      "title": "Inside-Out AI: Rebuilding Airbnb Behind the Scenes and Across the Guest Experience",
+      "url": "https://www.latent.space/p/airbnb",
+      "authors": [
+        "Latent Space"
+      ],
+      "abstract": "Prior to joining Airbnb as CTO in January, Ahmad Al-Dahle was head of generative AI at Meta and led the launch of its open source Llama models over 2023-2025. Now Al-Dahle is in charge of turning Airbnb into an “AI-native company”. What that means in practice is using AI internally to speed up product development, then using those same capabilities to transform the customer experience . We’re calling this an “inside-out AI” approach and in this article we’ll dig into the details. Al-Dahle spoke with Latent Space about Airbnb’s AI transformation. We began by asking him why he made the shift from building frontier models at Meta to deploying them at Airbnb . “Fundamentally, I like to chase where I believe the hard frontiers live ,” he replied, pun perhaps intended. “We kind of knew [at Meta] what the flywheel looks like, we understood how to improve the model capabilities, generation on generation.” The next challenge, Al-Dahle thinks, is deploying models at scale. At Airbnb, his goals are to “ push people to work differently , because these tools are transforming how you work,” and to “ take these systems and deploy them in production , in creative ways that actually add value to a core user experience.” From its launch in 2008, Airbnb has been considered a technology company operating in the hospitality industry. The company went public in 2020 and now has a market capitalization of approximately $93 billion (at time of writing). So it’s a big operation to try and make “AI-native.” Al-Dahle reeled off a few statistics to show that Airbnb is AI-pilled now: 60% of its code is now AI-authored , it has shipped nearly 80% more features and improvements year over year, and pull-request throughput for the average engineer is up about 1.6x . But how exactly has Airbnb done all this? Firstly, he said it’s about changing the organizational process for software engineering . Traditionally, you might do product requirements, then design work in Figma, then engineering implementation, and eventually production testing. In the past, these would’ve required handoffs from one team to another. But now, Airbnb has its product, design and engineering teams move directly to working with prototypes . “Breaking that time down is actually one of the biggest savings that a lot of traditional software companies have to make the leap to do,” said Al-Dahle. “And so we made that leap and it actually ended up adding a ton of tailwind to our product development process.” A byproduct of this change is that teams deal directly with code , rather than dealing with “artifacts” like a product requirements document. “We moved away from excessive artifact generation to the code being the artifact that we reason upon, and prototypes ,” he said. Al-Dahle told us that customer support was the first user-facing area that it introduced AI into. He described it as “the hardest problem to deploy,” because “the stakes and the consequences of a mistake are really high.” Roughly half of Airbnb’s support tickets are now resolved purely by AI , said Al-Dahle (this is in line with the company’s Q2 results , which put the figure at nearly 45%). The key to this, he says, is using synthetic data to thoroughly test the system before taking it to production. “We start with: build a model, build the agent, and begin to generate a battery of synthetic data before you ever go into production.” He notes that although agents handle about half of customer support queries, they are careful about what requires human assistance — with safety issues, for example. “So while we solve 50% of the tickets, we’re actually deliberate about the tickets we don’t choose to solve yet [with agents].” Two Airbnb Services projects you may not be familiar with yet are grocery deliveries and airport pickups (the grocery service has just been expanded to more cities ). Both were launched earlier this year, thanks in part to Airbnb’s inside-out AI approach. It was an internal organizational context graph called Everest that helped bring these products to market quickly. Al-Dahle said that Everest uses technologies such as LLMs, embeddings and AI-based retrieval to build and query the graph. He explained that the grocery delivery and airport pickup services are “kind of similar services — API integrations with partner services [external companies] that integrated onto our platform.” The grocery service was built first, and learnings from it were made available in Everest. That enabled the airport pickup team to do its project much more quickly. In its Q2 earnings report , Airbnb states that “groceries took eight months, nine months and airport pickups took about six weeks to develop.” Additionally, using Everest means its developers don’t necessarily need specialist knowledge to work on projects. “Because of this context graph that exists across the codebase,” said Al-Dahle, “we’re able to have generalists work across very specialist parts of the code .” Both of the new services were highlighted by CEO Brian Chesky at Airbnb’s 2026 Summer Release in May. To give more of a sense of Airbnb’s internal AI usage, Al-Dahle described it as a “multi-model company” and says it deploys “a lot of different models” in its production systems. Airbnb uses a mixture of frontier and open models, but conducts most of its own post-training and reinforcement learning on open models . Al-Dahle said the company deploys at least 10 customized models for production use cases. It also evaluates models along a Pareto frontier for cost, performance and latency , selecting a different trade-off for each application. “We run evals specifically for each use case,” he explained. “So if we’re using a model for search, we have a set of search queries that are sampled from production that we measure against. If we’re doing customer support, we also sample all the production queries that we care most about — including edge cases.” “We try to use the right tool for the right job,” he added. For example, coding can tolerate more latency but mistakes are expensive. So they prefer to use the strongest available frontier model for coding tasks. “It makes sense to use the absolute most frontier coding model , because for every defect that a model produces, it could easily cost us a lot more.” On the other hand, search is used at scale by Airbnb’s users and so is very latency-sensitive. So for that job, they prefer smaller specialized models. Al-Dahle claimed that smaller, post-trained models sometimes out-perform frontier models. “For narrow use cases, we’ve been able to take really small, really nimble models that are very fast and cheap and post-train them beyond the frontier.” Like other AI-native companies , Airbnb has created an internal agent — in its case called AirChat . “We have our own internal agent that we call AirChat, which [includes] basically all the necessary MCP organizational context,” said Al-Dahle. But Airbnb is also starting to implement what Al-Dahle sees as the next development in agents: asynchronous agents running in containers and activated by events. “A lot of our teams are starting to basically automate their on-calls,” he explained. “So if something trips, if a Grafana limit or whatever monitoring system that you use trips, agents spin up to then triage and run your on-call , your initial on-call.” A human engineer can review a PR proposed by the agent, while the agent may close the incident itself if it determines that the alert was flaky. This process reminds us of how open source projects like Vercel’s AI SDK, Astro, Flue and tldraw use software factories — teams of agents — to apply fixes and features . Al-Dahle sees this approach eventually being used across its entire marketplace platform; for example to monitor fraud, “trust violations,” marketplace quality, and software defects. “My vision is large amounts of asynchronous agents that are helping automate and manage the marketplace.",
+      "published_date": "2026-10-02",
+      "tags": [
+        "blog"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "blog_name": "Latent Space",
+        "blog_url": "https://www.latent.space/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, mcp, post-training, reinforcement learning, synthetic data",
+      "⚖️ 來源權重: blog +15"
+    ],
+    "llm_score": 46,
+    "llm_reason": "Airbnb CTO談AI-native轉型的企業敘事，故事性強但技術細節淺",
+    "novelty": 6,
+    "impact": 10,
+    "trending": 11,
+    "practicality": 6,
+    "blog_worthiness": 13
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "Sweep thousands of leases for compliance using Amazon Quick and the Adjudicated Query pattern",
+      "url": "https://aws.amazon.com/blogs/machine-learning/sweep-thousands-of-leases-for-compliance-using-amazon-quick-and-the-adjudicated-query-pattern/",
+      "authors": [
+        "Anand Komandooru"
+      ],
+      "abstract": "Checking tens of thousands of apartment leases against constantly changing state landlord-tenant laws, and proving you actually checked all of them, has been beyond the reach of most compliance teams. But with generative AI in Amazon Quick , paired with the right backend, it’s now possible. In this post, we introduce a design pattern called Adjudicated Query. Business users can use it to ask compliance questions in a chat interface (Amazon Quick), while the actual pass/fail decisions stay in a deterministic (non-AI) rules engine. We walk through an AWS reference architecture that implements the pattern, and deploy a working sample you can run end to end. The pattern applies to other high-stakes compliance domains as well (sanctions screening, insurance claims adjudication, export control), but lease compliance serves as our concrete example. A portfolio operator holds 50,000 leases across multiple states. Each state publishes landlord-tenant statutes (late-fee caps, notice periods, security-deposit limits) that change on the legislature’s schedule, not the operator’s. When a regulation changes, the team responsible for compliance must determine which leases are now out of line. At small volume a paralegal reads the leases. The answer is trustworthy because a human stands behind it. Past some threshold, that stops being possible. The work moves to software, and a new problem appears: the answer is now a number on a screen that nobody can independently verify. Two properties follow from that reality: These two properties are what distinguish this problem from enterprise search. Retrieval Augmented Generation (RAG) addresses the accessibility gap but cannot satisfy either property. Similarity search has no threshold that means all of them . A ranked sample never knows what it excluded. Text-to-SQL narrows this gap, but carries a category-level risk: a hallucinated predicate can silently reduce the population, and the resulting number looks exact even when the scope is wrong. The Adjudicated Query pattern is a bounded conversational layer over a deterministic rules engine. The model does exactly two things: translate a natural-language question into a call on a fixed set of typed operations, and narrate the result that comes back. It never writes a query, never fixes the population, and never performs a determination. Behind the boundary sits a rules engine. Rules are versioned data, not code. The engine knows generic comparison operators ( gte , lte , equals , exists ) and contains no branch naming a jurisdiction or topic. A law change is a rulebook row edit, not a code deployment. Every compliance sweep produces a completeness receipt: an asserted invariant where compliant + in-breach + ambiguous + unreadable must equal scanned. This is computed from counts and asserted before anything persists. A run that can’t account for its population never finishes. There’s no path by which a record is silently skipped. The conversational surface carries counts, the receipt, and a labeled sample. The full result set (potentially tens of thousands of rows) lives on a dashboard surface reading the same data store, drillable per record. This separation means the model never summarizes away the guarantee. The Adjudicated Query pattern adds natural-language access to the rules engine plus business intelligence (BI) approach without sacrificing the guarantee. It’s the right choice when accountable users need conversational access, and a missed record is a liability rather than a mild inconvenience. The following diagram shows how the components fit together end to end. A compliance officer interacts with two surfaces in Amazon Quick: a chat agent for asking questions and an Amazon Quick Sight dashboard for browsing the full result set. The chat agent first fetches an OAuth token from Amazon Cognito. It then sends Model Context Protocol (MCP) requests over an Amazon API Gateway HTTP API, which validates the token before forwarding to an AWS Lambda function. The Lambda function hosts the MCP server and the rules engine, reads and writes to Amazon Aurora Serverless v2 through the RDS Data API, and calls Amazon Bedrock only for the exploratory clause-search path. The Amazon Quick Sight dashboard reads the same Aurora store directly through a virtual private cloud (VPC) connection. Both surfaces therefore read from one store, which is what makes the completeness receipt a single source of truth. Figure 1: Reference architecture for the Adjudicated Query pattern Both surfaces read the same store. The chat agent carries the completeness receipt and a link to the dashboard. The dashboard carries the volume, because 10,800 rows don’t render in a chat message. Amazon Bedrock is called from AWS Lambda only by the exploratory operation. No model is involved in compliance sweeps, and Amazon Aurora Serverless v2 doesn’t call a model. The MCP server exposes exactly six tools, each with a distinct semantic: This bounded surface removes the path to the silent-narrowing risk of generated queries. Because the model can only select from a fixed set of operations whose population logic was written, reviewed, and tested by people, it has no way to compose a wrong population. With the Amazon Quick conversational interface and agent orchestration layer, you can ask natural-language compliance questions that the Amazon Quick chat agent translates into calls on the bounded MCP operation surface. Amazon Quick authenticates to the MCP server by using OAuth 2LO through Amazon Cognito and handles tool discovery and response narration. The deterministic engine handles the compliance logic. Amazon Aurora Serverless v2 (Postgres + pgvector) stores the rulebook, lease records, extraction status, determinations, and runs in a single relational store. Putting everything in one database makes the completeness receipt a SQL count, a cost-effective way to make the central guarantee inspectable. AWS Lambda hosts the MCP server (JSON-RPC 2.0 over Streamable HTTP, using Server-Sent Events framing for responses, which the Amazon Quick client requires) and the rule engine. Bounded operations translate to set-based SQL by using rule values bound as parameters. No natural language reaches the query layer. Amazon API Gateway HTTP API provides the front door with a JSON Web Token (JWT) authorizer backed by Amazon Cognito. No unauthenticated route exists. Amazon Cognito issues OAuth tokens through a two-legged (client credentials) flow. The client secret is read from Amazon Cognito at registration time and not written to disk. Amazon Bedrock powers the exploratory path only, using Amazon Titan Text Embeddings V2 ( amazon.titan-embed-text-v2:0 ) for semantic similarity ranking and Anthropic Claude Sonnet 5, invoked through a cross-region inference profile, for qualitative clause assessment. It isn’t consulted for an official compliance determination. Amazon Bedrock model availability, including Amazon Titan Text Embeddings V2 and Anthropic Claude Sonnet 5, varies by AWS Region, so confirm the models are available in your Region before deploying. Amazon Quick Sight connects to Aurora through a VPC connection and renders the full findings table, filterable by sweep and severity band, with every column needed to defend a determination already on the row. One design element deserves its own section because it will look unfamiliar: engineering safeguards to survive paraphrase by the chat model. Excluding the model from the decision path but putting one back in the delivery path reintroduces risk at the end of the chain. In practice, we observed: Three techniques address this: The principle: a safeguard in the payload is only as strong as its survival through paraphrase. The complete reference implementation is available on GitHub. It ships with synthetic data (no real customer lease data), deterministic corpus generation, and acceptance tests against the deployed stack.",
+      "published_date": "2026-10-02",
+      "tags": [
+        "Advanced (300)",
+        "Amazon Quick Suite",
+        "Technical How-to"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, mcp, model context protocol, synthetic data, rag",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 44,
+    "llm_reason": "AI結合規則引擎做合規稽核的實用架構模式，但話題熱度一般",
+    "novelty": 7,
+    "impact": 8,
+    "trending": 6,
+    "practicality": 13,
+    "blog_worthiness": 10
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "Show HN: Audionaut – an open-source cross-platform multitrack audio editor",
+      "url": "https://github.com/kvoltmer/Audionaut",
+      "authors": [
+        "vltmrkls"
+      ],
+      "abstract": "Audionaut A free, open-source multitrack audio editor that AI agents can drive over MCP. audionaut.app · Features · Discussions · Sponsor Audionaut is a free, open-source desktop application for effortless audio editing and recording. Whether you're working on music, podcasts, or multitrack recordings, it gives you precise cutting, per-track playlists, flexible multi-channel support, and clean exports — without the weight and complexity of a full DAW. Audionaut is written in modern C++ on the JUCE framework and runs natively on Windows, macOS, and Linux. Use with Claude Audionaut speaks MCP , so Claude and other agents can edit your sessions. With the app and Node.js 18+ installed: claude mcp add audionaut -- npx -y audionaut-mcp Keep the project open in Audionaut and each edit arrives as one undo step. On macOS, keep projects in your Music folder. Claude Desktop setup and details: manual, chapter 11 . Checkout Make sure to clone with submodules: git clone --recursive https://github.com/kvoltmer/Audionaut.git or once cloned do: git submodule update --init --recursive Essentia (audio analysis) The analysis features (BIC segmentation, onset detection, beat tracking) link against a static build of the Essentia submodule. Build it once after checking out the submodules: ./Audionaut/Builds/build_essentia.sh The script builds Essentia's 3rd-party dependencies statically (slow, skipped on re-runs; force with FORCE_3RDPARTY=1 ), then configures and builds Essentia itself with its waf build system into Submodules/essentia/build . It patches Essentia's Linux-oriented 3rd-party build scripts in the working tree as needed for macOS/Apple Silicon, so the essentia submodule will show as dirty afterwards — don't commit those changes. Prerequisites: Python ≤ 3.11 — Essentia's bundled waf needs distutils , removed in Python 3.12. The script picks a suitable interpreter automatically; override with PYTHON=... ./Audionaut/Builds/build_essentia.sh . pkg-config (e.g. brew install pkg-config ) CMake 3.x recommended — some 3rd-party deps ship very old CMakeLists that CMake 4.x refuses (e.g. pip install \"cmake~=3.31.0\" ). Building Essentia is optional: without it, ESSENTIA_ENABLED auto-detects off and the app and tests compile with the analysis features disabled. demucs.cpp (stem separation) Stem separation runs demucs.cpp , a C++ port of Meta's Demucs, compiled straight from the Submodules/demucs.cpp submodule — no separate build step. It needs the submodule's vendored Eigen ( Submodules/demucs.cpp/vendor/eigen , a nested submodule that --recursive fetches); the CMake build detects it and sets AUDIONAUT_ENABLE_DEMUCS accordingly. The model weights are not in the repository: the app downloads them on first use into its Models folder, or point the CLI at a copy with --model . Build Xcode — open the Xcode project located here: Audionaut/Builds/MacOSX/Audionaut.xcodeproj Visual Studio 2026 — open the Visual Studio solution located here: Audionaut/Builds/VisualStudio2026/Audionaut.sln Linux Makefile — install dependencies: sudo apt install libasound2-dev libjack-jackd2-dev ladspa-sdk libcurl4-openssl-dev libfreetype-dev libfontconfig1-dev libx11-dev libxcomposite-dev libxcursor-dev libxext-dev libxinerama-dev libxrandr-dev libxrender-dev libwebkit2gtk-4.1-dev libglu1-mesa-dev mesa-common-dev libxi-dev libegl-dev then compile: cd Audionaut/Builds/LinuxMakefile/\nmake CONFIG=Release -j8 Tests See the Catch2 tests README . Command-line tool (audionaut-cli) audionaut-cli gives scripts, CI and AI agents headless access to .audium projects — no GUI, no audio device. It builds alongside the tests: cmake -B build -S Audionaut/Catch2Tests\ncmake --build build -j8 --target AudionautCli\n./build/AudionautCli_artefacts/AudionautCli --help Every command takes --json to emit exactly one machine-readable result\nenvelope on stdout ( {\"ok\": true, \"result\": ...} or {\"ok\": false, \"error\": ...} ) with all logging on stderr, plus --quiet . Exit codes: 0 success, 1 operation failed, 2 usage error, 3 feature unavailable in this build\n(e.g. analyze without Essentia). Option values may be given as --opt value or --opt=value . audionaut-cli create song.audium --channels 2\naudionaut-cli import song.audium take1.wav take2.wav --position 4.5\naudionaut-cli info song.audium --json\naudionaut-cli analyze song.audium --types sbic,beat_degara\naudionaut-cli auto-edit song.audium --track 0 --measures 4\naudionaut-cli assemble song.audium --duration 60 --mode random\naudionaut-cli split song.audium --at 23 # bar 23; --unit beats|seconds|clocks\naudionaut-cli create-region song.audium --name chorus --start 17 --end 25\naudionaut-cli set-region song.audium --region chorus --rename drop --length 8\naudionaut-cli place-clip song.audium --region drop --at 33\naudionaut-cli move-clip song.audium --region drop --to 41\naudionaut-cli remove-clip song.audium --at 41 --track 0\naudionaut-cli clip-gain song.audium --region drop --gain -6 --db\naudionaut-cli clip-fades song.audium --region drop --fade-in 1 --fade-out 2 --unit beats\naudionaut-cli separate song.audium --track 1 # Drums/Bass/Other/Vocals tracks; needs the Demucs model\naudionaut-cli export song.audium -o mix.wav --sample-rate 48000 --bit-depth 24 A typical agent flow: create → import → analyze → auto-edit / assemble → export , checking ok in each --json envelope. Projects written by the\nCLI open in the GUI app and vice versa. End-user documentation lives in the User Manual . CLI invocations report anonymous usage statistics under the same strictly\nopt-in consent as the app (one cli_command event: verb and exit code) —\nnothing is sent unless consent was granted in the app's settings. Set AUDIONAUT_DISABLE_ANALYTICS=1 to switch the CLI's reporting off regardless\n(CI environments, scripts). The main Audionaut app also accepts the same verbs (Projucer-style): run\nthe app binary with a verb and it executes headlessly and quits with the\ncommand's exit code, even while a GUI instance is open — a file argument or\nno arguments launches the GUI as usual. ./Audionaut.app/Contents/MacOS/Audionaut export ~/Music/song.audium -o ~/Music/mix.wav Note: the macOS app is sandboxed, so its in-app CLI can only reach\nentitlement-covered locations such as ~/Music ; the standalone audionaut-cli build has no such restriction. On Windows, the app is a GUI\nprogram — the shell prompt returns immediately and output interleaves with\nit; prefer audionaut-cli for scripting there. License Audionaut is dual-licensed under GPL3 (or later) and a commercial license — see LICENSE.md for details. Contributing Contributions are welcome — see CONTRIBUTING.md for how to get started and the required Contributor License Agreement ( CLA.md ). Support If Audionaut is useful to you, consider sponsoring its development — sponsorship directly funds development time and keeps the project sustainable.\n\n(131 points, 45 comments on Hacker News)",
+      "published_date": "2026-10-02",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 131,
+        "num_comments": 45,
+        "hn_url": "https://news.ycombinator.com/item?id=49931031",
+        "object_id": "49931031"
+      }
+    },
+    "rule_score": 24.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, mcp",
+      "📰 Hacker News: 131 points",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 53,
+    "llm_reason": "開源MCP驅動音訊編輯器，實作完整但受眾偏小眾",
+    "novelty": 9,
+    "impact": 7,
+    "trending": 11,
+    "practicality": 15,
+    "blog_worthiness": 11
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "NVIDIA Announces DGX Spark 64GB: A 1-PetaFLOP Grace Blackwell Desktop for Local AI Agents, Fine-Tuning, and Inference",
+      "url": "https://www.marktechpost.com/2026/10/02/nvidia-announces-dgx-spark-64gb-a-1-petaflop-grace-blackwell-desktop-for-local-ai-agents-fine-tuning-and-inference/",
+      "authors": [
+        "Jean-marc Mommessin"
+      ],
+      "abstract": "NVIDIA announced a new 64GB configuration of DGX Spark — from Acer, ASUS, Dell, Gigabyte, HP and MSI — its GB10-powered desktop AI system. It gives developers a way to start with one system for local models and agents, then cluster two 64GB units for 128GB of memory across the cluster and more compute when workloads grow. The direct message is: Run open models and always-on agents on your own desk, then cluster DGX Spark system as the work grows – instead of on a metered API. The timing is not accidental. Agents burn tokens continuously through tool calls, retries, long context, and multi-step plans. Token consumption has grown 14x since early 2026. On a cloud API, every one of those tokens is billed. On owned hardware, there is no per-token fee. The 64GB model keeps the same GB10 Grace Blackwell superchip, NVIDIA CUDA accelerated AI software stack, and ConnectX-7 networking as the original — updated with 64GB of unified LPDDR5x instead of 128GB. NVIDIA positions that as enough for today’s most capable 30–35B class open models. NVIDIA continues to offer the 128GB DGX Spark for larger single-box workloads, and clustering 64GB units adds memory and compute together. GB10 pairs a Blackwell GPU with 5th-generation Tensor Cores and a 20-core Grace Arm CPU. The GPU delivers up to 1 petaFLOP of FP4 AI compute, with sparsity. Source: NVIDIA specifications. Unified memory is the key design choice: The CPU and GPU share one pool over NVLink-C2C, at 5x the bandwidth of PCIe Gen 5. There is no copying weights between system RAM and VRAM. For agents, that means several models, their KV caches, and tool processes live in one address space. The software is ready on first boot: DGX OS ships with the NVIDIA AI stack, including PyTorch, Jupyter, and Ollama. NVIDIA NemoClaw installs with a single command. It adds privacy and security controls to OpenClaw agents. NVIDIA OpenShell TM , part of the NVIDIA Agent Toolkit TM , adds policy-based guardrails on top. NVIDIA Nemotron TM models are optimized for the box. It runs on a standard wall outlet: No server room, no special cooling. That is important for an agent meant to run around the clock. Built-in networking for clustering: ConnectX-7 lets two DGX Spark 64GB systems cluster for 128GB of memory and more compute. NVIDIA Sync Cluster Assistant simplifies setup. Hardware is half the story. The other half is that 30B-class open models got good enough for agent work. Footprints are weight-only estimates; KV cache and runtime overhead come on top. Muse Glimmer is the main model. Meta distilled it from Muse Spark, the model family behind the Meta AI assistant. It targets local agents: reliable tool calls, long multi-step tasks, and recovery from failures. Meta reports 51.2 on SWE-Bench Pro and 75.5 on MCP Atlas. Context runs to 131K tokens. It is also available as an NVIDIA NIM . Full BF16 Glimmer needs 55GB+, which leaves almost nothing for context. The ~17GB quantized build is the practical choice on 64GB. Larger models like DeepSeek V4 Flash need more than one box. NVIDIA’s own benchmarks run it on 4 64 GB clustered Sparks. Install Hermes and point it at Muse Glimmer or Nemotron 3.5 Lightning. Give it tools: your GitHub repos, a test runner, an RSS feed of arXiv categories. Let it run overnight. By morning it has triaged new issues, reproduced a failing test, and drafted a pull request for review. It has also summarized the 30 papers you would never have opened. Your private notes, code, and email never leave the machine. QLoRA on a 70B model fits in 64GB. Train it on your codebase, internal docs, and past PR reviews. Then serve it locally as a coding assistant that knows your conventions. NVIDIA measured ~18,400 tokens/s on a single node for nanochat distributed fine-tuning. A new open-weight model drops on Hugging Face. Pull it through Ollama or vLLM the same day. Run your own question set against it. Score accuracy, then measure time to first token (TTFT) and tokens per second. Compare it against your current model. There is no API bill for re-running the eval 50 times. Unified memory lets several models share one pool. Run Bonsai 2 as a router, and Glimmer as the main reasoning agent. That is roughly 23GB of weights. The rest covers KV cache, the OS, and tool processes. When a problem exceeds local capacity, the agent can send a sanitized question to a larger cloud model. Fine-tune a vision transformer for a specific task, like spotting anomalies on a factory floor camera. Validate it locally with the same CUDA stack. Then deploy it to an NVIDIA Jetson device at the edge. Every DGX Spark ships with ConnectX-7 at 200GbE. Clustering is a native feature, not an add-on. Source: NVIDIA. 3-node compute derived from per-unit specs. NVIDIA states 2 clustered 64GB units deliver up to 1.7x the performance of one 128GB DGX Spark. The reason is doubled AI compute and bandwidth: 2 units provide up to 546 GB/s combined, double a single box. NVIDIA Sync is the management layer. The Windows and macOS app discovers Sparks on your network and manages SSH access. Its Cluster Assistant configures ConnectX-7 networking for up to 4 systems. Nodes can also connect across locations over a Tailscale mesh, with no cloud in the data path. The pattern is quite clear. Clustering roughly halves time to first token per doubling and scales fine-tuning near-linearly. Decode improves more modestly, about 1.4x at 4 nodes. For agents that read long inputs, the TTFT gain is the one that matters. Step-by-step multi-node guides, including vLLM on stacked Sparks , are at build.nvidia.com/spark . Check out the DGX Spark product page , NVIDIA Sync , and DGX Spark playbooks . Thanks to the NVIDIA team for the thought leadership / resources for this article. This article is sponsored by NVIDIA. The post NVIDIA Announces DGX Spark 64GB: A 1-PetaFLOP Grace Blackwell Desktop for Local AI Agents, Fine-Tuning, and Inference appeared first on MarkTechPost .",
+      "published_date": "2026-10-02",
+      "tags": [
+        "Agentic AI",
+        "AI Agents",
+        "AI Infrastructure",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Deep Learning",
+        "Editors Pick",
+        "Enterprise AI",
+        "For Devs",
+        "Hardware",
+        "Machine Learning",
+        "New Releases",
+        "Promote",
+        "Software Engineering",
+        "Sponsored",
+        "Staff",
+        "Tech News",
+        "Technology",
+        "Uncategorized",
+        "NVIDIA DGX Spark 64GB"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, mcp, reasoning, fine-tuning, kv cache",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 41,
+    "llm_reason": "既有DGX Spark的記憶體配置變體，贊助內容性質重於技術創新",
+    "novelty": 4,
+    "impact": 9,
+    "trending": 11,
+    "practicality": 10,
+    "blog_worthiness": 7
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "Add secure Web Search to Claude Desktop with Amazon Bedrock AgentCore",
+      "url": "https://aws.amazon.com/blogs/machine-learning/add-secure-web-search-to-claude-desktop-with-amazon-bedrock-agentcore/",
+      "authors": [
+        "Jishnu Dasgupta"
+      ],
+      "abstract": "Claude Desktop on Amazon Bedrock provides powerful AI assistance, but without integrated web search, responses are limited to the model’s training knowledge cutoff. When you need current information, such as recent documentation updates, live pricing, or weather updates, the model can’t retrieve it on its own. Amazon Bedrock AgentCore is a platform to build, connect, and optimize agents at scale, with any framework or model. With AgentCore Gateway , a capability of Amazon Bedrock AgentCore, you can close this knowledge cutoff gap by connecting Claude Desktop to Web Search . Web Search is a fully managed, Model Context Protocol (MCP)-compatible web search capability backed by an Amazon web index that spans tens of billions of documents. All query traffic stays within AWS infrastructure, with no external API keys to manage and no queries leaving your boundary. With Claude Desktop, you can use managed MCP servers to connect to an AgentCore Gateway with the Web Search target enabled. In this post, we walk through the steps to set up this integration and use JSON Web Token (JWT)-based inbound authentication to secure the communication. Many enterprises running on AWS use AWS IAM Identity Center for single sign-on (SSO) access to their AWS accounts. In this walkthrough, we use AWS IAM Identity Center as the authentication source for the AgentCore Gateway. With this setup, Claude Desktop on Amazon Bedrock can invoke Web Search through a trusted, enterprise-managed identity flow. This approach aligns with existing organizational identity governance. No separate credentials or third-party identity providers are required. To bridge AWS IAM Identity Center with the AgentCore Gateway JWT-based authentication, we use Amazon Cognito as a federation layer with the OAuth 2.0 authorization code grant flow. IAM Identity Center handles user authentication through Security Assertion Markup Language (SAML) . Amazon Cognito issues JWTs, and the AgentCore Gateway validates them on each request. The entire authentication chain stays within AWS. The following sequence diagram illustrates this authentication flow. Figure 1: User authentication and authorization sequence diagram To follow along with the steps in this post, you need the following: Web Search on Amazon Bedrock AgentCore is currently available in the US East (N. Virginia) AWS Region (us-east-1), Europe (Ireland) Region (eu-west-1), and Asia Pacific (Tokyo) Region (ap-northeast-1). Verify that your gateway is created in one of these Regions. The configuration involves setting up the authentication chain (AWS IAM Identity Center to Amazon Cognito to JWT) and then wiring the AgentCore Gateway into Claude Desktop. We walk through each step in the following section. In your target AWS account, create an Amazon Cognito user pool that will serve as the OpenID Connect (OIDC) token issuer for the AgentCore Gateway. Save these values for later steps: In your AWS Organizations management account, create a SAML application that federates with Cognito: Back in the target account, register IAM Identity Center as a SAML identity provider in your Cognito user pool: Create an app client with a client secret. Claude Desktop uses this client to initiate the OAuth flow, which authenticates the user through IAM Identity Center and obtains a JWT for the AgentCore Gateway: Note the Client ID and Client Secret from the output. These are your application client ID and secret. In this step, we create a new AgentCore Gateway with Inbound Auth Type as JSON Web Tokens (JWT) . For this configuration, we use the Cognito user pool ID and application client ID that were created in the prior steps. Run the following Python script to create the gateway with the required configurations, replacing all placeholders with actual values from your environment. You now have an AgentCore Gateway with Web Search tool, with JWT-based inbound authorization. Use the steps in the Claude Desktop configuration documentation to access the configuration window for Claude Desktop with Amazon Bedrock. After you open it, choose Connectors and Extensions , then choose Add server , and then choose Blank . The following screenshot shows the configuration window with these options. Figure 2: Claude Desktop connector configuration window When you’re done, choose sign in and test . This should open a browser for you to authenticate, redirecting you to your AWS IAM Identity Center SSO login. Enter your credentials to authenticate. If successful, you should see a message such as, “Authorization complete. You can close this tab and return to Claude.” Back in Claude Desktop, you should see a successful MCP registration message like in the following image. Figure 3: Successful MCP server registration in Claude Desktop Claude Desktop will now discover the WebSearchTool through the MCP tools/list call. It invokes the tool automatically whenever the model needs current information from the web. In your preferred interface (for example, Chat or Cowork), send a query that requires Claude Desktop to retrieve the latest results. You should see a tool execution approval box, indicating that Claude has successfully discovered the Web Search tool. On approval, you should see the web search results included in the response. Figure 4: Web Search tool execution approval dialog The dialog shows the query Claude wants to run and offers three options: Deny, Allow for this task, or Allow once. On approval, Web Search results are included in the response. If you created resources while following along, perform the following steps to delete them: Finally, in the IAM Identity Center console in the management account, delete the SAML application you created in Step 2. In this post, we walked through integrating Web Search on AgentCore with Claude Desktop. While this walkthrough uses AWS IAM Identity Center as the identity provider, the same pattern works with any SAML or OIDC-compatible identity provider. You can substitute your existing IdP by configuring it as a federation source in Amazon Cognito. This approach closes the web search gap without introducing third-party dependencies, and all queries stay within your AWS boundary. To get started, follow the steps above to set up the integration in your own environment. For advanced gateway configurations, see the AgentCore Gateway Developer Guide . To learn more about Web Search, see the Web Search documentation.",
+      "published_date": "2026-10-02",
+      "tags": [
+        "Advanced (300)",
+        "Amazon Bedrock",
+        "Amazon Bedrock AgentCore",
+        "Technical How-to"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: mcp, model context protocol",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 46,
+    "llm_reason": "標準AWS服務串接教學，技術含量有限但步驟清楚具參考性",
+    "novelty": 4,
+    "impact": 8,
+    "trending": 10,
+    "practicality": 14,
+    "blog_worthiness": 10
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Databricks",
+      "title": "How to choose your first Genie Agents for maximum impact",
+      "url": "https://www.databricks.com/blog/how-choose-your-first-genie-agents-maximum-impact",
+      "authors": [],
+      "abstract": "• The first few Genie Agents you build determine whether adoption scales or stalls, so choosing the right agents to start with is critical • Use a five criteria rubric: impact, demand, data readiness, scope, and governance to rank candidate workflows in minutes. • Several examples from the field show what \"build now,\" \"shape it first,\" and \"hold off\" rankings for agents look like in practice With more than 1 million Genie Agents created in 2026 alone, the question facing most data teams is no longer \"can we build a Genie Agent?\" Instead, it's \"which ones should we build first?\" That choice matters more than most teams expect; get it right, and you create a flywheel. A working, well-adopted agent earns trust, creates demand, and drives advocacy for the next agent. Get it wrong, and you spend the following quarter explaining why the pilot underwhelmed. This post shares a simple, field-tested way to choose which agents to build first, based on dozens of Genie Agents rollouts across financial services, energy, retail and more. We'll walk through a simple framework for evaluating potential agent success across 5 core variables that play roles in agent adoption, performance and effectiveness so that your team starts with the strongest pilot. The most common reason a Genie Agent pilot stalls isn't accuracy, it's that it was built for the wrong workflow. We see two common types of agents fail again and again, each for different reasons. The first is the “everything agent:” a single Genie Agent meant to answer any question across an entire department, like finance, marketing, or operations. Scope sprawl drags down accuracy, and the first wrong answer in a demo can often erode trust. The second is the \"vanity demo:\" an impressive one-off built for an executive meeting, but scoped to such a niche use case that no one ever has a reason to return to the agent. We've found that agent workflows most likely to succeed share a recognizable profile, which you can screen for before you write a single instruction. One additional factor sits outside the scoring criteria: the champion . If no business owner or executive sponsor is actively supporting the workflow, don't start building the agent, regardless of how well it scores. Top-down influence is what turns a performant agent into an adopted one. Score each candidate workflow 1–5 on the five criteria, and add them up. The total tells you what to do next: 20–25 means you're ready to build now, 14–19 suggests more shaping is needed, and under 14 means the workflow isn't a good fit yet. And if there's no champion, hold off regardless of score. The rubric's job is to reshape or deprioritize weak candidates early, not just rank them. A 12 isn't a failure; it's a signal about what to fix first. Here are four anonymized examples that show the Genie Agent rubric in action. High-scoring agents land quick adoption A pension fund built a risk and portfolio Q&A agent for its investment teams. It scored near the top on every axis: a bounded domain, certified risk metrics, and a question shape that analysts ran many times a day. As a result, usage climbed before the agent even reached production, because the value was demonstrated, not promised. Internal champions drive usage A global engineering firm stood up a Genie Agent for internal IT support. On paper, it was a solid but not spectacular candidate, with scores landing in the \"shape it first\" category. What changed the trajectory was that the CIO personally started using it, and adoption followed behind that signal. An active executive sponsor will carry a good agent further than a perfect one with no advocate. Potential impact can't outweigh low data-readiness A wealth manager chose to build a self-serve analytics agent, exactly the kind of workflow that \"should\" win. But the underlying data carried metadata gaps, so answers were inconsistent and user trust eroded. The rubric would have flagged this: high impact but low readiness land this prospective agent in the \"hold off\" band. This doesn't mean that this workflow can't be a potential fit for a Genie Agent later on, but a metadata investment would be required to bring the score up. Look where demand already exists A national retailer needed the same supply and inventory forecasts day after day, and the data behind them was already governed and well organized. Rather than wait for a perfect setup, the team used AI functions to clean up the data and Genie Code to write the forecasting logic. They had a working agent live in weeks, because the demand was already there, and the scope stayed narrow. It was quickly adopted, and quickly sparked inspiration for future Genie Agents. That’s what “build now” looks like: a clear, repeated need, data that’s ready, and a scope that can be delivered on. Across thousands of customers who have Genie Agents in production today, we've seen great success stories from those that choose their first few agents intentionally. Banco Bradesco delivers real time open finance insights with Genie Agents, and Unilever accelerates finance insights for its teams. Both examples share high frequency, high-impact questions that drove demand for agents, along with a strong, governed data foundation in Databricks. Additionally, Coty turned days-long data requests into seconds, and The Trade Desk scaled self-service insights outside of dashboards that couldn't keep up with growing demands from their team. Before you commit to building a Genie Agent, be sure check your candidate against these common pitfalls: Choosing wisely the first time sets the right foundation for your organization. Teams copy what they see working, so the habits you establish on agents one and two become the standard for the agents that follow. Using this framework is a great way to evaluate how likely your pilots are to succeed, and how you can fine-tune use cases to set them up for the highest chance of adoption and success across your organization. To get started, run your candidate list through the rubric to score, total, and rank options in minutes. Build your top two agents, have your leaders champion adoption from day one, and let real demand guide your third choice. To learn more about Genie Agents, visit our documentation. Subscribe to our blog and get the latest posts delivered to your inbox.",
+      "published_date": "2026-10-02",
+      "tags": [
+        "All",
+        "Data Strategy",
+        "Best Practices"
+      ],
+      "organization": "Databricks",
+      "raw_metadata": {
+        "feed_name": "Databricks",
+        "feed_url": "https://www.databricks.com/feed"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: rss +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 45,
+    "llm_reason": "Agent導入方法論實用但偏管理框架，技術深度不足",
+    "novelty": 5,
+    "impact": 9,
+    "trending": 9,
+    "practicality": 12,
+    "blog_worthiness": 10
+  }
+]
