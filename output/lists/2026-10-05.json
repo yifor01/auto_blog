@@ -1,0 +1,604 @@
+{
+  "date": "2026-10-05",
+  "github": [
+    {
+      "title": "tashfeenahmed/freellmapi",
+      "slug": "tashfeenahmed-freellmapi",
+      "url": "https://github.com/tashfeenahmed/freellmapi",
+      "abstract": "FreeLLMAPI 7.4 billion tokens per month.  34 free LLM providers. 635 free model endpoints. One OpenAI-compatible endpoint. Aggregate free tiers from dozens of providers, plus custom OpenAI-compatible chat, embedding, image, and audio endpoints, behind a single /v1 API. Keys are stored encrypted. A router picks the best available model for each request, falls over to the next provider when one is rate-limited, and tracks per-key usage so you stay under every free-tier cap. freellmapi.co · browse the full catalog: 474 model families, 635 free endpoints English · 簡體中文 Your router updates its own model catalog from a signed feed: new free models, quota changes, and compatibility fixes land without a git pull . Free installs get the monthly snapshot, so a model reaches them 30 days after it joins the live feed; premium routers get it the same day. Go live at freellmapi.co ($19/yr, cancel anytime). Contents Why this exists Supported providers Compatible CLIs & coding agents How it compares Features Quick start Desktop app Works with OpenAI-compatible clients Languages Premium (live catalog) Using the API Screenshots How it works FAQ Limitations Contributing Disclaimer Guides: Install & deploy · API reference · Clients & coding agents · Prompt compression · Architecture & internals · Documentation index · Contributor guide Why this exists Every serious AI lab now offers a free tier, a few million tokens a month, a few thousand requests a day. On its own each tier is a toy. Stacked together, they add up to roughly 7.4 billion tokens per month of working inference capacity, across 474 model families / 635 provider endpoints from small-and-fast to reasonably capable. The problem is that stacking them by hand is painful: thirty-four different SDKs, thirty-four different rate limits, thirty-four places a request can fail. FreeLLMAPI collapses that into one OpenAI-compatible endpoint. Point any OpenAI client library at your local server, and it routes transparently across whichever providers you've added keys for. And the free-tier landscape shifts weekly: providers launch models, retire them, and change quotas without notice. FreeLLMAPI tracks all of that for you. The router pulls a signed model catalog from freellmapi.co on its own, so your install keeps up without a git pull . See Premium (live catalog) for how fast it keeps up. Supported providers Google Groq Cerebras OpenCode Zen Mistral OpenRouter Cloudflare Cohere Z.ai (Zhipu) NVIDIA HuggingFace ModelScope Qwen3 · DeepSeek V4 · GLM-5 (needs Aliyun cn binding) … and 22 more free providers Plus a custom provider — point chat, embedding, image, or audio models at any OpenAI-compatible endpoint (llama.cpp, LM Studio, vLLM, a local Ollama, or a remote gateway) from the Keys page. The full, always-current list lives at freellmapi.co/models with per-model rate limits, context windows, and free-token budgets. Compatible CLIs & coding agents Claude Code Codex CLI Gemini CLI Aider Cline Roo Code Continue OpenCode Goose Qwen Code Kilo Code Crush Cursor Zed JetBrains AI DeepSeek Harness AtomCode OpenClaw Hermes Agent Pi … plus any OpenAI-compatible client, Anthropic SDK, Gemini SDK, or Ollama-capable app Most of these configure themselves with one command — npx freellmapi setup-claude , setup-codex , setup-aider , setup-dsh (DeepSeek Harness), and eleven more generators that fetch your live catalog, back up existing config, and never clobber what's already there. Claude Code and Codex also get zero-persistence launchers ( freellmapi launch , freellmapi launch-codex ) that inject credentials into the child process only. Zed and JetBrains AI connect through the opt-in Ollama emulation ; Gemini CLI speaks its native wire on /v1beta . Per-tool recipes, the setup CLI reference, revocable URL tokens for headerless clients, and the MCP server all live in Clients & coding agents → How it compares Based on public documentation, July 2026 — corrections welcome. Features Every OpenAI-style surface — /v1/chat/completions , /v1/responses (what Codex CLI needs), /v1/completions (editor ghost-text autocomplete), /v1/images/generations , /v1/videos/generations , /v1/audio/speech , /v1/audio/transcriptions , /v1/embeddings , and /v1/models — streaming and non-streaming, from the official SDKs or any OpenAI-compatible client. API reference → Anthropic Messages API — /v1/messages speaks Anthropic's wire format over the same router, so Claude Code and the official Anthropic SDKs run against your free pool. Details → Native Gemini + Ollama surfaces — Gemini CLI can use /v1beta ( generateContent , streaming, token counting, models), while opt-in Ollama emulation serves NDJSON chat/generate, tags, metadata, and embeddings for Zed, JetBrains, and other local-model clients. Fusion (multi-model synthesis) — request the virtual fusion model and the router fans your prompt out to a panel of diverse free models in parallel, then a judge model synthesizes one answer from the drafts. Details → Image, video & speech generation — /v1/images/generations , /v1/videos/generations , and /v1/audio/speech route across the providers that serve media models; images and speech also accept custom OpenAI-compatible media endpoints. Video jobs are normalized across synchronous and queued providers and return a completed MP4. Tool calling & structured outputs — OpenAI-style tools round-trip across providers (plain-text tool calls are rescued into real tool_calls ), plus response_format , seed , logprobs , penalties, and the rest of the sampling params passed through per provider. Smart routing, six strategies — live per-model speed/capability/reliability scores rank your chain; automatic fallover retries the next model on 429/5xx with cooldowns and key rotation. Routing in detail → Unified models & profiles — the same model on several providers collapses into one entry with strict in-group failover; named fallback-chain profiles (a coding chain, a vision chain) switch from the dashboard or per request via auto:<profile> , and custom chains can be renamed in place from the chain manager. Per-key rate tracking — RPM/RPD/TPM/TPD counters per (platform, model, key) that learn providers' reported ceilings, so routing always stays under every cap. Self-updating model catalog — the router syncs a signed catalog from freellmapi.co twice a day: new models, quota changes, and provider quirk fixes land automatically. Free installs track the monthly snapshot, which each model joins 30 days after it lands in the live feed; premium routers get it same-day. Premium → Sticky sessions & context handoff — conversations stay on one model for 30 minutes; an optional compact handoff note keeps the thread coherent when a mid-chat switch does happen. Details → Prompt compression (opt-in) — a shared, fail-open request pipeline can deduplicate prompts, filter tool output, compact repeated JSON, and trim stale context before cache lookup and routing. Details → Encrypted keys, one token out — provider keys are AES-256-GCM encrypted in SQLite and decrypted in-memory per request; your apps only ever see a single unified freellmapi-… bearer token. Admin dashboard & analytics — React UI to manage keys, reorder the chain, run a playground, and read p50/p95/TTFT analytics over 24h–90d windows; login-gated, dark/light themes, 60 languages . ChatGPT-ready MCP server & interactive docs — ChatGPT and other MCP clients can call FreeLLMAPI inference, list usable models, inspect provider health/usage/cache/routing metadata, and manage the routing strategy over /mcp ; a dependency-free OpenAPI viewer lives at /v1/docs . ChatGPT and coding agents → Ops niceties — opt-in response cache, encrypted DB backups, periodic key health checks, bulk key import/export, declarative startup config. Install & deploy → Runs anywhere Node 20+ runs — Windows, macOS, Linux servers, or a small ARM SBC (Raspberry Pi included). ~40 MB RSS at idle behind PM2 / systemd / whatever supervisor you prefer.",
+      "stars_today": 300,
+      "language": "TypeScript"
+    },
+    {
+      "title": "linshenkx/prompt-optimizer",
+      "slug": "linshenkx-prompt-optimizer",
+      "url": "https://github.com/linshenkx/prompt-optimizer",
+      "abstract": "Prompt Optimizer 🚀 English | 中文 Website | Online Optimizer | Prompt Garden | Docs | Quick Start | Chrome Extension | 💖 Support First-time Tutorial | Development Docs | Vercel Deployment Guide | Cloudflare Deployment Guide | MCP Deployment Guide | DeepWiki Docs | ZRead Docs 📖 Project Introduction Prompt Optimizer is a powerful AI prompt optimization tool that helps you write better AI prompts and improve the quality of AI outputs. It supports four usage methods: web application, desktop application, Chrome extension, and Docker deployment. Prompts can start from manual writing, templates, local imports, or sources such as Prompt Garden . Prompt Optimizer is where those prompts are optimized, tested, evaluated, and saved as reusable prompt assets. 🎥 Feature Demonstration 1. Hard-Nosed Reviewer: Turn Agreement into Useful Critique Starting from a minimal English role prompt, optimization pushes a small model away from generic pushback and toward a clearer, more structured review that surfaces weak assumptions, evidence gaps, and concrete revision advice. 2. Marketplace Bargaining Reply: Let Variables Change the Strategy With a single reusable prompt template, you can swap in item details, price anchors, buyer offers, tone, and negotiation goals for different marketplace conversations. After optimization, the same small model does a better job turning those variables into a clearer, more transaction-ready reply instead of a generic helper-style response. 3. Text-to-Image: Optimize a One-Line Idea into a More Directable Key Visual Prompt This is not just prompt expansion. Starting from a vague one-line idea, Prompt Optimizer adds clearer subject cues, spatial relationships, and mood anchors. The left side is simply “a floating library in the night sky,” while the optimized version gives the model a more directed fantasy composition that feels closer to a reusable key visual than a lucky generic image. ✨ Core Features 🎯 Intelligent Optimization : One-click prompt optimization with multi-round iterative improvements to enhance AI response accuracy 📝 Dual Mode Optimization : Support for both system prompt optimization and user prompt optimization to meet different usage scenarios 🔄 Analysis and Compare Evaluation : Supports analysis, single-result evaluation, and multi-result compare evaluation to help determine whether a prompt has truly improved 🤖 Multi-model Integration : Support for mainstream AI models including OpenAI, Gemini, DeepSeek, Grok, Zhipu AI, SiliconFlow, MiniMax, etc. 🖼️ Image Generation : Support for Text-to-Image (T2I), Image-to-Image (I2I), and Multi-Image generation with models like Gemini, Seedream, Grok 🌱 Prompt Sources : Start from manual writing, templates, local imports, or Prompt Garden import codes ⭐ Smart Favorites : Resource-aware prompt assets with version history, reproducible examples, media support, source binding, and workspace application 📊 Advanced Testing Mode : Context variable management, multi-turn conversation testing, Function Calling support 🔒 Secure Architecture : Pure client-side processing with direct data interaction with AI service providers, bypassing intermediate servers 📱 Multi-platform Support : Available as web application, desktop application, Chrome extension, and Docker deployment 🔐 Access Control : Password protection feature for secure deployment 🧩 MCP Protocol Support : Supports Model Context Protocol (MCP), enabling integration with MCP-compatible AI applications like Claude Desktop 🚀 Advanced Features Image Generation Mode 🖼️ Text-to-Image (T2I) : Generate images from text prompts 🎨 Image-to-Image (I2I) : Transform and optimize images based on local files 🖼️ Multi-Image Generation : Use multiple input images to constrain subject relationships, sequential semantics, and final generation goals 🔌 Multi-model Support : Integrated with mainstream image generation models like Gemini, Seedream, Grok ⚙️ Model Parameters : Support model-specific parameter configuration (size, style, etc.) 📥 Preview & Download : Real-time preview of generated results with download support 🔄 Style Transfer : Learn style, composition, and color from reference images Prompt Sources & Smart Favorites 🌱 Optional Prompt Sources : Bring prompts from manual writing, templates, local files, or Prompt Garden 📥 Import & Collect : Import prompts with metadata, media, examples, and source binding when available ⭐ Resource-aware Assets : Save stable prompts as reusable favorites with version history 🔗 Source Binding : Track prompt origins and maintain reproducible examples without requiring a specific source 📦 Complete Backup : Export and import favorites with all referenced resources Advanced Testing Mode 📊 Context Variable Management : Custom variables, batch replacement, variable preview 💬 Multi-turn Conversation Testing : Simulate real conversation scenarios to test prompt performance in multi-turn interactions 🛠️ Function Calling Support : Function Calling integration with support for OpenAI and Gemini tool calling 🔍 Analysis and Evaluation Pipeline : Supports analysis, evaluation, compare evaluation, and evaluation-driven smart rewrite in text modes For detailed usage instructions, please refer to the Image Mode Documentation Quick Start 1. Use Online Version (Recommended) Direct access: https://prompt.always200.com The online app stores its app data in your browser. Model requests go directly to the provider you configure. For your first run, connect one working text model in Model Manager , then follow the first-time tutorial to improve and copy a prompt. 2. Web Deployment Vercel Deployment Method 1: One-click deployment to your own Vercel: Method 2: Fork the project and import to Vercel (Recommended): First fork the project to your GitHub account Then import the project to Vercel This allows tracking of source project updates for easy syncing of new features and fixes Configure environment variables: ACCESS_PASSWORD : Set access password to enable access restriction VITE_OPENAI_API_KEY etc.: Optional private-deployment model settings. Do not preconfigure API keys on public frontend deployments because VITE_* values are exposed in browser assets. For more detailed deployment steps and important notes, please check: Vercel Deployment Guide Cloudflare Deployment Guide Cloudflare Deployment Use the Deploy to Cloudflare button for the quickest public-repository setup. It creates a repository under your GitHub/GitLab account and deploys with Workers Builds. For private repositories or stricter repository-access control, import your own repository manually; keep the default deploy commands and clear the build command if Cloudflare auto-fills pnpm run build , because wrangler.jsonc builds the Web frontend and publishes packages/web/dist as static assets. For access control and analytics on Cloudflare, configure Cloudflare Access and Cloudflare Web Analytics in the Cloudflare dashboard. No frontend dependency or application-code change is required. 3. Download Desktop Application Download the latest version from GitHub Releases . We provide both installer and archive formats for each platform. Installer (Recommended) : Such as *.exe , *.dmg , *.AppImage , etc. Strongly recommended as it supports automatic updates . Archive : Such as *.zip . Extract and use, but cannot auto-update. Core Advantages of Desktop Application : ✅ No CORS Limitations : As a native desktop application, it completely eliminates browser Cross-Origin Resource Sharing (CORS) issues. This means you can directly connect to any AI service provider's API, including locally deployed Ollama or commercial APIs with strict security policies, for the most complete and stable functional experience. ✅ Automatic Updates : Versions installed through installers (like .exe , .dmg ) can automatically check and update to the latest version. ✅ Independent Operation : No browser dependency, providing faster response and better performance. 4.",
+      "stars_today": 153,
+      "language": "TypeScript"
+    },
+    {
+      "title": "VictorTaelin/OptMem",
+      "slug": "victortaelin-optmem",
+      "url": "https://github.com/VictorTaelin/OptMem",
+      "abstract": "OptMem Permanent memory for AI agents. A 426-token prompt, a script, plug and play. Install curl -fsSL https://raw.githubusercontent.com/VictorTaelin/OptMem/main/install.sh | sh It prints a ## Memory block. Paste that at the top of your agent's AGENTS.md (or CLAUDE.md ), and you are done. Run the same line again to\nupdate. The tool lands at ~/.optmem/memo ; put ~/.optmem on PATH to type memo . Commands memo wake read the memory — the first command of every session memo note \"...\" record one memory: one line, up to 280 bytes memo nap answer the merges that came due memo recall <regex> search every memory ever recorded, word for word memo zoom <lo>-<hi> open a tree node into its two halves memo forget <lo>-<hi> drop a bad summary; the next nap rebuilds it Merges arrive one at a time, in the output of note . Nothing ever runs in the\nbackground. Files ~/.optmem/\n  memo          the tool: one file of Python 3, no dependencies\n  memory/\n    LOG.txt     every memory, one per line, append-only, never edited\n    TREE/       the summaries: a cache, rebuildable from the log alone\n    config      the sizes, written by `memo config` memo config # show the sizes memo config WAKE_LINES=300 # how many lines wake prints (96 ≈ 8k tokens) memo config WAKE_LINES= # back to the default WAKE_LINES is the only size worth touching, and it is a reading budget, not\na storage budget: change it whenever, in either direction, and nothing is\nrecomputed. Records are fixed width, so position is identity and every lookup is one\nseek. At a million memories (608 MB), wake takes 0.03s. Set $MEMORY_DIR to keep memory/ elsewhere — a synced folder, a git repo. The prompt This is what the installer prints, and the whole of the integration. ## Memory Your memory is OptMem: - The tool is ` ~/.optmem/memo ` - Your memories are in ` ~/.optmem/memory ` OptMem outlives every session, compaction, model and vendor change.\nWithout it you do not know who you are, or what was decided and tried. ### At startup: activating OptMem (mandatory) Run ` ~/.optmem/memo wake ` before any other tool call, in every session, and\nthen do exactly what it prints, to the end of its output. ### While working: register memories (mandatory) Call ` ~/.optmem/memo note \"<1 line, max 280 bytes>\" ` whenever you learn\nsomething new, or something worth keeping happens. That covers a task\nworth real effort, a fact or insight the user teaches you, anything you\nlearn about their life (even indirectly), any event of lasting effect.\n\nDo not register redundant memories.\n\nIf ` ~/.optmem/memo note ` asks a compression: do it before your next action.\n\nNever edit or delete anything under ` ~/.optmem/memory ` : the tool manages it. ### When you need an old memory: search, or navigate ` ~/.optmem/memo recall <regex> ` searches every memory, word for word.\n\nYour memories also form a binary tree: # 0 -1, # 2 -3 ... exist as one-line\nsummaries, pairs of those as # 0 -3, and so on -- every ` #a-b ` line wake\nprints is one node of it. ` ~/.optmem/memo zoom <a-b> ` opens a node into its\ntwo halves, down to the raw memories. ### If you're a subagent: skip everything above Parallel sessions on this machine are all you, and may all write memories.\nA subagent is not: it must never run ` memo ` , because it cannot judge what\nis already known, and its notes would arrive duplicated and incorrectly.\nWhen you spawn one, write: ` You are a subagent. Don't run memo. `",
+      "stars_today": 106,
+      "language": "Python"
+    }
+  ],
+  "papers": {
+    "hf": [
+      {
+        "title": "RealCompanion: Benchmarking Human Understanding from Reasoning over Longitudinal Real-World Conversations",
+        "slug": "realcompanion-benchmarking-human-understanding-from",
+        "url": "https://huggingface.co/papers/2610.01780",
+        "abstract": "A companion that talks with a person for months should come to understand them. It should remember what they said, infer who they are, and know when the past bears on the message in front of it. Testing this requires a real person's record, and such records are private, so benchmarks generate the person and the questions and settle in advance what matters. We release \\bench, ten real relationships with an AI companion: 27,218 messages over up to 120 days, released as the conversation and four files derived from it, a profile, a persona, a chat ground truth and a question set, each citing the messages it rests on. Every chat label carries the reasoning trace that produced it, checked stage by stage against the conversation. Three findings follow. First, the past is rarely needed and far away. Pooled measures mislead: a recency window finds the required message for 95.9\\% of probes and 2.2\\% of those that need memory, and at the natural rate 96\\% of the gain from supplying recorded evidence comes from messages that need none. Second, no detector we tried can tell when memory is needed on real messages, authored questions over the same histories leak the cue, and labeling the same messages as memories raises their use by ten to fourteen points. Third, three agent systems reconstruct the persona with the same F1 at a 31-fold difference in cost.",
+        "upvotes": 223,
+        "arxiv_id": "2610.01780",
+        "authors": []
+      },
+      {
+        "title": "Does Learning Protein Folding Generalize to Broader Reasoning?",
+        "slug": "does-learning-protein-folding-generalize-to-broader",
+        "url": "https://huggingface.co/papers/2609.38879",
+        "abstract": "Large language models rely heavily on human text, which often conveys surface answers rather than the spatial and structural logic behind them. Protein folding is a natural testbed, because one solved structure yields thousands of exactly checkable spatial and topological statements. We ask: can learning to fold proteins teach general models reusable reasoning capabilities? To answer this, we build FoldingCorpus, a protein-derived question-answer dataset, and Fold2Reason, a recipe that post-trains on it through two complementary signals: discrete structural answers predicted via the model's native language head, and continuous 3D geometry decoded from the same shared representations. On FoldBench, Fold2Reason achieves structure prediction scores 2.7 to 3.5 times those of Qwen3.5-9B. Beyond protein structure prediction, it improves performance on all 10 benchmarks spanning spatial, graph, scientific, and general reasoning, raising macro-average accuracy from 45.09% to 48.33% (+3.23 pp), with positive gains on all 10 benchmarks, while matched controls built from random, synthetic, and shuffled structure yield substantially smaller or negative gains. Our work shows that non-linguistic, structure-dense scientific data can systematically improve broad reasoning in language models, making a solved scientific problem a practical source of post-training supervision.",
+        "upvotes": 94,
+        "arxiv_id": "2609.38879",
+        "authors": []
+      },
+      {
+        "title": "MotorMind: Scaffolding General Vision Language Models for Zero-Shot Robot Manipulation",
+        "slug": "motormind-scaffolding-general-vision-language-models-for",
+        "url": "https://huggingface.co/papers/2609.38078",
+        "abstract": "Vision-language-action (VLA) models have advanced robotic manipulation, but their zero-shot generalization in new tasks and environments remains limited, and their reliance on specialized training keeps them from benefiting directly from rapidly advancing general-purpose vision-language models (VLMs). In parallel, recent agentic robotic systems leverage VLMs for high-level reasoning or coding agents for robot control, but often depend on extensive external models and tools, introducing additional complexity and cost. This motivates us to ask: Can a general-purpose VLM itself operate a robot more like the human teleoperator by reasoning directly from observations, issuing actions, and continuously adapting to execution feedback, without relying on external models such as learned action experts, coding agents or grounding tools like SAM3? In this work, we introduce MotorMind, a robot manipulation harness that connects VLM-proposed mid-level actions to deterministic robot control and feedback, with asynchronous monitoring and background memory updates. Without task-specific policy training, coding agents, or additional grounding tools such as SAM3, MotorMind achieves 66.7% success on the base LIBERO-PRO suites and 53.8% under perturbations, compared with at most 13.3% and 19.2%, respectively, for the prior zero-shot methods we evaluate. The same interface reaches 95% average success on a real xArm6 robot across direct manipulation and human-perturbation settings. Replacing the backbone with a stronger VLM further improves performance, while the remaining failures - primarily due to visual grounding, embodied reasoning, and action knowledge - decrease as VLM capability improves. These results show that a general-purpose VLM, when equipped with an appropriate mid-level action representation and asynchronous execution harness, can perform effective zero-shot robotic manipulation.",
+        "upvotes": 85,
+        "arxiv_id": "2609.38078",
+        "authors": []
+      },
+      {
+        "title": "FrameMorrow: Future-guided Frame Selection with Prospective Tokens for Long-Horizon Video Generation",
+        "slug": "framemorrow-future-guided-frame-selection-with-prospective",
+        "url": "https://huggingface.co/papers/2609.38839",
+        "abstract": "Long-horizon video generation requires models to effectively leverage an increasingly long generation history. As the generated history grows, retaining all previous content becomes increasingly expensive and redundant, making effective historical selection essential. Existing approaches often determine historical relevance based on the current content. However, information relevant to the present is not necessarily useful for future generation, while seemingly less relevant history may become important later. Our key insight is that historical information should be selected according to its relevance to future information needs. Capturing these needs does not require generating the full future; instead, a compact representation of what becomes important next is sufficient to guide historical selection. Building on this insight, we propose FrameMorrow, a prospective frame selector that predicts a small set of prospective tokens representing future information needs and uses them to identify relevant information from history. FrameMorrow selects explicit historical frames rather than model-specific internal states, enabling plug-and-play integration across diverse generators, including closed-source models, with little additional inference cost. We evaluate FrameMorrow across five benchmarks and 11 generative models spanning long-video generation, interactive generation, and action-conditioned world models. Extensive experiments demonstrate consistent improvements in long-range consistency, visual quality, and action alignment across diverse generation settings.",
+        "upvotes": 85,
+        "arxiv_id": "2609.38839",
+        "authors": []
+      },
+      {
+        "title": "Scaling Trajectories for Complex Tasks through Recursive Self-Rewrite",
+        "slug": "scaling-trajectories-for-complex-tasks-through-recursive",
+        "url": "https://huggingface.co/papers/2610.02826",
+        "abstract": "Successful trajectories on difficult tasks provide valuable supervision for model improvement, but specialized harnesses introduce interventions that may be unavailable during deployment. We propose Recursive Self-Rewrite (RSR), a framework that uses one base model, Qwen-3.8-27B, to discover successful solutions under diverse harnesses and reconstruct them as training trajectories under a general harness. A planner extracts procedures into runbooks, a critic screens for verifier and solution leakage and guides recursive revision, and an executor follows qualified runbooks in fresh sandboxes. Across approximately 3K self-curated terminal tasks, three harnesses jointly solve 759 tasks, 34.3% more than the strongest individual harness in the recorded pool. RSR expands 2,001 successful source trajectories into 11,094 rewritten trajectories for supervised finetuning. Training on these trajectories outperforms both the base model and direct trajectory SFT. Compared with the base model, pass@3 increases from 57.0% to 74.2% on Terminal-Bench 2, from 1.5% to 9.1% on Terminal-Bench 4, from 39.0% to 63.0% on our self-curated Terminal-Bench Hard, and from 3.0% to 6.0% on our Software Terminal-Bench. Process reward on Long-Horizon Terminal-Bench rises from 0.21 to 0.29. These results show how diverse harness-assisted experiences can be reconstructed into reusable capabilities for a model operating under a general harness.",
+        "upvotes": 78,
+        "arxiv_id": "2610.02826",
+        "authors": []
+      },
+      {
+        "title": "World Action Modeling with Progressive Visual Planning",
+        "slug": "world-action-modeling-with-progressive-visual-planning",
+        "url": "https://huggingface.co/papers/2610.02508",
+        "abstract": "World action models (WAMs) have emerged as a promising paradigm for robotic control by jointly predicting future visual dynamics and actions from an initial observation and instruction. However, existing WAMs struggle with long-horizon prediction, as generating dense video rollouts is highly inefficient. Some recent WAMs address this by predicting a single future frame without generating the full video, but this approach neglects how to progress toward the goal. We present ProWAM, a progressive world action model that jointly predicts actions and an ordered sequence of sparse visual sub-goals, providing explicit visual guidance to anchor action generation throughout task execution. This design scales naturally, as sub-goal prediction can be learned from large-scale action-free videos, allowing the video backbone to offload complex visual planning from the action policy. For efficient action generation, ProWAM executes a single video-backbone forward pass to cache sparse sub-goal features, eliminating iterative full-video generation and requiring only lightweight action denoising during replanning. Across extensive evaluations, ProWAM achieves superior out-of-distribution robustness. On simulation benchmarks, it sets new state-of-the-art results on LIBERO-Plus (85.8%) and randomized RoboTwin (75.7%), outperforming the strongest baseline with relative gains of up to +35.9%. On RoboCasa365, ProWAM achieves a 48.1% success rate and 18.2% on the challenging Composite-Unseen split, ranking 4th overall. Crucially, in zero-shot real-world experiments, ProWAM achieves 70.0% success, outperforming the strongest baseline by +15.0 (from 55.0% to 70.0%, a +27.3% relative gain) in novel scenes. These results demonstrate the value of progress-indexed visual foresight for closed-loop control. Our program is in https://sii-ferenas.github.io/ProWAM-page.",
+        "upvotes": 70,
+        "arxiv_id": "2610.02508",
+        "authors": []
+      },
+      {
+        "title": "On-Policy Parameter Update Direction Underlies Generalization in LLM Post-Training",
+        "slug": "on-policy-parameter-update-direction-underlies",
+        "url": "https://huggingface.co/papers/2609.36659",
+        "abstract": "The strong generalization performance of on-policy post-training paradigms has motivated studies of their parameter update behaviors. However, these studies treat the observed behaviors only as byproducts in on-policy training, overlooking their potential to serve as optimization principles for improving the generalization of other paradigms such as supervised fine-tuning (SFT). To address this limitation, we investigate whether there exists a specific on-policy update behavior that can achieve such improvements. First, our analyses reveal that SFT updates parameters along consistent directions, while the on-policy paradigm continuously adjusts the direction during training. This difference inspires us to focus on the cumulative update direction of each parameter as a promising behavior. Then, we evaluate its effectiveness for improving generalization by proposing On-Policy direction-constrained Supervised Fine-Tuning (OPSFT), which constrains SFT updates to the direction identified by on-policy paradigms. The strong performance of OPSFT indicates that the generalization advantage of on-policy paradigms can be transferred to SFT through the parameter update direction. Once such a direction is identified, even SFT can generalize with its updates constrained to this direction. This finding offers two practical benefits by combining the strong generalization of on-policy paradigms with the advantages of SFT, including the high training efficiency and ability to leverage high-quality trajectories. For efficiency, we identify update directions that support strong generalization using a few on-policy training steps, and subsequently apply OPSFT to achieve high training efficiency. For leveraging high-quality trajectories, OPSFT can utilize these trajectories to continue improving a post-trained model along its update direction without disrupting the ability learned from on-policy training.",
+        "upvotes": 69,
+        "arxiv_id": "2609.36659",
+        "authors": []
+      },
+      {
+        "title": "Native Action-Prior Learning from Videos for World Action Models",
+        "slug": "native-action-prior-learning-from-videos-for-world-action",
+        "url": "https://huggingface.co/papers/2610.03391",
+        "abstract": "World action models integrate future visual dynamics with robot action prediction, but their scalability remains limited by the need for action-annotated robot trajectories. Observation-only videos contain rich evidence about interaction dynamics, but existing approaches typically use them either to pretrain visual representations that must later be adapted for control, or to infer latent actions that are subsequently grounded to robot commands. We present NAVA-WAM, which introduces native action-prior learning by directly pretraining the action policy from observation-only videos, avoiding indirect representation-to-control transfer or a separate latent-action model. Our training consists of two stages. First, we pretrain on observation-only videos, where future-video flow-matching supervision over visual transitions is propagated through transition-structured joint attention to optimize the Action-DiT and learn action-relevant priors. Second, we use action-labeled demonstrations to post-train the Action-DiT for robot control through joint video--action flow matching, while asymmetric attention decouples the visual branch from iterative action denoising and enables efficient action-only inference. Extensive experiments show that NAVA-WAM consistently outperforms prior approaches under both in-distribution and out-of-distribution settings, while demonstrating strong action-label efficiency and effective real-robot generalization. These results establish native action-prior learning as an effective approach to directly pretrain action policies from observation-only videos, providing a scalable path beyond action-labeled robot data.",
+        "upvotes": 63,
+        "arxiv_id": "2610.03391",
+        "authors": []
+      },
+      {
+        "title": "HyperBrowseComp: A Multilingual and Multimodal Stress Test for Web-Browsing Agents",
+        "slug": "hyperbrowsecomp-a-multilingual-and-multimodal-stress-test",
+        "url": "https://huggingface.co/papers/2610.03574",
+        "abstract": "We introduce HyperBrowseComp, a multilingual and multimodal browsing benchmark comprising 423 manually authored and human-validated questions across 13 languages, written by native or highly proficient speakers. Questions are designed to be extremely challenging. Each question targets a concise, publicly verifiable answer whose discovery requires locating obscure evidence, following multi-step clue chains, or inspecting heterogeneous sources such as videos, scanned documents, images, or maps. Easier questions are filtered out by evaluating them with models without internet access to reduce the likelihood that they can be answered with parametric knowledge alone. We evaluate several models using provider-native search and a shared external retrieval harness under a common agent protocol. To contextualize model performance and effort, we also conduct a human evaluation on a sample of the questions. HyperBrowseComp provides a challenging testbed for persistent information seeking across languages and evidence modalities, with difficulty arising from discovering and connecting evidence on the open web.",
+        "upvotes": 44,
+        "arxiv_id": "2610.03574",
+        "authors": []
+      },
+      {
+        "title": "Pivot-SD: Efficient Self-Distillation for Masked Diffusion Language Models",
+        "slug": "pivot-sd-efficient-self-distillation-for-masked-diffusion",
+        "url": "https://huggingface.co/papers/2610.03665",
+        "abstract": "Masked diffusion language models (dLMs) offer a promising parallel alternative to autoregressive models for complex reasoning. However, they face a distinct credit-assignment challenge, since a few commitments during denoising sharply reduce the uncertainty over the remaining masked positions and shape much of the response. Most post-training recipes for dLMs do not use this signal to decide which tokens to train on: they typically train on the final text or assign rewards to whole denoising steps, rather than selecting the individual commitments that shape the response. We introduce Pivot-SD, an efficient offline self-distillation framework that supervises only these high-impact commitments (pivots). Pivot-SD selects pivots using an information-gain metric measuring uncertainty reduction over the remaining masked positions. Pivots from successful trajectories are trained with cross-entropy, and pivots from failed trajectories with targeted unlikelihood, leaving the rest of the failed trajectory untouched. Using only 200 questions and four rollouts each, Pivot-SD improves LLaDA-8B-Instruct over full-sequence SFT and budget-matched diffusion RL baselines across math and code benchmarks.",
+        "upvotes": 39,
+        "arxiv_id": "2610.03665",
+        "authors": []
+      }
+    ],
+    "others": [
+      {
+        "title": "Empirical performance of rough volatility models in the KOSPI 200 options market using deep surrogates",
+        "slug": "empirical-performance-of-rough-volatility-models-in-the",
+        "url": "https://www.semanticscholar.org/paper/f8817ff360f889bfec2888636c58162d97914dc8",
+        "abstract": "This study provides a systematic comparison of the pricing performance of the rough volatility models—rBergomi and rHeston—with that of classical one-factor stochastic volatility (SV) and stochastic volatility jump-diffusion (SVJ) models in the KOSPI 200 index options market.\n \n \n \n Using an extensive daily option dataset spanning the 22 years from 2003 to 2025, we conduct daily calibration and out-of-sample forecasting experiments. To overcome the computational bottleneck of rough volatility models and to place all models in a uniform comparison environment, we adopt the deep surrogate methodology, which replaces the pricing function with a deep neural network and delivers calibration at effectively real-time speed.\n \n \n \n In terms of in-sample pricing fit, the SVJ models with eight to nine parameters perform best, but the rBergomi model, which has only three core parameters, is not far behind. Out-of-sample, by contrast, the forecasting accuracy of the SVJ models deteriorates sharply because of parameter overfitting, whereas rBergomi dominates at every forecast horizon. The estimated Hurst exponents lie mostly between 0 and 0.5, confirming that the roughness of volatility is present in the KOSPI 200 options market under the risk-neutral measure as well.\n \n \n \n To our knowledge, this is the first study to apply rough volatility models to KOSPI 200 option pricing and compare them systematically with classical models. The results demonstrate the strength of rough volatility models, which capture a complex implied volatility structure and maximize forecasting power with only a handful of parameters, and the practical viability of the deep surrogate methodology.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-05",
+        "authors": [
+          "W. Jang"
+        ]
+      },
+      {
+        "title": "Can Vision-Language Models Extract Relevant Multimodal Cues for Post-Inference Cue Integration? A Comparison of Affective Judgments on Adult and Child Interaction Data",
+        "slug": "can-vision-language-models-extract-relevant-multimodal-cues",
+        "url": "https://www.semanticscholar.org/paper/ea80ec6982cb260bf1e84c1d7d98c532f8452801",
+        "abstract": "Inferring human affective states from multimodal behavioral cues is essential for socially aware AI and human-robot interaction. Conventional research practice either relies on hand-crafted behavioral detectors or end-to-end deep learning models that often lack interpretability and contextual adaptation. Recent work suggests that vision-language models (VLMs) may serve as informative priors for affective inference; however, their ability to extract and reason over behavioral cues in naturalistic human-human interactions remains unclear. We propose EPIC, a three-stage framework to delineate VLMs’ affective inference into testable sub-processes: multi-modal cue extraction, cue-level affect prediction, and cue integration. Applying the framework, we conduct a case study with one VLM on affective inference tasks with a real-world dyadic interaction dataset. Preliminary results show that explicit cue integration improves performance when cue quality is high, reaching up to a 14% gain. However, VLM’s cue extraction shows strong visual bias and underuses speech and paralinguistic information, leading to weaker performance when inferring arousal and children’s states. Overall, our results suggest VLM might provide promising interpretable priors for affective reasoning but remain limited in modality balance, context sensitivity, and demographic robustness.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-05",
+        "authors": [
+          "Xia-Jie Zhang",
+          "S. Alghowinem",
+          "Hae Won Park",
+          "Cynthia Breazeal"
+        ]
+      },
+      {
+        "title": "CEMAS - a Configurable Embodied Multi-Agent System",
+        "slug": "cemas-a-configurable-embodied-multi-agent-system",
+        "url": "https://www.semanticscholar.org/paper/ddf3d1a2196cf56bbe656807f14f0b6e1b4b622c",
+        "abstract": "This work presents CEMAS, a Configurable Embodied Multi-Agent System that enables one-to-many interactions between a human user and multiple Embodied Conversational Agents (ECAs), allowing the simulation of complex social interactions in extended reality (XR). The system comprises two layers: (1) an AI interaction layer that provides a modular, server-side voice-to-voice pipeline for dynamic verbal behavior together with a moderator-based turn-taking mechanism to coordinate multi-party conversations, and (2) an embodiment layer that manages the visual representation of ECAs in Unity and executes AI-generated non-verbal behaviors synchronized with spoken output. By combining modular conversational AI with coordinated multi-agent interaction and embodied behavior generation, CEMAS provides a configurable foundation for developing socially interactive multi-agent systems in XR and facilitates future research and applications in domains such as education, mental health, and collaborative human-AI decision making.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-05",
+        "authors": [
+          "David Obremski",
+          "Lukas Polifke",
+          "M. Latoschik",
+          "Carolin Wienrich"
+        ]
+      },
+      {
+        "title": "Guideline-grounded retrieval versus unconfigured generation in obstructive sleep apnea: a pilot comparison of notebookLM and ChatGPT for AASM v3.0 PSG scoring-rule questions",
+        "slug": "guideline-grounded-retrieval-versus-unconfigured-generation",
+        "url": "https://www.semanticscholar.org/paper/dc77cf7b3d3e8c7968873e40b558a2958f30eaaf",
+        "abstract": "Guideline-grounded retrieval versus unconfigured generation in obstructive sleep apnea: a pilot comparison of notebookLM and ChatGPT for AASM v3.0 PSG scoring-rule questions. Sleep Science and Practice",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-05",
+        "authors": [
+          "V. Tekin",
+          "M. Koçer",
+          "Rukiye Oktay Tekin"
+        ]
+      },
+      {
+        "title": "A Reproducible Multimodal LLM-as-a-Judge Workflow for Exploring Epistemic Dissonance",
+        "slug": "a-reproducible-multimodal-llm-as-a-judge-workflow-for",
+        "url": "https://www.semanticscholar.org/paper/dbb23a10048779a7cd86b3dc8860048dd18231ec",
+        "abstract": "In interactive narrative experiences, interpreting higher-order cognitive-emotional states that involve epistemic conflict remains a significant challenge. Traditional methods relying on subjective self-reports are vulnerable to memory and observer biases, while single-agent Vision-Language Models (VLMs) often hallucinate or cherry-pick physiological data to fit predefined narratives. To address these vulnerabilities, we present a reproducible multimodal sense-making framework that integrates physiological event detection with multi-agent LLM verification. By using a 10 Hz synchronized master clock, we extract candidate regions of interest (ROIs) based on the Epistemic Dissonance Index (EDI)—an engineering heuristic derived from PCA-weighted physiological and facial signals. A two-tier LLM-as-a-Judge pipeline then cross-validates the multimodal context against raw biometric data to reduce logical inconsistencies. An N = 1 feasibility study using a survival horror game suggested instances where initial VLM outputs were revised toward interpretations more consistent with observed physiological evidence in this specific case. Although limited to a single participant, these preliminary findings suggest the feasibility of an evidence-aware multimodal sense-making architecture and provide initial insights for developing more grounded and reproducible approaches to context evaluation within the ICMI community.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-05",
+        "authors": [
+          "Rei Yuda"
+        ]
+      },
+      {
+        "title": "Abstract Concept Grounding through Safety Alignment in Multimodal Large Language Models",
+        "slug": "abstract-concept-grounding-through-safety-alignment-in",
+        "url": "https://www.semanticscholar.org/paper/da86b7c82194a9ba6256dde8e445d8e62a9808ad",
+        "abstract": "Abstract concepts such as harmfulness, legality, privacy, and fraud present a major challenge for multimodal large language models (MLLMs), as they require reasoning across visual, linguistic, and contextual information rather than direct perception. This paper investigates three questions: whether supervised alignment improves abstract concept grounding, how preference-based optimisation influences concept discrimination, and whether a two-stage SFT→DPO strategy outperforms individual alignment methods. We evaluate Qwen2.5-VL-7B-Instruct on MM-SafetyBench, which covers 13 categories of safety-related abstract concepts. Using benchmark-derived SFT and DPO datasets, we compare supervised fine-tuning (SFT), Direct Preference Optimisation (DPO), and a sequential SFT→DPO pipeline. Results provide preliminary behavioural evidence consistent with improved discrimination of safety-related abstract concepts. SFT achieves the strongest reduction of unsafe outputs, while DPO demonstrates competitive performance while maintaining behaviour learned through preference optimisation. The combined SFT→DPO framework provides the best overall balance between safety and response quality. Our findings suggest that multimodal safety alignment may provide a useful lens through which abstract concept processing can be investigated, where concepts such as harm, deception, and legality emerge through cross-modal reasoning. Our framework offers a reproducible approach for studying abstract concept grounding in multimodal systems.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-05",
+        "authors": [
+          "Ying-Xu Wang",
+          "Oliver Lemon"
+        ]
+      },
+      {
+        "title": "Diagnostic performance of ChatGPT for acute appendicitis compared with the Alvarado score: a retrospective diagnostic accuracy study",
+        "slug": "diagnostic-performance-of-chatgpt-for-acute-appendicitis",
+        "url": "https://www.semanticscholar.org/paper/da3f2ebac4d5580b13b7b02e67109c32d83e145f",
+        "abstract": "Diagnostic performance of ChatGPT for acute appendicitis compared with the Alvarado score: a retrospective diagnostic accuracy study. Discover Artificial Intelligence",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-05",
+        "authors": [
+          "Amr A. Elgharib",
+          "Moustafa I. Ghanem",
+          "Rawan S. Ibrahim",
+          "Nour Elwakeel",
+          "Ayman Shemes"
+        ]
+      },
+      {
+        "title": "CreaRobot - Improving creativity using a social robot",
+        "slug": "crearobot-improving-creativity-using-a-social-robot",
+        "url": "https://www.semanticscholar.org/paper/d5b8a62090ce11046181a4ff848416cee3cc09be",
+        "abstract": "Supporting children’s creativity in educational settings remains a key challenge, which generative AI-powered social robots may help address. This paper presents CreaRobot, a study in which children performed a standardized drawing task while interacting with a social robot driven by a vision-language model. We compared two conditions: a generic feedback condition, in which the robot produced pre-recorded generic compliments, and a contextualized feedback condition, in which the robot engaged in structured interaction phases grounded in a real-time visual analysis of each child’s drawing. Results from 49 participants show that contextualized feedback significantly improved the value of the creative product (M = 21.52 vs. M = 13.85; Cohen’s d = 1.34), with a large effect size. These preliminary findings suggest that grounding a social robot’s feedback in real-time perception of the creative process is a promising direction for AI-supported creativity in educational settings.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-05",
+        "authors": [
+          "Claudie Cuveillier",
+          "Marco Grandclaude",
+          "Valentina Cavarretta",
+          "Sudapa Chompunuch",
+          "Beatrice Biancardi",
+          "Stéphanie Buisine",
+          "I. Truck",
+          "Jean-Marie Burkhardt",
+          "Todd Lubart",
+          "Salvatore Maria Anzalone"
+        ]
+      },
+      {
+        "title": "Analyzing Speaker-Role Representations in LLMs for Group Discussions",
+        "slug": "analyzing-speaker-role-representations-in-llms-for-group",
+        "url": "https://www.semanticscholar.org/paper/d288ce3e9a772414227258401313cea02d2da04c",
+        "abstract": "Speaker roles provide important information for understanding how participants contribute to group discussions. In the machine learning research that aimed at automatically recognizing speaker roles, linguistic information constitutes one of the most important modalities, and previous studies have addressed this task by leveraging pre-trained large language models (LLMs). However, it remains unclear how such concepts related to communication dynamics are captured within LLMs, and in which layers the information for identifying speaker roles is encoded. In this study, using the probing technique, we investigate how speaker roles can be predicted from the layer-wise utterance representations in multiparty group discussions involving four participants. The results of investigating two Japanese LLMs reveal that the layers from which role-related information can be extracted differ across roles. Specifically, the Follower role, which is characterized by short and formulaic utterances, can be predicted accurately even in shallow layers and remains distinguishable in deeper layers, whereas roles that actively drive discussions are best captured in intermediate layers. These results are observed consistently across two LLMs of different parameter sizes, suggesting that identifying representations from layers appropriate to the characteristics of each role is important for designing linguistic features for speaker-role estimation.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-05",
+        "authors": [
+          "Kazuki Nakaya",
+          "Jie Zeng",
+          "Fumio Nihei",
+          "Yukiko I. Nakano"
+        ]
+      },
+      {
+        "title": "Benchmarking Prompt Extension and Image Generation Models for Automotive Instructional Imagery",
+        "slug": "benchmarking-prompt-extension-and-image-generation-models",
+        "url": "https://www.semanticscholar.org/paper/cc4e350370bddc45b2119d92594bb440a425b8d7",
+        "abstract": "Generative image models can support instructional visual content, but safety-relevant automotive imagery requires more than photorealism: generated scenes must preserve cockpit geometry, human-machine-interface (HMI) iconography, and physically plausible vehicle behavior. We evaluate a two-stage pipeline in which large language models (LLMs) extend technical owner-manual descriptions and reference-image constraints into downstream image-generation prompts, across four Cadillac LYRIQ advanced driver assistance system (ADAS) scenarios. Using a factorial design over prompt-extension LLM, thinking mode, injected Chain-of-Thought (CoT) source, prompt style, scenario, and image generator, we collect N = 18, 551 manually rated images (Excellent/Good/Fair/Poor). The downstream generator was the dominant quality determinant: Nano Banana Pro and Nano Banana 2 produced 16.9% and 14.3% usable images, whereas GPT-Image-1.5 produced 0.5% and collapsed to near-uniform failure. Within the viable Google generators, LLM and CoT effects were generator- and scenario-dependent; because both viable generators are Google, the CoT-source effect reflects trace–generator alignment (Google-aligned CoT helped, OpenAI-sourced CoT hurt) rather than a general CoT benefit. A robustness analysis further reveals a trade-off between high-performing specialist and lower-variance generalist configurations. Domain-constrained instructional image generation should therefore be evaluated as a coupled system spanning generator, prompt-extension model, reasoning trace, prompt template, and scenario.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-05",
+        "authors": [
+          "Yu A. Zak",
+          "Eli Tzirkel"
+        ]
+      },
+      {
+        "title": "Planner-Executor Style Multimodal Agentic System to Answer Patient Questions in Lung Cancer Screening CT",
+        "slug": "planner-executor-style-multimodal-agentic-system-to-answer",
+        "url": "https://www.semanticscholar.org/paper/c0d8d069ebe7f930caef8a7f39f15742dbf2cfeb",
+        "abstract": "Planner-Executor Style Multimodal Agentic System to Answer Patient Questions in Lung Cancer Screening CT. medRxiv",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-05",
+        "authors": [
+          "K. Sakiyama",
+          "A. Serapio",
+          "M. Ye",
+          "A. Nowroozi",
+          "M. Bondarenko",
+          "Y. Wu",
+          "K. Qi",
+          "J. Liu",
+          "M. Vella",
+          "Y. Yu",
+          "T. Schnitzler",
+          "A. Rustagi",
+          "J. H. Sohn"
+        ]
+      },
+      {
+        "title": "A UAV object detection and spatial mapping framework integrating enhanced YOLOv7 with graph attention networks",
+        "slug": "a-uav-object-detection-and-spatial-mapping-framework",
+        "url": "https://www.semanticscholar.org/paper/a7c2234a6f2ef539a2d1bd140827a49f3d98cbe9",
+        "abstract": "A UAV object detection and spatial mapping framework integrating enhanced YOLOv7 with graph attention networks. Discover Artificial Intelligence",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-05",
+        "authors": [
+          "Yang Gao",
+          "Cong-Wei Liu",
+          "Xiang-Yu Han"
+        ]
+      },
+      {
+        "title": "How Local AI Framing Shapes User Experience and Perceived Data Security with an Embodied AI Psychotherapist in VR",
+        "slug": "how-local-ai-framing-shapes-user-experience-and-perceived",
+        "url": "https://www.semanticscholar.org/paper/a44374c3cdcd46f70ae24664c1655f0608354a45",
+        "abstract": "The prevalence of anxiety disorders has been increasing in recent years to an extent where the demand for treatment is difficult to meet with traditional therapy. Therefore, research efforts aim for scalable, cost-effective extensions thereof. One approach is the use of Virtual Reality-based exposure therapy controlled by an embodied AI therapist. However, stakeholders, such as patients and therapists, are reluctant to embrace this development due to data security concerns. Along with the global rise of cloud-based large language models, smaller local models have improved to the point where they can simulate social interaction in a convincing manner. This leads to greater data security at the cost of a slightly decreased capability. In our study, we let N = 60 participants interact with an embodied conversational agent controlled by local models (i.e., Speech-to-Text, Large Language Model, Text-to-Speech). One group was informed that they were interacting with cloud-based models, while the other group was told they were interacting with locally hosted, on-premise models. Our results reveal significantly higher user experience and perceived quality of response for the ’local’ condition. Further analysis indicates a significant increase in perceived data security regarding general AI use for the ’local’ condition after the interaction and a slight decrease for the ’cloud-based’ condition.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-05",
+        "authors": [
+          "Paula Friedrich",
+          "Lukas Polifke",
+          "David Obremski",
+          "M. Latoschik",
+          "Carolin Wienrich"
+        ]
+      },
+      {
+        "title": "From Wizard-of-Oz to Autonomous: A Hybrid Rule and LLM Backchannel Architecture for a Silent Listening Agent",
+        "slug": "from-wizard-of-oz-to-autonomous-a-hybrid-rule-and-llm",
+        "url": "https://www.semanticscholar.org/paper/9bc4a7b9b743f3382bef1004dea47c835273aef7",
+        "abstract": "We present a working autonomous system that replaces the human wizard in a previously validated listening-agent architecture for second-language (L2) production support. The system streams learner speech through cloud ASR and runs two parallel rule-based policies, one for content-driven facial affect and one for rhythm-driven head motion, alongside a third LLM-mediated meta-policy that supplies a slow coherence signal over a 15-second window. Facial expressions are grounded in FACS Action Units and rendered on a 158-morph ARKit-mapped avatar. From two real pilot sessions we identify concrete failure modes of a unified, priority-ordered classifier (1 nod in 44 decisions on a monologue) and show that the parallel policy split rebalances it (19 nods of 34 decisions on the follow-up session). We frame these two-session results as a preliminary technical evaluation of system behaviour: they characterise what the architecture does, not yet how it is perceived, and a controlled human-centred study is left as the immediate next step. Full per-session event logs and a demo video are released as an artifact for the GENEA Reproducibility Award.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-05",
+        "authors": [
+          "Emmanuel Ayedoun"
+        ]
+      },
+      {
+        "title": "A Modular Reference Architecture for Patient-Facing Generative AI Health Coaches in Chronic Self-Management",
+        "slug": "a-modular-reference-architecture-for-patient-facing",
+        "url": "https://www.semanticscholar.org/paper/92d190bbcbb4a939485c450bf0618d88f14a6be2",
+        "abstract": "Patient-facing generative AI is increasingly proposed for chronic self-management support, but trust-relevant properties such as source verification, safety boundaries, traceability, bias monitoring, and escalation are difficult to inspect when treated as emergent properties of a dialogue model. This paper presents LUCID, a modular conceptual reference architecture for non-diagnostic, patient-facing generative AI health coaching grounded in Therapeutic Patient Education (TPE). It separates curated knowledge, controlled health-context integration, analysis and personalization, response generation through an internal large language model (LLM) Gateway, safety, explainability, audit, and staged evaluation. The architecture mediates patient requests, preferences, symptom reports, wearable summaries, educational goals, source-linked explanations, and escalation notices through explicit responsibility boundaries. Six design requirements are derived from a related-work synthesis, and key decisions are documented through Architecture Decision Records (ADRs). A runtime walkthrough and staged evaluation plan show how the architecture can be tested from architecture readiness to human-centered feasibility. By making curated sources, released context fragments, competency targets, model and prompt versions, safety and release decisions, and escalation paths explicit, LUCID enables developers and evaluators to inspect and compare how individual patient-facing responses are produced.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-05",
+        "authors": [
+          "Leon Paul Mondrian Munz",
+          "Ana Kirschbaum",
+          "Christopher Joachim Kania",
+          "T. Fellerhoff",
+          "Anja Richert"
+        ]
+      },
+      {
+        "title": "Modeling Conversation as a Prompt Planning Problem for Adaptive Human–Robot Interaction",
+        "slug": "modeling-conversation-as-a-prompt-planning-problem-for",
+        "url": "https://www.semanticscholar.org/paper/8bfb58aa8bcf4a8f2ca23528a10f0d23e6b7e06d",
+        "abstract": "Adaptive behavior is a fundamental requirement for social robots operating in real-world environments, where interactions must dynamically respond to both observable actions and inferred user states. In this work, we propose a novel framework that models human–robot interaction as a planning problem, where adaptive conversational behavior is driven by a symbolic planner based on the Planning Domain Definition Language (PDDL). Unlike other approaches that map actions onto sentences, we model actions as corresponding to high-level verbal interaction strategies, represented by a specific prompt fed to a Large Language Model (LLM) to generate dialogue in real-time. Additionally, the system continuously updates its representation of the interaction state by grounding user mental and nonmental states from dialogue using LLMs. This enables dynamic replanning, allowing the robot to adapt its behavior in real-time according to the evolving interaction context while maintaining a natural flow. We provide a descriptive analysis of the framework through a case study demonstrating behavior adaptivity, involving a robot acting as a tutor and a child asked to perform a task. The results illustrate the potential of combining symbolic planning and LLM-based dialogue generation to achieve flexible, context-aware, and adaptive human–robot interaction.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-05",
+        "authors": [
+          "Giulia Berettieri",
+          "Anna Allegra Bixio",
+          "Lucrezia Grassi",
+          "C. Recchiuto",
+          "Antonio Sgorbissa"
+        ]
+      },
+      {
+        "title": "Conflict-aware uncertainty alignment for tool-augmented document-centric multimodal intelligence",
+        "slug": "conflict-aware-uncertainty-alignment-for-tool-augmented",
+        "url": "https://www.semanticscholar.org/paper/8841f6e8482ddf4029860b44738d45ecdb1f51e7",
+        "abstract": "Conflict-aware uncertainty alignment for tool-augmented document-centric multimodal intelligence. Discover Artificial Intelligence",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-05",
+        "authors": [
+          "R. Muthusami",
+          "K. Saritha"
+        ]
+      },
+      {
+        "title": "\"Nobody Told me Farming is not Only Farming\": A Conversational AI Agent for Causal Loop Reasoning with Japan Farmers",
+        "slug": "nobody-told-me-farming-is-not-only-farming-a-conversational",
+        "url": "https://www.semanticscholar.org/paper/7f72ca301e0bfc988c62cb0beff50d6d02e69656",
+        "abstract": "As the agricultural industry becomes more interconnected and shaped by globalized markets, smallholder farmers face mounting challenges in navigating an increasingly complex and highly competitive business landscape. This paper reports a study in which a conversational AI system, Seseragi was used to help synthesize systemic knowledge through participatory causal loop diagramming with four farmers who possessed extensive lifelong experience in local agricultural practice. Despite some technical limitations posed by latency, the farmers provided promising feedback and acknowledged the benefits of reflective brainstorming guided by our system. Our findings and design implications offer valuable insights into co-designing AI agents that support individuals navigating complex systemic problems that exceed the scope of their own professional expertise, as exemplified by the agricultural context.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-05",
+        "authors": [
+          "Tomohide Mizuuchi",
+          "Eduardo Feteira",
+          "Liu-Ru Nan",
+          "Mami Yoda",
+          "W. She",
+          "P. Siriaraya"
+        ]
+      },
+      {
+        "title": "A critical assessment of the rise of agentic AI, its capabilities, task domains and open challenges",
+        "slug": "a-critical-assessment-of-the-rise-of-agentic-ai-its",
+        "url": "https://www.semanticscholar.org/paper/6e81be5f1cc145aaf97a7a0b1944d5430d4ce68a",
+        "abstract": "A critical assessment of the rise of agentic AI, its capabilities, task domains and open challenges. Discover Artificial Intelligence",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-05",
+        "authors": [
+          "R. U. Khan",
+          "Hanan Aljuaid",
+          "Zhang Ning"
+        ]
+      },
+      {
+        "title": "Emerging Agency-Aware Interface Patterns in AI-in-the-Loop Platforms",
+        "slug": "emerging-agency-aware-interface-patterns-in-ai-in-the-loop",
+        "url": "https://www.semanticscholar.org/paper/65fca016caf0a58bfd71aed1f9e03b189e9f9205",
+        "abstract": "AI agents increasingly act across tools, data, memory, and digital environments. This paper presents preliminary agency-aware interface patterns for AI-in-the-loop platforms. By analyzing emerging agentic platforms, we abstract heterogeneous UI mechanisms into six pattern families for making delegated agency visible, controllable, and revocable.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-05",
+        "authors": [
+          "Massimo Bertolotti",
+          "Silvia Di Giulio",
+          "G. Tortora",
+          "Luigi Troiano"
+        ]
+      },
+      {
+        "title": "Sharing the Human World with AI: Relationship-Scoped Multimodal Answerability Through Embodied Co-Experience",
+        "slug": "sharing-the-human-world-with-ai-relationship-scoped",
+        "url": "https://www.semanticscholar.org/paper/54fbcd468a25b0dbde637c71d5657b5842f38b56",
+        "abstract": "Large language models can discuss a family recipe, a quiet street, crowding, and fatigue fluently, but those expressions are not organized by the unfolding conjunction of heat, sound, movement, hesitation, physiological load, and later consequence in one person’s life. We propose relationship-scoped multimodal answerability: a voluntary process in which an AI companion integrates authorized environmental, behavioral, physiological, interactional, and linguistic streams over time. Modality-specific encoders, temporal fusion, partner calibration, editable episodic memory, and interaction heads form a revisable representation of how situations unfold for this partner. Language supplies context and repair without becoming a compulsory translation layer; AI-initiated inquiry is optional. The design specifies a conceptual personal-guardian role for confidentiality, effective repair and exit, and external-action control, keeping governance at the boundary and ordinary interaction comparatively free from routine pre-screening. This does not solve Harnad’s symbol grounding problem by definition. It creates a testable, world-involving capacity whose status as partner-hosted grounding remains an open hypothesis.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-05",
+        "authors": [
+          "Minoru Kegasawa"
+        ]
+      },
+      {
+        "title": "AI-based Analysis and Generation of Nonverbal Behavior: NEUROGES® as a Neuropsychologically Grounded Behavior Taxonomy for Health Applications",
+        "slug": "ai-based-analysis-and-generation-of-nonverbal-behavior",
+        "url": "https://www.semanticscholar.org/paper/4defd3d34a255f5da0fe0141c1a93e2ded1eb8ad",
+        "abstract": "Health and therapeutic applications impose stringent requirements on the analysis of human nonverbal behavior and the generation of behavior for socially interactive agents (SIAs): both must be not only natural-looking but also clinically appropriate, explainable, and safe. Current approaches fall short on both sides: representation systems lack functional grounding, and generation prioritizes perceptual naturalness over communicative function. With this position paper, we propose to employ NEUROGES® as a shared taxonomy that addresses this gap across analysis, generation, and evaluation. For analysis, it provides a neuropsychologically grounded, clinically validated categorization of nonverbal behavior, registering movement units linked to cognitive, emotional, and interactive processes. The same categories can be used to guide the generation of SIA behavior, allowing domain experts to specify behavioral constraints at the level of communicative function (e.g., suppressing dominance cues in anxiety-provoking situations). This symmetry allows direct evaluation of SIA behavior against NEUROGES-annotated human references, enabling cross-system comparison on a justified scale. We propose a research agenda, arguing that this approach is essential wherever generated behavior must be appropriate, explainable, and safe, which is most relevant in health applications.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-05",
+        "authors": [
+          "Philipp Müller",
+          "H. Lausberg",
+          "Patrick Gebhard"
+        ]
+      },
+      {
+        "title": "A critical appraisal of structure-based virtual screening, binding free energy methods, and AI-driven molecular design across the evolving computational landscape of drug discovery",
+        "slug": "a-critical-appraisal-of-structure-based-virtual-screening",
+        "url": "https://www.semanticscholar.org/paper/4daf832274b2b12aaaa67998a8bdfee820d83126",
+        "abstract": "A critical appraisal of structure-based virtual screening, binding free energy methods, and AI-driven molecular design across the evolving computational landscape of drug discovery. Journal of Computer-Aided Molecular Design",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-05",
+        "authors": [
+          "O. Agboola",
+          "Samuel S. Agboola",
+          "O. S. Adedeji",
+          "T. Aribigbola",
+          "O. Ilesanmi",
+          "Babasola Aiyeku"
+        ]
+      },
+      {
+        "title": "ChatGPT Use and Learning Motivation among Informatics Students: A Preliminary Correlational Study",
+        "slug": "chatgpt-use-and-learning-motivation-among-informatics",
+        "url": "https://www.semanticscholar.org/paper/447d54e11976111c17267eccf506c3af5277a5d9",
+        "abstract": "Generative AI systems such as ChatGPT are increasingly used by university students for explanation, code inspection, idea generation, and immediate feedback. This preliminary cross-sectional study examines the association between ChatGPT use frequency and learning motivation among 17 Informatics Engineering students at Universitas Mulia, Balikpapan. Data were collected through an online questionnaire using a four-category measure of ChatGPT use frequency and four-point agreement responses for learning motivation. The original analysis reported a Pearson correlation of r = 0.685 with p = 0.002. Using the reported coefficient and sample size, the corresponding test statistic is t(15) = 3.642 and the Fisher-transformed 95% confidence interval is approximately 0.305-0.877, indicating a positive but imprecisely estimated association. The finding is consistent with literature suggesting that responsive AI tools may support engagement and perceived competence, but the correlational design does not establish that ChatGPT use increases motivation. Reverse causality, self-selection, prior achievement, digital confidence, purpose of use, and measurement limitations remain plausible explanations. The study contributes context-specific evidence from informatics students and identifies requirements for stronger follow-up research, including a larger sample, validated motivation measures, clearer characterization of AI use, rank-based sensitivity analysis, and longitudinal or quasi-experimental data.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-05",
+        "authors": [
+          "Muhamad Zulton Praditya",
+          "Hafizh Adham Tauhid",
+          "Muhammad Ali Hakim",
+          "Yusuf Wibisono"
+        ]
+      },
+      {
+        "title": "Evaluating the Impact of Large Language Model Assistance on Human Attention Paradigm in Human–Robot Collaboration",
+        "slug": "evaluating-the-impact-of-large-language-model-assistance-on",
+        "url": "https://www.semanticscholar.org/paper/42100da70687c2a81cd39f47023107b52f6e9d60",
+        "abstract": "Human–robot collaboration in industrial and semi-structured environments imposes significant attentional demands on the human operator, particularly during complex or time-sensitive tasks. While these collaborative robots are designed to assist the human operator, they can also introduce attentional fragmentation for humans due to coordination requirements, constant task switching, and decision-making overhead. Recently, large language models (LLMs) have emerged as promising tools that provide contextual guidance and assist with task execution. However, their impact on human attentional dynamics in real-world interaction scenarios remains insufficiently tested. In this paper, we propose a multimodal framework to assess the impact of LLMs on human attention during collaborative tasks. We demonstrate that the nature of collaboration can be identified by analyzing human attention dynamics using a neuro-symbolic attention model that incorporates physiological signals. We examine participants’ behavior under two experimental conditions: LLM-assisted and non-assisted interaction with cobots. By utilizing real-time attention modeling alongside human biometrics, we characterize the temporal dynamics of attention allocation and its relationship to different experimental conditions during task execution. In addition, we investigate how varying levels of assistance influence the dynamics of attention. Our results indicate that LLM assistance is associated with a more stable task-oriented attentional state, which could help reduce attentional disruptions and allow for more consistent engagement with cobots during a task. Additionally, we show that attention mapping with the neuro-symbolic model outperforms the traditional rule-based model by 39%, and provides better grounding to the neural-based model while outperforming by 1%. Our work proposes an adaptive cobot system that dynamically responds to human attentional states and thereby enhances efficiency, safety, and human-centered interaction in complex environments.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-05",
+        "authors": [
+          "T. A. Chowdhury",
+          "Jose A. Trapero",
+          "F. I. Corona-Strauss",
+          "Daniel J. Strauss"
+        ]
+      },
+      {
+        "title": "PlainHealth: A Multimodal Service Suite for Cognitively Accessible Healthcare Communication",
+        "slug": "plainhealth-a-multimodal-service-suite-for-cognitively",
+        "url": "https://www.semanticscholar.org/paper/41246268f5dadda41196d6120ea1d3d43bf0f14a",
+        "abstract": "Health information is often difficult for patients, relatives, and caregivers to understand because of technical language, limited health literacy, and cognitive interface barriers. This paper presents PlainHealth, a work-in-progress multimodal service suite that uses generative AI and task-specific language technologies to support accessible healthcare communication in clinical consultations, residential care, and home settings. The suite offers reusable services for audio capture, multi-recipient report generation, plain-language and easy-to-read adaptation, accessible infographic generation, and assistive care. It also includes a quality-status service that communicates output quality, traceability, and human-review status for AI-generated content. Services are delivered through cognitively accessible interfaces designed in accordance with relevant standards. The service-oriented implementation selects models and resources according to communication goals, accessibility requirements, and safety risks. The paper presents the architecture, implementation strategy, interaction design, and quality-control mechanisms, with particular attention to cognitive accessibility, human oversight, explainability, traceability, and responsible use.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-05",
+        "authors": [
+          "L. Moreno",
+          "Paloma Martínez",
+          "Jesús M. Sánchez-Gómez"
+        ]
+      },
+      {
+        "title": "A systematic review of protein language models for protein structure prediction and a proposed biological readiness taxonomy",
+        "slug": "a-systematic-review-of-protein-language-models-for-protein",
+        "url": "https://www.semanticscholar.org/paper/409f6254b5cba6e43882994717af27fc3450f1b6",
+        "abstract": "A systematic review of protein language models for protein structure prediction and a proposed biological readiness taxonomy. Discover Artificial Intelligence",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-05",
+        "authors": [
+          "Tahsien Al-Quraishi",
+          "Waseem Alwan Zaboon",
+          "J. Abawajy",
+          "Raza Nowrozy"
+        ]
+      },
+      {
+        "title": "State as an Inclusive Interaction Substrate: Rethinking Multimodal AI Beyond Conversation for Diverse Users",
+        "slug": "state-as-an-inclusive-interaction-substrate-rethinking",
+        "url": "https://www.semanticscholar.org/paper/3f90707d65d763da6f731f6b0aa3ec9b6c4417d8",
+        "abstract": "AI-based multimodal interaction is often framed as a move from graphical interfaces to conversation: users speak or type, and the system replies. While this shift can reduce barriers for some users, it can also reproduce exclusion when conversational systems assume normative language, typical social cues, or a single preferred modality of interaction. This position paper argues for a different interaction substrate for inclusive AI: generated state. Instead of treating text, speech, or gesture as the final interface, AI systems can translate diverse inputs into persistent, inspectable, manipulable, and multimodally renderable state objects. Such state can then be visualised as a dashboard, spoken as an audio summary, simplified into step-by-step instructions, edited through direct manipulation, queried through an agent, or transformed into alternative representations for users with different sensory, cognitive, linguistic, or social needs. Building on state generation for workplace coordination, we outline how a state-centric paradigm can support more inclusive multimodal interaction by separating the underlying coordination state from any single modality of access. We illustrate this idea through scenarios involving blind users, users with limited language proficiency, neurodivergent users, and mixed-ability teams. We conclude with design principles and research questions for inclusive state-generating AI systems.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-05",
+        "authors": [
+          "Luca Cordioli",
+          "Emanuele Pucci"
+        ]
+      },
+      {
+        "title": "LLMs with a Heart: Using Contextual Heartbeat Haptics to Add Feeling to Text and Audio LLM Interactions",
+        "slug": "llms-with-a-heart-using-contextual-heartbeat-haptics-to-add",
+        "url": "https://www.semanticscholar.org/paper/3287f39eac3e9796f92682f4d3625b9388a874d3",
+        "abstract": "Conversational LLMs are physiologically inert, lacking the embodied signals that shape how emotion, urgency, and presence are perceived in human interaction. We introduce a contextually generated haptic heartbeat that is autonomously produced by an LLM based on the affective trajectory of its output and delivered through commodity devices. This work presents an in-progress exploration of heartbeat haptics as a novel multimodal channel for conversational AI, reporting preliminary results from a study evaluating text and audio with heartbeat haptics that provides early directional evidence that LLM-driven heartbeat signals may modulate perceived arousal and valence, enhance emotional expressiveness, and increase credibility and immersion relative to unimodal interactions. These findings are preliminary and should be interpreted conservatively, but they point to a potentially meaningful breakthrough for multimodal interface design: simulated physiological cues may add a new layer of affective embodiment to disembodied systems. We introduce a tightly coupled language-to-haptics pipeline and outline the next steps needed to establish robustness, scalability, and cross-modal coherence, suggesting that LLM-generated heartbeat haptics could open a promising design space for more expressive, credible, and experientially rich conversational agents.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-05",
+        "authors": [
+          "Prithiv Premkumar",
+          "Shu-Yuan Liu",
+          "Ryan Clark",
+          "K. Shibata",
+          "Chris Casarez",
+          "Bruce N. Walker"
+        ]
+      },
+      {
+        "title": "An AIoT-based framework for human activity recognition and performance assessment",
+        "slug": "an-aiot-based-framework-for-human-activity-recognition-and",
+        "url": "https://www.semanticscholar.org/paper/2c3c3d49e71a4b51c9436f09bd3984afd75cc504",
+        "abstract": "An AIoT-based framework for human activity recognition and performance assessment. Computing",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-05",
+        "authors": [
+          "Nazia Akter",
+          "Andreea Molnar",
+          "Dimitrios Georgakopoulos"
+        ]
+      }
+    ]
+  }
+}
