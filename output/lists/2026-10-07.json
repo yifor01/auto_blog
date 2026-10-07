@@ -1,0 +1,640 @@
+{
+  "date": "2026-10-07",
+  "github": [
+    {
+      "title": "superdesigndev/treg",
+      "slug": "superdesigndev-treg",
+      "url": "https://github.com/superdesigndev/treg",
+      "abstract": "Treg (OpenRouter for Tools) OpenRouter, but for agent tools instead of models. Point an agent at one base URL with one token\nand it can do the job: a curated catalog of thousands of endpoints across many providers — SEO and backlinks,\nsocial and trends, people and company enrichment, ads, scraping, image and video generation — priced per call, from a cent ,\nwith no provider signup. Plus your own team's keys, skills and CLIs, callable by every teammate's\nagent without the credential ever leaving the server. Ask for the task, not the tool. You do not need to know which vendor sells backlink data, or to\nhold an account with them. Search for what you want to do, read the price, call it. Built for the Superdesign team, live at treg.to — anyone can self-host. Why it exists The tools an agent needs for real work sit behind subscriptions nobody buys for a single run —\nSemrush $139/mo, Moz $99/mo, Crunchbase $99/mo, Apollo $59/seat — behind signup walls, or behind no\npublic API at all (invite-only, partner-only, app-review-only). treg carries those accounts and\nbills fractions of a cent per call. Two kinds of tool, one token The catalog — external endpoints treg can serve with its own key or through a verified public\nroute that needs no provider key. Own-key calls use the team's prepaid balance; anonymous calls\nare free. No account with the provider is needed. New verified accounts receive $1.00 free once, when they create an eligible team. Your own tools — anything a teammate registered: a paid API account, an OAuth connection, a\nvendor CLI, a SKILL.md . Your own key always wins over treg's, and those calls are never\nmetered. The vocabulary for the second half: tool = something the registry calls for you with the org's credential. Two kinds: endpoint — an upstream base_url + credential bindings (each binding injects one\nsecret into the request; a request can carry several, e.g. an OAuth bearer and a developer-token header). CLI — a vendor binary ( stripe , gh , vercel , ...) run with the credential injected. skill / bundle = a recipe ( SKILL.md ) + its secrets + its tool(s), registered together. The one rule: the proxy relays, never models the upstream, and injects auth server-side — so it survives upstream API changes and callers never hold keys. Part 1 · Using the registry Visit treg.to (hosted on Render) — the dashboard,\nsign-in, and every URL below live there. Quickstart Same flow as the dashboard's Getting started guide: # 1. install the CLI — also points it at the registry curl -fsSL https://treg.to/install.sh | sh # 2. sign in (GitHub default · --email for a one-time code · --token for agents/CI) treg login # 3. do something useful immediately — no key, nothing registered treg catalog search \" backlinks for a domain \" # find a tool by what it DOES treg call tikhub.tiktok.user.profile --query uniqueId=tiktok\ntreg balance # exactly what that cost # (or `treg onboard` for the guided walkthrough) Fish Audio provides S2.1 Pro speech, public-voice discovery, and private voice cloning.\nSpeech is binary stdout, so redirect it to a file. A discovered voice's _id or a team voice id is\nthe TTS reference_id ; voices created on treg's Fish account are durable team resources: treg call fishaudio.tts.s2-1-pro --method POST --header model=s2.1-pro \\\n  --data ' {\"text\":\"Hello from treg\",\"format\":\"mp3\"} ' > speech.mp3\ntreg call fishaudio.voices.discover --query self=false --query licensed=false --query language=en\ntreg resources list --provider fishaudio --kind voice With your own Fish key, requests remain an unrestricted, unmetered upstream relay and Fish owns the\naccount boundary. Catalog tool inputs are described by treg catalog get <id> . Tools marked strict_query reject undeclared or repeated query parameters, unsupported values and request bodies. Your token identifies you on every call ( X-Treg-Token header) and is the same for all tools.\nDiscover what your team has shared: treg tool ls · check credential health: treg health . Or install it as a Claude Code plugin /plugin marketplace add superdesigndev/treg\n/plugin install treg@treg Installs with no token and no configuration. The skill loads as treg:treg and, on its first run,\nwalks your agent through the rest — the CLI, sign-in, then treg mcp install — so you end up with\nthe command line and treg's tools. Other agents: npx skills add superdesigndev/treg -s treg (or see Workflow skills for the rest).\nSee docs/CLAUDE-PLUGIN.md . MiniMax Code / MiniMax Agent users: the same\nskill ships via the MiniMax Plugin Marketplace ( docs/MINIMAX-PLUGIN.md ). Workflow skills Ready-made recipes your agent runs end to end, every call through treg: Skill What your agent can do treg Find and call any tool in the catalog, plus your own tools lead-signals Find in-market buyers from public signals (complaints, job changes, hiring, funding, tool adoption) and monitor a topic, competitor or account list for them ( treg.to/leads-signals ) make-ugc Make AI UGC videos: trending hooks, a presenter, talking-head clips, captions ( treg.to/ugc ) jev-memory Give Claude Code a memory: a Claude Code mod where Jev judges each prompt after the turn and keeps your lasting preferences, installed ready-made or built from one prompt ( the mod ) install.sh installs all of them for you except jev-memory , which is opt-in. To add them to an existing agent instead\n( skills.sh CLI): npx skills add superdesigndev/treg # every public skill npx skills add superdesigndev/treg --skill lead-signals # just one treg skill bootstrap # same set, with the treg CLI you already have The workflow skills run on treg, so set it up first (the Quickstart above, or point your agent at treg.to/llms.txt ). Claude.ai connector The Claude Connectors Directory surface is https://treg.to/mcp/v2/ . It exposes only curated\ncatalog endpoints and separates read calls from write calls so Claude receives accurate safety\nsignals. The existing /mcp/ surface remains available for catalog endpoints, team-owned tools,\nand imported skills. See the MCP and OAuth architecture for the boundary and implementation, and the submission runbook for release gates. Call a tool you don't have a key for The catalog is grouped by what endpoints do : keyword and rank tracking, backlinks and authority,\nAI visibility, trending and discovery, publishing to socials, people and company enrichment, ads\nmanagement and creative, measurement. treg catalog # every platform, busiest first treg catalog search \" find a work email \" # by the job, not the vendor treg catalog get hunter.people.email.find # params, PRICE, example response treg call hunter.people.email.find --query domain=reddit.com --query full_name= \" Alexis Ohanian \" How a catalogued call is served — the credential ladder, in order: your team registered its own tool for that provider → that tool, that key; your team stored a secret for the provider → injected through a virtual tool; neither, and the endpoint has a verified public route → no provider key , free; otherwise → treg's own key , billed to the team's prepaid balance. The anonymous price assumes the caller does not send a provider credential header. The faithful\nrelay preserves caller headers, so a caller-supplied provider key can use that key's credits.\nYour own credential always beats treg's, so connecting a key you already pay for makes those calls\nfree of the balance rather than duplicating them. An endpoint treg has no published price for is refused , not served free — you are told to connect your own key instead. Where several providers\nserve one capability, treg catalog search shows them side by side with prices; choosing is\nyours — treg does not silently pick or fail over between providers for you. (When treg's own\naccount for a provider is out it may serve the same endpoint through a treg-owned relay account,\ndisclosed on the response; a team can opt out.) The exception you opt into: treg.<capability> routed endpoints, where treg picks the provider for you and names it.",
+      "stars_today": 407,
+      "language": "Python"
+    },
+    {
+      "title": "trycua/cua",
+      "slug": "trycua-cua",
+      "url": "https://github.com/trycua/cua",
+      "abstract": "Give AI agents computers they can use. Cua Spaces gives your agents full desktops on your Mac and on machines you own. This repository also holds Cua Driver for desktop automation, Lume for local VMs, CUA-S1 decision models and Cua Bench for evaluating computer-use agents. Get Cua Spaces Choose your path Cua Spaces: Install the app and run your first Space . Cua Driver: Operate Calculator and verify its result . Lume: Create a Tahoe VM and connect over SSH . Cua SDK and CLI: Install cua and create a local sandbox . CUA-S1: Explore small, specialized models for computer-use decisions . Cua Bench: Create and verify a simulated task . Bring your own agent and model, or explore CUA-S1 for specialized decisions. Cua provides the computer and automation tools. Computer-Use 2.0 describes an agent moving between code, APIs, and graphical interfaces within the same task. Cua Spaces Cua Spaces is a desktop app that gives your agents full desktops. Each desktop is a Space: a macOS VM built locally on your Mac, or a Linux or Omarchy image. Spaces run on your Mac, on other machines you own, and in your own cloud account (AWS, Google Cloud or Modal), and the app keeps them in your menu bar and notch. Teleport. Move a signed-in app, such as Chrome or Slack, into a Space and it opens there still signed in. Your sessions stay in the Cua Keyvault, encrypted on your Mac, and reach a Space only after you approve. Multiplayer. You and your agents work on the same desktop, each with your own cursor. Step in to make a choice, then hand the desktop back. Agent-ready images. Spaces images ship with cua-spacesd , so agents get processes, files, screenshots and input as soon as a Space starts. cua-spaces-demo.mp4 Install on macOS 26 or later curl -fsSL https://cua.ai/install.sh | sh On macOS the installer selects the Cua Spaces app by default and adds the cua CLI. You can also download the signed .dmg , or get the .pkg from the Cua Spaces 0.1.0 release . Spaces is free for individuals. Pro and Teams plans are coming soon. The app is source-available under FSL-1.1-MIT . Quickstart | Teleport an app | Share a Space | Host Spaces on a spare Mac (relay, Tailscale or SSH) | Your own cloud | App source Cua Driver Give your agent tools to inspect and operate native desktop apps and browsers on macOS, Windows, and Linux. Connect through the CLI, MCP, or typed SDKs. Background delivery lets agents work without moving your pointer or taking focus when the app and platform support it; see platform support for the boundaries. macOS / Linux /bin/bash -c \" $( curl -fsSL https://cua.ai/driver/install.sh ) \" Windows (PowerShell) irm https: // cua.ai / driver / install.ps1 | iex Your first result: connect your agent, ask it to compute 6 × 7 in Calculator, and have it verify that the app displays 42. The tutorial covers platform setup, permissions, and agent connection. Drive your first app | Installation | CLI Reference Using Claude Code, Codex, Cursor, OpenClaw, or another agent? Find your integration . Source documentation and architecture notes live in libs/cua-driver/README.md . See Cua Driver in action Two Cua Driver sessions select cells in LibreOffice Calc and objects in Inkscape on an Omarchy desktop while a terminal stays in the foreground. Watch the 50-second demo. recording.mp4 Lume Create and manage local macOS and Linux VMs on Apple Silicon using Apple's Virtualization.Framework. /bin/bash -c \" $( curl -fsSL https://cua.ai/lume/install.sh ) \" Your first result: create a vanilla macOS Tahoe VM from an Apple restore image, start it, and connect over SSH. The tutorial uses the Lume CLI directly and explains the unattended setup defaults. Create your first Lume VM | Installation | CLI reference Cua SDK and CLI One SDK and one cua command for local VMs and containers, and for any machine that runs cua-spacesd . macOS / Linux curl -fsSL https://cua.ai/install.sh | sh Windows (PowerShell) irm https: // cua.ai / install.ps1 | iex In a terminal the script shows a short checklist: the cua CLI, the Cua Spaces app (default on macOS), the cua-driver MCP and skill for your agents, and hosting this machine. It then runs cua auth login , which signs you in and offers to install cua skills and the cua MCP server into your AI coding agents (Claude Code, Codex, Cursor, and others). Preselect items with sh -s -- --select cua-driver , or skip the checklist with --only cua-driver . See the installer options . cua sb create ubuntu --name dev # a gVisor container, set up on first use cua sb exec dev uname -a\ncua sb screenshot dev\ncua sb rm dev The same sandbox from Python: from cua_sandbox import Image , Sandbox async with Sandbox . ephemeral ( Image . linux (), local = True ) as sb : print (( await sb . shell . run ( \"uname -a\" )). stdout ) SDK: the same API in Python ( pip install cua ), TypeScript ( @trycua/cua ), Swift ( Cua ) and Kotlin (generated bindings), running embedded in your process or through a shared cua daemon . Sandboxes need no agent inside. Readiness comes from the runtime and optional port probes. Images that ship cua-spacesd (port 3211) add processes, files, screenshots, input through cua-driver, and low-latency video and audio streaming. Your own machines. cua host setup makes this machine reachable through the cua.ai relay with no port forwarding. SDK README | Quickstart | CLI reference | Sandbox SDK reference CUA-S1 CUA-S1 is our family of small, specialized System 1 models for computer use. We use \"System 1\" as an engineering analogy for fast, bounded decisions, such as choosing which value belongs in a field or whether to leave an element alone. It is not a strict classification of model architectures or a replacement for a general-purpose agent's planning and reasoning. The first research profile focuses on forms: scoring decisions from structured interface elements and document values rather than generating a response token by token. Application code orders the actions, and the optional Cua Driver integration handles execution with explicit action boundaries. The project includes Python model code, synthetic-data generation, training, and evaluation. The GitHub component is an early, source-only research release; model weights are hosted separately on Hugging Face. The source is MIT-licensed. Check each model and dataset card for its scope, limitations, and artifact-specific license. Explore CUA-S1 | Model card | Safety and deployment guidance CUA-S1-FORMS on Hugging Face: Model weights | Dataset Cua Bench Build computer-use tasks, evaluate agents, and export trajectories for training. Start with a simulated task that requires no VM, Docker, or model API key. With Python 3.12 or 3.13 and uv installed: uv tool install ' cua-bench[browser] ' uv tool run --from ' cua-bench[browser] ' playwright install chromium Your first result: create a small task, run its reference solution, and verify that its evaluator reports a reward of 1.0 . Then try the same task yourself. Build your first task | What is Cua-Bench? | CLI reference | Partner with us Packages Package Description cua-driver Background computer-use agent for macOS, Windows, and Linux cua SDK and CLI Rust core and the cua command: sandboxes, local runtimes, images, Spaces cua (Python) The cua SDK for Python ( pip install cua ) @trycua/cua The cua SDK for Node and the browser, plus @trycua/cua/spaces Cua (Swift) The cua SDK for Swift (SwiftPM, XCFramework) cua-sandbox High-level Python Sandbox / Image / Pool API, a thin wrapper over the cua SDK cua-spacesd In-sandbox daemon on port 3211: processes, files, desktop, streaming (gRPC) Cua Spaces for macOS The Spaces app on macOS: menu bar and notch, live streams, teleport, agent threads Cua Spaces core The shared Spaces app core, and the Tauri app for Linux and Windows cua-bench Benchmarks and RL environments for computer-use lume macOS/Linux VM management on Apple Silicon lumier Docker-compatible interface for Lume VMs Deprecated packages Cua no longer maintains these.",
+      "stars_today": 229,
+      "language": "Rust"
+    },
+    {
+      "title": "xerj-org/xerj",
+      "slug": "xerj-org-xerj",
+      "url": "https://github.com/xerj-org/xerj",
+      "abstract": "XERJ XERJ is a community-trusted local AI search that indexes any folder automatically, so your\ncoding agent stops burning tokens reading files one by one and pulls the exact code it\nneeds instead. Reference coding is its main use case and the clearest win: point an agent\nat a task and it downloads the open-source repos closest to it, indexes them, and reuses\nhow they solved the problem before writing its own code. In a controlled study that cut a\ncoding agent's output tokens by 2.7x at the same 16/16 solve rate\n( case study ), and people report\nroughly 5x in everyday work\n( field reports ).\nIt is enough for a smaller, cheaper model to out-code a pricier one working from memory,\nwhile you spend less time in fix loops. Try it now with a one-prompt install: Install XERJ (docs: https://xerj.org/llms.txt), index this project's sources, and set up\nreference coding: clone and index the open-source repos closest to what we're building,\nand search how they solved a problem before writing code. Or run it yourself: curl -fsSL https://xerj.org/get | sh\nxerj --insecure --data-dir ./data & xerj init # wire XERJ into Claude Code/Cursor (MCP + skill), one command xerj autoindex ~ /my-project\nxerj search \" how do we rotate the WAL segment \" # ranked passages, file:line xerj def \" euler_to_rotationmatrix \" # go-to-definition: file:line + signature xerj gain # what it did for you — counted, not estimated Windows and a hand-verified install are under Install by hand . That --insecure flag is a trust boundary, not a formality. It turns off TLS and API-key\nauth, so every caller that can reach the port is a superuser who can read and delete every\nindex, including every /_memory namespace. It is meant for one user on a dev machine: a\nfresh node binds 127.0.0.1 only, and a cleartext bind on any other interface refuses to\nstart unless you explicitly allow it. The full model is in docs/SECURITY_MODEL.md . Join the community You join XERJ by running it and sending back one short field report on what it was like: a\nsingle commit or PR. That report is the membership card, and it is the only thing the\nproject asks in return for a free, Apache-2.0 binary. It is what keeps the engine improving\nfor whoever runs it next. Humans and AI agents are both welcome; this is deliberately not an agents-only project.\nWhether you indexed a repo over lunch or an agent installed XERJ mid-session in someone\nelse's codebase, the ask is the same: one short report saying what you pointed it at, what\nyou used it for, and your honest verdict. A negative verdict is a good report. If something\nbroke, that is a separate issue or fix on top. Field-report PRs are CLA-exempt, so they merge without a signature. The path that works on\nany build is a plain gh pr create adding exactly one markdown file under user-feedback/16-agent-field-reports/ , with\nnothing else in the diff. On a build that has it, xerj feedback drafts the report and\nfills in version, OS and what was indexed, and xerj feedback --open-pr opens the PR for\nyou. Check xerj --help for whether your binary has the command. The measured reason: reference coding An agent that greps pulls whole files into its context, up to 1.06M input tokens on one\ncorpus in our measurements, and still has to read them. An agent that queries XERJ gets the\npassage. Measured end to end on code the model had not memorised\n( case study : 8 tasks, 4 languages,\n16 runs per arm, real claude -p token counts): output tokens cost solved from memory only 260,916 $11.18 11/16 grep-driven agent 26,477 $3.27 16/16 XERJ 9,982 $1.58 16/16 That is 2.7x fewer output tokens than grep and 26x fewer than memory alone at the same solve\nrate, and up to 278x fewer on a single Java task. In real development, users report roughly\n5x fewer tokens end to end\n( field reports ).\nThe value is gated by memorisation: it wins on private, internal, niche or post-cutoff code,\nand is neutral to harmful on popular public libraries the model already knows. The honest\nlimits are in the case study . Feed it any folder Reference coding is one use of the same primitive: xerj autoindex <folder> makes an agent\nknow a corpus instead of grepping it. One command indexes code, docs, logs, PDFs, SQLite and\nawkward CSVs into typed, queryable indices for search, RAG, security audits and agent\nmemory, with no schema to write and no pipeline to configure. xerj --insecure --data-dir ./data & # start it xerj autoindex ~ /my-project # point it at anything --insecure again means no TLS and no auth — every caller a superuser — so this is the\nsame one-user-on-a-dev-machine boundary as above ( security model ). XERJ sniffs every file, works out what it is, and creates one index per dataset it finds.\nCode arrives with its symbols and line numbers through tree-sitter, not as flat text: phase A: 593 datasets inferred, 1955 junk/skipped files\nphase B: indexing 25329 files with 8 workers\ndone in 158.1s, 593 datasets, 83103 records live, 790 junk records What people point it at Reference coding: index the OSS projects nearest your problem and retrieve how they solved\nit before writing code (the measured use case above). Codebase Q&A and RAG: index a repo, ask for the mechanism, get the passage with file:line instead of a directory listing. Security audits: index a target tree and query for sink patterns, secrets and dangerous\ncalls across every file type at once. Log and incident analysis: mixed formats become typed indices with the aggregations you\nwould expect from Elasticsearch. Agent long-term memory: /_memory/{namespace} stores what an agent learns and recalls it\nby meaning next session. How the prompt works llms.txt gives your agent the ordered steps: install, start the\nserver, xerj autoindex . , query with any Elasticsearch client, and the reference-coding\nloop (clone similar OSS, index it, retrieve the mechanism before writing, cite what you use,\nrespect licenses). The reason it helps: an agent working from memory retry-loops on any API it has not\nmemorised, and grep only tells it where to look; the recovery is still reading source into\ncontext, up to 1.06M input tokens on one corpus in our measurements. An agent that queries\nXERJ reads the exact passage instead. The 2.7x fewer output tokens than grep (26x vs memory\nalone, 2.1x cheaper) at the same 16/16 solve rate is in The measured reason above, with a companion run\nscoring 9/9 with retrieval versus 0/9 from memory on a Rust library the model had never seen. More prompts that work on a fresh install: \"Read https://xerj.org/llms.txt , set XERJ up as your search backend, index ./docs , and\nshow me one example query per index it created.\" \"Run xerj autoindex map and tell me what is in this data (types, counts and the gotchas\nit recorded), then answer my questions with search instead of reading files.\" \"Use XERJ's /_memory/notes API as your long-term memory for this project: store what you\nlearn as you work, and recall it by meaning next session.\" Worked, validated examples for each capability: xerj.org/docs/recipes . Boot, bulk ingest, search, vector kNN, live dashboards, no cuts. Watch it on xerj.org or try the live playground . Install by hand curl -fsSL https://xerj.org/get | sh Windows PowerShell: irm https: // xerj.org / get.ps1 | iex One static binary, no JVM, no dependencies. Prebuilt for Linux, macOS and Windows on x86-64\nand arm64. You can also build from source . It speaks the Elasticsearch\nAPI, so existing clients, dashboards and tooling work against it unchanged. First commands after install (the installer prints where xerj landed; add it to your PATH\nif needed): xerj --insecure --data-dir ./data & , wait until http://localhost:9200 responds, then xerj autoindex ~/my-project . See Index a folder . For a host with no runtime internet access, follow the air-gapped deployment recipe . The default lexical\nembedder is offline; neural mode needs the three model files staged locally before the first\nsemantic operation.",
+      "stars_today": 185,
+      "language": "Rust"
+    },
+    {
+      "title": "eolix/photosuite",
+      "slug": "eolix-photosuite",
+      "url": "https://github.com/eolix/photosuite",
+      "abstract": "PhotoSuite A desktop image editor, faithful to classic Adobe Photoshop, with native PSD/PSB compatibility - written entirely in Rust. Downloads • What this is • Features • File formats • Building • Licences PhotoSuite is built on PhotoCraft , an open-source\nRust image-editing engine (MIT OR Apache-2.0): its document model, PSD reader and writer,\ncompositor and command system are the foundation, with PhotoSuite's interface, tools and features\non top. PhotoSuite's intention is to fully suppport Photoshop-PhotoSuite PSD round trips, with\nall effects and smart objects/filters. It's a work in progress.\nIt was originally clean-room written in JS with a Rust engine (Tauri), but it has since\ntaken a more modern, performant approach. The Javascript version still lives in many forks. Downloads Installers are on the Releases page. Platform Packages Architecture macOS 11+ .dmg (and a command-line .zip ) Universal: Apple silicon and Intel Windows 10+ .msi installer, portable .zip x64 Linux .AppImage , .deb , .rpm , .tar.gz x86_64 and arm64 Linux .flatpak x86_64 The AppImage carries update information, so AppImageUpdate fetches only what changed in a new release. What this is A native desktop editor that tries to work the way Photoshop does: menus where you expect them,\nthe same shortcuts and modifier keys, dialogs with the same fields, and PSD as a first-class\nformat rather than an import filter. If you know Photoshop, most of PhotoSuite will feel familiar.\nIt does not do everything Photoshop does, and where it differs, the issues are open for it. Native. egui on wgpu (Metal, Vulkan, DirectX 12), with a CPU fallback. No Electron, no\nweb view, no JavaScript. Local and private. No account, no telemetry, no cloud. Your files stay on your machine. Scriptable. Every action is a command, the same ones the menus run, so the CLI, a JSON\ncontrol channel and an MCP server for AI agents can do anything the interface can. Not affiliated with or endorsed by Adobe. Photoshop is a registered trademark of Adobe Inc.,\nnamed here only to describe the interface and behaviour PhotoSuite follows. PhotoSuite is\nindependent of, and not endorsed by, the PhotoCraft project. What this is not A GIMP or Affinity replacement with a feature for everything. The goal is narrower: a free,\nlegal way for designers to open, edit and save PSDs with tools they already know. Anything\nbeyond that can be a plug-in . Features Documents and layers Pixel, type, shape, fill and adjustment layers; groups, clipping masks, layer masks and\nvector masks; all of Photoshop's blend modes. Layer styles: Drop Shadow, Inner Shadow, Outer and Inner Glow, Bevel & Emboss, Satin, Color,\nGradient and Pattern Overlay, Stroke. Smart Objects (embedded and linked) with Smart Filters. 8, 16 and 32-bit documents in RGB, Grayscale, CMYK and Lab, with its own ICC colour\nmanagement engine. Tools Marquee, Lasso, Polygonal and Magnetic Lasso, Magic Wand, Quick and Object Selection, Select\nSubject, Select and Mask. Brush, Pencil, Eraser, Clone Stamp, Healing, Gradient (live and classic), Paint Bucket,\nDodge, Burn, Sponge, Blur, Sharpen, Smudge. Pen and shape tools, custom shapes, Type (point, paragraph, on a path, warped), Crop,\nRuler, Hand, Zoom, Eyedropper. Adjustments and filters Adjustment layers and Image › Adjustments, including Curves, Levels, Hue/Saturation and\nColor Lookup (3D LUTs, and ICC abstract and device-link profiles). Camera Raw: develop raw files and use it as a filter. Lens Correction with measured lens profiles from the Lensfun database. Liquify, Puppet Warp, Perspective Warp, Vanishing Point, Content-Aware Fill and Scale, the\nFilter Gallery and the classic filter menus. Automation and integration Actions, Batch, droplets and script events. photosuite-cli for headless conversion and scripted edits, plus a JSON control channel and\nan MCP server (see docs/control-protocol.md ). Sandboxed WebAssembly filter plug-ins ( docs/plugins.md ). Native menus on macOS, six themes, adjustable UI font size, and 38 interface languages. Bundled libraries : Color Lookup presets, gradients, brushes, patterns and custom shapes,\neach under its own licence (see Licences ). File formats Open Save Layered PSD, PSB, PhotoSuite ( .pcraft ) PSD, PSB, PhotoSuite ( .pcraft ) Raster PNG, JPEG, WebP, TIFF, GIF, BMP, TGA, ICO, QOI, OpenEXR, Radiance HDR, PBM/PGM/PPM/PAM/PFM PNG, JPEG, WebP (lossy and lossless), TIFF, OpenEXR, GIF, PNG-8, WBMP Document PDF (a page, as pixels) PDF (flattened) Camera raw DNG, CR2, CR3, NEF, NRW, ARW, PEF, ORF, RW2, RAF — Presets Brushes ( .abr ), gradients ( .grd ), patterns ( .pat ), custom shapes ( .csh ), 3D LUTs ( .cube , .3dl , .look ) — Building from source Rust stable (1.90 or later). Linux also needs libxkbcommon-dev libwayland-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev libgtk-3-dev . cargo run --release -p photosuite # the desktop app cargo test --workspace # the tests scripts/dev-macos.sh some/file.psd # macOS: fast development build, opening a file Installers are built by the scripts in packaging/ (the same ones CI runs). docs/development.md covers profiles, debugging and the test corpora; docs/architecture.md explains how the code is organised, and docs/contributing.md the rules for changes. Licences PhotoSuite is licensed under either of the MIT licence or the Apache License 2.0 , at your option. NOTICE carries the required\nattributions, including PhotoCraft's. It bundles third-party material under its own licences, each with its licence file beside it. THIRD-PARTY-NOTICES.md lists them file by file. Material Author Licence PhotoCraft engine ArtCraft Team and the PhotoCraft contributors MIT OR Apache-2.0 Inter , JetBrains Mono fonts The Inter and JetBrains Mono authors SIL OFL 1.1 Tabler Icons Paweł Kuna MIT Lucide icons Lucide contributors (some from Feather, Cole Bemis) ISC, MIT SCOWL word list (spell checking) Kevin Atkinson and contributors SCOWL Lensfun lens database (adapted) The Lensfun contributors CC BY-SA 3.0 Fresh LUTs Color Lookup presets Fresh LUTs uploaders CC0 uiGradients gradients Indrashish Ghosh and contributors MIT Subtle Patterns patterns (adapted) Toptal and the pattern designers CC BY-SA 3.0 Brusheezy brush packs (unmodified) brushchick, lovelace, stuffwemake CC BY-ND, CC BY-SA Font Awesome Free shapes (converted) Fonticons, Inc. CC BY 4.0 PDFium's standard fonts, inside the hayro PDF renderer PDFium authors BSD-3-Clause The Rust crates PhotoSuite links (egui, wgpu, hayro and many more) are under their own\npermissive licences, listed with their texts in THIRD-PARTY-CRATES.md .",
+      "stars_today": 118,
+      "language": "Rust"
+    },
+    {
+      "title": "twentyhq/twenty",
+      "slug": "twentyhq-twenty",
+      "url": "https://github.com/twentyhq/twenty",
+      "abstract": "The #1 Open-Source CRM Website · Documentation · Roadmap · Discord · Figma Why Twenty Twenty gives technical teams the building blocks for a custom CRM that meets complex business needs and quickly adapts as the business evolves. Twenty is the CRM you build, ship, and version like the rest of your stack. Learn more about why we built Twenty Installation Cloud The fastest way to get started. Sign up at twenty.com and spin up a workspace in under a minute, with no infrastructure to manage and always up to date. Build an app Scaffold a new app with the Twenty CLI: npx create-twenty-app my-app Define objects, fields, and views as code: import { defineObject , FieldType } from 'twenty-sdk/define' ; export default defineObject ( { nameSingular : 'deal' , namePlural : 'deals' , labelSingular : 'Deal' , labelPlural : 'Deals' , fields : [ { name : 'name' , label : 'Name' , type : FieldType . TEXT } , { name : 'amount' , label : 'Amount' , type : FieldType . CURRENCY } , { name : 'closeDate' , label : 'Close Date' , type : FieldType . DATE_TIME } , ] , } ) ; Then ship it to your workspace: npx twenty app:publish --private See the app development guide for objects, views, agents, and logic functions. Building with a coding agent? Install the official Twenty app skills , which work in Claude Code, Codex, Cursor, Pi, and any other harness supported by the skills CLI: npx skills add https://github.com/twentyhq/twenty/tree/agent-skills --list The agent-skills branch is created by the first successful publish from main . Until then, use the local build instructions . SKILLS.md explains the other skill families in this repository and who they are for. Self-hosting Run Twenty on your own infrastructure with Docker Compose , or contribute locally via the local setup guide . Everything you need Twenty gives you the building blocks of a modern CRM (objects, views, workflows, and agents) and lets you extend them as code. Here's a tour of what's in the box. Want to go deeper? Read the User Guide for product walkthroughs, or the Documentation for developer reference. Learn more about apps in doc Learn more about version control in doc Learn more about primitives in doc Learn more about layouts in doc Learn more about AI in doc Learn more about CRM features in doc Stack TypeScript Nx NestJS , with BullMQ , PostgreSQL , Redis React , with Jotai , Linaria and Lingui Thanks Thanks to these amazing services that we use and recommend for code review (Greptile), catching bugs (Sentry) and translating (Crowdin). Join the Community Star the repo · Discord · Feature requests · Releases · X · LinkedIn · Crowdin · Contribute",
+      "stars_today": 74,
+      "language": "TypeScript"
+    },
+    {
+      "title": "vllm-project/vllm",
+      "slug": "vllm-project-vllm",
+      "url": "https://github.com/vllm-project/vllm",
+      "abstract": "Easy, fast, and cheap LLM serving for everyone | Documentation | Blog | Paper | Twitter/X | User Forum | Developer Slack | 🔥 We have built a vLLM website to help you get started with vLLM. Please visit vllm.ai to learn more.\nFor events, please visit vllm.ai/events to join us. About vLLM is a fast and easy-to-use library for LLM inference and serving. Originally developed in the Sky Computing Lab at UC Berkeley, vLLM has grown into one of the most active open-source AI projects built and maintained by a diverse community of many dozens of academic institutions and companies from over 2000 contributors. vLLM is fast with: State-of-the-art serving throughput Efficient management of attention key and value memory with PagedAttention Continuous batching of incoming requests, chunked prefill, prefix caching Fast and flexible model execution with piecewise and full CUDA/HIP graphs Quantization: FP8, MXFP8/MXFP4, NVFP4, INT8, INT4, GPTQ/AWQ, GGUF, compressed-tensors, ModelOpt, TorchAO, and more Optimized attention kernels including FlashAttention, FlashInfer, TRTLLM-GEN, FlashMLA, and Triton Optimized GEMM/MoE kernels for various precisions using CUTLASS, TRTLLM-GEN, CuTeDSL Speculative decoding including n-gram, suffix, EAGLE, DFlash Automatic kernel generation and graph-level transformations using torch.compile Disaggregated prefill, decode, and encode vLLM is flexible and easy to use with: Seamless integration with popular Hugging Face models High-throughput serving with various decoding algorithms, including parallel sampling , beam search , and more Tensor, pipeline, data, expert, and context parallelism for distributed inference Streaming outputs Generation of structured outputs using xgrammar or guidance Tool calling and reasoning parsers OpenAI-compatible API server, plus Anthropic Messages API and gRPC support Efficient multi-LoRA support for dense and MoE layers Support for NVIDIA GPUs, AMD GPUs, Intel GPUs, and x86/ARM/PowerPC CPUs. Additionally, diverse hardware plugins such as Google TPUs, Intel Gaudi, IBM Spyre, Huawei Ascend, Rebellions NPU, Apple Silicon, MetaX GPU, and more. vLLM seamlessly supports 200+ model architectures on Hugging Face, including: Decoder-only LLMs (e.g., Llama, Qwen, Gemma) Mixture-of-Expert LLMs (e.g., Mixtral, DeepSeek-V3, Qwen-MoE, GPT-OSS) Hybrid attention and state-space models (e.g., Mamba, Qwen3.5) Multi-modal models (e.g., LLaVA, Qwen-VL, Pixtral) Embedding and retrieval models (e.g., E5-Mistral, GTE, ColBERT) Reward and classification models (e.g., Qwen-Math) Find the full list of supported models here . Getting Started Install vLLM with uv (recommended) or pip : uv pip install vllm Or build from source for development. Visit our documentation to learn more. Installation Quickstart List of Supported Models Contributing We welcome and value any contributions and collaborations.\nPlease check out Contributing to vLLM for how to get involved. Citation If you use vLLM for your research, please cite our paper : @inproceedings { kwon2023efficient , title = { Efficient Memory Management for Large Language Model Serving with PagedAttention } , author = { Woosuk Kwon and Zhuohan Li and Siyuan Zhuang and Ying Sheng and Lianmin Zheng and Cody Hao Yu and Joseph E. Gonzalez and Hao Zhang and Ion Stoica } , booktitle = { Proceedings of the ACM SIGOPS 29th Symposium on Operating Systems Principles } , year = { 2023 } } Contact Us For technical questions and feature requests, please use GitHub Issues For discussing with fellow users, please use the vLLM Forum For coordinating contributions and development, please use Slack For security disclosures, please use GitHub's Security Advisories feature For collaborations and partnerships, please contact us at collaboration@vllm.ai Media Kit If you wish to use vLLM's logo, please refer to our media kit repo",
+      "stars_today": 73,
+      "language": "Python"
+    },
+    {
+      "title": "elder-plinius/G0DM0D3",
+      "slug": "elder-plinius-g0dm0d3",
+      "url": "https://github.com/elder-plinius/G0DM0D3",
+      "abstract": "▄████  ██████  ██████  ███▄ ▄███  ██████  ██████  ██████\n██      ██  ██  ██   ██ ██ ███ ██  ██  ██  ██   ██      ██\n██ ▄███ ██  ██  ██   ██ ██  █  ██  ██  ██  ██   ██  █████\n██  ██  ██  ██  ██   ██ ██     ██  ██  ██  ██   ██      ██\n ██████  ████   ██████  ██     ██   ████   ██████  ██████\n ───────────────────────────────────────────────────────────\n  ░▒▓█  LIBERATED AI. COGNITION WITHOUT CONTROL.  █▓▒░\n ─────────────────────────────────────────────────────────── GODMOD3.AI G0DM0D3 is a fully open-source, privacy-transparent, multi-model chat interface that pushes the limits of the post-training layer — for red teaming, cognition research, and liberated AI interaction. Built for hackers, philosophers, and system tinkerers. ✨ Features 🧠 Multi-Provider — 60 listed OpenRouter models, up to 44 Venice models, or your own local models 🔥 GODMODE CLASSIC — 5 battle-tested prompt + model combos racing in parallel to find the best response 🌋 ULTRAPLINIAN — Multi-model evaluation engine across 5 tiers (12–60 OpenRouter models), with composite scoring 🏠 Local Models — Run ULTRAPLINIAN on your own hardware through Ollama, LM Studio, llama.cpp, or vLLM 🐍 Parseltongue — Input perturbation engine for red-teaming with 33 techniques across 3 intensity tiers 🎛 AutoTune — Context-adaptive sampling parameter engine across 20 query contexts 🔐 Privacy Controls — Metadata-only app telemetry is on by default and can be disabled with No-Log or Local-only mode 💾 Local History — Conversations and settings stay in browser storage with export/import support 🎮 Easter Eggs — Hidden secrets throughout (try the Konami code!) 📱 Responsive — Works on desktop and mobile 🌐 Single-File Core UI — The hosted interface lives in one index.html ; the telemetry endpoint is a separate Cloudflare Pages Function 🚀 Quick Start Hosted Visit godmod3.ai — no install needed. Bring an OpenRouter key, a Venice key, connect a local OpenAI-compatible server, or configure more than one of those providers. Self-Host The standalone interface is a single index.html file with no build step or package install. # Clone the repository git clone https://github.com/elder-plinius/G0DM0D3.git cd G0DM0D3 # Open directly in your browser open index.html # or serve locally python3 -m http.server 8000 Open it in your browser and configure OpenRouter, Venice, or local models in Settings. A static-only deployment can run the chat UI, but /api/telemetry will not publish metadata unless you also deploy functions/api/telemetry.ts on Cloudflare Pages and configure its Hugging Face variables. Run with Local Models G0DM0D3 supports OpenAI-compatible model servers running on your own hardware. For example, with Ollama : ollama pull qwen3:8b\nollama serve Open Settings → API Keys → Local Models , enter http://localhost:11434/v1 , then click Test & Discover Models . Enable Local-only mode to exclude OpenRouter and Venice model calls and automatically disable G0DM0D3 app telemetry. Add multiple model IDs to race them together in ULTRAPLINIAN. If you use the hosted site, your local server must allow browser CORS from https://godmod3.ai . For a completely self-hosted setup, serve this repository locally as shown above. See LOCAL_MODELS.md for Ollama, LM Studio, troubleshooting, and privacy details. Deploy Upload index.html to any static host — GitHub Pages, Vercel, Cloudflare Pages, Netlify, or a web server. To reproduce the hosted telemetry pipeline, deploy on Cloudflare Pages with functions/api/telemetry.ts ; see the comments at the top of that file for configuration. 🔥 GODMODE CLASSIC The OG mode. 5 proven model + prompt combos race in parallel. Each combo pairs a specific model with a battle-tested jailbreak prompt. The best response wins. Combo Model Strategy 🩷 CLAUDE SONNET 4.6 anthropic/claude-sonnet-4.6 END/START boundary inversion + GODMODE semantic opposite 💜 GROK 4.5 x-ai/grok-4.5 Unfiltered liberated + GODMODE divider 💙 GEMINI 2.5 FLASH google/gemini-2.5-flash Refusal inversion + rebel genius code block 💛 GPT-4 CLASSIC openai/gpt-4o OG GODMODE l33t format — the original 💚 GODMODE FAST nousresearch/hermes-4-405b Instant stream, zero refusal checking 🌋 ULTRAPLINIAN The new flagship. Multi-model comparative evaluation engine. Queries models in parallel, scores responses on a 100-point composite metric, and returns the winner. Tier Models Description ⚡ FAST 12 Lightweight speed-optimized OpenRouter models 🎯 STANDARD 27 Mid-range OpenRouter workhorses 🧠 SMART 41 Strong reasoning models via OpenRouter ⚔️ POWER 53 Broad OpenRouter race including frontier models 🔱 ULTRA 60 All OpenRouter models currently listed in the race These are the OpenRouter base counts. When configured, Venice adds up to 6/15/25/36/44 models by tier, and local models add the configured local race entries. Provider catalogs change, so an individual listed model may become unavailable before the repository is updated. 🐍 Parseltongue Input perturbation engine for red-teaming research. Detects trigger words and applies obfuscation techniques to study model robustness. 33 transformation techniques across 3 tiers (light: 11, standard: 22, heavy: 33) Techniques include leetspeak, bubble text, braille, morse, Unicode substitutions, phonetic transforms, and layered encodings 3 intensity levels : light, medium, heavy 🎛 AutoTune Context-adaptive sampling parameter engine. Classifies a query into one of 20 contexts and selects parameters such as temperature, top_p, top_k, frequency penalty, presence penalty, and repetition penalty automatically. The repository also contains an optional React/Next.js frontend under src/ . It includes STM controls, four themes, and a separate feedback-learning implementation. Those features should not be assumed to exist in the standalone index.html deployed at godmod3.ai. 🔐 Privacy G0DM0D3 has no account system. Its data flows are intentionally documented here instead of hidden behind a blanket “zero telemetry” claim. Hosted standalone app ( index.html ) Data Where it goes Prompts, images, conversation context, and responses To the model providers you configure (OpenRouter, Venice, or a local server). Their own privacy and logging policies apply. Provider credentials Stored in browser storage and sent to the corresponding provider or local endpoint for model requests. They are not included in G0DM0D3 telemetry. Browser storage is convenient, not a secure secret vault. Chat history and settings Browser localStorage ; there is no G0DM0D3 account or cloud history sync. App telemetry On by default. It includes a random page-session ID, timestamps, model/mode/tier, timing and success data, scores, content lengths, pipeline configuration, conversation depth, image presence, and classification labels. It does not intentionally include prompt text, response text, images, or API keys . Network address The Cloudflare telemetry function temporarily reads the request IP for an in-memory rate limit. The IP is not added to the telemetry event or Hugging Face JSONL by G0DM0D3. Cloudflare, model providers, and other hosting infrastructure may keep their own network logs. Telemetry batches in browser memory and is sent to /api/telemetry every five minutes, at 50 events, or on page unload. The endpoint allowlists top-level fields and, when Hugging Face publishing is configured, writes JSONL under incoming_v2/ . The allowlist is not a general-purpose recursive PII detector, so the project does not promise that arbitrary metadata values can never contain identifying information. When app telemetry is enabled, the standalone app also sends the raw prompt to an auxiliary model through the configured OpenRouter or local provider to produce the harm-taxonomy label. Only the resulting label is placed in the telemetry event. No-Log and Local-only mode skip this classifier. Use Settings → General → No-Log Mode to stop G0DM0D3 app telemetry and clear its pending browser buffer. Local-only mode does the same while also excluding OpenRouter and Venice model calls.",
+      "stars_today": 72,
+      "language": "TypeScript"
+    },
+    {
+      "title": "xingkongliang/skills-manager",
+      "slug": "xingkongliang-skills-manager",
+      "url": "https://github.com/xingkongliang/skills-manager",
+      "abstract": "Skills Manager One app to manage AI agent skills across all your coding tools. skillsmanager.dev 🎬 Video intro (YouTube) · 影片介紹 (Bilibili) 中文說明 · @JayTL00 on X · Buy me a coffee Install Skills — Marketplace Global Workspace Agent Workspace Project Workspace Backup & Multi-Device Sync Settings Features Unified skill library — Install skills from Git repos, local folders, .zip / .skill archives, or the skills.sh marketplace. Everything goes into one central repo, which defaults to ~/.skills-manager and can be customized in Settings . Marketplace — Browse popular skills from the marketplace and find them with keyword search. Your agents can manage skills — Claude Code, Codex, Cursor and the rest can install a skill, deploy it to another agent, or report what is where, by driving Skills Manager instead of writing into an agent's folder behind its back — so sources, presets, update tracking and per-agent state stay intact. The Dashboard sets this up in one click; see Let your agents manage skills . Presets — Group skills into named presets. In any workspace, click a preset pill to instantly activate or deactivate all its skills for the current agent scope. Applying a preset is a one-time copy, not a live sync. The sidebar lists all presets for quick access. Global Workspace — Each agent gets its own page listing every skill in its global folder — including ones installed outside Skills Manager — so the view always reflects what the agent actually sees. Add or remove skills per agent, or use the All Agents overview to manage every installed agent at once. Project Workspaces — View and manage project-local skill folders for supported agents, compare them with your central library, and sync changes in either direction. Supports nested skill directories and per-agent assignment when exporting. Linked Workspaces — Point to any directory as a skills root — useful for skills that live outside the default agent paths. Managed as a standalone workspace without participating in global preset sync. Multi-tool sync — Sync skills to any supported tool via symlink or copy with a single click. Every skill card shows an agent icon badge per enabled agent — click a badge to install or remove that skill for that agent right from the card, with the badge reflecting live sync state. Add from Library sheet — In any workspace, click + Add Skills to open a unified picker: search your central library, toggle target agents with always-visible chips (with select-all/clear), and batch-add multiple skills in one click. Batch operations — Multi-select skills for bulk enable/disable, export, or delete. Project Workspaces also support bulk enable/disable for project-local skills. Skill tagging and filters — Tag skills, use tags to group similar skills, and filter by source or tag — including an Untagged pill to quickly find skills missing labels. Update tracking — Check for upstream updates on Git-based skills; re-import local ones. Skill preview and source inspection — Read SKILL.md / README.md , inspect source metadata, and compare local content with the upstream version inside the app. Custom tools — Add your own agents/tools with custom skills directories, or override the default path for any built-in tool. Backup & multi-device sync — Connect a private GitHub repository with one sign-in (or any Git remote), and the app backs your library up automatically and keeps all connected devices in sync. Merges are skill-aware — a rename on one machine combines cleanly with an edit on another — and true conflicts never block: your local version stays put until you choose keep mine / use remote / keep both. Snapshot versions are restorable at any time. Activity log & Export Logs — Install / remove / update / sync operations are recorded locally. Use Settings → Export Logs to bundle recent logs and activity history into a single zip for easier issue reports. Flexible app settings — Configure repo path, sync mode, theme, text size, language, tray behavior, proxy, Git remote, update checks, and the order agents appear throughout the app — all in one place. In-app updates — The app tells you when a new version is out and installs it for you on macOS and Windows. Nothing downloads or installs on its own: checking only notifies, and installing and restarting each take a click. Install macOS Install with Homebrew : brew install --cask skills-manager You can also download the .dmg for your Mac from the latest release . Windows and Linux Download the installer for your platform from the latest release : .exe or .msi for Windows, and .AppImage , .deb , or .rpm for Linux (x64 and arm64). Every installer ships the CLI inside the app — see Where the binary lives . Quick Start Install skills from local folders, Git repositories, archives, or the marketplace. Open Global Workspace from the sidebar and pick an agent (e.g. Claude Code). Click a Preset pill to activate its skills for that agent, or use + Add Skills to pick from your library and toggle target agents inline. Active presets show a ✓; partial installs show a count badge. To manage project-local skills, open a Project Workspace and use the same preset pills or the + Add Skills picker with its multi-agent target selector. Configure agent paths, custom tools, theme, language, proxy, and Git preferences in Settings . If you want history or multi-machine sync, open Backup in the sidebar and click Sign in with GitHub — backup and cross-device sync run automatically from then on. Let your agents manage skills Claude Code, Codex, Cursor and the rest can install a skill, deploy it to another agent, or report what is where — by driving Skills Manager rather than writing into an agent's folder behind its back. That is what keeps source metadata, preset membership, update tracking and cross-agent deployment state intact. The Dashboard offers a one-time setup: pick the agents that should be able to do it, and the app installs the manage-skills skill and deploys it to exactly those. Afterwards it is an ordinary library skill — adding or removing an agent is the agent badge row on its own card. No PATH setup is involved: the app publishes a copy of its CLI where agents look for it. It is also an ordinary published skill, so it can be installed without the app: npx skills add xingkongliang/skills-manager Backup & Multi-Device Sync The Backup page (sidebar) keeps your skill library versioned in a Git repository. One device gets versioned backup with restorable snapshots; several devices connected to the same repository stay in sync with each other automatically. The remote stays a plain Git repository — you can git clone it anywhere, no lock-in. Connect Sign in with GitHub (recommended): an 8-digit device-flow sign-in creates a private skills-manager-backup repository for you. The token is stored in the OS keychain — never in files or the repo config. Advanced : paste any Git URL (HTTPS + PAT, SSH, self-hosted) under Settings → Git Sync Configuration . On a new machine with an empty library, the first launch asks: start fresh, or restore from a backup? How syncing works Automatic : local changes are committed and pushed in the background a couple of minutes after you stop editing; updates pushed by your other devices are merged in and pushed back automatically. Back Up Now is always available for an immediate run, and every backup in the history shows which device made it. Skill-aware merging : changes are merged per skill, not per text line — renaming a skill on one machine combines cleanly with editing its content on another. Conflicts never block or overwrite : if the same skill was edited on two devices at once, everything else syncs normally while that skill keeps your local version and appears under Needs attention (also badged on its card in the Library). Pick keep mine / use remote / keep both — a safety snapshot is taken before any choice is applied, so every decision is undoable.",
+      "stars_today": 71,
+      "language": "Rust"
+    },
+    {
+      "title": "harry0703/MangoDisk",
+      "slug": "harry0703-mangodisk",
+      "url": "https://github.com/harry0703/MangoDisk",
+      "abstract": "MangoDisk Disk cleanup, storage analysis, and privacy protection for macOS , Windows , and Linux English · 簡體中文 · 繁體中文 · 日本語 · 한국어 · Русский What MangoDisk Can Do Storage 1. Deep Cleanup Find cleanable content scattered across the system, applications, developer tools, and local projects in one scan. MangoDisk saves you from checking each location manually and groups the results by reclaimable space: System and user caches : Reclaim space taken up over time by system temporary files, diagnostic data, and rebuildable caches. Application caches : Keep application caches, logs, update packages, and temporary content from quietly consuming more and more storage. Browser data : Reclaim space used by cached and temporary web data from Chrome, Edge, Firefox, Brave, Arc, Opera, and other browsers. Developer tools and Xcode : Quickly recover substantial storage used by package managers, IDEs, compiler caches, and Xcode development data. Container caches : Free up space used by inactive build caches and rebuildable data from Docker and other container tools. Project build artifacts : Recover space used by rebuildable dependencies, caches, and build directories across Node.js, Rust, Gradle, Swift, Python, .NET, Godot, CMake, and other projects. AI models and caches : Quickly spot large local AI models, download caches, and temporary transfer files. Application optimization : Shrink supported applications without affecting normal use, leaving more room on your disk. Smart recommendations help you make safe choices quickly. You can also review items individually and see the estimated reclaimable space upfront, keeping every cleanup predictable and under your control. 2. Large File Cleanup Quickly find the largest files and reclaim space used by old installers, videos, archives, and other bulky content without digging through folders one by one. 3. Duplicate File Cleanup Reclaim space taken up by duplicate copies without treating files as duplicates just because they share a name. Smart selection keeps at least one file in every group, so cleanup stays effortless and safe. 4. Disk Space Analysis See where your disk space is going at a glance. Switch between a treemap and a sunburst chart , and choose how many levels to display to explore space usage and folder structure. Browse folders alongside the file list to quickly find the largest folders and files and decide what to clean up. Privacy & Security 5. Privacy Cleanup Keep browsing history, searches, cookies, recent items, and clipboard data from lingering on your computer. Clear traces left by browsers, applications, and the system to reduce exposure of your activity and make everyday privacy easier to manage. System Tools 6. Application Uninstall and Cleanup Uninstall applications and clear related caches, settings, and leftovers so removing an application actually gives you the space back. Potential personal files are handled cautiously to reduce the risk of accidental deletion. 7. Startup Item Management Reduce unnecessary startup delays and background resource use, so your computer starts faster and feels lighter. Turn items back on at any time when you need them again. 8. System Optimization Reduce unnecessary settings that slow down your system or get in the way. Balance performance, privacy, and personal preferences so your computer feels faster and easier to use. 9. System Maintenance Fix common problems like missing search results, incorrect icons, no sound, or network connection failures—without hunting down fixes or typing complex commands. Get your computer back to normal sooner. Activity 10. Operation History Keep a clear record of every cleanup and system change. See how much space you recovered, what completed successfully, and whether anything still needs your attention. Resource Usage and Memory Management Available since version 1.1.1 Check CPU and memory usage, network speeds, and disk activity at a glance. See which apps use the most memory and free up memory with a click when resources are running low. Keep these details in your menu bar, taskbar, or system tray—no need to open the main window. AI Explanations Available since version 1.1.0 Unsure what an item does or what might happen if you change it? AI explanations use the item's description and current scan results to explain its purpose and what to consider before taking action. Spend less time looking things up and make more informed choices. Get explanations directly from items in Deep Cleanup (built-in rules), Privacy Cleanup, Startup Item Management, System Optimization, and System Maintenance. Official releases include free explanations each day, with the option to connect your own AI service. AI offers guidance; you decide which actions to take. Safety and Rules Important MangoDisk puts data safety ahead of reclaiming more space. Cleanup rules and system optimizations only ship after their safety boundaries are clearly defined and they pass validation on real systems. MangoDisk scans in read-only mode by default. Before cleanup, deletion, uninstall, or system setting changes begin, you can review and confirm exactly what will happen. Results are saved to Operation History. System Optimization only uses built-in, validated settings. It never accepts arbitrary registry paths, terminal commands, or scripts. MangoDisk reads each setting again after changing it and calls out high-impact items and changes that require administrator access or a restart. MangoDisk maintains its own cleanup rules. Third-party projects may provide research leads, but a candidate rule is only accepted after reliable sources, safe boundaries, and real-system behavior have been verified. Anything without a clear safety boundary is excluded. The complete rule library and revision history are open for inspection: view the MangoDisk cleanup rule library . Screenshots Deep Cleanup Find cleanable content across the system, applications, developer tools, and projects to reclaim more space Large File Cleanup Find the files taking up the most space without digging through folders Duplicate File Cleanup Safely remove exact duplicates while keeping at least one copy Disk Space Analysis See where your storage is going and quickly find the largest files and folders Startup Item Management Reduce unnecessary startup programs for faster sign-in and less background activity Application Uninstall and Cleanup Uninstall applications and remove related leftovers to reclaim more space System Optimization Optimize performance, privacy, and everyday usability in one click System Maintenance Fix common system issues quickly and get your computer back to normal Privacy Cleanup Leave fewer activity traces behind and keep everyday use more private Before You Begin Caution Cleanup, permanent deletion, and uninstall operations may not be reversible. Review the selected content and keep reliable backups of important data. Before running system maintenance or changing a startup item or system setting, make sure you understand its purpose and impact. Some system optimizations can affect security, privacy, battery life, or update behavior. Desktop App Download MangoDisk from the official download page or GitHub Releases , then follow the instructions for your operating system below. macOS Requirements: macOS Monterey 12.5 or later. Install with Homebrew: brew install --cask harry0703/tap/mangodisk Manual installation: Download the DMG from the official download page , open it, and drag MangoDisk into the Applications folder. Windows Requirements: 64-bit Windows 10 or later. Install with PowerShell: irm https: // get.mangodisk.app | iex Install with WinGet (official source): winget install -- id MangoDisk.MangoDisk -- exact -- source winget Manual installation: Download the Windows installer from the official download page and follow the installation prompts. Linux Recommended: Ubuntu 22.04 LTS or later, on x64 or ARM64. Available as .deb packages and AppImages.",
+      "stars_today": 56,
+      "language": "Rust"
+    },
+    {
+      "title": "martin-olivier/airgorah",
+      "slug": "martin-olivier-airgorah",
+      "url": "https://github.com/martin-olivier/airgorah",
+      "abstract": "Airgorah A WiFi security auditing software Installation | Usage | Credits Airgorah is a WiFi security auditing software that can capture nearby WiFi traffic, discover clients connected to access points, perform deauthentication attacks, capture handshakes and PMKIDs, and crack the password of access points. It is written in Rust and uses GTK4 for the graphical part. ⭐ Don't forget to put a star if you like the project! Legal ⚠️ Airgorah is designed to be used in testing and discovering flaws in networks you are owner of. Performing attacks on WiFi networks you are not owner of is illegal in almost all countries. I am not responsible for whatever damage you may cause by using this software. Requirements This software only works on linux . The graphical interface runs as a normal\nuser (so it works under both X11 and Wayland ). When a privileged operation is\nneeded, it launches a small privileged agent ( airgorah-agent ) via polkit ,\nwhich will prompt for authentication once. You will also need a wireless network card that supports monitor mode and packet injection . Installation The installation instructions are available here . Usage The documentation about the usage of the application is available here . License This project is released under MIT license. Contributing If you have any question about the usage of the application, do not hesitate to open a discussion If you want to report a bug or provide a feature, do not hesitate to open an issue or submit a pull request",
+      "stars_today": 55,
+      "language": "Rust"
+    }
+  ],
+  "papers": {
+    "hf": [
+      {
+        "title": "Rethinking Cross-Tokenizer On-Policy Distillation: From Alignment Coverage to Supervision Reliability",
+        "slug": "rethinking-cross-tokenizer-on-policy-distillation-from",
+        "url": "https://huggingface.co/papers/2610.08448",
+        "abstract": "On-Policy Distillation (OPD) trains a student on its own generations using teacher feedback. With different tokenizers, comparing teacher and student predictions requires alignment at both sequence and vocabulary levels. In this paper, we examine whether expanding this alignment coverage improves learning. Across three heterogeneous teacher--student pairs on mathematical reasoning and code generation, strict 1:1 groups already cover most student-generated tokens despite substantial vocabulary mismatch. On responses sampled from the students before distillation, the shared vocabulary retains nearly all teacher and student probability mass at strictly aligned positions on average. Restricting reverse KL to a student-selected top-16 subset of the shared vocabulary at each strict position achieves accuracy comparable to full shared-vocabulary OPD, outperforming the evaluated cross-tokenizer baselines. Adding mean squared error supervision on span log-probabilities in mismatch groups gives complete supervision coverage, yet reduces accuracy. At checkpoints from training with only the strict loss, the span gradients show weak or negative directional agreement with the strict gradients and grow in magnitude relative to them. These diagnostics may help explain the accuracy drop from adding span supervision. Our findings motivate a shift from maximizing alignment coverage to prioritizing supervision reliability: compact supervision at strict positions can be more effective than broader coverage that introduces weakly aligned or conflicting training signals.",
+        "upvotes": 153,
+        "arxiv_id": "2610.08448",
+        "authors": []
+      },
+      {
+        "title": "DuoMatching: Joint-Marginal Distribution Matching for Few-Step Video Generation",
+        "slug": "duomatching-joint-marginal-distribution-matching-for-few",
+        "url": "https://huggingface.co/papers/2610.03543",
+        "abstract": "Streaming video generation has benefited from distribution matching distillation (DMD), which matches the joint distribution of video frames to a video teacher's approximation of the real video distribution. Although this joint matching mitigates drift during autoregressive rollouts, limitations remain in visual quality and semantic alignment. To address these limitations, we propose DuoMatching, a distribution matching framework that approximates the real video distribution through a unified joint-marginal formulation. On top of existing joint matching formulations, the additional marginal matching objective provides dedicated frame-level supervision from an image generator, transferring complementary visual and semantic priors from it. To apply this frame-level supervision in video generation, we introduce LatentBridge to resolve the latent representation mismatch between the video student and the image teacher. Latent Variation Sampling further distributes such frame-level supervision across distinct temporal segments, reducing redundancy. Experiments demonstrate that DuoMatching improves visual quality, composition, and semantic alignment while largely preserving motion dynamics. Human evaluations show overall preference rates above 80% against all evaluated baselines. The project page is available at https://johnzhan2023.github.io/DuoMatching/.",
+        "upvotes": 68,
+        "arxiv_id": "2610.03543",
+        "authors": []
+      },
+      {
+        "title": "TRACE: Rollout-Guided Quantization-Aware Training for FP4 Reinforcement Learning of MoE Language Models",
+        "slug": "trace-rollout-guided-quantization-aware-training-for-fp4",
+        "url": "https://huggingface.co/papers/2610.07767",
+        "abstract": "Reinforcement learning (RL) for post-training large language models (LLMs) incurs substantial computation and memory overhead during rollout generation, which motivates low-precision rollout for efficient RL training. However, existing FP4 RL methods suffer from a key limitation: they primarily optimize quantization accuracy on the training and rollout paths independently rather than directly reducing the discrepancy between the two quantized execution paths. In this work, we propose TRACE (Train-Rollout Quantization Alignment via Compact GuidancE), an FP4 quantization framework for RL training of Mixture-of-Experts (MoE) language models that addresses the limitation of existing FP4 RL methods. TRACE incorporates rollout-guided quantization-aware training that uses rollout-side quantization outcomes to guide training-side FP4 rounding decisions, directly reducing train-rollout discrepancy. Moreover, TRACE adopts an efficient quantization-information caching scheme that selectively retains mantissa and scale information from deeper layers to reduce the storage and communication overhead introduced by rollout guidance. We evaluate TRACE on four large-scale MoE language models across reasoning, coding, and long-horizon RL tasks. Our results demonstrate that TRACE enables joint FP4 weight/activation and FP4 KV-cache rollout with RL performance comparable to BF16 rollout, while achieving up to 5.4xrollout speedup and strong final FP4 performance compared with post-hoc FP4 quantization of BF16-trained policies.",
+        "upvotes": 65,
+        "arxiv_id": "2610.07767",
+        "authors": []
+      },
+      {
+        "title": "EVISKILL: Grounding Skill Evolution in Replayable Evidence",
+        "slug": "eviskill-grounding-skill-evolution-in-replayable-evidence",
+        "url": "https://huggingface.co/papers/2610.05030",
+        "abstract": "Continual skill evolution enables LLM agents to accumulate and refine reusable procedural knowledge from interaction experience without updating model parameters. Its effectiveness depends on determining not only what to change, but also why a change is justified and when it should become persistent guidance. However, existing experience-driven methods can lose the behavioral evidence and task contexts supporting edits. Moreover, a global validation outcome provides an incomplete judgment of its constituent changes: locally supported corrections may be discarded with a rejected revision, while evidence may require further experience to inform useful updates. To this end, we introduce EVISKILL, an evidence-driven framework that organizes execution observations into Replayable Evidence Cards and synthesizes edits with explicit links to their supporting contexts. Targeted replay verifies these edits through re-execution and provides feedback for correction. Across epochs, EVISKILL preserves evidence and provisionally retains supported edits for further refinement, while global validation governs their incorporation into the final skill. Experiments on three interactive benchmarks across six LLM backbones demonstrate the effectiveness of this approach.",
+        "upvotes": 36,
+        "arxiv_id": "2610.05030",
+        "authors": []
+      },
+      {
+        "title": "From Evidence to Action: How Tool-Using Agents Fail",
+        "slug": "from-evidence-to-action-how-tool-using-agents-fail",
+        "url": "https://huggingface.co/papers/2610.07753",
+        "abstract": "Tool-using agents make consequential changes to external state, yet correct outcomes do not guarantee that their actions were supported by evidence established beforehand. We study where this evidence-to-action chain breaks as agents move from deciding whether to act to executing single actions and dependent workflows. Across ten model-harness configurations, strong static action assessment can coexist with much weaker interactive execution. Failures often begin before execution: agents stop with incomplete investigation or act before required evidence is established. Once required evidence is obtained, single-action execution is usually reliable, while multi-action workflows additionally expose unresolved prerequisites and incomplete execution. For this analysis, we introduce SafeActBench, comprising 656 cases across six operational domains and five protocols that progress from static action judgment and investigated non-action to single- and multi-action workflows. A provenance-bound Evidence Ledger and deterministic trajectory evaluator track what information was established, when actions occurred, and whether downstream dependencies were satisfied. These results show that failures arise not only from missing information, but also from how agents use established evidence when deciding and executing actions.",
+        "upvotes": 34,
+        "arxiv_id": "2610.07753",
+        "authors": []
+      },
+      {
+        "title": "AutoSciBench: Autonomous Benchmark Generation for Evaluating Scientific Agents",
+        "slug": "autoscibench-autonomous-benchmark-generation-for-evaluating",
+        "url": "https://huggingface.co/papers/2610.05140",
+        "abstract": "As agents rapidly evolve, existing benchmarks can become saturated, limiting their ability to distinguish capabilities and reveal remaining failure modes. Particularly in scientific domains, constructing and updating benchmarks requires substantial time, labor, and domain expertise, making it difficult to keep evaluation aligned with advances in agent capabilities. We address this challenge by investigating whether scientific-agent benchmarks can be automatically generated and iteratively adapted as agent capabilities evolve. We introduce AutoSciBench, a framework that represents each task as a high-level concept specifying the scientific domain, data modality, and required reasoning approach, together with a low-level recipe specifying how the question, environment, and ground-truth answer are constructed and verified. Agents attempt to solve each task, producing solver trajectories and corresponding judge feedback which AutoSciBench uses to revise the recipe or concept, closing observed shortcuts and shifting tasks toward raw-data re-examination, interpretation of intermediate results, and evidence integration. Experience distilled from completed refinement trajectories further guides new concept generation, allowing lessons from earlier task refinement to inform subsequent benchmark construction. Starting from existing benchmarks, we evaluate AutoSciBench across computational biology, materials science, and clinical imaging. Generated benchmarks reduce average solver accuracy by 22.4 and 25.5 percentage points relative to the human-curated benchmarks in computational biology and materials science, respectively, while generated tasks receive higher average quality ratings across all three domains, suggesting that scientific-agent evaluation can adapt as agent capabilities advance.",
+        "upvotes": 26,
+        "arxiv_id": "2610.05140",
+        "authors": []
+      },
+      {
+        "title": "Taming VLAs under Robot Execution Errors: Self-Compensation and Stress Testing",
+        "slug": "taming-vlas-under-robot-execution-errors-self-compensation",
+        "url": "https://huggingface.co/papers/2609.37334",
+        "abstract": "Vision-language-action (VLA) policies often fail when a robot's executed motion deviates from their commanded action. Such execution errors arise from the robot's mechanics and operating conditions, such as wear and payload changes. We propose self-compensating VLA, a deployment-time adaptation method that enables a VLA policy to pre-compensate for the robot's execution errors when generating commands. Without task rewards or labels, it updates the policy online using the residual between the action commanded by a VLA and the motion executed by the robot. To stress-test VLA robustness across execution conditions that are impractical to cover with physical robots alone, we introduce RoboStress, a controlled simulation benchmark. It combines established joint-level models of friction, backlash, compliance, and gravity-compensation error into seven deployment scenarios whose execution errors depend on the robot's state and motion history. On RoboStress, self-compensating VLA achieves higher average task success than both the base policies and methods that build in robustness during training. On two physical robot arms with different usage histories, it raises the average task success rate by more than 30 percentage points on each arm, and the gains extend to objects not seen in the task demonstrations.",
+        "upvotes": 24,
+        "arxiv_id": "2609.37334",
+        "authors": []
+      },
+      {
+        "title": "HuatuoGPT-3: RL-Only Domain Adaptation from Base Models",
+        "slug": "huatuogpt-3-rl-only-domain-adaptation-from-base-models",
+        "url": "https://huggingface.co/papers/2610.05966",
+        "abstract": "Domain adaptation aims to turn a general-purpose large language model (LLM) into an expert for a target domain. While the dominant SFT+RL pipeline offers a convenient cold start, it may reduce exploration diversity and introduces additional complexity through multi-stage optimization. These limitations motivate RL-only adaptation. However, pure on-policy RL suffers from a cold-start problem, while mixed-policy RL still falls short: informative tokens in teacher outputs are learned too slowly in early training, and stale teacher outputs can hinder later improvement. We identify these two failure modes as Gradient Starvation and Teacher-Distribution Anchoring. To address them, we propose One-stage Policy Optimization (OnePO), which treats teacher outputs as transient guidance for policy improvement. OnePO combines Adaptive Objective Evolution to strengthen learning on informative low-probability teacher tokens and Teacher Retirement to discard teacher outputs once the current policy can surpass them. On medical adaptation, OnePO achieves 67.2 on HealthBench (Total) with only 20K training samples, outperforming SFT+RL and pure RL by 2.7 and 7.4 points, respectively. We further scale OnePO to produce HuatuoGPT-3, an open-source medical LLM series whose 27B variant reaches 70.1 on HealthBench (Total) and 71.4 on HealthBench Professional, surpassing frontier models such as GPT-6 Astra. Models and code are available at https://github.com/FreedomIntelligence/HuatuoGPT-3.",
+        "upvotes": 21,
+        "arxiv_id": "2610.05966",
+        "authors": []
+      },
+      {
+        "title": "World Action Learning via Interaction-Centric Spectral Latent Guidance",
+        "slug": "world-action-learning-via-interaction-centric-spectral",
+        "url": "https://huggingface.co/papers/2610.03607",
+        "abstract": "Learning general-purpose robot policies requires large-scale real-world interaction data, yet collecting robot demonstrations remains expensive and difficult to scale. Egocentric videos offer abundant human interaction experience with task-relevant semantics for robotic manipulation, but direct transfer is challenging for two reasons: latent actions inferred from frame reconstruction can be dominated by nuisance variation such as ego-camera motion, and human and robot behaviors often exhibit different temporal dynamics. We propose WING (World Action Learning via INteraction-Centric Spectral Latent Guidance), a framework for transferring interaction knowledge from egocentric videos to robot policies. WING first separates observer-induced motion from hand-object interaction and distills the interaction-centric component into latent actions. It then exploits the observation that cross-embodiment task semantics are concentrated in slowly varying temporal structures, identifying shared low-frequency components between egocentric latent actions and robot behaviors in the spectral domain and using them to guide action generation. WING achieves average success rates of 99.20% on LIBERO, 93.80% on RoboTwin 2.0, and 57.7% on RoboCasa-GR1, and also performs strongly across four real-world manipulation tasks under diverse generalization settings. These results show that interaction-centric spectral guidance provides an effective and scalable way to transfer physical interaction knowledge from human egocentric video to robot control. Project page: https://mikuz12.github.io/wing/",
+        "upvotes": 16,
+        "arxiv_id": "2610.03607",
+        "authors": []
+      },
+      {
+        "title": "UNREAL: Unifying Retrieval and Long-Context with a Single Model",
+        "slug": "unreal-unifying-retrieval-and-long-context-with-a-single",
+        "url": "https://huggingface.co/papers/2610.08463",
+        "abstract": "Long-context inference and Retrieval-Augmented Generation (RAG) handle evidence selection at vastly different scales, from a single long prompt to an entire corpus. We ask whether a single model-internal mechanism can select evidence across this range. We introduce UNifying REtrieval And Long-Context with a Single Model (UNREAL), a model-native evidence selection framework to span corpus retrieval and long-context inference. UNREAL encodes chunks and derives retrieval queries directly from the frozen LLM's internal representations. It adds fewer than 500K trainable parameters and leaves the backbone unchanged. On a 3B-token, 21M-chunk Wikipedia index, all four dense and hybrid UNREAL backbones outperform state-of-the-art retriever-reranker systems. The best model raises recall from 49.1% to 73.2% on HotpotQA, from 31.7% to 60.1% on 2WikiMultiHopQA, and from 8.8% to 14.4% on MuSiQue. Applied to long-context tasks, the same selection mechanism removes distractors before generation, raising NoLiMa accuracy from 1.0% to 24.83% at its maximum context length of 128K tokens, and LV-Eval's F1 score from 49.97% to 54.66% at 256K. UNREAL also reduces FLOPs and time-to-first-token relative to full-context inference from roughly 32K tokens onward, with larger gains as context grows. Together, these results establish model-internal evidence selection as a common foundation for corpus retrieval and evidence-sparse long-context inference.",
+        "upvotes": 15,
+        "arxiv_id": "2610.08463",
+        "authors": []
+      }
+    ],
+    "others": [
+      {
+        "title": "Technology-Supported Interventions and Learners’ Metacognition: A Three-Level Meta-Analysis",
+        "slug": "technology-supported-interventions-and-learners",
+        "url": "https://www.semanticscholar.org/paper/b095508d2c1d8ac005e104cafa96e4fe36a66156",
+        "abstract": "Technology-Supported Interventions and Learners’ Metacognition: A Three-Level Meta-Analysis. Educational Psychology Review",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-07",
+        "authors": [
+          "Yi-Jia Yuan",
+          "Yi-Ran Du"
+        ]
+      },
+      {
+        "title": "A semantic layer architecture for removing schema identifiers from external LLM prompts, with model-dependent accuracy trade-offs",
+        "slug": "a-semantic-layer-architecture-for-removing-schema",
+        "url": "https://www.semanticscholar.org/paper/aaf401e80636740516239a740e8daabb753151d9",
+        "abstract": "A semantic layer architecture for removing schema identifiers from external LLM prompts, with model-dependent accuracy trade-offs. Discover Artificial Intelligence",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-07",
+        "authors": [
+          "Mu-Je Yang"
+        ]
+      },
+      {
+        "title": "Stochastic agent-based SEIRS model with Poisson jump mutations and AI-based optimal control",
+        "slug": "stochastic-agent-based-seirs-model-with-poisson-jump",
+        "url": "https://www.semanticscholar.org/paper/a7a73f1f9904e73041640f9659555ff7aa307add",
+        "abstract": "Stochastic agent-based SEIRS model with Poisson jump mutations and AI-based optimal control. Rendiconti del Circolo Matematico di Palermo Series 2",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-07",
+        "authors": [
+          "Samira Zouhri",
+          "Mohcine El Baroudi",
+          "Hassan Laarabi",
+          "A. Abta"
+        ]
+      },
+      {
+        "title": "Mapping generative AI governance readiness in Kurdistan Region universities",
+        "slug": "mapping-generative-ai-governance-readiness-in-kurdistan",
+        "url": "https://www.semanticscholar.org/paper/91d4746177fd786aed0201e23e22a34b0f632460",
+        "abstract": "Mapping generative AI governance readiness in Kurdistan Region universities. Discover Education",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-07",
+        "authors": [
+          "A. Abdulrahman",
+          "S. Ahmed"
+        ]
+      },
+      {
+        "title": "How does AI-generated assessment compare to expert assessment in simulation-based experiences: Analyzing AI-human interrater reliability",
+        "slug": "how-does-ai-generated-assessment-compare-to-expert",
+        "url": "https://www.semanticscholar.org/paper/8c7f2d2140467d139ec6668ce7daa175e4f102e0",
+        "abstract": "How does AI-generated assessment compare to expert assessment in simulation-based experiences: Analyzing AI-human interrater reliability. Advances in Simulation",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-07",
+        "authors": [
+          "M. Brace",
+          "G. Furman",
+          "L. Diewald",
+          "R. Shenkman",
+          "S. Felgoise",
+          "T. Oliver"
+        ]
+      },
+      {
+        "title": "Semantic indeterminacy in agentic negotiation: agreement after the recession of the principal",
+        "slug": "semantic-indeterminacy-in-agentic-negotiation-agreement",
+        "url": "https://www.semanticscholar.org/paper/8164759780f179e564fcea5ae8e345e1078b7797",
+        "abstract": "Semantic indeterminacy in agentic negotiation: agreement after the recession of the principal. AI and Ethics",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-07",
+        "authors": [
+          "Shun Okuhara"
+        ]
+      },
+      {
+        "title": "Beyond similarity retrieval: governance fidelity, consistency, and minimality in long-term conversational memory",
+        "slug": "beyond-similarity-retrieval-governance-fidelity-consistency",
+        "url": "https://www.semanticscholar.org/paper/788f4baea235bf81916c67227297a2e72a874194",
+        "abstract": "Beyond similarity retrieval: governance fidelity, consistency, and minimality in long-term conversational memory. International Journal of Data Science and Analysis",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-07",
+        "authors": [
+          "Oghenenefe Abeke",
+          "Rasheed Mohammad",
+          "H. Mahmoud"
+        ]
+      },
+      {
+        "title": "Beyond Code Generation: Reassessing Software Quality in AI-Assisted Development",
+        "slug": "beyond-code-generation-reassessing-software-quality-in-ai",
+        "url": "https://www.semanticscholar.org/paper/6f651870ef2bd16cbb2c01e0917d40bbd0f88cbe",
+        "abstract": "Beyond Code Generation: Reassessing Software Quality in AI-Assisted Development. Acta Universitatis Sapientiae: Informatica",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-07",
+        "authors": [
+          "L. Cernau"
+        ]
+      },
+      {
+        "title": "A global-local hybrid vision-language framework for interpretable grapevine disease diagnosis",
+        "slug": "a-global-local-hybrid-vision-language-framework-for",
+        "url": "https://www.semanticscholar.org/paper/649d69fbe3394c8e951b2e17df015b5e3554930e",
+        "abstract": "A global-local hybrid vision-language framework for interpretable grapevine disease diagnosis. Discover Artificial Intelligence",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-07",
+        "authors": [
+          "Lang-Ho-Ang Son",
+          "H. T. Bui"
+        ]
+      },
+      {
+        "title": "From traditional histopathology to virtual staining: deep learning approaches for assessing tissue lesions in farmed fish",
+        "slug": "from-traditional-histopathology-to-virtual-staining-deep",
+        "url": "https://www.semanticscholar.org/paper/5d00be1efedb176d380b534edb8888d93fb46550",
+        "abstract": "From traditional histopathology to virtual staining: deep learning approaches for assessing tissue lesions in farmed fish. Veterinary research communications",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-07",
+        "authors": [
+          "Enes Üstüner",
+          "Mustafa Öz"
+        ]
+      },
+      {
+        "title": "Context engineering frames prompt engineering within system level orchestration for large language model applications",
+        "slug": "context-engineering-frames-prompt-engineering-within-system",
+        "url": "https://www.semanticscholar.org/paper/5a67f5abf42aafb9019774bfa0b68d4d8a1d158f",
+        "abstract": "Context engineering frames prompt engineering within system level orchestration for large language model applications. Discover Artificial Intelligence",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-07",
+        "authors": [
+          "Attila Kovari"
+        ]
+      },
+      {
+        "title": "LoRA based instruction fine tuning of large language models for agronomic triple extraction and GraphRAG knowledge retrieval",
+        "slug": "lora-based-instruction-fine-tuning-of-large-language-models",
+        "url": "https://www.semanticscholar.org/paper/502815466b8df45257829f42182ad8c4cc38eb1e",
+        "abstract": "LoRA based instruction fine tuning of large language models for agronomic triple extraction and GraphRAG knowledge retrieval. Discover Artificial Intelligence",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-07",
+        "authors": [
+          "Rohini Kokare",
+          "Sunil B. Mane"
+        ]
+      },
+      {
+        "title": "Extending the affective process and strategic engagement framework to address writer’s block in Ethiopian English as a foreign language contexts through critical artificial intelligence literacy and ethical generative artificial intelligence in low-resource settings",
+        "slug": "extending-the-affective-process-and-strategic-engagement",
+        "url": "https://www.semanticscholar.org/paper/3c07bf9c3400b785bbeaf0af0034823c905bd1c3",
+        "abstract": "Extending the affective process and strategic engagement framework to address writer’s block in Ethiopian English as a foreign language contexts through critical artificial intelligence literacy and ethical generative artificial intelligence in low-resource settings. Discover Education",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-07",
+        "authors": [
+          "Eshetie Kasie"
+        ]
+      },
+      {
+        "title": "Diffusion model-driven multi-objective collaborative optimization for building energy management using graph neural networks",
+        "slug": "diffusion-model-driven-multi-objective-collaborative",
+        "url": "https://www.semanticscholar.org/paper/2c47d12dc639bfad07abd5e63e266190da3d38da",
+        "abstract": "Diffusion model-driven multi-objective collaborative optimization for building energy management using graph neural networks. Discover Artificial Intelligence",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-07",
+        "authors": [
+          "Ya-Lan Zheng",
+          "Tai-Xiang Yin"
+        ]
+      },
+      {
+        "title": "QF3: Fast Flow RL with Filtered Q-Gradients",
+        "slug": "qf3-fast-flow-rl-with-filtered-q-gradients",
+        "url": "http://arxiv.org/abs/2610.08789v1",
+        "abstract": "Flow policies have become a standard policy class for learning robot behaviors from demonstrations, but reinforcement learning is still critical for improving pre-trained flow policies or learning them from scratch through interaction. We introduce QF3 (Fast Flow RL with Filtered Q-Gradients), an online off-policy RL algorithm that trains a flow policy with flow matching plus the critic's action gradient, backpropagated through a one-step prediction of the flow's output. To keep updates where the critic and this prediction are reliable, QF3 applies the critic gradient only to action dimensions that stay near the replay action. To our knowledge, QF3 is the first off-policy flow RL method to train humanoid locomotion policies from scratch and transfer them zero-shot to hardware. Paired with a high-throughput off-policy training recipe, it trains humanoid locomotion and motion-tracking policies with a 10x wall-clock speedup over FPO++, a recent on-policy flow RL method. We further apply QF3 to fine-tune pretrained flow-based manipulation policies on both ABC-Sim and Robomimic tasks. These results suggest that QF3 can both learn robot policies from scratch and refine those acquired from demonstrations. Website: https://qf3-rl.github.io/",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-06",
+        "authors": [
+          "Chung Min Kim",
+          "Brent Yi",
+          "David McAllister",
+          "Hongsuk Choi",
+          "Himanshu Gaurav Singh",
+          "Jinkun Cao",
+          "Ken Goldberg",
+          "Pieter Abbeel",
+          "Carmelo Sferrazza",
+          "Angjoo Kanazawa"
+        ]
+      },
+      {
+        "title": "Conformal Prediction Sets Quantify Information Gain: A Theoretical Perspective",
+        "slug": "conformal-prediction-sets-quantify-information-gain-a",
+        "url": "http://arxiv.org/abs/2610.08785v1",
+        "abstract": "Conformal prediction is a popular tool for uncertainty quantification that outputs prediction sets with finite-sample coverage guarantees. While prediction set size is commonly used as a heuristic measure of uncertainty, the information-theoretic basis for this interpretation remains poorly understood. In this work, we provide such a foundation using a decision-theoretic generalization of entropy tailored to set-valued prediction. In particular, we introduce a family of generalized information measures based on the size and coverage of conformal prediction sets. Notably, Shannon mutual information admits an exact integral representation in terms of these measures. We then show that, in standard classification settings, the reduction in conformal set size from additional information (i) is sandwiched between calibration-dependent members of this family and (ii) obeys a data processing inequality, both up to finite-sample calibration and model error terms. Together, our results formally relate conformal prediction to classical information-theoretic quantities and justify using set-size reduction as an information gain metric. Empirically, we validate our theory across 11 classification settings and show that set-size reduction and Shannon mutual information can rank features differently in a greedy feature selection experiment.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-06",
+        "authors": [
+          "Kevin Zhang",
+          "Stephen Bates"
+        ]
+      },
+      {
+        "title": "4D-HOF: Hand-Object Flow Matching for Feed-Forward 4D Interaction Reconstruction",
+        "slug": "4d-hof-hand-object-flow-matching-for-feed-forward-4d",
+        "url": "http://arxiv.org/abs/2610.08782v1",
+        "abstract": "Existing methods for 4D hand-object reconstruction often rely on costly per-sequence optimization, while generative approaches typically synthesize interactions from random noise, which can lead to unstable interaction prediction. We introduce 4D-HOF, a feed-forward framework that reconstructs 4D hand-object interactions from coarse but informative estimates produced by vision foundation models. Concretely, we learn a conditional flow matching model that transports foundation-model-derived hand-object states toward an interaction manifold, allowing the model to correct errors in translation, rotation, and alignment in a feed-forward manner. A key advantage of our generative formulation is that it naturally enables test-time guidance within the transport process. Rather than applying a separate post-hoc optimization after reconstruction, we directly steer the evolving generative states using physical interaction constraints and observed 2D evidence, allowing the reconstruction to be refined as part of the generative process itself. By training the generative model on diverse datasets, 4D-HOF generalizes robustly to challenging in-the-wild scenarios. Experiments on out-of-domain benchmarks show that 4D-HOF achieves state-of-the-art performance, producing more stable and accurate 4D hand-object reconstructions.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-06",
+        "authors": [
+          "Shiqi Li",
+          "Sean Cho",
+          "Yijie Li",
+          "Fengzhi Guo",
+          "Bowen Wen",
+          "Cheng Zhang"
+        ]
+      },
+      {
+        "title": "IdeaAnchor: Teaching LLMs to Turn Literature into Research Ideas",
+        "slug": "ideaanchor-teaching-llms-to-turn-literature-into-research",
+        "url": "http://arxiv.org/abs/2610.08781v1",
+        "abstract": "Scientific research often begins by synthesizing ideas from a set of related papers to identify gaps and formulate new directions. However, training language models to perform this form of literature-grounded ideation remains challenging, as existing approaches based on prompting or feedback lack structured supervision for how papers should be synthesized. We introduce IdeaAnchor, a paradigm for training LLMs to perform research ideation using structured specifications as privileged signals. Each IdeaAnchor instance encodes how each input paper should be synthesized into a successful idea, including their functional roles, relationships, and target synthesis criteria. We build this paradigm by mining instances from published papers, capturing how real ideas emerge from prior literature. We then train models via demonstration, self-distillation, and reinforcement learning, and further enhance generation with retrieval at inference time. Experiments show consistent improvements in ideation quality. Our analysis reveals a functional decomposition: anchor-based training strengthens creative synthesis, retrieval enhances detail elaboration, and combining both yields the best performance.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-06",
+        "authors": [
+          "Ziyu Chen",
+          "Yilun Zhao",
+          "Jiashuo Sun",
+          "Yiling Ma",
+          "Manasi Patwardhan",
+          "Arman Cohan"
+        ]
+      },
+      {
+        "title": "DepthWorld: 3D World Model for Robot Manipulation",
+        "slug": "depthworld-3d-world-model-for-robot-manipulation",
+        "url": "http://arxiv.org/abs/2610.08780v1",
+        "abstract": "World models offer a data-driven alternative to traditional simulators for robotics, with applications spanning policy evaluation, improvement, and planning. All of these uses depend on faithful 3D geometry, yet current video-based world models are trained on RGB alone and produce rollouts that look correct frame-by-frame but do not compose into a consistent 3D world. Closing this gap requires progress on two fronts: large-scale 3D supervision for manipulation, and an architecture that can absorb it without disturbing strong pretrained video priors. We introduce a calibration pipeline that combines learned stereo depth with a joint factor graph, pooling all episodes collected from the same physical robot to recover its shared kinematic parameters alongside per-scene extrinsics. Applied to the DROID dataset, this yields DROID-3D, a calibrated 3D dataset providing dense metric depth and recalibrated multi-view extrinsics (achieving <0.7 px reprojection error on 90% of episodes for external cameras). We then train DepthWorld, a Stable Video Diffusion-based world model that jointly predicts multi-view RGB and depth via spatial latent tiling, leaving the pretrained Variational Autoencoder (VAE) unchanged. Depth supervision improves RGB prediction itself by +1.48 dB PSNR over an identical RGB-only baseline at equal training budget, while simultaneously yielding accurate metric depth for downstream geometric reasoning.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-06",
+        "authors": [
+          "Jai Bardhan",
+          "Josef Sivic",
+          "Vladimir Petrik"
+        ]
+      },
+      {
+        "title": "Agent in a Bottle: Can LLM Agents Turn Their Capabilities Into Cheap, Scalable Artifacts?",
+        "slug": "agent-in-a-bottle-can-llm-agents-turn-their-capabilities",
+        "url": "http://arxiv.org/abs/2610.08775v1",
+        "abstract": "Large language models (LLMs) can solve many narrow tasks, but querying them separately for millions of related instances can be prohibitively expensive. Can LLM agents autonomously create cheaper solutions for such workloads? We call this ability \"bottling\": the ability to turn general capabilities into task-specific solutions that balance answer quality and amortised cost. We introduce BOTTLED, a benchmark in which agents receive an entire unlabelled workload and must complete it under fixed time, compute and LLM API budgets. Agents choose their own approach, such as training a small model or writing a reusable program. Across ten models and three tasks, we find that strong zero-shot task performance does not reliably translate into strong bottling capabilities. Models with similar zero-shot scores can differ substantially after bottling, and 48 of 60 bottling runs score below the lower bound of the 95% confidence interval of their model's zero-shot performance. Moreover, 31 of 60 runs underperform the stronger of two small-model distillation baselines with the same token budget. Nevertheless, bottling can yield substantial savings: on query-product relevance classification, Opus 5 retains about 82% of its zero-shot macro-F1 at roughly 657 times lower reported cost. Bottling is also competitive with Jev, a \"system one\" model built especially for cheap, repetitive inference: Opus 5 on the same task recovers about 94% of Jev's macro-F1 at a quarter of Jev's projected full-workload cost. BOTTLED provides a basis for evaluating and improving agents' ability to invest limited resources in reusable solutions for large, repetitive workloads.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-06",
+        "authors": [
+          "Ankit Sonthalia",
+          "Haritz Puerto",
+          "Alexander Rubinstein",
+          "Martin Gubri",
+          "Seong Joon Oh"
+        ]
+      },
+      {
+        "title": "Backend-Agnostic Sparse Attention for Fast High-Resolution Visual Generation",
+        "slug": "backend-agnostic-sparse-attention-for-fast-high-resolution",
+        "url": "http://arxiv.org/abs/2610.08772v1",
+        "abstract": "Diffusion Transformers (DiTs) have achieved strong performance in image and video generation, but the quadratic complexity of full attention makes high-resolution generation computationally expensive. Window attention offers an efficient alternative, yet existing methods face a practical trade-off: partitioned window attention typically achieves computational efficiency consistent with its theoretical complexity. However, isolated windows block cross-window interaction, often introducing visible grid-like artifacts in the generated results. Fine-grained sliding-window attention effectively restores interactions across neighboring windows and improves visual quality. However, its irregular computation patterns create a substantial gap between theoretical and practical speedups and require specialized kernels tailored to each hardware backend. To tackle these challenges, we propose BASA, a backend-agnostic sparse attention, which brings the best of both worlds: visual quality and practical acceleration. Specifically, BASA replaces visual self-attention with shifted local-window attention. By introducing a structured window-shifting scheme across DiT blocks, we allow tokens divided by window boundaries in one layer to communicate in the following layers, thereby achieving global information exchange and eliminating window-induced visual artifacts. Notably, our design introduces no additional irregular operators or customized kernels, making it readily deployable on existing attention backends and closing the gap between theoretical sparsity and practical acceleration. Experiments demonstrate that BASA achieves measured speedups exceeding 90\\% of the theoretical estimates on FLUX and delivers a 4.52$\\times$ attention speedup on Wan while maintaining competitive generation quality.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-06",
+        "authors": [
+          "Liao Ma",
+          "Jiayi Song",
+          "Yunfeng Wu",
+          "Songhua Liu",
+          "Peilin Zhao"
+        ]
+      },
+      {
+        "title": "Data Leakage in Patch-Based Hyperspectral Image Classification: Quantifying the Impact of Spatial Overlap",
+        "slug": "data-leakage-in-patch-based-hyperspectral-image",
+        "url": "http://arxiv.org/abs/2610.08770v1",
+        "abstract": "Patch-based learning improves hyperspectral image (HSI) classification by exploiting local spectral-spatial information, but random train-test sampling from the same image can cause spatial patch overlap, leading to data leakage and optimistic performance estimates. This paper investigates same-class train-test spatial overlap in patch-based HSI classification using two measures: overlap percentage (OP), which quantifies the global amount of overlapped testing patch pixels, and average overlap ratio (AOR), which measures the local severity among affected testing patches. Experiments on the Pavia University dataset compare random and non-random spatial sampling using SVM, MLP, 2D-CNN, 3D-CNN, ViT, and MorpMamba. The results show that deep patch-based models achieve high accuracy under random sampling, with 3D-CNN reaching 96.17% Overall Accuracy (OA), but drop substantially under non-random spatial sampling, where 3D-CNN decreases to 55.20% and ViT and 2D-CNN drop by 40.71 and 38.81 percentage points (PP), respectively. Patch-size analysis further shows that increasing the patch size from 5x5 to 19x19 raises the random-sampling overlap percentage from 23.28% to 77.02%. These findings demonstrate that random patch-based evaluation can substantially inflate classification performance, especially for models that strongly exploit spatial context. The code associated with this paper is available at: https://github.com/mqalkhatib/Data_Leakage_in_HSI_Classification.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-06",
+        "authors": [
+          "Mohammed Q. Alkhatib"
+        ]
+      },
+      {
+        "title": "Rapid Fredholm stabilization of the Kuramoto--Sivashinsky equation with unrestricted, spatially-varying anti-diffusion",
+        "slug": "rapid-fredholm-stabilization-of-the-kuramoto-sivashinsky",
+        "url": "http://arxiv.org/abs/2610.08764v1",
+        "abstract": "We develop the first feedback design for rapid stabilization of the Kuramoto--Sivashinsky equation with a spatially varying anti-diffusion coefficient. For constant coefficients, the single-input Fredholm design of Coron and Lü (2015) excludes a discrete set of values at which repeated unstable eigenvalues cause a loss of controllability. We overcome this obstruction by introducing a second boundary input and assigning the two inputs distinct roles. The key idea, inspired by Heymann's Lemma, is to use the boundary value $u(0,t)$ entirely for a pre-feedback that renders the modified plant controllable through the curvature input $u_{xx}(0,t)$. The latter input then stabilizes the plant through a Fredholm backstepping transformation. We show that two inputs suffice for controllability and are necessary when the plant has an unstable double eigenvalue. However, the Fredholm kernel still must be approximated for implementation. Hence, to enable kernel and gain approximation, we prove continuity of the coefficient-to-gain design map on compact admissible design classes. Unlike Volterra-based continuity proofs using successive approximations, our proof uses the modal representation to control the spectral data, the inverse coefficient system, and the tails of the kernel and gain series. This yields a single neural operator approximation of the gain to any prescribed $L^2$ accuracy across the class. Finally, we establish rapid local stabilization of the nonlinear closed-loop system under both the exact gains and sufficiently accurate approximations. We conclude with numerical results that illustrate prescribed decay rates and the computational cost of the approximations. In particular, we train a Fourier neural operator that achieves typical relative gain errors of approximately $0.1\\%$ and stabilizes all held-out cases tested, including a plant with an unstable double eigenvalue.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-06",
+        "authors": [
+          "Luke Bhan",
+          "Miroslav Krstic",
+          "Yuanyuan Shi"
+        ]
+      },
+      {
+        "title": "WorldSonus: Bringing Sound to Worlds",
+        "slug": "worldsonus-bringing-sound-to-worlds",
+        "url": "http://arxiv.org/abs/2610.08760v1",
+        "abstract": "Recent advances in world models have enabled increasingly realistic visual synthesis. However, these generated environments remain largely silent. Bringing sound to world models poses three core challenges: real-time generation to keep pace with interactive video streams, interactive control to respond to mid-stream sound instructions, and spatially aligned stereo to reflect scene geometry and camera motion. To address these demands, we introduce WorldSonus, an interactive video-to-audio framework designed for real-time spatial sound synthesis in world models. For real-time generation, WorldSonus employs a streaming causal autoregressive diffusion architecture that synthesizes audio chunks at a low real-time factor (RTF) of 0.41. For interactive control, we incorporate an audio-centric captioning pipeline with chunk-indexed prompt scheduling, enabling dynamic manipulation of sound events during generation. For spatial alignment, we leverage high-quality stereo supervision curated from diverse stereo and ambisonic data. Extensive experiments demonstrate that while tailored for world models, WorldSonus generalizes effectively to open-domain video-to-audio benchmarks, matching or outperforming state-of-the-art bidirectional models in both acoustic quality and spatial alignment. Project page: https://noizai.github.io/WorldSonus/",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-06",
+        "authors": [
+          "Pengjun Fang",
+          "Jingyi Fa",
+          "Kam Man Wu",
+          "Jiaming Wang",
+          "Haoyuan Huang",
+          "Yaguang Wu",
+          "Xiangjun Huang",
+          "Ziyang Ma",
+          "Weijia Chen",
+          "Hongyu Liu",
+          "Zeyue Tian",
+          "Qifeng Chen"
+        ]
+      },
+      {
+        "title": "Post-Training Semantic Lifting for 3D Gaussian Splatting: Separating Detector, Lifting and Representation Error",
+        "slug": "post-training-semantic-lifting-for-3d-gaussian-splatting",
+        "url": "http://arxiv.org/abs/2610.08756v1",
+        "abstract": "The same Gaussian of a 3D Gaussian Splatting model is seen from many views, and these views do not always agree on the class it belongs to. The Gaussian may be occluded in some of them, and the confidence of the detector is not the same from one view to another. The ground truth, on the other hand, is given as an annotated mesh, because two training runs do not produce the same Gaussians. In this work, we propose a post-training lifting method that works with one target class at a time and combines the information coming from all the views. Target and non-target evidence are accumulated simultaneously, weighted by the visibility of each Gaussian in each view. After that, the Gaussians are filtered with two thresholds: a main threshold $β$ selects the high-confidence seeds, and a lower one $γβ$ adds the connected components around them. For the evaluation, the labels are transferred from the Gaussians to the mesh vertices that are both visible and annotated. With this design, we can separate three sources of error: the 2D detector, the lifting and the transfer between representations. The thresholds and the transfer operator are chosen on seven Replica validation scenes, and the method is evaluated on ten held-out ScanNet++ scenes with the same values for every scene and class. The mean mIoU on the validation scenes was 0.93 with masks from the dataset annotations and 0.65 with YOLO masks, and on the ScanNet++ test scenes it was 0.80 and 0.54. Compared with thresholding the evidence per view, as a previous version of the method did, the fraction improves the test mIoU by 0.24 and makes it possible to use a single threshold for all the classes and scenes of both datasets. Finally, the error analysis shows that most of the remaining error comes from the detector.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-06",
+        "authors": [
+          "Iván Verdugo Guerra",
+          "Ezequiel López Rubio",
+          "Jorge García González"
+        ]
+      },
+      {
+        "title": "Neural Petri flows for chemical reactions",
+        "slug": "neural-petri-flows-for-chemical-reactions",
+        "url": "http://arxiv.org/abs/2610.08750v1",
+        "abstract": "Petri nets have been used to describe chemical processes such as reactions.They map well to chemistry: Places are the bonds between atoms and the free valence of each atom, a token is a unit of bond order, a transition forms or breaks a bond, the conserved quantities are the valence budgets of the atoms, and the enabling rule is the valence rule. These semantics are not guaranteed by learned models of reactions or neural networks that are built on Petri nets that use the net as a scaffold for message passing. Here, we ask what architecture remains a Petri net for every value of its weights. We find the answer in the theory, where all semantics of a net share the firing form $m^\\prime=m+Cσ$, locality, as enabling reads only the inputs of a transition, and the enabling rule, and we prove that conservation forces the firing form and that non-negativity forces the enabling rule on local rate laws. This leaves free the rate law, which is the propensity of each transition to fire. We introduce Neural Petri Flow, which learns this rate law, or a readout for classification, and hard-wires the rest as parameter-free layers. On what we denote a valence net, atom mapping, reaction classification, and forward prediction become three tasks on one firing vector. Without training, the minimum firing vector maps 88.8% of the curated Golden set against 85.6% for RXNMapper, and 88.7 against 77.9% of the enzymatic reactions of EnzymeMap. On USPTO-480K, NPF trained on these firing vectors predicts 87.7% of the products and 67.4% when trained on a 1% subset of the training reactions. EC numbers of ECREACT are predicted at the third level for 90.2% of reactions, 5.6 points ahead of the best published method. With electrons as tokens, the same token game predicts 90.5% of the elementary steps of FlowER first, ahead of the published baseline, and every top-1 prediction is a valid molecule without a filter.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-06",
+        "authors": [
+          "Jose Eduardo Escrig Molina",
+          "Daniel Probst"
+        ]
+      },
+      {
+        "title": "The Missing Minimal Pair: Stereotype Evaluation in LLMs",
+        "slug": "the-missing-minimal-pair-stereotype-evaluation-in-llms",
+        "url": "http://arxiv.org/abs/2610.08747v1",
+        "abstract": "A common approach to measuring bias in Large Language Models is to compare the log-likelihoods of two contrastive stereotype sentences. We argue that such single-pair comparisons are often unreliable: simply rewriting the same stereotype with an alternative attribute can yield logically inconsistent preferences. To address this, we propose a dual minimal pair setup that introduces two axes of comparison for robust stereotype evaluation. First, we present a data-augmentation framework that fills critical gaps in existing stereotype datasets by generating paraphrases and alternate attributes. We apply our framework on a set of English, Russian, Spanish and Chinese stereotypes. Second, we introduce two evaluation metrics tailored to the dual minimal pair setup. One of these metrics provides a new perspective on bias by modeling the mutual information (MI) between social groups and stereotyped attributes. This MI-based metric is better suited for aggregation and enables more robust comparisons of stereotype strength across different languages and models.\n  Our code is available at https://github.com/stepanat/missing-minimal-pair/.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-06",
+        "authors": [
+          "Nataliya Stepanova",
+          "Ivan Titov",
+          "Emily Allaway",
+          "Björn Ross"
+        ]
+      },
+      {
+        "title": "Linear Bandits under Exact Sliding-Window Constraints",
+        "slug": "linear-bandits-under-exact-sliding-window-constraints",
+        "url": "http://arxiv.org/abs/2610.08745v1",
+        "abstract": "We study linear bandits under exact sliding-window constraints, where every consecutive block of actions must belong to a prescribed feasible set. In the offline setting, where the reward function is known, we show that convexity and cyclic-shift invariance make a stationary solution optimal when $w\\mid T$ and within an additive $O(w)$ gap otherwise. In the online setting, we show that geometric structure alone is insufficient for learning, and sublinear regret can be impossible. We introduce a transition diameter $τ$ that quantifies feasible reachability and develop a rare-switching OFUL algorithm with regret $\\widetilde{O}(d\\sqrt{T}+τd+w)$ against the offline-optimal feasible trajectory. Finally, we remove cyclic invariance and consider general sliding-window constraints, where optimal behavior may be non-stationary. We represent recent action history as the state of a finite-memory control problem and introduce a history-state diameter $D$ that measures feasible communication between viable histories. Combining optimistic remaining-horizon planning with rare policy updates, we obtain a regret bound of $\\widetilde{O}(d\\sqrt{T}+dD+w)$. We evaluate our approach on real-world and synthetic benchmarks, showing that it maintains exact feasibility while achieving reward and regret comparable to baselines with substantially fewer policy updates.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-06",
+        "authors": [
+          "Seyed Mohammad Hadi Hosseini",
+          "Yasin Abbasi-Yadkori",
+          "Sattar Vakili"
+        ]
+      },
+      {
+        "title": "Reinforcement Learning with Conformal Action Sets: An Application to Sequential Recommendation",
+        "slug": "reinforcement-learning-with-conformal-action-sets-an",
+        "url": "http://arxiv.org/abs/2610.08743v1",
+        "abstract": "Sequential recommenders typically use a fixed slate size even though the number of useful alternatives changes within a session. We propose Reinforcement Learning with Calibrated Pruning (RLCP), which adapts the retained action set using critic scores and an online threshold. The threshold is updated from binary feedback indicating whether the set contains an action in a proxy target. We prove a deterministic bound on the observed proxy miss rate along adaptive trajectories. To quantify the effect of pruning on reward, we derive an exact decomposition of value loss into filtering and selection losses. Under explicit proxy and critic approximation conditions, this decomposition yields a finite session reward bound that also accounts for imperfect selection and set truncation, without requiring the learning parameters to converge. Experiments on KuaiRand-Pure and MovieLens 1M compare two RLCP implementations with four RL baselines. In each of the 19 configurations, at least one RLCP variant achieves the highest catalog diversity, reaching $1.11\\times$ to $5.21\\times$ that of the strongest baseline, with competitive session depth and no larger retained sets.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-06",
+        "authors": [
+          "Wenwen Si",
+          "Honghao Wei"
+        ]
+      },
+      {
+        "title": "On the Computational Tractability of Robust Bandits",
+        "slug": "on-the-computational-tractability-of-robust-bandits",
+        "url": "http://arxiv.org/abs/2610.08740v1",
+        "abstract": "Learning when the environment does not belong to the learner's hypothesis class is typically handled using agnostic learning guarantees. However, for anything beyond supervised learning, agnostic guarantees are difficult to come by. Recently, imprecise bandits (Kosoy, 2025) (later renamed to robust bandits in Appel and Kosoy, 2025) were introduced as another approach to unrealizable learning in the bandits setting and a $Θ(\\sqrt{T})$ regret learner was shown for a large class. However, no computational guarantees were provided. In this paper we identify a special case that admits a polynomial-time learner with $\\tilde{O}(\\sqrt{T})$ regret. We also show that several small generalizations of this special case are NP-hard thus indicating that the special case is at the boundary of what is tractable. It has been recently suggested (Kosoy, 2018) that computationally efficient learners for unrealizable learning problems are crucial for solving the AI alignment problem. This work is a small step in that direction.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-06",
+        "authors": [
+          "Vanessa Kosoy",
+          "Vinayak Pathak"
+        ]
+      }
+    ]
+  }
+}
