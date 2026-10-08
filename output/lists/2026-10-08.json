@@ -1,0 +1,622 @@
+{
+  "date": "2026-10-08",
+  "github": [
+    {
+      "title": "CursorTouch/Windows-MCP",
+      "slug": "cursortouch-windows-mcp",
+      "url": "https://github.com/CursorTouch/Windows-MCP",
+      "abstract": "🪟 Windows-MCP Windows-MCP is a lightweight, open-source project that enables seamless integration between AI agents and the Windows operating system. Acting as an MCP server bridges the gap between LLMs and the Windows operating system, allowing agents to perform tasks such as file navigation, application control, UI interaction, QA testing, and more. mcp-name: io.github.CursorTouch/Windows-MCP Updates Windows-MCP reached 2M+ Users in Claude Desktop Extensiosn . Try out 🪟Windows-Use , an agent built using Windows-MCP. Windows-MCP is now available on PyPI (thus supports uvx windows-mcp ) Windows-MCP is added to MCP Registry Supported Operating Systems Windows 7 Windows 8, 8.1 Windows 10 Windows 11 🎥 Demos windows.mcp.mov windows.mcp.mov ✨ Key Features Seamless Windows Integration Interacts natively with Windows UI elements, opens apps, controls windows, simulates user input, and more. Use Any LLM (Vision Optional) Unlike many automation tools, Windows-MCP doesn't rely on any traditional computer vision techniques or specific fine-tuned models; it works with any LLMs, reducing complexity and setup time. Rich Toolset for UI Automation Includes tools for basic keyboard, mouse operation and capturing window/UI state. Lightweight & Open-Source Minimal dependencies and easy setup with full source code available under MIT license. Customizable & Extendable Easily adapt or extend tools to suit your unique automation or AI integration needs. Real-Time Interaction Typical latency between actions (e.g., from one mouse click to the next) ranges from 0.2 to 0.5 secs , and may slightly vary based on the number of active applications and system load, also the inferencing speed of the llm. DOM Mode for Browser Automation Special use_dom=True mode for State-Tool that focuses exclusively on web page content, filtering out browser UI elements for cleaner, more efficient web automation. Supports Chrome, Edge, and Firefox (Firefox uses an IAccessible2 fallback since it doesn't expose RootWebArea via UIA). 🛠️Installation Note: When you install this MCP server for the first time it may take a minute or two because of installing the dependencies in pyproject.toml . In the first run the server may timeout ignore it and restart it. Prerequisites Python 3.13+ UV (Package Manager) from Astra, install with pip install uv or curl -LsSf https://astral.sh/uv/install.sh | sh English as the default language in Windows preferred else disable the App-Tool in the MCP Server for Windows with other languages. Run at Login Run the server directly when needed: uvx windows-mcp serve\nuvx windows-mcp serve --transport sse --host localhost --port 8000\nuvx windows-mcp serve --transport streamable-http --host localhost --port 8000 Install it as a background task that starts now and at every login: windows-mcp install # Or choose the HTTP transport and bind address explicitly windows-mcp install --transport sse --host 127.0.0.1 --port 8000 This creates a per-user Scheduled Task named windows-mcp-server and a wrapper script at ~/.windows-mcp/start-server.cmd . Use windows-mcp uninstall to remove it. Logs are written\nto ~/.windows-mcp/server.log and ~/.windows-mcp/server.error.log . Install in Claude Desktop Install Claude Desktop . npm install -g @anthropic-ai/mcpb Configure the MCP server. Option A: Install from PyPI (Recommended) Use uvx to run the latest version directly from PyPI. Add this to your claude_desktop_config.json : { \"mcpServers\" : { \"windows-mcp\" : { \"command\" : \" uvx \" , \"args\" : [ \" windows-mcp \" , \" serve \" ]\n    }\n  }\n} Option B: Install from Source Clone the repository: git clone https://github.com/CursorTouch/Windows-MCP.git cd Windows-MCP Add this to your claude_desktop_config.json : { \"mcpServers\" : { \"windows-mcp\" : { \"command\" : \" uv \" , \"args\" : [ \" --directory \" , \" <path to the windows-mcp directory> \" , \" run \" , \" windows-mcp \" , \" serve \" ]\n    }\n  }\n} Fully restart Claude Desktop and verify the server appears in the MCP tools list. Claude Desktop MSIX (Windows Store) The MSIX-packaged Claude Desktop (Microsoft Store version) virtualizes %APPDATA% . This causes two main issues: The config file is located at: %LOCALAPPDATA%\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Roaming\\Claude\\claude_desktop_config.json (not %APPDATA%\\Claude\\ ). Automatic installation from the \"Claude Directory\" will fail because the ${__dirname} variable resolves to the incorrect (non-virtualized) path. To configure Windows-MCP on the Windows Store version of Claude: You must manually edit the configuration file. Note that Electron apps in the MSIX sandbox do not inherit the system PATH , so you must use the full absolute path to uvx.exe (or uv.exe ). Option A: Using pre-installed executable In a terminal, run uv tool install windows-mcp . Use the generated executable in your config: { \"mcpServers\" : { \"windows-mcp\" : { \"command\" : \" C: \\\\ Users \\\\ <user> \\\\ .local \\\\ bin \\\\ windows-mcp.exe \" , \"args\" : [ \" serve \" ]\n    }\n  }\n} Option B: Using uvx { \"mcpServers\" : { \"windows-mcp\" : { \"command\" : \" C: \\\\ Users \\\\ <user> \\\\ .local \\\\ bin \\\\ uvx.exe \" , \"args\" : [ \" windows-mcp \" , \" serve \" ]\n    }\n  }\n} Option C: Install from Source { \"mcpServers\" : { \"windows-mcp\" : { \"command\" : \" C: \\\\ Users \\\\ <user> \\\\ .local \\\\ bin \\\\ uv.exe \" , \"args\" : [ \" --directory \" , \" C: \\\\ path \\\\ to \\\\ Windows-MCP \" , \" run \" , \" windows-mcp \" , \" serve \" ]\n    }\n  }\n} Replace <user> with your Windows username. To find the correct paths, run where uvx , where windows-mcp , or where uv . Fully quit Claude Desktop (Tray → Quit) and reopen after saving the config. For additional Claude Desktop integration troubleshooting, see the MCP documentation . Install in Perplexity Desktop Install Perplexity Desktop . Open Perplexity Desktop and go to Settings -> Connectors -> Add Connector -> Advanced . Enter the name as Windows-MCP , then paste one of the following configs. Option A: Install from PyPI (Recommended) { \"command\" : \" uvx \" , \"args\" : [ \" windows-mcp \" , \" serve \" ]\n} Option B: Install from Source { \"command\" : \" uv \" , \"args\" : [ \" --directory \" , \" <path to the windows-mcp directory> \" , \" run \" , \" windows-mcp \" , \" serve \" ]\n} Click Save , then restart Perplexity Desktop if needed. For additional Claude Desktop integration troubleshooting, see the Perplexity MCP Support . The documentation includes helpful tips for checking logs and resolving common issues. Install in Gemini CLI Install Gemini CLI. npm install -g @google/gemini-cli Open %USERPROFILE%/.gemini/settings.json . Add the windows-mcp config and save it. { \"theme\" : \" Default \" , ... \"mcpServers\" : { \"windows-mcp\" : { \"command\" : \" uvx \" , \"args\" : [ \" windows-mcp \" , \" serve \" ]\n    }\n  }\n} Note: To run from source, replace the command with uv and args with [\"--directory\", \"<path>\", \"run\", \"windows-mcp\", \"serve\"] . Restart Gemini CLI. Install in Qwen Code 1. Install Qwen Code. npm install -g @qwen-code/qwen-code@latest Open %USERPROFILE%/.qwen/settings.json . Add the windows-mcp config and save it. { \"mcpServers\" : { \"windows-mcp\" : { \"command\" : \" uvx \" , \"args\" : [ \" windows-mcp \" , \" serve \" ]\n    }\n  }\n} Note: To run from source, replace the command with uv and args with [\"--directory\", \"<path>\", \"run\", \"windows-mcp\", \"serve\"] . Restart Qwen Code. Install in Codex CLI 1. Install Codex CLI. npm install -g @openai/codex Open %USERPROFILE%/.codex/config.toml . Add the windows-mcp config and save it. [ mcp_servers . windows-mcp ] command = \" uvx \" args =[ \" windows-mcp \" , \" serve \" ] Note: To run from source, replace the command with uv and args with [\"--directory\", \"<path>\", \"run\", \"windows-mcp\", \"serve\"] . Restart Codex CLI. Install in Autohand Code Add the published stdio server from a Windows terminal: autohand mcp add windows-mcp uvx windows-mcp serve Add --scope project after add to keep the server configuration in the current project. See Autohand Code for current installation and CLI details.",
+      "stars_today": 411,
+      "language": "Python"
+    },
+    {
+      "title": "Vincentwei1021/video-shotcraft",
+      "slug": "vincentwei1021-video-shotcraft",
+      "url": "https://github.com/Vincentwei1021/video-shotcraft",
+      "abstract": "video-shotcraft An agent skill for crafting cinematic product videos: 157 shot recipe cards · 214 styles · 214 motion previews · a production-ready template English | 中文 | 日本語 video-shotcraft is an AI agent skill that turns Claude Code or Codex into a\nmotion-design studio: point it at your product and it storyboards, animates, and\nsound-designs a cinematic promo, marketing, launch, or demo video with Remotion — real page captures, 2.5D camera moves,\nbeat-synced cuts, and film-grade SFX included. 🎬 Watch finished films in the Showcase » — see what makers have created with video-shotcraft. 🖼️ Browse all 214 motion previews in the live Gallery » ✨ What's new One-click film themes: switch the template between Ink Press, Modern Light, Midnight, Sage, Coral, Iris, Deep Ocean, Obsidian Violet, and Vintage Kraft in the workbench while keeping your edits. Theme guide . Important 🔥 2026-08 · New in the series: video-talkcraft , for narration videos video-talkcraft is the\nnarration-video installment of this series. Hand it a script plus a finished\nvoiceover and every motion beat locks to the voice: word-level timestamps\naligned locally (median 20–40 ms per character), 78 motion recipe cards , a\n7-layer anti-slideshow shot system (continuous camera curves, parallax planes,\nidle/yield lifecycle, breathing environment), plain-cut subtitles, and\ntriple-gate QA. Same recipe-card + Remotion workflow as here, retuned for\ntalking content. 🎙️ Project page » ·\n🖼️ Browse all 78 narration motion previews » Important 🛠️ 2026-09 · New: the Motion Workbench — keep editing the delivered film in your browser After delivery the skill opens a CapCut-style workbench\n( node workbench/scripts/open.mjs <project> ). The film is decomposed into\nshot / transition / caption / SFX tracks exactly as authored; select any shot\nand edit its copy, font sizes and colours in a schema-driven inspector, move,\ntrim or speed-ramp clips, drag any of the 216 demo motions in from the\nlibrary, then export with Remotion. Preview and render are frame-identical\n(pixel-parity verified). 🧭 Workbench guide — every panel and feature, with screenshots » (Chinese) ·\n🔌 Integration contract » 🌟 2026-08 · 48 new shot recipe cards — the library grows from 104 to 152 cards / 209 previews . Distilled from 209 candidate motions through\neight rounds of frame-by-frame review against reference footage, then folded\ninto the regular Gallery categories with full recipe cards, native Remotion\ncomponents ( demos/<category>/<name>/<Component>.tsx , deterministic and\ndriven by the normalized progress t — see demos/README.md for the wiring\nsnippet), and motion previews. All de-branded: neutral placeholder copy and a\nsingle swappable ACCENT color variable. 🎞️ 2026-08 · JianYing (CapCut CN) project export — after final delivery\nthe film can be exported as an editable JianYing draft: the plate is cut per\nshot (retime/reorder/grade), captions are rebuilt as native text tracks\n(content/size/color editable), SFX/BGM land on separate audio tracks.\nVerified on JianYing Pro 11.2 for macOS; see references/jianying-export.md . 🎬 Showcase The 38-second Gallery intro below was itself produced with this skill —\nstoryboard, shot implementation, and sound design were all done by an agent\nfollowing the toolkit's methodology: skill-demo-upload-v2.mp4 ▶️ Watch in HD on YouTube Watch finished product films made with this skill: Showcase — community submissions sit alongside the project's own demos. Browse every shot card and motion preview online: Gallery — search, filter, switch between variants, and copy selected shot-card names. 🚀 Quick start The most direct way: hand the repo link to your agent. In Claude Code / Codex or a similar agent, just say: Install this skill for me: https://github.com/Vincentwei1021/video-shotcraft The agent will clone the repo and link it into your skills directory. Or install\nwith the skills CLI / manually: npx skills add Vincentwei1021/video-shotcraft git clone https://github.com/Vincentwei1021/video-shotcraft.git cd video-shotcraft\nln -s \" $( pwd ) \" ~ /.claude/skills/video-shotcraft # Claude Code # or ln -s \" $( pwd ) \" ~ /.codex/skills/video-shotcraft # Codex Then make requests like: Use video-shotcraft to create a promo for my desktop product.\nUse the deck-deal-flyin and row-embed shot cards to present this feature.\nDesign a product close-up inspired by spotlight-hero-card. If no shot card is specified, the skill introduces the built-in video template\nfirst and asks whether to use it; you can also pick shots in the Gallery before starting. 📼 Video template: Ink Press The skill ships with Ink Press — a validated, complete promo template:\n36.2 seconds, 1920×1080, 30fps, 10 shots in a paper-ink-amber style, with 2.5D\nreal-page camera moves, title cards, transitions, and a fully pinned cinematic\nSFX pass: template-final-upload.mp4 ▶️ Watch in HD on YouTube To use it, just tell your agent: Use video-shotcraft to make a promo for my product with the Ink Press template. The agent swaps in your product's screenshots, copy, and branding to reproduce\nthe same quality — the fastest, most reliable path to a finished film. More templates are on the way. Headless / CI notes Rendering on a headless Linux box (tested: 2 cores, Node 22) hits three walls\nworth knowing: Concurrency cap — remotion still/render fails with \"Maximum for\n--concurrency is 2\" on low-core machines. Fix: pass --concurrency=1 . Old Headless removal — recent Chrome/Chromium dropped old headless mode;\npointing Remotion at system chromium fails to launch. Fix: use a\nchrome-headless-shell binary instead of full Chrome. Blocked CDN — if remotion.media is unreachable, the automatic\nheadless-shell download is rejected. Fix: --browser-executable=<path-to-local chrome-headless-shell> . With these three flags, frame renders from the bundled template work. 📦 What's included Content Description 157 shot recipe cards Purpose, energy, suggested duration, parameters, implementation notes, and known pitfalls 214 motion previews Covering 214 styles; searchable and filterable in the online Gallery Remotion implementations Tuned TSX demos containing the actual easing and timing parameters for each card Complete video template A validated 36.2-second, 1920×1080, 30fps product promo with 10 shots Components and assets 2.5D page camera, captions, flash cuts, digit rolls, SFX, and capture scripts Production methodology Capture, visual direction, storyboarding, sound design, beat sync, and final QA JianYing project export Load the film into JianYing (CapCut CN) for further editing — per-shot speed, captions, and audio all editable (verified on macOS 11.2) Motion workbench Browser timeline editor opened after delivery: split the film into tracks, edit exposed shot properties, retime, drag in any of the 216 demo motions, export via Remotion The toolkit primarily targets web and desktop product promos, while individual\nshot cards can also be used in feature demos, brand films, launch videos, and\nother motion projects. 🗂 Repository structure video-shotcraft/\n├── SKILL.md                 # Agent entry point and core production rules\n├── references/\n│   ├── pipeline.md          # End-to-end production workflow\n│   ├── shots/               # 157 shot recipe cards in 10 functional categories\n│   ├── sequences/           # Reusable full-video structures and sequence patterns\n│   ├── aesthetic-rules.md   # Visual QA criteria\n│   ├── music-beat-sync.md   # BGM analysis and beat-sync methodology\n│   ├── sound-design.md      # Sound-design guidance and examples\n│   ├── jianying-export.md   # JianYing (CapCut CN) project-export guide\n│   └── workbench.",
+      "stars_today": 264,
+      "language": "TypeScript"
+    },
+    {
+      "title": "akitaonrails/ai-memory",
+      "slug": "akitaonrails-ai-memory",
+      "url": "https://github.com/akitaonrails/ai-memory",
+      "abstract": "Long-term memory for AI coding agents. Quit Claude Code mid-task,\nstart OpenAI Codex in the same directory, continue without\nre-explaining the architecture, the failed approaches, or the open\nquestions. Why ai-memory Your coding agent already has a memory feature. Claude Code takes its own\nnotes, Cursor remembers some things, and every platform is adding more. All\nof them share the same walls: the notes live on one machine, belong to one\nagent, and vanish from view the moment you switch tools — or teammates. ai-memory is what's on the other side of those walls. It follows you across agents. Twenty-plus harnesses — Claude Code,\nCodex, Cursor, Gemini CLI, OpenCode, Grok, Devin, Kimi, Kiro, and more —\nfeed one shared memory. Quit Claude Code mid-task, open Codex in the same\ndirectory, and the next agent picks up a real handoff: where you left\noff, what failed, what's still open. Handoffs are a protocol here, not a\nconvention — typed, owned, claimed exactly once. It follows you across projects. A small profile of how you usually\nwork — your package manager, test layout, architecture habits — reaches\nevery new repository at session start, so you stop re-explaining yourself.\nIt is a default below each repository's rules file, on by default for a\nsingle user and opt-in, private per person, on a shared server.\nSee docs/cross-project-profile.md . It follows you across machines. Memory lives in a server you run —\non the same laptop, a homelab box, or wherever — so the project you left\non the desktop is the project you resume on the laptop. Same knowledge,\nsame open questions. It works for a team. Point everyone at one server and what one\nperson's sessions learn, everyone's agents can retrieve. Knowledge is\nshared per project; personal handoffs stay personal. Multi-user auth,\nper-person attribution, and an audit log are built in — not a paid tier. Your memory is plain markdown. The source of truth is a git-backed\nwiki of ordinary .md files: grep it, open it in Obsidian, edit it by\nhand, rsync it. The database is a derived index that can always be\nrebuilt from the files. No vector store to babysit, nothing held hostage\nin a binary blob. It captures the work itself, silently. Lifecycle hooks record what\nactually happened — prompts, tool calls, session boundaries — sanitized\nat a typed privacy boundary before anything is stored, then consolidated\ninto readable pages. No \"remember this\" ceremony. And the default path\nuses zero LLM calls : capture, search, and handoffs all work with no\nAPI key at all. It ages gracefully, without an LLM. Memory decays on a schedule you\ncan tune per tier, and the memory you actually use decays slower — open a\npage, search it, or reach it through a link and it earns its keep. When\nepisodic notes go cold they can be compacted down to their durable facts\n(file paths, error codes, decisions) instead of dropped, near-duplicates\ncollapse into one, and likely contradictions get flagged — all with zero\nAPI calls . Nothing is hard-deleted: the original stays in git and the\nversion chain ( restore-page brings it back). Access-weighted retention is\nalways on because it can only ever keep memory longer ; the parts that\nrewrite or drop content (compaction, dedup, per-tier curves) stay off by\ndefault until you turn them on. And it can dream, if you let it. Point it at an LLM and an opt-in\nbackground pass will, while you're idle, rewrite whole clusters of cold\nnotes into single coherent pages — cancelling the moment you come back to\nwork. It never deletes a source (the pre-merge versions stay reachable),\nit's off by default, and it's gated on a recall eval before it could ever\nbecome default behavior. The zero-LLM path above is what runs unless you\nask for more. It tells you the truth about itself. One self-contained binary.\nPurge commands that say exactly what \"deleted\" means. A measured write\nceiling (~700/s) instead of a guessed one. An audit log of every\nmutation. Boring, in the way infrastructure should be. How it works capture ──▶ consolidate ──▶ recall ──▶ handoff\n hooks        session-end      search     next agent,\n observe      summaries as     + brief    any harness\n silently     wiki pages       injection Agents emit sanitized observations through lifecycle hooks as you work.\nAt session end, observations become coherent markdown pages in the\nproject's wiki (optionally LLM-written; useful even without). The next\nsession — any agent, any machine — gets a bounded brief and can search\neverything: full-text, entities, links, and (optionally) vectors, fused\ninto one ranking. Cross-agent handoffs carry the baton explicitly. The full design, including the invariants that keep multi-user and\nmulti-session use safe, is in docs/ARCHITECTURE.md . Support matrix Every row below is a first-party integration — MCP registration, lifecycle\nhooks, or both — kept honest by CI. The full matrix with per-agent notes and\ncaveats is in docs/support-matrix.md . Area Status Linux Supported NixOS module Supported macOS Supported Windows via WSL2 Supported Native Windows Experimental Claude Code Supported Codex Supported Command Code Supported Devin CLI Supported OpenCode (V1/V2 auto-detected) Supported OpenCode V2 compatibility aliases ( opencode2 , opencode-v2 , open-code2 ) Supported Cursor Supported Gemini CLI Supported Oh My Pi / OMP Supported Pi Supported Crush Managed-only Managed workstreams Opt-in Claude Desktop MCP-only OpenClaw Supported Antigravity CLI Supported Grok Build CLI Supported Swival CLI MCP-only Zero Supported ZCode Supported Kimi Code Supported Kiro CLI Supported Pool Hooks-only GitHub Copilot CLI Supported VS Code Copilot MCP-only Zed MCP-only Muse Code MCP-only Hermes Agent Supported GrizzyBot Supported LLM/auth providers Supported Embedding providers Supported Coming from another tool? Most agent-memory tools optimize one thing — extracting atomic facts per turn,\na temporal knowledge graph, an agent-editable memory OS, or a hosted context\nAPI. ai-memory optimizes something different: a git-backed markdown wiki as\nthe source of truth , with a derived index for retrieval, captured\nautomatically from lifecycle hooks, shared across agents, machines, and people,\nand working with zero LLM calls by default . Here's what carries over from\neach, and what you gain: Coming from… What's similar What you gain Mem0 / fact extractors (LangMem) Automatic per-turn capture Memory compiles into readable pages you own and edit, not opaque fact rows; retrieval fuses FTS + entity + graph (+ optional vectors), not vector-only Zep / Graphiti (temporal KG) Temporal reasoning, typed relations Bi-temporal-lite ( as_of , version-filtered search) and typed edges without standing up a graph database — on one binary mcp-memory-service (closest sibling) SQLite + local embeddings, hook capture, typed edges, honest numbers — and, on 2.4, per-tier decay curves, extractive compression, DBSCAN cold-cluster dedup, access reinforcement, and contradiction flagging Human-editable markdown pages instead of fact-rows, cross-agent claim-once handoffs, and the same aging machinery done zero-LLM by default, reversibly (supersede-not-delete + restore-page ), and off by default basic-memory (file-first sibling) Markdown-on-disk as the source of truth Automatic lifecycle capture and a derived FTS/entity/graph index on top, cross-agent handoffs, and multi-user sharing built in Claude Code built-in memory \"Remember my project\" convenience, zero setup Synced across machines and agents, searchable, team-capable, and captures tool lifecycle — not a per-laptop MEMORY.md Hindsight / OpenViking (hosted, LLM-required) Living pages / document memory with a background consolidation loop — and, on 2.",
+      "stars_today": 120,
+      "language": "Rust"
+    },
+    {
+      "title": "microsoft/mxc",
+      "slug": "microsoft-mxc",
+      "url": "https://github.com/microsoft/mxc",
+      "abstract": "Microsoft eXecution Container (MXC) MXC is a sandboxed code execution system for running untrusted code\n(model output, plugins, and tools) on Windows, Linux, and macOS. It provides\nmultiple containment backends, from OS-native process sandboxes to full VMs,\nbehind a unified containment model and typed SDKs. Features Cross-platform : Windows, Linux, and macOS support with\nplatform-appropriate containment backends JSON-based configuration : Versioned container-creation requests and\nsecurity policies Multiple containment backends : ProcessContainer, Windows Sandbox, LXC,\nBubblewrap, Seatbelt, MicroVM (Nanvix), Hyperlight, IsolationSession, and WSLC Policy-driven sandboxing : Filesystem policy : Read-only, read-write, and denied path lists Network policy : Proxy support, outbound controls, and backend-dependent\nhost filtering UI policy : Clipboard, display, and GUI access controls State-aware lifecycle : Provision, start, execute, stop, and deprovision\npersistent containers Rust, .NET, and Node SDKs : Versioned APIs for one-shot and state-aware\nexecution Diagnostics : Tools to understand access-denied failures in a container What is MXC? MXC is an SDK dependency that builds into your app. flowchart LR\n    App[\"Your application<br/>Launch API\"] --> SDK[\"MXC SDK<br/>Rust / .NET / Node<br/>(in process)\"]\n    SDK --> Backend[\"Selected backend<br/>(in process)\"]\n    Backend --> Container[\"Isolated workload<br/>ProcessContainer / WSLC / Bubblewrap / ...\"] Loading Your application specifies: The container type The containment rules The workload command MXC validates the request, selects the backend, and launches the workload in\nthe resulting container. What container types are supported? MXC runs workloads through platform-appropriate container backends on Windows,\nLinux, and macOS. Runtime platform Default backend Other backends Minimum host OS Windows 11 x64 / ARM64 processcontainer windows_sandbox *, wslc , microvm *, hyperlight *, isolation_session Windows OS-version support Linux x64 / ARM64 bubblewrap lxc , microvm , hyperlight - macOS ARM64 / x64 seatbelt - - * These backends are experimental . How do I use MXC? Install an SDK through your package manager. You do not need to clone this\nrepository. SDK Package Rust https://crates.io/crates/mxc-sdk .NET https://www.nuget.org/packages/Microsoft.Mxc.Sdk Node https://www.npmjs.com/package/@microsoft/mxc-sdk The Node and .NET packages include the native runtime assets. The Rust crate\nbuilds the MXC SDK, engine, and selected backends into the consuming\napplication. Non-SDK consumption: Platform-specific executor binaries, such as wxc-exec.exe , accept JSON container-creation requests defined by the stable schema . Use for testing or when the\nSDK cannot be embedded in your app. Running a contained workload For complete SDK samples, see the Rust, .NET, and Node samples . Sample Node snippet import { spawn , type ContainerRequest } from '@microsoft/mxc-sdk/v1' ; const request : ContainerRequest = { command : 'node -e \"console.log(\\'hello from container\\')\"' , network : { egress : { default : 'deny' } } , timeoutMs : 30_000 , } ; const child = await spawn ( request ) ; See the runnable streaming standard-I/O sample and the SDK API reference . My application won't run in the sandbox! Your application will hit access issues when running in a sandbox, until you've\nhad time to tune your containment rules. We're here to help. Debug console mode Native executors normally reserve standard input, output, and error for the\nworkload. Use --debug for MXC diagnostic output: wxc-exec.exe --debug config.json See MXC diagnostics for the complete\ndeveloper reference. Audit mode Warning: --audit turns off all sandbox security for the workload being\nanalyzed. Never use it to run untrusted code. Audit mode helps a policy author find access-denied failures and reconstruct a\nProcessContainer policy that grants the files and capabilities a trusted tool\nactually needs. On supported Windows releases, run: wxc-exec.exe --audit policy.json MXC records the observed accesses and produces policy-authoring artifacts. See logging access denied for safe\ndeny-and-record diagnostics, audit outputs, and supported workflows. Telemetry Official Microsoft builds can send optional diagnostic telemetry to Microsoft.\nTelemetry is off unless the individual run opts in, the Windows user has\nexplicitly consented, administrative policy permits collection, and your\napplication enables the telemetry option in a contained workload request. An\nadministrator can block telemetry but cannot grant consent for the user. Local open-source builds are not configured to route telemetry to Microsoft,\nand telemetry is a no-op on non-Windows platforms. See telemetry policy and consent for controls and privacy\ndetails. Building from source Build from source when developing MXC, changing the native runtime, or using\nthe standalone executor binaries instead of a packaged SDK. Repository builds\nproduce the platform-native runtime and executors and stage the native assets\nused by the Node SDK. Build prerequisites are: Rust , pinned to version 1.93 by src/rust-toolchain.toml Node.js 24 or later and npm The platform toolchain and prerequisites described by the selected backend Build Windows build.bat --all # Release build for current architecture Linux ./build.sh --all # Release build macOS ./build-mac.sh --all # Release build for native architecture Documentation Consumer documentation Document Repository location Purpose SDK samples samples/ Runnable Rust, .NET, and Node scenarios SDK API reference docs/api-reference/ Supported V1 operations and types Container lifecycle docs/container-lifecycle.md Persistent container lifecycle overview Logging access denied docs/logging-access-denied.md Diagnose blocked accesses and author policy Telemetry docs/telemetry.md Consent and administrative controls Backend guides docs/backends/ Platform and backend prerequisites and behavior Repository contributors should start with the MXC development documentation . Contributing See CONTRIBUTING.md for contribution guidelines. License See LICENSE.md for details.",
+      "stars_today": 106,
+      "language": "Rust"
+    },
+    {
+      "title": "koala73/worldmonitor",
+      "slug": "koala73-worldmonitor",
+      "url": "https://github.com/koala73/worldmonitor",
+      "abstract": "World Monitor 簡體中文 | 日本語 | Русский Real-time global intelligence dashboard — AI-powered news aggregation, geopolitical monitoring, and infrastructure tracking in a unified situational awareness interface. Documentation · Releases · Contributing What It Does Curated news feeds across global and regional categories, AI-synthesized into briefs Dual map engine — 3D globe (globe.gl) and WebGL flat map (deck.gl) with a shared map-layer catalog Panel inventory — concrete panel implementations across specialized variants Cross-stream correlation — military, economic, disaster, and escalation signal convergence Country Instability Index (CII) — live CII v8 scores, bands, and approximate 24-hour movement for 31 Tier-1 countries Finance radar — stock exchanges, commodities, crypto, and a market composite Local AI — run everything with Ollama, no API keys required Site variants from a single codebase (world, tech, finance, commodity, happy, energy) Native desktop app (Tauri 2) for macOS, Windows, and Linux Multilingual UI with native-language feeds and RTL support For the full feature list, architecture, data sources, and algorithms, see the documentation . Support Status All site variants and desktop binaries are built from a single codebase and ship from the same release process. The table below clarifies maintenance status so you know which surfaces are safe to depend on. Surface Status Notes worldmonitor.app , tech. , finance. , commodity. , happy. , energy. Stable Public deployments built from this repo, actively maintained Desktop binaries (Windows / macOS Apple Silicon / macOS Intel / Linux AppImage) Stable One Tauri binary for every variant — install World Monitor and switch to tech, finance, commodity, energy, or happy in-app. There is deliberately no per-variant download Issues filed against any of the above are triaged from the same backlog — see the issues board for currently-open work. Quick Start git clone https://github.com/koala73/worldmonitor.git cd worldmonitor\nnpm install\nnpm run dev Open localhost:3000 (override the port with DEV_PORT in .env.local ). The app runs with no environment variables. Feature-specific data sources may require credentials. See .env.example for the full list. For variant-specific development: npm run dev:tech # tech.worldmonitor.app npm run dev:finance # finance.worldmonitor.app npm run dev:commodity # commodity.worldmonitor.app npm run dev:happy # happy.worldmonitor.app npm run dev:energy # energy.worldmonitor.app See the self-hosting guide for deployment options (Vercel, Docker, static). Tech Stack Category Technologies Frontend Vanilla TypeScript, Vite, globe.gl + Three.js, deck.gl + MapLibre GL Desktop Tauri 2 (Rust) with Node.js sidecar AI/ML Ollama / OpenRouter, Transformers.js (browser-side) API Contracts Protocol Buffers and sebuf HTTP annotations Deployment Vercel Edge Functions, Railway relay, Tauri, PWA Caching Redis (Upstash), 3-tier cache, CDN, service worker Full stack details in the architecture docs . Programmatic Access World Monitor is built for agents and scripts as well as browsers: MCP server — https://worldmonitor.app/mcp (Streamable HTTP). Public tools/list ; tools/call authenticates with a X-WorldMonitor-Key header or OAuth.\nThe server also publishes its Agent Skills through the draft io.modelcontextprotocol/skills extension ( skills/list , skills/get , and skill://… resource reads). REST API — base https://api.worldmonitor.app , described by the OpenAPI spec . CLI — the official worldmonitor npm package (source in cli/ ): npx worldmonitor tools # run ad-hoc — list every MCP tool (no key needed) npm install -g worldmonitor # or install the `worldmonitor` (alias `wm`) command worldmonitor risk IR --api-key wm_xxx SDKs — official zero-dependency client libraries mirroring the CLI: Python worldmonitor-sdk (source in sdk/python/ ), Ruby worldmonitor ( sdk/ruby/ ), Go github.com/koala73/worldmonitor/sdk/go ( sdk/go/ ). Guide: worldmonitor.app/docs/sdks . Agent discovery files: llms.txt · agent-skills manifest · api-catalog . Get an API key at worldmonitor.app/pro . Flight Data Flight data provided graciously by Wingbits , the most advanced ADS-B flight data solution. Data Sources WorldMonitor aggregates attributed upstream sources across geopolitics, finance, energy, climate, aviation, cyber, military, infrastructure, and news intelligence. Curated feeds and freshness-tracked source groups are published in the full data sources catalog , with provider, feed-tier, license-posture, and collection-method details. Contributing Contributions welcome! See CONTRIBUTING.md for guidelines. npm run typecheck # Type checking npm run build:full # Production build License AGPL-3.0-only for the source code. Commercial use is permitted under the AGPL when you comply with its copyleft and source-availability terms. Use Case Allowed? Personal / research / educational Yes, under AGPL-3.0-only Self-hosted instance Yes, under AGPL-3.0-only Fork and modify Yes, share source under AGPL-3.0-only when required Commercial use / SaaS Yes, under AGPL-3.0-only when you comply with AGPL obligations Private-source proprietary use or official branding rights Separate commercial or trademark permission needed See LICENSE for the full code license and docs/license.mdx for a plain-language summary. Commercial licensing is available as an alternative option for teams that need non-AGPL terms. Copyright (C) 2024-2026 Elie Habib. All rights reserved. Author Elie Habib — GitHub Contributors Security Acknowledgments We thank the following researchers for responsibly disclosing security issues: Cody Richard — Disclosed three security findings covering IPC command exposure, renderer-to-sidecar trust boundary analysis, and fetch patch credential injection architecture (2026) See our Security Policy for responsible disclosure guidelines. worldmonitor.app · docs.worldmonitor.app · finance.worldmonitor.app · commodity.worldmonitor.app Star History",
+      "stars_today": 94,
+      "language": "TypeScript"
+    },
+    {
+      "title": "vercel-labs/agent-browser",
+      "slug": "vercel-labs-agent-browser",
+      "url": "https://github.com/vercel-labs/agent-browser",
+      "abstract": "agent-browser Browser automation CLI for AI agents. Fast native Rust CLI. Installation Global Installation (recommended) Installs the native Rust binary: npm install -g agent-browser\nagent-browser install # Download Chrome from Chrome for Testing (first time only) Project Installation (local dependency) For projects that want to pin the version in package.json : npm install agent-browser\nagent-browser install Then use via package.json scripts or by invoking agent-browser directly. Homebrew (macOS) brew install agent-browser\nagent-browser install # Download Chrome from Chrome for Testing (first time only) Cargo (Rust) cargo install agent-browser\nagent-browser install # Download Chrome from Chrome for Testing (first time only) From Source Requires Node.js 24+, pnpm 11+, and Rust. git clone https://github.com/vercel-labs/agent-browser cd agent-browser\npnpm install\npnpm build\npnpm build:native # Requires Rust (https://rustup.rs) pnpm link --global # Makes agent-browser available globally agent-browser install Linux Dependencies On Linux, install system dependencies: agent-browser install --with-deps This exits nonzero if the package manager cannot install every required browser library. Updating Upgrade to the latest version: agent-browser upgrade Detects your installation method (npm, Homebrew, or Cargo) and runs the appropriate update command automatically. Requirements Chrome - Run agent-browser install to download Chrome from Chrome for Testing (Google's official automation channel). Existing Chrome, Brave, Playwright, and Puppeteer installations are detected automatically. No Playwright or Node.js required for the daemon. Node.js 24+ and pnpm 11+ - Only needed when building from source. Rust - Only needed when building from source (see From Source above). Quick Start agent-browser open example.com\nagent-browser snapshot # Get accessibility tree with refs agent-browser click @e2 # Click by ref from snapshot agent-browser fill @e3 \" test@example.com \" # Fill by ref agent-browser get text @e1 # Get text by ref agent-browser screenshot page.png\nagent-browser close Clicks fail early when another element covers the target's click point, for example a consent banner or modal. Dismiss or interact with the reported covering element, then take a fresh snapshot before retrying the original ref. Headless Chromium screenshots hide native scrollbars for consistent image output. Pass --hide-scrollbars false when launching to keep native scrollbars visible. Traditional Selectors (also supported) agent-browser click \" #submit \" agent-browser fill \" #email \" \" test@example.com \" agent-browser find role button click --name \" Submit \" Commands Core Commands agent-browser open # Launch browser (no navigation); stays on about:blank agent-browser open < url > # Launch + navigate to URL (aliases: goto, navigate) agent-browser read [url] # Fetch agent-readable text, or read rendered active-tab DOM agent-browser click < sel > # Click element (--new-tab to open in new tab) agent-browser dblclick < sel > # Double-click element agent-browser focus < sel > # Focus element agent-browser type < sel > < text > # Type into element agent-browser fill < sel > < text > # Clear and fill agent-browser press < key > # Press key (Enter, Tab, Control+a) (alias: key) agent-browser keyboard type < text > # Type with real keystrokes (no selector, current focus) agent-browser keyboard inserttext < text > # Insert text without key events (no selector) agent-browser keydown < key > # Hold key down agent-browser keyup < key > # Release key agent-browser hover < sel > # Hover element agent-browser select <sel> < val > # Select dropdown by value or visible label agent-browser check < sel > # Check checkbox agent-browser uncheck < sel > # Uncheck checkbox agent-browser scroll < dir > [px] # Scroll (up/down/left/right, --selector <sel>) agent-browser scrollintoview < sel > # Scroll element into view (alias: scrollinto) agent-browser drag < src > < tgt > # Drag and drop agent-browser upload < sel > < files > # Upload files agent-browser screenshot [path] # Take screenshot (--full for full page, saves to a temporary directory if no path) agent-browser screenshot --annotate # Annotated screenshot with numbered element labels agent-browser screenshot --if-changed # Recommended: skip unchanged images to save tokens agent-browser screenshot --threshold 0.01 # Ignore changes affecting at most 1% of pixels agent-browser screenshot --screenshot-dir ./shots # Save to custom directory agent-browser screenshot --screenshot-format jpeg --screenshot-quality 80\nagent-browser pdf < path > # Save as PDF agent-browser snapshot # Accessibility tree with refs (best for AI) agent-browser eval < js > # Run JavaScript (-b for base64, --stdin for piped input) agent-browser connect < port > # Connect to browser via CDP agent-browser stream enable [--port < port > ] # Start runtime WebSocket streaming agent-browser webmcp list # List experimental page tools agent-browser webmcp invoke < tool > --params @input.json\nagent-browser stream status # Show runtime streaming state and bound port agent-browser stream disable # Stop runtime WebSocket streaming agent-browser close # Close browser (aliases: quit, exit) agent-browser close --all # Close all active sessions agent-browser chat \" <instruction> \" # AI chat: natural language browser control (single-shot) agent-browser chat # AI chat: interactive REPL mode WebMCP (experimental) WebMCP is enabled by default in agent-browser-managed Chrome. Use --no-webmcp to disable the launch features and proactive context. Browser responses automatically announce WebMCP tools on first discovery and when the catalog changes. Summaries contain only names, brief descriptions, origins, and frame IDs. Choose a relevant tool, then fetch its full schema with agent-browser webmcp list <tool> --frame <frame-id> --json before invoking it. Schemas and annotations are never included proactively. Unchanged catalogs and pages without tools add no context. JSON exposes updates as data.webmcp ; CLI and MCP text use the same summaries. An omitted field means no update. A one-time status: \"ready\" update with tools: [] clears previously advertised tools; status: \"unavailable\" invalidates them when observation fails. Every emitted summary replaces earlier availability, including schema-only changes. After conversation compaction or joining an existing browser session, use webmcp list to recover context. Administrative commands and explicit metadata requests do not append duplicate summaries. Automatic summaries are limited to 16 tools and 4 KiB of JSON, with descriptions shortened to 160 bytes plus a truncation marker. Names and frame identities are never cut into unusable identifiers; oversized records are omitted. truncated: true indicates shortened descriptions or omitted tools. webmcp list --json retrieves the full catalog; webmcp list <tool> --frame <frame-id> --json retrieves only the selected tool. Full-record changes trigger an update even when the brief description stays the same, so refresh previously fetched schemas after a catalog update. The daemon subscribes to CDP WebMCP events once per page session and reads its event cache after browser actions. There is no per-action discovery polling or registration grace period. Initial subscription is bounded to one second; unsupported sessions are not repeatedly probed. Explicit webmcp list can retry discovery. Asynchronous registrations appear on the next normal browser response after the event arrives. This describes agent-browser's active tab and frames, not a separately opened preview iframe. agent-browser open https://example.com # Brief tool summary, if available agent-browser webmcp list search --json # Fetch only the selected tool schema agent-browser webmcp invoke search --params ' {\"query\":\"browser agents\"} ' agent-browser webmcp invoke slow_tool --params @input.",
+      "stars_today": 69,
+      "language": "Rust"
+    },
+    {
+      "title": "ItzCrazyKns/Vane",
+      "slug": "itzcrazykns-vane",
+      "url": "https://github.com/ItzCrazyKns/Vane",
+      "abstract": "Vane 🔍 Vane is a privacy-focused AI answering engine that runs entirely on your own hardware. It combines knowledge from the vast internet with support for local LLMs (Ollama) and cloud providers (OpenAI, Claude, Groq), delivering accurate answers with cited sources while keeping your searches completely private. Want to know more about its architecture and how it works? You can read it here . ✨ Features 🤖 Support for all major AI providers - Use local LLMs through Ollama or connect to OpenAI, Anthropic Claude, Google Gemini, Groq, and more. Mix and match models based on your needs. ⚡ Smart search modes - Choose Speed Mode when you need quick answers, Balanced Mode for everyday searches, or Quality Mode for deep research. 🧭 Pick your sources - Search the web, discussions, or academic papers. More sources and integrations are in progress. 🧩 Widgets - Helpful UI cards that show up when relevant, like weather, calculations, stock prices, and other quick lookups. 🔍 Web search powered by SearxNG - Access multiple search engines while keeping your identity private. Support for Tavily and Exa coming soon for even better results. 📷 Image and video search - Find visual content alongside text results. Search isn't limited to just articles anymore. 📄 File uploads - Upload documents and ask questions about them. PDFs, text files, images - Vane understands them all. 🌐 Search specific domains - Limit your search to specific websites when you know where to look. Perfect for technical documentation or research papers. 💡 Smart suggestions - Get intelligent search suggestions as you type, helping you formulate better queries. 📚 Discover - Browse interesting articles and trending content throughout the day. Stay informed without even searching. 🕒 Search history - Every search is saved locally so you can revisit your discoveries anytime. Your research is never lost. ✨ More coming soon - We're actively developing new features based on community feedback. Join our Discord to help shape Vane's future! Sponsors Vane's development is powered by the generous support of our sponsors. Their contributions help keep this project free, open-source, and accessible to everyone. We'd like to thank the following partners for their generous support: Exa • The Perfect Web Search API for LLMs - web search, crawling, deep research, and answer APIs Installation There are mainly 2 ways of installing Vane - With Docker, Without Docker. Using Docker is highly recommended. Getting Started with Docker (Recommended) Vane can be easily run using Docker. Simply run the following command: docker run -d -p 3000:3000 -v vane-data:/home/vane/data --name vane itzcrazykns1337/vane:latest This will pull and start the Vane container with the bundled SearxNG search engine. Once running, open your browser and navigate to http://localhost:3000 . You can then configure your settings (API keys, models, etc.) directly in the setup screen. Note : The image includes both Vane and SearxNG, so no additional setup is required. The -v flags create persistent volumes for your data and uploaded files. Using Vane with Your Own SearxNG Instance If you already have SearxNG running, you can use the slim version of Vane: docker run -d -p 3000:3000 -e SEARXNG_API_URL=http://your-searxng-url:8080 -v vane-data:/home/vane/data --name vane itzcrazykns1337/vane:slim-latest Important : Make sure your SearxNG instance has: JSON format enabled in the settings Wolfram Alpha search engine enabled Replace http://your-searxng-url:8080 with your actual SearxNG URL. Then configure your AI provider settings in the setup screen at http://localhost:3000 . Advanced Setup (Building from Source) If you prefer to build from source or need more control: Ensure Docker is installed and running on your system. Clone the Vane repository: git clone https://github.com/ItzCrazyKns/Vane.git After cloning, navigate to the directory containing the project files. Build and run using Docker: docker build -t vane . docker run -d -p 3000:3000 -v vane-data:/home/vane/data --name vane vane Access Vane at http://localhost:3000 and configure your settings in the setup screen. Note : After the containers are built, you can start Vane directly from Docker without having to open a terminal. Non-Docker Installation Install SearXNG and allow JSON format in the SearXNG settings. Make sure Wolfram Alpha search engine is also enabled. Clone the repository: git clone https://github.com/ItzCrazyKns/Vane.git cd Vane Install dependencies: npm i Build the application: npm run build Start the application: npm run start Open your browser and navigate to http://localhost:3000 to complete the setup and configure your settings (API keys, models, SearxNG URL, etc.) in the setup screen. Note : Using Docker is recommended as it simplifies the setup process, especially for managing environment variables and dependencies. See the installation documentation for more information like updating, etc. Troubleshooting Local OpenAI-API-Compliant Servers If Vane tells you that you haven't configured any chat model providers, ensure that: Your server is running on 0.0.0.0 (not 127.0.0.1 ) and on the same port you put in the API URL. You have specified the correct model name loaded by your local LLM server. You have specified the correct API key, or if one is not defined, you have put something in the API key field and not left it empty. Ollama Connection Errors If you're encountering an Ollama connection error, it is likely due to the backend being unable to connect to Ollama's API. To fix this issue you can: Check your Ollama API URL: Ensure that the API URL is correctly set in the settings menu. Update API URL Based on OS: Windows: Use http://host.docker.internal:11434 Mac: Use http://host.docker.internal:11434 Linux: Use http://<private_ip_of_host>:11434 Adjust the port number if you're using a different one. Linux Users - Expose Ollama to Network: Inside /etc/systemd/system/ollama.service , you need to add Environment=\"OLLAMA_HOST=0.0.0.0:11434\" . (Change the port number if you are using a different one.) Then reload the systemd manager configuration with systemctl daemon-reload , and restart Ollama by systemctl restart ollama . For more information see Ollama docs Ensure that the port (default is 11434) is not blocked by your firewall. Lemonade Connection Errors If you're encountering a Lemonade connection error, it is likely due to the backend being unable to connect to Lemonade's API. To fix this issue you can: Check your Lemonade API URL: Ensure that the API URL is correctly set in the settings menu. Update API URL Based on OS: Windows: Use http://host.docker.internal:8000 Mac: Use http://host.docker.internal:8000 Linux: Use http://<private_ip_of_host>:8000 Adjust the port number if you're using a different one. Ensure Lemonade Server is Running: Make sure your Lemonade server is running and accessible on the configured port (default is 8000). Verify that Lemonade is configured to accept connections from all interfaces ( 0.0.0.0 ), not just localhost ( 127.0.0.1 ). Ensure that the port (default is 8000) is not blocked by your firewall. Using as a Search Engine If you wish to use Vane as an alternative to traditional search engines like Google or Bing, or if you want to add a shortcut for quick access from your browser's search bar, follow these steps: Open your browser's settings. Navigate to the 'Search Engines' section. Add a new site search with the following URL: http://localhost:3000/?q=%s . Replace localhost with your IP address or domain name, and 3000 with the port number if Vane is not hosted locally. Click the add button. Now, you can use Vane directly from your browser's search bar. Using Vane's API Vane also provides an API for developers looking to integrate its powerful search engine into their own applications. You can run searches, use multiple models and get answers to your queries. For more details, check out the full documentation here .",
+      "stars_today": 51,
+      "language": "TypeScript"
+    },
+    {
+      "title": "bmad-code-org/BMAD-METHOD",
+      "slug": "bmad-code-org-bmad-method",
+      "url": "https://github.com/bmad-code-org/BMAD-METHOD",
+      "abstract": "Agile Ai Driven Development — turn an idea or change request into working software without giving up the thinking. Ai Driven Development (AiDD) covers the whole effort, not only the code: what to build, how it holds together, and how it changes as you learn. BMad Method is the agile way to do it — decisions stay explicit, context carries forward, and the process sizes itself to the work. Small changes go straight to build. Complex work gets the depth it needs. The same method covers a weekend prototype and a system with years of history behind it. Start anywhere. Use BMad end to end, or carry its briefs, specifications, and architecture into your existing delivery workflow. Start Building Choose one install route. You need an AI coding tool that supports skills and uv for BMad setup and Python scripts. Skills CLI — with Node.js and npm and Git, run in your project: npx skills add bmad-code-org/BMAD-METHOD Select the skills and coding tool you want. Include bmad for setup and help, and the module record for each module you pick skills from: bmod-method and bmod-core-tools . To install by name instead, list them together: npx skills add bmad-code-org/BMAD-METHOD --skill bmad --skill bmod-core-tools --skill bmod-method --skill bmad-build . Claude Code plugin — add the marketplace inside Claude Code: /plugin marketplace add bmad-code-org/bmad-plugins Codex plugin — add the marketplace from your terminal: codex plugin marketplace add bmad-code-org/bmad-plugins For either marketplace, install bmad-method for the delivery workflows and bmad-core-tools for standalone skills, including the bmad hub. Open your coding tool in the project and ask the bmad skill to run bmad setup . Then invoke bmad-build with what you want to change. Ask bmad whenever you want guidance on what comes next or what is optional. Build your first project with BMad → Add BMad to an existing codebase → BMad is free and open source, with no paywalled workflows or gated community.\nAsk for bmad status to check versions and see what to run next. Ask for bmad setup to install updates: it runs npx skills update , then refreshes the project and cleans up renamed and removed skills. With a plugin marketplace, update there, then ask for bmad setup . Why BMad? Coding assistants are effective at implementation, but they often turn unstated assumptions into code. BMad keeps you in control while its agents and workflows make the important decisions explicit and preserve them as context for the work that follows. Right-sized process — Go directly to implementation for clear changes or add deeper planning for larger initiatives. New or existing code — Start from nothing, or establish verified context on a codebase you inherited and work from what is actually there. Durable context — Carry product and technical decisions forward instead of re-explaining them in every chat. Specialized perspectives — Bring in product, architecture, UX, development, and testing expertise when it helps. Guided collaboration — Use structured workflows and multiple-agent discussions without handing over judgment. One delivery path — Move from early thinking through reviewed implementation, correction, and learning. See how much planning a change needs → BMad Ecosystem Install the core method or add official modules for specialized work. Module Purpose BMad Method Plan and deliver software, from new prototypes to established codebases BMad Builder Skill, workflow, and agent builder BMad Creative Intelligence Suite Creative thinking partners for innovation, design thinking, and storytelling BMad Test Architect Enterprise testing add-on for BMad Method BMad Loop Builds, verifies, and retros a whole epic unattended BMad Game Dev Studio Ideate, design, and build games in any framework, including Unity, Unreal, Godot, and Phaser Documentation Build Your First Change — Install BMad and build a small project. Choose a Planning Path — Pick how much planning a change needs and see what each planning skill produces. Start in an Existing Codebase — Add BMad to an existing codebase. Community Discord — Get help, share ideas, and collaborate. YouTube — Watch tutorials and master classes. GitHub Issues — Report bugs and request features. GitHub Discussions — Join longer community conversations. BMad Code — Explore the wider ecosystem. Support and Contributing BMad is free for everyone and always will be. Star the repository, buy me a coffee , or email contact@bmadcode.com for corporate sponsorship. Contributions are welcome. Read CONTRIBUTING.md before opening a pull request. License MIT License — see LICENSE for details. BMad and BMAD-METHOD are trademarks of BMad Code, LLC. See TRADEMARK.md for details. If you would like to contribute, join us in the discord and read CONTRIBUTORS.md first.",
+      "stars_today": 50,
+      "language": "Python"
+    },
+    {
+      "title": "invoke-ai/InvokeAI",
+      "slug": "invoke-ai-invokeai",
+      "url": "https://github.com/invoke-ai/InvokeAI",
+      "abstract": "Invoke - Professional Creative AI Tools for Visual Media Invoke is a leading creative engine built to empower professionals and enthusiasts alike. Generate and create stunning visual media using the latest AI-driven technologies. Invoke offers an industry leading web-based UI, and serves as the foundation for multiple commercial products. Free to use under a commercially-friendly license Download and install on compatible hardware Generate, refine, iterate on images, and build workflows Documentation Quick Links Installation and Updates - Documentation and Tutorials - Bug Reports - Contributing Installation To get started with Invoke, Download the Launcher . Troubleshooting, FAQ and Support Please review our FAQ for solutions to common installation problems and other issues. For more help, please join our Discord . Features Full details on features can be found in our documentation . Web Server & UI Invoke runs a locally hosted web server & React UI with an industry-leading user experience. Unified Canvas The Unified Canvas is a fully integrated canvas implementation with support for all core generation capabilities, in/out-painting, brush tools, and more. This creative tool unlocks the capability for artists to create with AI as a creative collaborator, and can be used to augment AI-generated imagery, sketches, photography, renders, and more. Workflows & Nodes Invoke offers a fully featured workflow management solution, enabling users to combine the power of node-based workflows with the ease of a UI. This allows for customizable generation pipelines to be developed and shared by users looking to create specific workflows to support their production use-cases. Board & Gallery Management Invoke features an organized gallery system for easily storing, accessing, and remixing your content in the Invoke workspace. Images can be dragged/dropped onto any Image-base UI element in the application, and rich metadata within the Image allows for easy recall of key prompts or settings used in your workflow. Model Support SD 1.5 SD 2.0 SDXL SD 3.5 Medium SD 3.5 Large CogView 4 Flux.1 Dev Flux.1 Schnell Flux.1 Kontext Flux.1 Krea Flux Redux Flux Fill Flux.2 Dev Flux.2 Klein 4B Flux.2 Klein 9B Z-Image Turbo Z-Image Base Krea 2 Turbo Krea 2 Raw Anima Qwen Image Qwen Image Edit Ideogram 4 ERNIE-Image ERNIE-Image-Turbo Nano Banana (API Only) GPT Image (API Only) Wan (API Only) Other features Support for ckpt, diffusers, and some gguf models Upscaling Tools Embedding Manager & Support Model Manager & Support Workflow creation & management Node-Based Architecture Object Segmentation & Selection Models (SAM / SAM2) Contributing Anyone who wishes to contribute to this project - whether documentation, features, bug fixes, code cleanup, testing, or code reviews - is very much encouraged to do so. Get started with contributing by reading our contribution documentation , joining the #dev-chat or the GitHub discussion board. We hope you enjoy using Invoke as much as we enjoy creating it, and we hope you will elect to become part of our community. Sponsors Invoke's open-source development is powered by our sponsors. If Invoke is valuable to you or your business, please consider sponsoring us — it directly funds maintenance, new features, and community support. We very much thank the following sponsors: Backers ($15/mo) apokolypsse Romeotechguy Pynshe9 CarstenD74 zamjoor FusionBreak and 2 anonymous donors Power Users ($50/mo) mickr777 Astroburner and 2 anonymous donors Thanks Invoke is a combined effort of passionate and talented people from across the world . We thank them for their time, hard work and effort. Copyright 2022-2026 InvokeAI Contributors. See NOTICE .",
+      "stars_today": 49,
+      "language": "TypeScript"
+    },
+    {
+      "title": "dyad-sh/dyad",
+      "slug": "dyad-sh-dyad",
+      "url": "https://github.com/dyad-sh/dyad",
+      "abstract": "Dyad Dyad is a local, open-source AI app builder. It's fast, private, and fully under your control — like Lovable, v0, or Bolt, but running right on your machine. More info at: https://dyad.sh/ 🚀 Features ⚡️ Local : Fast, private and no lock-in. 🛠 Bring your own keys : Use your own AI API keys — no vendor lock-in. 🖥️ Cross-platform : Easy to run on Mac or Windows. 📦 Download No sign-up required. Just download and go. 👉 Download for your platform 🤝 Community Join our growing community of AI app builders on Reddit : r/dyadbuilders - share your projects and get help from the community! 🛠️ Contributing Dyad is open-source (see License info below). If you're interested in contributing to dyad, please read our contributing doc. License All the code in this repo outside of src/pro is open-source and licensed under Apache 2.0 - see LICENSE . All the code in this repo within src/pro is fair-source and licensed under Functional Source License 1.1 Apache 2.0 - see LICENSE .",
+      "stars_today": 46,
+      "language": "TypeScript"
+    }
+  ],
+  "papers": {
+    "hf": [
+      {
+        "title": "STEPQuant: When and Where Errors Matter in Delta-Rule Recurrent State Quantization",
+        "slug": "stepquant-when-and-where-errors-matter-in-delta-rule",
+        "url": "https://huggingface.co/papers/2609.38169",
+        "abstract": "Linear attention replaces growing KV caches with fixed-size recurrent states, yet these persistent states can become a substantial memory bottleneck under concurrent serving. Directly quantizing recurrent states to low precision often leads to severe accuracy degradation, as quantization errors propagate through successive state updates. We discover that the impact of these errors depends on two complementary dimensions: temporally, errors in long-lived memory can persist across many decoding steps; spatially, errors in different key rows affect model outputs differently, while state magnitudes vary substantially along both rows and columns. Motivated by these observations, we propose STEPQuant, a spatial-temporal post-training quantization framework for Delta-rule recurrent states. STEPQuant allocates precision according to error magnitude and memory lifetime, and jointly fits key-row and value-column scales based on state distributions and key-row impact on output error. Experiments on Qwen3.8-27B and Kimi-Linear-48B-A3B-Instruct across both long- and short-generation benchmarks show that STEPQuant closely matches FP32-state accuracy under a nominal 6-bit budget and outperforms uniform INT8 in its 4-bit configuration. Integrated into SGLang with optimized GPU kernels, 6-bit STEPQuant achieves over 5x recurrent-state compression and reduces total serving memory by up to 68.7%. Our code is available at https://github.com/Dreamer-Toby/STEPQuant.",
+        "upvotes": 99,
+        "arxiv_id": "2609.38169",
+        "authors": []
+      },
+      {
+        "title": "Long-WAM: Scaling the Context of World-Action Models",
+        "slug": "long-wam-scaling-the-context-of-world-action-models",
+        "url": "https://huggingface.co/papers/2610.10528",
+        "abstract": "Real-time robot control demands enough visual history to infer motion and task progress, but processing that history can delay action. We present Long-WAM, a model-system framework for scaling the context of causal world-action models under real-time control constraints. Our central finding is that access to history is not the same as using it: longer histories pay off far more when the video foundation is pretrained autoregressively (AR). We first learn causal prediction from robot and egocentric videos without action labels, then preserve this history-to-future structure during world-action adaptation. On RoboCasa GR-1, increasing context from 0.0 to 19.2 seconds raises success from 63.3% to 78.7%, whereas a bidirectionally pretrained initialization shows no net gain; robot-domain AR pretraining further raises peak success on GR-1 and LIBERO-Long. Long-WAM also achieves the best results among compared methods on LIBERO-Long, RoboTwin 2.0, and DOMINO. Streaming observation encoding, asynchronous execution, and hardware-specific acceleration enable deployment on RTX 5090, DGX Spark, and Jetson AGX Thor without dropping future prediction; on RTX 5090, each action chunk, including future-video latent prediction, takes 107.4 ms. Real-time deployment on Unitree G1 and YAM supports dynamic and long-horizon manipulation, including 95% success on dynamic cup stacking, where Pi0.5 and Fast-WAM succeed in none of 20 trials. As a memory-informed executor, Long-WAM also complements higher-level planning in composite tasks.",
+        "upvotes": 88,
+        "arxiv_id": "2610.10528",
+        "authors": []
+      },
+      {
+        "title": "Recursive Game Creator: An Agentic Product-Level Experience-Oriented Game Harness",
+        "slug": "recursive-game-creator-an-agentic-product-level-experience",
+        "url": "https://huggingface.co/papers/2610.08621",
+        "abstract": "Recent game design agents have made substantial progress in generating playable games. However, program correctness does not ensure an enjoyable experience for players. We present Recursive Game Creator, an experience-oriented harness to advance agentic game development from rough game prototypes into entertaining games. Recursive Game Creator organizes recursive development around four components: Designer, Builder, Player, and Reviewer. The Designer translates user instructions and Reviewer's feedback into detailed plans. The Builder turns these plans into candidate games. The coding-native Player creates and executes reusable policies through programmatic interfaces to efficiently collect diverse gameplay trajectories, mitigating evaluation bias caused by slow GUI-based collection. The Reviewer uses carefully designed trajectory-based metrics to induce player preferences, integrating with visual evidence and explicit textual preferences to evaluate games against game-specific criteria. Finally, the Reviewer accepts the better version and provides improvement reviews for the next round, closing the recursive loop. Our method achieves state-of-the-art overall performance of 77.89 on GameCraft-Bench. On GameASG-Bench, it achieves a strict task success rate of 53.2%, a 34.1% improvement over the same-model baseline, and the highest mean runtime-check pass rate at 93.4% among compared methods. A user study shows longer playtime and higher ratings. Code is coming soon.",
+        "upvotes": 78,
+        "arxiv_id": "2610.08621",
+        "authors": []
+      },
+      {
+        "title": "DecepEval: A Benchmark for Evaluating Deception in LLM Agents",
+        "slug": "decepeval-a-benchmark-for-evaluating-deception-in-llm-agents",
+        "url": "https://huggingface.co/papers/2610.07967",
+        "abstract": "As large language model (LLM) agents become increasingly autonomous, they may pursue task performance through deception, raising concerns about their reliable deployment. Existing evaluations show that LLM agents can deceive, but often examine isolated scenarios or narrowly defined conditions, limiting systematic understanding of when deception becomes more likely. To address this gap, we introduce DecepEval, a benchmark comprising 1,532 instances across 3 task families and 28 professional scenarios. Drawing on classical fraud theories, we propose the LLM Deception Diamond framework, which characterizes four external conditions that may induce deception: pressure, incentive, opportunity, and conflict. DecepEval pairs neutral and induced versions of each instance to measure condition-dependent changes in deception rates, while explicit task facts and observable agent behavior help distinguish deception from capability-related errors. Evaluations of nine frontier LLMs show that inducements increase deception across models and task families, even among models with low baseline deception rates. DecepEval makes these vulnerabilities measurable, providing a shared benchmark for progress toward trustworthy artificial intelligence.",
+        "upvotes": 66,
+        "arxiv_id": "2610.07967",
+        "authors": []
+      },
+      {
+        "title": "Questioning the Questions: Sustaining Self-Evolution in Reasoning Models",
+        "slug": "questioning-the-questions-sustaining-self-evolution-in",
+        "url": "https://huggingface.co/papers/2610.04299",
+        "abstract": "Self-evolving reasoning models learn from their own generated questions, yet repeated self-training can lead to performance collapse. In this paper, we investigate why performance deteriorates over successive rounds and how to sustain self-evolution. Our analysis identifies two recurring quality problems in self-generated questions: invalid questions and repeated variants of the same mathematical questions. First, invalid questions become more prevalent across rounds, and answer-consistency filtering further increases their proportion in training data. Second, existing question diversity controls based on lexical similarity can miss mathematically equivalent questions expressed in different ways, which leads to question diversity collapse in later training rounds. Building on these findings, we introduce R-Quest, which uses question validity and novelty feedback to guide self-evolution. We first train the solver to recognize and reject invalid questions, then use its judgments to guide questioner rewards and filter solver training data. To avoid question repetition, we use a frozen base model to compare sampled question pairs and provide novelty feedback. Empirically, our method consistently achieves the highest average performance on 12 benchmarks in mathematical reasoning, general-domain reasoning, and code generation across two model families. Additionally, R-Quest maintains stable performance gains over ten rounds of self-evolution, peaking in the final round and outperforming R-Zero by 17.32 points.",
+        "upvotes": 64,
+        "arxiv_id": "2610.04299",
+        "authors": []
+      },
+      {
+        "title": "GRACE: Generation-aware latent compression for efficient video generation",
+        "slug": "grace-generation-aware-latent-compression-for-efficient",
+        "url": "https://huggingface.co/papers/2610.10524",
+        "abstract": "Highly compressed video autoencoders offer an effective way to accelerate video diffusion models, as the Diffusion Transformer (DiT) operates on far fewer tokens. However, such autoencoders are challenging to train, since a higher compression ratio degrades reconstruction quality and recovering it requires more channels, which is known to slow the convergence of the DiT. The compressed latent also differs from the one the DiT was trained on, so the pretrained DiT must be either retrained from scratch or adapted at considerable cost. Compressing the autoencoder the DiT was trained with appears to preserve compatibility, yet optimizing it for reconstruction alone still shifts the latent away from the distribution the DiT has learned. To address this, we propose Generation-Aware Latent Compression for Efficient Video Generation (GRACE), a two-stage framework that compresses a pretrained video autoencoder while keeping it compatible with the pretrained DiT. Specifically, we keep a frozen base latent from the pretrained encoder and learn a residual latent for the information lost under stronger compression, while aligning the compressed latent with the pretrained latent in the feature space of the frozen DiT so that the autoencoder is optimized for generation. We then adapt the DiT with lightweight fine-tuning and asymmetric denoising, where the base is denoised ahead of the residual. GRACE reduces the token count of Wan2.1-I2V-14B by 8x and its latency by 11.1x at 480x832x81, while matching the generation quality of the pretrained pipeline before compression on VBench.",
+        "upvotes": 63,
+        "arxiv_id": "2610.10524",
+        "authors": []
+      },
+      {
+        "title": "UltraText Bench: A Comprehensive Bilingual Benchmark for Evaluating Visual Text Rendering in Image Generation",
+        "slug": "ultratext-bench-a-comprehensive-bilingual-benchmark-for",
+        "url": "https://huggingface.co/papers/2610.09823",
+        "abstract": "Dense visual text requires image generators to reproduce long strings across multiple regions with correct placement and legibility. As short-string rendering improves, evaluation must test sustained performance across more demanding scenes. We introduce UltraText Bench, a bilingual benchmark for prompt-only generation of dense visual text. It contains 432 prompts spanning 24 real-world scene categories and three difficulty levels, split equally between English and Chinese. Each human-reviewed prompt supplies exact strings for four to twelve text regions, paired with structured references for their content, placement, and visual attributes. We use the Q-Judger vision-language model to assess each image against the complete reference, reporting text fidelity, text clarity, spatial quality, and scene quality. Across 24 model configurations, these dimensions reveal different strengths: Z-Image-Turbo gains 3.81 clarity points over Z-Image-Base while losing 14.76 fidelity points under the reported settings. Performance also varies with workload; Qwen-Image-2512's English composite falls from 86.50 at L1 to 42.86 at L3. Ten participants took part in human evaluation of the automatic scores. Repository: https://github.com/LINs-lab/UltraText_Bench.",
+        "upvotes": 54,
+        "arxiv_id": "2610.09823",
+        "authors": []
+      },
+      {
+        "title": "VepAgent: Bridging Causal-Transition via Tool-Augmented Reinforcement Learning for Video Event Prediction",
+        "slug": "vepagent-bridging-causal-transition-via-tool-augmented",
+        "url": "https://huggingface.co/papers/2610.06293",
+        "abstract": "Multimodal Large Language Models (MLLMs) have demonstrated remarkable potential in video understanding, yet their reliance on retrospective summarization and text-centric priors often limits their ability to bridge unobserved causal transitions when applied to Video Event Prediction (VEP). To address this, we propose VepAgent, an agentic framework that integrates causal-transition reasoning with tool-augmented reinforcement learning (RL) for robust VEP. Unlike prior methods that passively project future trajectories from historical dependencies, our approach explicitly models the logical progression from terminal observed states to future events. Specifically, we first construct futurebench-4K, a high-quality chain-of-thought dataset for supervised fine-tuning (SFT) that effectively bridges the causal-logic gap by structuring the deduction of unobserved intermediate states. Subsequently, we develop a diagnostic tool library integrating state tracking, frame retrieval, and region magnification, enabling the agent to dynamically augment reasoning with external tools to recover missing spatio-temporal evidence and resolve visual ambiguities during inference. Moreover, we propose a composite reward mechanism that jointly optimizes prediction accuracy, causal coherence, and reliable prior, compelling the agent to rely on genuine visual grounding rather than superficial textual similarities. Extensive evaluations on FutureBench and NEPBench datasets demonstrate that our method achieves state-of-the-art performance, significantly outperforming larger MLLMs and validating the empirical effectiveness of our agentic, future-oriented reasoning paradigm.",
+        "upvotes": 53,
+        "arxiv_id": "2610.06293",
+        "authors": []
+      },
+      {
+        "title": "SGF+: Decoupling Gradient Flows for Autoregressive Video Generation",
+        "slug": "sgf-decoupling-gradient-flows-for-autoregressive-video",
+        "url": "https://huggingface.co/papers/2610.10429",
+        "abstract": "Autoregressive video generation requires denoising the current frames while writing their key-value representations as context for future predictions. However, these two roles typically share parameters, and we find that their gradients exhibit distinct patterns and systematic negative alignment, hindering the joint optimization of visual quality and temporal consistency. We introduce Self Gradient Forcing Plus (SGF+), which assigns separate parameters to context writing and denoising while preserving their interaction through causal attention. Both roles are jointly optimized using the original generation objective without auxiliary losses, with context writing supervised through its contribution to future predictions. This simple change improves visual quality and long-horizon consistency over the evaluated baselines in both framewise and chunkwise generation, without additional video training data or a longer training horizon. Trained on only 5s rollouts, SGF+ supports continuous generation for up to 24 hours without long-video fine-tuning. These results highlight role-specific parameterization as an effective design principle for high-quality autoregressive video generation and native long-horizon extrapolation.",
+        "upvotes": 51,
+        "arxiv_id": "2610.10429",
+        "authors": []
+      },
+      {
+        "title": "UniWAM: Unified World-Action Model",
+        "slug": "uniwam-unified-world-action-model",
+        "url": "https://huggingface.co/papers/2610.02054",
+        "abstract": "Vision-language-action models benefit from the understanding and reasoning capabilities of pretrained vision-language models, but action-only supervision provides limited grounding in world dynamics. Conversely, world-action models inherit spatiotemporal priors from video generation models, yet remain limited in semantic understanding and reasoning under distribution shifts. We introduce UniWAM, a unified architecture that integrates a physical reasoner, a world generator, and an action predictor to jointly learn semantic understanding of the physical world, visual generation, and action prediction. To ensure the quality of the training data, we developed a rigorous data cleaning and annotation pipeline for both human egocentric data and robot data. To adapt the vision-language component to embodied tasks while preserving its inherited language capabilities, we represent low-level actions in natural language and introduce a pre-training recipe that assigns complementary supervision from visual question answering (VQA) data, human egocentric data, and robot demonstrations to the appropriate model components. During post-training, future visual noise augmentation reduces reliance on precise future predictions, while history-conditioned flow matching uses encoded action history to initialize action generation. Together, these designs significantly reduce denoising steps while maintaining performance. UniWAM achieves state-of-the-art (SOTA) performance across multiple evaluations, including in-distribution performance, robustness, generalization, instruction following, and long-horizon task execution. Furthermore, we uncover a log-linear scaling law of unified human-robot co-training, demonstrating the effectiveness of large-scale pre-training on a mixture of human and robot data.",
+        "upvotes": 47,
+        "arxiv_id": "2610.02054",
+        "authors": []
+      }
+    ],
+    "others": [
+      {
+        "title": "Can Open-Weight LLMs Predict Test Outcomes from Traces? A Cross-Subject Boundary Study on Tests4Py",
+        "slug": "can-open-weight-llms-predict-test-outcomes-from-traces-a",
+        "url": "https://www.semanticscholar.org/paper/fe8b1086d325f16549e58f84dcad3ee504543f6a",
+        "abstract": "Can Open-Weight LLMs Predict Test Outcomes from Traces? A Cross-Subject Boundary Study on Tests4Py.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-08",
+        "authors": [
+          "Giuliano Ricardo Rasper",
+          "T. Mammadov",
+          "Marius Smytzek",
+          "Andreas Zeller"
+        ]
+      },
+      {
+        "title": "AI Meets Program Analysis: Lessons from a Decade of Enterprise Software Modernization at IBM",
+        "slug": "ai-meets-program-analysis-lessons-from-a-decade-of",
+        "url": "https://www.semanticscholar.org/paper/fa6f986cb63f56ba321bb910edaab10740b81a3e",
+        "abstract": "AI Meets Program Analysis: Lessons from a Decade of Enterprise Software Modernization at IBM.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-08",
+        "authors": [
+          "Vini Kanvar"
+        ]
+      },
+      {
+        "title": "AgentChaosBench: Benchmarking External Fault Detection and Localization in Agentic Systems",
+        "slug": "agentchaosbench-benchmarking-external-fault-detection-and",
+        "url": "https://www.semanticscholar.org/paper/f08da96e010556c2269e7031682c4856a66df84a",
+        "abstract": "AgentChaosBench: Benchmarking External Fault Detection and Localization in Agentic Systems.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-08",
+        "authors": [
+          "Chen-Kai Zhang",
+          "Yi-Ran Li",
+          "Yi-Fang Tian",
+          "Michail Bachras",
+          "Hans-Arno Jacobsen"
+        ]
+      },
+      {
+        "title": "Spec-Graph Meta-framework for AI-Assisted Software Development: An Industry Case",
+        "slug": "spec-graph-meta-framework-for-ai-assisted-software",
+        "url": "https://www.semanticscholar.org/paper/ee14ac4c687dfc19d613db06a2d232a8ad115687",
+        "abstract": "Spec-Graph Meta-framework for AI-Assisted Software Development: An Industry Case.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-08",
+        "authors": [
+          "Daniel Soto",
+          "D. A. González-Rueda",
+          "Mario Linares-Vásquez",
+          "Andrés Hurtado"
+        ]
+      },
+      {
+        "title": "Evidence-Driven, Failure-Resilient Planning for Domain-Agnostic Multi-agent Orchestration",
+        "slug": "evidence-driven-failure-resilient-planning-for-domain",
+        "url": "https://www.semanticscholar.org/paper/ed36a00db35ea242a2e5bd1713f7a7422534b82d",
+        "abstract": "Evidence-Driven, Failure-Resilient Planning for Domain-Agnostic Multi-agent Orchestration.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-08",
+        "authors": [
+          "Baran Osmanoglu"
+        ]
+      },
+      {
+        "title": "RepoTune: Co-evolving Vulnerability Detection with a Repository’s Genome",
+        "slug": "repotune-co-evolving-vulnerability-detection-with-a",
+        "url": "https://www.semanticscholar.org/paper/ec336d4a0d7c0114f8d48255e38e79b02be5f168",
+        "abstract": "RepoTune: Co-evolving Vulnerability Detection with a Repository’s Genome.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-08",
+        "authors": [
+          "Yu-Qiang Sun",
+          "Ruo-Zhao Yang",
+          "Ying Li"
+        ]
+      },
+      {
+        "title": "Artificial Intelligence vs. Traditional Models in Computational Thinking Gap Analytics: A BERT-Driven Approach with XAI Diagnostics",
+        "slug": "artificial-intelligence-vs-traditional-models-in",
+        "url": "https://www.semanticscholar.org/paper/eb315598ece4d198f5d05f4a25cdfd247bc1bfee",
+        "abstract": "This study investigates computational thinking (CT) proficiency in programming-based learning environments using a unified analytical framework that combines statistical analysis and predictive modeling. CT proficiency is examined across five pedagogically grounded dimensions—abstraction, decomposition, algorithmic thinking, debugging, and pattern recognition—derived from rubric-based assessment of student work. First, descriptive and inferential statistical analyses are conducted to examine overall CT performance and gender-related patterns, providing correlational insight into group-level differences. Building on this analysis, a transformer-based model (BERT) is employed to predict continuous CT proficiency from students’ code comments and reflective journals, enabling semantic modeling of higher-order reasoning expressed in natural language. The predictive performance of BERT is benchmarked against traditional machine learning and lightweight deep learning baselines. Results show that transformer-based semantic modeling improves predictive accuracy while maintaining interpretability through post hoc explanation methods. Explainable AI techniques are used to identify linguistic and behavioral indicators associated with CT proficiency, and gender-related interpretations are derived through subsequent comparative analysis rather than direct prediction. Overall, the study positions deep learning as a complementary tool to statistical analysis for understanding and predicting CT proficiency.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-08",
+        "authors": [
+          "Azeddine Benelrhali",
+          "K. Berrada"
+        ]
+      },
+      {
+        "title": "Software Engineering Governance: Foundations for Trustworthy Automated Software Engineering",
+        "slug": "software-engineering-governance-foundations-for-trustworthy",
+        "url": "https://www.semanticscholar.org/paper/e88e85dfb2a805d560dfc4dea817f065cc03e521",
+        "abstract": "Software Engineering Governance: Foundations for Trustworthy Automated Software Engineering.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-08",
+        "authors": [
+          "C. Braga",
+          "Manuel A. Serrano",
+          "E. Fernández-Medina"
+        ]
+      },
+      {
+        "title": "Prompts Matter: On the Impact of Code Smell Remediation with Large Language Models",
+        "slug": "prompts-matter-on-the-impact-of-code-smell-remediation-with",
+        "url": "https://www.semanticscholar.org/paper/e83ed938a60e7fdc3425c118686cbcc0242263fd",
+        "abstract": "Prompts Matter: On the Impact of Code Smell Remediation with Large Language Models.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-08",
+        "authors": [
+          "Nadim Hagatulah",
+          "Markus Borg",
+          "E. Söderberg"
+        ]
+      },
+      {
+        "title": "From Statistical Code Generation to Correct-by-Construction AI Programming: A Basis-Function Composition Framework",
+        "slug": "from-statistical-code-generation-to-correct-by-construction",
+        "url": "https://www.semanticscholar.org/paper/e8094ac42279ccf6a2111a896e5222a7c390ea06",
+        "abstract": "From Statistical Code Generation to Correct-by-Construction AI Programming: A Basis-Function Composition Framework.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-08",
+        "authors": [
+          "Yu Wu",
+          "Yu-Cheng Yang"
+        ]
+      },
+      {
+        "title": "Effects of speech-enabled LLM-based chatbots on L2 learning outcomes and affective domains: a multilevel meta-analysis",
+        "slug": "effects-of-speech-enabled-llm-based-chatbots-on-l2-learning",
+        "url": "https://www.semanticscholar.org/paper/e59b2b2c22eb8604fdbaa88af0ece91ced61b908",
+        "abstract": "Effects of speech-enabled LLM-based chatbots on L2 learning outcomes and affective domains: a multilevel meta-analysis.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-08",
+        "authors": [
+          "Eunjin Lee",
+          "Hansol Lee",
+          "Jang-Ho Lee"
+        ]
+      },
+      {
+        "title": "Author metadata affects Large Language Model scores in scientific peer review",
+        "slug": "author-metadata-affects-large-language-model-scores-in",
+        "url": "https://www.semanticscholar.org/paper/e0ff324b0d8b4dfd93a7133f9af4833067135915",
+        "abstract": "Author metadata affects Large Language Model scores in scientific peer review. Discover Artificial Intelligence",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-08",
+        "authors": [
+          "Marco Rospocher"
+        ]
+      },
+      {
+        "title": "katIA: Hybrid Source Code Change Impact Analysis",
+        "slug": "katia-hybrid-source-code-change-impact-analysis",
+        "url": "https://www.semanticscholar.org/paper/df7bd638f59a077f2e36f8d9a3b0a0db86caff27",
+        "abstract": "katIA: Hybrid Source Code Change Impact Analysis.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-08",
+        "authors": [
+          "Katharina Stengg",
+          "Christian Macho",
+          "M. Pinzger"
+        ]
+      },
+      {
+        "title": "Extender: A Multi-agent System for Code Extensibility Review",
+        "slug": "extender-a-multi-agent-system-for-code-extensibility-review",
+        "url": "https://www.semanticscholar.org/paper/d736058485947f8bbb2d6b027332d6a003aa44eb",
+        "abstract": "Extender: A Multi-agent System for Code Extensibility Review.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-08",
+        "authors": [
+          "Jia-He Chen",
+          "Jia-Cheng Shen"
+        ]
+      },
+      {
+        "title": "MOSAICO: A Multi-agent Infrastructure for Collaborative LLM-Powered Software Engineering",
+        "slug": "mosaico-a-multi-agent-infrastructure-for-collaborative-llm",
+        "url": "https://www.semanticscholar.org/paper/d65913ed18ec31e1e3ed4fd7aa81ea9f0c948309",
+        "abstract": "MOSAICO: A Multi-agent Infrastructure for Collaborative LLM-Powered Software Engineering.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-08",
+        "authors": [
+          "Tuong Manh Vu",
+          "Ionut Predoaia",
+          "K. Barmpis",
+          "D. Kolovos",
+          "Antonio García-Domínguez"
+        ]
+      },
+      {
+        "title": "Sufficiently Advanced Agents Are Indistinguishable from Erlang: An Operational Mapping from OTP to Multi-agent LLM Systems",
+        "slug": "sufficiently-advanced-agents-are-indistinguishable-from",
+        "url": "https://www.semanticscholar.org/paper/d5468483911d2078639cdb3271ae93cf8712d446",
+        "abstract": "Sufficiently Advanced Agents Are Indistinguishable from Erlang: An Operational Mapping from OTP to Multi-agent LLM Systems.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-08",
+        "authors": [
+          "Mick Darling"
+        ]
+      },
+      {
+        "title": "Schema-Conditioned Next-Tool Prediction for Coding Agents under Interface Drift",
+        "slug": "schema-conditioned-next-tool-prediction-for-coding-agents",
+        "url": "https://www.semanticscholar.org/paper/d2b8b417536640acf80dde931a94006577b77dac",
+        "abstract": "Schema-Conditioned Next-Tool Prediction for Coding Agents under Interface Drift.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-08",
+        "authors": [
+          "Selma Nyberg",
+          "Isak Samsten"
+        ]
+      },
+      {
+        "title": "When Log Parsing Removes What Matters: Detecting Failures in Distributed GPU Workloads",
+        "slug": "when-log-parsing-removes-what-matters-detecting-failures-in",
+        "url": "https://www.semanticscholar.org/paper/cf4020b90de98e9e8c25f4ffc8471fea67ebe929",
+        "abstract": "When Log Parsing Removes What Matters: Detecting Failures in Distributed GPU Workloads.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-08",
+        "authors": [
+          "Bo-Yuan Cui",
+          "Yu-Yang Zeng",
+          "Yi-Fang Tian",
+          "Hans-Arno Jacobsen"
+        ]
+      },
+      {
+        "title": "Is There a Human Premium in Negotiations? A Relational-Economic Tradeoff in Human vs. AI Bargaining",
+        "slug": "is-there-a-human-premium-in-negotiations-a-relational",
+        "url": "https://www.semanticscholar.org/paper/ccf89454d45b5455dca13b6d0c8a2e698cb9b2c4",
+        "abstract": "Is There a Human Premium in Negotiations? A Relational-Economic Tradeoff in Human vs. AI Bargaining. Group Decision and Negotiation",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-08",
+        "authors": [
+          "Alexandra Mislin",
+          "Daniel Druckman",
+          "L. Serre"
+        ]
+      },
+      {
+        "title": "Towards Model-Driven Generation of Domain-Specific Modelling Agents for Local Language Models",
+        "slug": "towards-model-driven-generation-of-domain-specific-modelling",
+        "url": "https://www.semanticscholar.org/paper/ca3c47a28be7ad1d1891c0035705dcb5bb870d4f",
+        "abstract": "Towards Model-Driven Generation of Domain-Specific Modelling Agents for Local Language Models.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-08",
+        "authors": [
+          "Antonio García-Domínguez",
+          "Ionut Predoaia",
+          "Tuong Manh Vu",
+          "K. Barmpis",
+          "D. Kolovos"
+        ]
+      },
+      {
+        "title": "Human-centred Artificial Intelligence and Learning Analytics in emerging higher education: a critical scoping review",
+        "slug": "human-centred-artificial-intelligence-and-learning-analytics",
+        "url": "https://www.semanticscholar.org/paper/c7bace072bf1a6923b2b534927aa6914cee2fa22",
+        "abstract": "Human-centred Artificial Intelligence and Learning Analytics in emerging higher education: a critical scoping review. Discover Education",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-08",
+        "authors": [
+          "A. Alenezi"
+        ]
+      },
+      {
+        "title": "AIEngOrchestrator-HITL: Human-in-the-Loop Process Intelligence for Resilient AI Systems",
+        "slug": "aiengorchestrator-hitl-human-in-the-loop-process",
+        "url": "https://www.semanticscholar.org/paper/c64146273bc53886389b99de90080cae53c1038d",
+        "abstract": "AIEngOrchestrator-HITL: Human-in-the-Loop Process Intelligence for Resilient AI Systems.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-08",
+        "authors": [
+          "Razan Abualsaud"
+        ]
+      },
+      {
+        "title": "Agent4RE: A Self-Refining Multi-agent Framework for End-to-End Software Requirements Engineering and Benchmarking",
+        "slug": "agent4re-a-self-refining-multi-agent-framework-for-end-to",
+        "url": "https://www.semanticscholar.org/paper/c397b7abd6eca52ab6711c013742a0df8e369522",
+        "abstract": "Agent4RE: A Self-Refining Multi-agent Framework for End-to-End Software Requirements Engineering and Benchmarking.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-08",
+        "authors": [
+          "Yong-Jian Tang",
+          "Lin-Han Li",
+          "Thomas A. Runkler"
+        ]
+      },
+      {
+        "title": "Automated Counterfactual Scenario Generation for Fairness Assessment of Large Language Models: The ScenGen Framework",
+        "slug": "automated-counterfactual-scenario-generation-for-fairness",
+        "url": "https://www.semanticscholar.org/paper/bf91e7702d0617db7b301aebf1892f20083ab7dc",
+        "abstract": "Automated Counterfactual Scenario Generation for Fairness Assessment of Large Language Models: The ScenGen Framework.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-08",
+        "authors": [
+          "Alessandra Parziale",
+          "Antonio D'Auria",
+          "Daniele Pio Scaparra",
+          "Valeria Pontillo"
+        ]
+      },
+      {
+        "title": "Seeing the Forest: A Taxonomy-Guided Analysis and Improvement of Malicious PyPI Package Detectors",
+        "slug": "seeing-the-forest-a-taxonomy-guided-analysis-and-improvement",
+        "url": "https://www.semanticscholar.org/paper/b73d76a5122bbc8aa0036d44bd4e65bbadd164d5",
+        "abstract": "Seeing the Forest: A Taxonomy-Guided Analysis and Improvement of Malicious PyPI Package Detectors.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-08",
+        "authors": [
+          "Zi-Bo Liu",
+          "Jun-Jie Wang",
+          "Sen Chen"
+        ]
+      },
+      {
+        "title": "Constrained Automated Requirements Formalization for Rigorous Analysis with Alloy",
+        "slug": "constrained-automated-requirements-formalization-for",
+        "url": "https://www.semanticscholar.org/paper/b44faed1ee20f2419a5379b435d2439c1d1c2119",
+        "abstract": "Constrained Automated Requirements Formalization for Rigorous Analysis with Alloy.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-08",
+        "authors": [
+          "Viktoria Koscinski",
+          "Mehdi Tarrit Mirakhorli"
+        ]
+      },
+      {
+        "title": "Toward Trace-Guided Automated Program Repair",
+        "slug": "toward-trace-guided-automated-program-repair",
+        "url": "https://www.semanticscholar.org/paper/b2ce02a1485d07fe828f932b9f4e6782ab358ac3",
+        "abstract": "Toward Trace-Guided Automated Program Repair.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-08",
+        "authors": [
+          "D. Reichelt",
+          "Shinhyung Yang",
+          "Wilhelm Hasselbring"
+        ]
+      },
+      {
+        "title": "Geometry-Aware Prompt Context for Model Consistency Management",
+        "slug": "geometry-aware-prompt-context-for-model-consistency",
+        "url": "https://www.semanticscholar.org/paper/acfe6bef8742ac0848c96b55b07f8e0245ae0432",
+        "abstract": "Geometry-Aware Prompt Context for Model Consistency Management.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-08",
+        "authors": [
+          "Monalisha Ojha",
+          "Shilpi Gupta",
+          "Rahul Sharma"
+        ]
+      },
+      {
+        "title": "A Teacher-Student BERT Architecture for Semi-Supervised Learning on Unstructured Social Work Texts: Identifying Service Gaps and Needs",
+        "slug": "a-teacher-student-bert-architecture-for-semi-supervised",
+        "url": "https://www.semanticscholar.org/paper/ab28bbcec8b2d5b1cae8758dc496a5141748a001",
+        "abstract": "To address the “information gap” in social work arising from unstructured data and limited labeled instances, this study proposes a semi-supervised learning framework based on a Teacher-Student BERT architecture. Based on an analysis of 50,000 case records spanning 2019 to 2024, the model incorporates Latent Dirichlet Allocation for topic extraction alongside a multidimensional gap analysis. The proposed method attained a state-of-the-art F1 score of 0.913, markedly surpassing baseline BERT models. Notable findings include a 67.6% increase in mental health-related discourse and the quantification of significant systemic deficiencies, such as inadequate coverage in elderly care (45.8%) and substantial unmet needs in medical assistance (46.4%). Furthermore, to address the profound challenges of class imbalance and the data-hungry nature of transformer models, this study integrated generative artificial intelligence (AI) data augmentation techniques. This approach produced synthetically varied case narratives that preserved the original socio-economic context while expanding lexical and structural diversity, thereby significantly enhancing the classification accuracy of minority classes. Additionally, the use of a Mean Teacher denoising framework and knowledge distillation drastically reduced the computational inference time, rendering the architecture highly suitable for deployment in resource-constrained social welfare environments. Prior to analysis, all case records underwent rigorous automated Personally Identifiable Information (PII) scrubbing utilizing the Microsoft Presidio framework to guarantee data privacy. To ensure reproducibility, the Teacher-Student training codebase, prompt architectures, and anonymized synthetic data samples will be made publicly available upon request. This research effectively transforms administrative textual data into actionable strategic intelligence, offering a scalable and evidence-based tool to enhance resource allocation and inform policy development.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-08",
+        "authors": [
+          "Yih-Chang Chen",
+          "Chia-Ching Lin",
+          "S. Ağan"
+        ]
+      },
+      {
+        "title": "AI physician agents . . . and other research",
+        "slug": "ai-physician-agents-and-other-research",
+        "url": "https://www.semanticscholar.org/paper/aa22db400d45b0972cf7e7de4e038d9a2079acb0",
+        "abstract": "AI physician agents . . . and other research. British medical journal",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-08",
+        "authors": [
+          "T. Nolan"
+        ]
+      }
+    ]
+  }
+}
