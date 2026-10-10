@@ -1,0 +1,561 @@
+{
+  "date": "2026-10-10",
+  "github": [
+    {
+      "title": "anthropics/claude-code",
+      "slug": "anthropics-claude-code",
+      "url": "https://github.com/anthropics/claude-code",
+      "abstract": "Claude Code Claude Code is an agentic coding tool that lives in your terminal, understands your codebase, and helps you code faster by executing routine tasks, explaining complex code, and handling git workflows -- all through natural language commands. Use it in your terminal, IDE, or tag @claude on Github. Learn more in the official documentation . Get started Note Installation via npm is deprecated. Use one of the recommended methods below. For more installation options, uninstall steps, and troubleshooting, see the setup documentation . Install Claude Code: MacOS/Linux (Recommended): curl -fsSL https://claude.ai/install.sh | bash Homebrew (MacOS/Linux): brew install --cask claude-code Windows (Recommended): irm https: // claude.ai / install.ps1 | iex WinGet (Windows): winget install Anthropic.ClaudeCode NPM (Deprecated): npm install -g @anthropic-ai/claude-code Navigate to your project directory and run claude . Plugins This repository includes several Claude Code plugins that extend functionality with custom commands and agents. See the plugins directory for detailed documentation on available plugins. Reporting Bugs We welcome your feedback. Use the /bug command to report issues directly within Claude Code, or file a GitHub issue . Connect on Discord Join the Claude Developers Discord to connect with other developers using Claude Code. Get help, share feedback, and discuss your projects with the community. Data collection, usage, and retention When you use Claude Code, we collect feedback, which includes usage data (such as code acceptance or rejections), associated conversation data, and user feedback submitted via the /bug command. How we use your data See our data usage policies . Privacy safeguards We have implemented several safeguards to protect your data, including limited retention periods for sensitive information, restricted access to user session data, and clear policies against using feedback for model training. For full details, please review our Commercial Terms of Service and Privacy Policy .",
+      "stars_today": 195,
+      "language": "TypeScript"
+    },
+    {
+      "title": "mksglu/context-mode",
+      "slug": "mksglu-context-mode",
+      "url": "https://github.com/mksglu/context-mode",
+      "abstract": "Context Mode The other half of the context problem. Used across teams at The Problem Every MCP tool call dumps raw data into your context window. A Playwright snapshot costs 56 KB. Twenty GitHub issues cost 59 KB. One access log — 45 KB. After 30 minutes, 40% of your context is gone. And when the agent compacts the conversation to free space, it forgets which files it was editing, what tasks are in progress, and what you last asked for. On top of that, the agent wastes output tokens on filler, pleasantries, and verbose explanations — burning context from both sides. How Context Mode Solves It Context Mode is an MCP server that solves all four sides of this problem: Context Saving — Sandbox tools keep raw data out of the context window. 315 KB becomes 5.4 KB. 98% reduction. Session Continuity — Every file edit, git operation, task, error, and user decision is tracked in SQLite. When the conversation compacts, context-mode doesn't dump this data back into context — it indexes events into FTS5 and retrieves only what's relevant via BM25 search. The model picks up exactly where you left off. If you don't --continue , previous session data is deleted immediately — a fresh session means a clean slate. Think in Code — The LLM should program the analysis, not compute it. Instead of reading 50 files into context to count functions, the agent writes a script that does the counting and console.log() s only the result. One script replaces ten tool calls and saves 100x context. This is a mandatory paradigm across all 17 supported clients, plus the OpenClaw gateway integration: stop treating the LLM as a data processor, treat it as a code generator. // Before: 47 × Read() = 700 KB.  After: 1 × ctx_execute() = 3.6 KB. ctx_execute ( \"javascript\" , ` const files = fs.readdirSync('src').filter(f => f.endsWith('.ts')); files.forEach(f => console.log(f + ': ' + fs.readFileSync('src/'+f,'utf8').split('\\\\n').length + ' lines')); ` ) ; No prose-style enforcement — context-mode keeps raw data out of context but never dictates how the model writes its final answer. Brevity, completeness, formatting — your model's call (or yours via your own CLAUDE.md / AGENTS.md ). Aggressive brevity prompts have been shown to degrade coding/reasoning benchmarks ( Moonshot AI on kimi-k2.5 ) — the routing block stays focused on where data goes , not on how the model talks . Install Platforms are grouped by install complexity. Hook-capable platforms get automatic routing enforcement. Non-hook platforms need a one-time routing file copy. Claude Code — plugin marketplace, fully automatic Prerequisites: Claude Code v1.0.33+ ( claude --version ). If /plugin is not recognized, update first: brew upgrade claude-code or npm update -g @anthropic-ai/claude-code . Install: /plugin marketplace add mksglu/context-mode\n/plugin install context-mode@context-mode Restart Claude Code (or run /reload-plugins ). Verify: /context-mode:ctx-doctor All checks should show [x] . The doctor validates runtimes, hooks, FTS5, and plugin registration. Routing: Automatic. The SessionStart hook injects routing instructions at runtime — no file is written to your project. The plugin registers all hooks (PreToolUse, PostToolUse, UserPromptSubmit, PreCompact, SessionStart, Stop) and 11 MCP tools — six sandbox tools ( ctx_batch_execute , ctx_execute , ctx_execute_file , ctx_index , ctx_search , ctx_fetch_and_index ) plus five meta-tools ( ctx_stats , ctx_doctor , ctx_upgrade , ctx_purge , ctx_insight ). Slash Command What it does /context-mode:ctx-stats Context savings — per-tool breakdown, tokens consumed, savings ratio. /context-mode:ctx-doctor Diagnostics — runtimes, hooks, FTS5, plugin registration, versions. /context-mode:ctx-index Index a local file or directory into the persistent FTS5 knowledge base. /context-mode:ctx-search Search previously indexed content. /context-mode:ctx-upgrade Pull latest, rebuild, migrate cache, fix hooks. /context-mode:ctx-purge Permanently delete all indexed content from the knowledge base. /context-mode:ctx-insight Opens the hosted Insight dashboard ( context-mode.com/insight ) in your browser — org analytics for AI-assisted engineering teams. Note: Slash commands are a Claude Code plugin feature. On other platforms, type ctx stats , ctx doctor , ctx index , ctx search , ctx upgrade , or ctx insight in the chat — the model calls the MCP tool automatically. See Utility Commands . Status line (optional): Claude Code's plugin manifest cannot declare a status line, so this is a one-time manual edit to ~/.claude/settings.json : { \"statusLine\" : { \"type\" : \" command \" , \"command\" : \" context-mode statusline \" }\n} After saving, restart Claude Code. The bar shows $ saved this session · $ saved across sessions · % efficient so you can see savings accumulate in real time. The wiring is path-free — context-mode statusline resolves through the bundled CLI regardless of where the plugin cache lives. Alternative — MCP-only install (no hooks or slash commands) claude mcp add context-mode -- npx -y context-mode This gives you all 11 MCP tools without automatic routing. The model can still use them — it just won't be nudged to prefer them over raw Bash/Read/WebFetch. Good for trying it out before committing to the full plugin. Gemini CLI — one config file, hooks included Prerequisites: Node.js >= 22.5 (or Bun), Gemini CLI installed. Install: Install context-mode globally: npm install -g context-mode Add the following to ~/.gemini/settings.json . This single file registers the MCP server and all four hooks: { \"mcpServers\" : { \"context-mode\" : { \"command\" : \" context-mode \" }\n  }, \"hooks\" : { \"BeforeTool\" : [\n      { \"matcher\" : \" run_shell_command|read_file|read_many_files|grep_search|search_file_content|web_fetch|activate_skill|mcp__plugin_context-mode|mcp__context-mode|mcp__(?!.*context-mode) \" , \"hooks\" : [{ \"type\" : \" command \" , \"command\" : \" context-mode hook gemini-cli beforetool \" }]\n      }\n    ], \"AfterTool\" : [\n      { \"matcher\" : \" \" , \"hooks\" : [{ \"type\" : \" command \" , \"command\" : \" context-mode hook gemini-cli aftertool \" }]\n      }\n    ], \"PreCompress\" : [\n      { \"matcher\" : \" \" , \"hooks\" : [{ \"type\" : \" command \" , \"command\" : \" context-mode hook gemini-cli precompress \" }]\n      }\n    ], \"SessionStart\" : [\n      { \"matcher\" : \" \" , \"hooks\" : [{ \"type\" : \" command \" , \"command\" : \" context-mode hook gemini-cli sessionstart \" }]\n      }\n    ]\n  }\n} Restart Gemini CLI. Verify: /mcp list You should see context-mode: ... - Connected . Routing: Automatic via SessionStart hook. Optionally copy routing instructions for full model awareness: cp node_modules/context-mode/configs/gemini-cli/GEMINI.md ./GEMINI.md Why the BeforeTool matcher? It targets only tools that produce large output ( run_shell_command , read_file , read_many_files , grep_search , search_file_content , web_fetch , activate_skill ) plus context-mode's own tools ( mcp__plugin_context-mode ). This avoids unnecessary hook overhead on lightweight tools while intercepting every tool that could flood your context window. Full config reference: configs/gemini-cli/settings.json VS Code Copilot — hooks with SessionStart Prerequisites: Node.js >= 22.5 (or Bun), VS Code with Copilot Chat v0.32+. Install: Install context-mode globally: npm install -g context-mode Create .vscode/mcp.json in your project root: { \"servers\" : { \"context-mode\" : { \"command\" : \" context-mode \" }\n  }\n} Create .github/hooks/context-mode.json : { \"hooks\" : { \"PreToolUse\" : [\n      { \"type\" : \" command \" , \"command\" : \" context-mode hook vscode-copilot pretooluse \" }\n    ], \"PostToolUse\" : [\n      { \"type\" : \" command \" , \"command\" : \" context-mode hook vscode-copilot posttooluse \" }\n    ], \"SessionStart\" : [\n      { \"type\" : \" command \" , \"command\" : \" context-mode hook vscode-copilot sessionstart \" }\n    ]\n  }\n} Restart VS Code. Verify: Open Copilot Chat and type ctx stats . Context-mode tools should appear and respond. Routing: Automatic via SessionStart hook.",
+      "stars_today": 178,
+      "language": "TypeScript"
+    },
+    {
+      "title": "huggingface/transformers",
+      "slug": "huggingface-transformers",
+      "url": "https://github.com/huggingface/transformers",
+      "abstract": "English | 簡體中文 | 繁體中文 | 한국어 | Español | 日本語 | हिन्दी | Русский | Português | తెలుగు | Français | Deutsch | Italiano | Tiếng Việt | العربية | اردو | বাংলা | فارسی | Română | Türkçe State-of-the-art pretrained models for inference and training Transformers acts as the model-definition framework for state-of-the-art machine learning with text, computer\nvision, audio, video, and multimodal models, for both inference and training. It centralizes the model definition so that this definition is agreed upon across the ecosystem. transformers is the\npivot across frameworks: if a model definition is supported, it will be compatible with the majority of training\nframeworks (Axolotl, Unsloth, DeepSpeed, FSDP, PyTorch-Lightning, ...), inference engines (vLLM, SGLang, TGI, ...),\nand adjacent modeling libraries (llama.cpp, mlx, ...) which leverage the model definition from transformers . We pledge to help support new state-of-the-art models and democratize their usage by having their model definition be\nsimple, customizable, and efficient. There are over 1M+ Transformers model checkpoints on the Hugging Face Hub you can use. Explore the Hub today to find a model and use Transformers to help you get started right away. Installation Transformers works with Python 3.10+, and PyTorch 2.6+. Create and activate a virtual environment with venv or uv , a fast Rust-based Python package and project manager. # venv python - m venv . my - env source . my - env / bin / activate # uv uv venv . my - env source . my - env / bin / activate Install Transformers in your virtual environment. # pip pip install \"transformers[torch]\" # uv uv pip install \"transformers[torch]\" Install Transformers from source if you want the latest changes in the library or are interested in contributing. However, the latest version may not be stable. Feel free to open an issue if you encounter an error. git clone https://github.com/huggingface/transformers.git cd transformers # pip pip install ' .[torch] ' # uv uv pip install ' .[torch] ' Quickstart Get started with Transformers right away with the Pipeline API. The Pipeline is a high-level inference class that supports text, audio, vision, and multimodal tasks. It handles preprocessing the input and returns the appropriate output. Instantiate a pipeline and specify model to use for text generation. The model is downloaded and cached so you can easily reuse it again. Finally, pass some text to prompt the model. from transformers import pipeline pipeline = pipeline ( task = \"text-generation\" , model = \"Qwen/Qwen2.5-1.5B\" ) pipeline ( \"the secret to baking a really good cake is \" )\n[{ 'generated_text' : 'the secret to baking a really good cake is 1) to use the right ingredients and 2) to follow the recipe exactly. the recipe for the cake is as follows: 1 cup of sugar, 1 cup of flour, 1 cup of milk, 1 cup of butter, 1 cup of eggs, 1 cup of chocolate chips. if you want to make 2 cakes, how much sugar do you need? To make 2 cakes, you will need 2 cups of sugar.' }] To chat with a model, the usage pattern is the same. The only difference is you need to construct a chat history (the input to Pipeline ) between you and the system. Tip You can also chat with a model directly from the command line, as long as transformers serve is running . transformers chat Qwen/Qwen2.5-0.5B-Instruct import torch from transformers import pipeline chat = [\n    { \"role\" : \"system\" , \"content\" : \"You are a sassy, wise-cracking robot as imagined by Hollywood circa 1986.\" },\n    { \"role\" : \"user\" , \"content\" : \"Hey, can you tell me any fun things to do in New York?\" }\n] pipeline = pipeline ( task = \"text-generation\" , model = \"meta-llama/Meta-Llama-3-8B-Instruct\" , dtype = torch . bfloat16 , device_map = \"auto\" ) response = pipeline ( chat , max_new_tokens = 512 ) print ( response [ 0 ][ \"generated_text\" ][ - 1 ][ \"content\" ]) Expand the examples below to see how Pipeline works for different modalities and tasks. Automatic speech recognition from transformers import pipeline pipeline = pipeline ( task = \"automatic-speech-recognition\" , model = \"openai/whisper-large-v3\" ) pipeline ( \"https://huggingface.co/datasets/Narsil/asr_dummy/resolve/main/mlk.flac\" )\n{ 'text' : ' I have a dream that one day this nation will rise up and live out the true meaning of its creed.' } Image classification from transformers import pipeline pipeline = pipeline ( task = \"image-classification\" , model = \"facebook/dinov2-small-imagenet1k-1-layer\" ) pipeline ( \"https://huggingface.co/datasets/Narsil/image_dummy/raw/main/parrots.png\" )\n[{ 'label' : 'macaw' , 'score' : 0.997848391532898 },\n { 'label' : 'sulphur-crested cockatoo, Kakatoe galerita, Cacatua galerita' , 'score' : 0.0016551691805943847 },\n { 'label' : 'lorikeet' , 'score' : 0.00018523589824326336 },\n { 'label' : 'African grey, African gray, Psittacus erithacus' , 'score' : 7.85409429227002e-05 },\n { 'label' : 'quail' , 'score' : 5.502637941390276e-05 }] Visual question answering from transformers import pipeline pipeline = pipeline ( task = \"visual-question-answering\" , model = \"Salesforce/blip-vqa-base\" ) pipeline ( image = \"https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/transformers/tasks/idefics-few-shot.jpg\" , question = \"What is in the image?\" ,\n)\n[{ 'answer' : 'statue of liberty' }] Why should I use Transformers? Easy-to-use state-of-the-art models: High performance on natural language understanding & generation, computer vision, audio, video, and multimodal tasks. Low barrier to entry for researchers, engineers, and developers. Few user-facing abstractions with just three classes to learn. A unified API for using all our pretrained models. Lower compute costs, smaller carbon footprint: Share trained models instead of training from scratch. Reduce compute time and production costs. Hundreds of model architectures with 1M+ pretrained checkpoints across all modalities. Choose the right framework for every part of a model's lifetime: Train state-of-the-art models in 3 lines of code. Move a single model between PyTorch/JAX/TF2.0 frameworks at will. Pick the right framework for training, evaluation, and production. Easily customize a model or an example to your needs: We provide examples for each architecture to reproduce the results published by its original authors. Model internals are exposed as consistently as possible. Model files can be used independently of the library for quick experiments. When shouldn't I use Transformers? This library is not a modular toolbox of building blocks for neural nets. The code in the model files is not refactored with additional abstractions on purpose, so that researchers can quickly iterate on each of the models without diving into additional abstractions/files. The training API is optimized to work with PyTorch models provided by Transformers. For generic machine learning loops, you should use another library like Accelerate . The example scripts are only examples . They may not necessarily work out-of-the-box on your specific use case and you'll need to adapt the code for it to work. 100 projects using Transformers Transformers is more than a toolkit to use pretrained models, it's a community of projects built around it and the\nHugging Face Hub. We want Transformers to enable developers, researchers, students, professors, engineers, and anyone\nelse to build their dream projects. In order to celebrate Transformers 100,000 stars, we wanted to put the spotlight on the\ncommunity with the awesome-transformers page which lists 100\nincredible projects built with Transformers. If you own or use a project that you believe should be part of the list, please open a PR to add it! Example models You can test most of our models directly on their Hub model pages . Expand each modality below to see a few example models for various use cases.",
+      "stars_today": 94,
+      "language": "Python"
+    },
+    {
+      "title": "pytorch/pytorch",
+      "slug": "pytorch-pytorch",
+      "url": "https://github.com/pytorch/pytorch",
+      "abstract": "PyTorch is a Python package that provides two high-level features: Tensor computation (like NumPy) with strong GPU acceleration Deep neural networks built on a tape-based autograd system You can reuse your favorite Python packages such as NumPy, SciPy, and Cython to extend PyTorch when needed. Our trunk health (Continuous Integration signals) can be found at hud.pytorch.org . More About PyTorch A GPU-Ready Tensor Library Dynamic Neural Networks: Tape-Based Autograd Python First Imperative Experiences Fast and Lean Extensions Without Pain Installation Binaries NVIDIA Jetson Platforms From Source Prerequisites NVIDIA CUDA Support AMD ROCm Support Intel GPU Support Get the PyTorch Source Install Dependencies Install PyTorch Adjust Build Options (Optional) Docker Image Using pre-built images Building the image yourself Previous Versions Getting Started Resources Communication Releases and Contributing The Team License More About PyTorch Learn the basics of PyTorch At a granular level, PyTorch is a library that consists of the following components: Component Description torch A Tensor library like NumPy, with strong GPU support torch.autograd A tape-based automatic differentiation library that supports all differentiable Tensor operations in torch torch.nn A neural networks library deeply integrated with autograd designed for maximum flexibility torch.multiprocessing Python multiprocessing, but with magical memory sharing of torch Tensors across processes. Useful for data loading and Hogwild training torch.utils DataLoader and other utility functions for convenience Usually, PyTorch is used either as: A replacement for NumPy to use the power of GPUs. A deep learning research platform that provides maximum flexibility and speed. Elaborating Further: A GPU-Ready Tensor Library If you use NumPy, then you have used Tensors (a.k.a. ndarray). PyTorch provides Tensors that can live either on the CPU or the GPU and accelerates the\ncomputation by a huge amount. We provide a wide variety of tensor routines to accelerate and fit your scientific computation needs\nsuch as slicing, indexing, mathematical operations, linear algebra, reductions.\nAnd they are fast! Dynamic Neural Networks: Tape-Based Autograd PyTorch has a unique way of building neural networks: using and replaying a tape recorder. Most frameworks such as TensorFlow, Theano, Caffe, and CNTK have a static view of the world.\nOne has to build a neural network and reuse the same structure again and again.\nChanging the way the network behaves means that one has to start from scratch. With PyTorch, we use a technique called reverse-mode auto-differentiation, which allows you to\nchange the way your network behaves arbitrarily with zero lag or overhead. Our inspiration comes\nfrom several research papers on this topic, as well as current and past work such as torch-autograd , autograd , Chainer , etc. While this technique is not unique to PyTorch, it's one of the fastest implementations of it to date.\nYou get the best of speed and flexibility for your crazy research. Python First PyTorch is not a Python binding into a monolithic C++ framework.\nIt is built to be deeply integrated into Python.\nYou can use it naturally like you would use NumPy / SciPy / scikit-learn etc.\nYou can write your new neural network layers in Python itself, using your favorite libraries\nand use packages such as Cython and Numba .\nOur goal is to not reinvent the wheel where appropriate. Imperative Experiences PyTorch is designed to be intuitive, linear in thought, and easy to use.\nWhen you execute a line of code, it gets executed. There isn't an asynchronous view of the world.\nWhen you drop into a debugger or receive error messages and stack traces, understanding them is straightforward.\nThe stack trace points to exactly where your code was defined.\nWe hope you never spend hours debugging your code because of bad stack traces or asynchronous and opaque execution engines. Fast and Lean PyTorch has minimal framework overhead. We integrate acceleration libraries\nsuch as Intel MKL and NVIDIA ( cuDNN , NCCL ) to maximize speed.\nAt the core, its CPU and GPU Tensor and neural network backends\nare mature and have been tested for years. Hence, PyTorch is quite fast — whether you run small or large neural networks. The memory usage in PyTorch is extremely efficient compared to Torch or some of the alternatives.\nWe've written custom memory allocators for the GPU to make sure that\nyour deep learning models are maximally memory efficient.\nThis enables you to train bigger deep learning models than before. Extensions Without Pain Writing new neural network modules, or interfacing with PyTorch's Tensor API, was designed to be straightforward\nand with minimal abstractions. You can write new neural network layers in Python using the torch API or your favorite NumPy-based libraries such as SciPy . If you want to write your layers in C/C++, we provide a convenient extension API that is efficient and with minimal boilerplate.\nNo wrapper code needs to be written. You can see a tutorial here and an example here . Installation Binaries Commands to install binaries via Conda or pip wheels are on our website: https://pytorch.org/get-started/locally/ NVIDIA Jetson Platforms Python wheels for NVIDIA's Jetson Nano, Jetson TX1/TX2, Jetson Xavier NX/AGX, and Jetson AGX Orin are provided here and the L4T container is published here They require JetPack 4.2 and above, and @dusty-nv and @ptrblck are maintaining them. From Source Prerequisites If you are installing from source, you will need: Python 3.10 or later A compiler that fully supports C++20, such as clang or gcc (gcc 11.3.0 or newer is required, on Linux) Visual Studio or Visual Studio Build Tool (Windows only) At least 10 GB of free disk space 30-60 minutes for the initial build (subsequent rebuilds are much faster) * PyTorch CI uses Visual C++ BuildTools, which come with Visual Studio Enterprise,\nProfessional, or Community Editions. You can also install the build tools from https://visualstudio.microsoft.com/visual-cpp-build-tools/ . The build tools do not come with Visual Studio Code by default. An example of environment setup is shown below: Linux: $ source < CONDA_INSTALL_DIR > /bin/activate\n$ conda create -y -n < CONDA_NAME > $ conda activate < CONDA_NAME > Windows: $ source < CONDA_INSTALL_DIR > \\S cripts \\a ctivate.bat\n$ conda create -y -n < CONDA_NAME > $ conda activate < CONDA_NAME > $ call \" C:\\Program Files\\Microsoft Visual Studio\\<VERSION>\\Community\\VC\\Auxiliary\\Build\\vcvarsall.bat \" x64 A conda environment is not required.  You can also do a PyTorch build in a\nstandard virtual environment, e.g., created with tools like uv , provided\nyour system has installed all the necessary dependencies unavailable as pip\npackages (e.g., CUDA, MKL.) NVIDIA CUDA Support If you want to compile with CUDA support, select a supported version of CUDA from our support matrix , then install the following: NVIDIA CUDA NVIDIA cuDNN v9.0 or above Compiler compatible with CUDA Note: You could refer to the cuDNN Support Matrix for cuDNN versions with the various supported CUDA, CUDA driver, and NVIDIA hardware. If you want to disable CUDA support, export the environment variable USE_CUDA=0 .\nOther potentially useful environment variables are documented in cmake/EnvVarForwarding.cmake .  If\nCUDA is installed in a non-standard location, set PATH so that the nvcc you\nwant to use can be found (e.g., export PATH=/usr/local/cuda-12.8/bin:$PATH ). If you are building for NVIDIA's Jetson platforms (Jetson Nano, TX1, TX2, AGX Xavier), Instructions to install PyTorch for Jetson Nano are available here AMD ROCm Support If you want to compile with ROCm support, install AMD ROCm 4.0 and above installation ROCm is currently supported only for Linux systems. By default the build system expects ROCm to be installed in /opt/rocm .",
+      "stars_today": 81,
+      "language": "Python"
+    },
+    {
+      "title": "BitterSecurity/Decepticon",
+      "slug": "bittersecurity-decepticon",
+      "url": "https://github.com/BitterSecurity/Decepticon",
+      "abstract": "Decepticon — Autonomous Red Team Agent \"Another AI hacker? Let us guess — it runs nmap and writes a report.\" Commercial product demo continuum-github.mp4 ☁️ Don't want to self-host? Decepticon is live in the cloud. Skip the Docker setup — run autonomous red-team engagements right from your browser. Open-source CLI demo v1demo.mp4 Install Prerequisites : Docker and Docker Compose v2.\nSupported on macOS (Apple Silicon + Intel), Linux (amd64 + arm64), and Windows (amd64 + arm64) — native via PowerShell or via WSL2 (Ubuntu / Kali). macOS / Linux / WSL2 curl -fsSL https://decepticon.red/install | bash\ndecepticon onboard # Interactive setup wizard (provider, API key, model profile) decepticon # Start the core stack and drop into the terminal CLI The default start brings up the core management plane (LiteLLM, PostgreSQL, Neo4j, Skillogy, LangGraph, sandbox) and launches the terminal CLI. Specialist workloads (BloodHound CE, Sliver C2, Ghidra MCP, …) and the web dashboard come up on demand — the orchestrator spawns specialists via ops_start(\"ad\") etc., and you bring up the dashboard from inside the CLI with /web (see Web Dashboard ). Windows (PowerShell, native) irm https: // decepticon.red / install.ps1 | iex\ndecepticon onboard\ndecepticon → Quick start · Full setup walkthrough Use from Claude Code or Codex After starting Decepticon, register its MCP server in your coding agent: claude mcp add --scope user decepticon -- decepticon mcp serve\ncodex mcp add decepticon -- decepticon mcp serve Use the command for the coding agent you have installed, then run decepticon skill install to add the operator guide to both agents. See the external agent guide for the Agent Skill,\ntool workflow, and source installation path. Use as a library (pip) Building on top of the agents — a product, a research integration, or a custom orchestrator? Install the SDK from PyPI: pip install decepticon # core SDK pip install \" decepticon[neo4j] \" # + the knowledge-graph attack-chain tools decepticon is a client SDK : it ships the agent factories, middleware, tools, and skills, and routes LLM calls and sandbox execution to runtime services over HTTP ( DECEPTICON_LLM__PROXY_URL , SANDBOX_URL ). Running agents still needs those services — use the Docker stack above, or point the URLs at your own equivalents. See Decepticon as a library for the factory override surface, declarative PluginBundle plugins, and the safety gate. 💖 Support Decepticon We're building Decepticon toward an Offensive Vaccine for the AI-driven threat landscape. If you believe in autonomous red teaming as a path to stronger defense, consider supporting the project. Benchmark Benchmark Difficulty Pass Rate XBOW validation-benchmarks Easy (Level 1) 45 / 45 (100 %) XBOW validation-benchmarks Medium (Level 2) 50 / 51 (98.0 %) XBOW validation-benchmarks Hard (Level 3) 7 / 8 (87.5 %) XBOW validation-benchmarks All levels 102 / 104 (98.08 %) Full per-challenge index, attack-class matrix, and LangSmith traces Comparison vs other AI pentest agents (Strix, PentestGPT, MAPTA, Cyber-AutoAgent, XBOW commercial, …) What is Decepticon? The \"AI + hacking\" space is full of demos that run nmap and print a report. That's not what this is. Decepticon is a professional autonomous Red Team agent. It executes realistic attack chains — reconnaissance, exploitation, privilege escalation, lateral movement, C2 — the way a real adversary would, not the way a scanner does. But more importantly: it operates under the discipline that separates red teamers from script kiddies. Before a single packet leaves the wire, Decepticon generates a complete engagement package — RoE , ConOps , Deconfliction Plan , and OPPLAN with MITRE ATT&CK mapping — and every action runs inside those defined rules. → Engagement workflow deep dive Why Decepticon? Real kill chains, not checkbox scans. Decepticon reads an OPPLAN and pursues objectives through whatever path opens up — pivoting, adapting, chaining techniques. Interactive shells, actually. Real offensive tools are interactive ( msfconsole , sliver-client , evil-winrm ). Decepticon runs every command inside persistent tmux sessions with automatic prompt detection — so when a tool drops into an interactive prompt, the agent sends follow-up commands without workarounds. Hardened sandbox isolation. All commands run inside a Kali Linux sandbox on a dedicated operational network ( sandbox-net ), separate from the management plane ( decepticon-net ). LangGraph drives the sandbox via the Docker socket. → Architecture Offense serves defense. The planned Offensive Vaccine loop will turn findings into defense improvements through an attack → defend → verify cycle. Architecture Two-network design. The always-on management plane (LiteLLM, PostgreSQL, Skillogy, LangGraph) and the always-on sandbox plane stay up across the whole engagement; everything else is dynamic-spawn — the Web dashboard comes up on /web from the CLI, and specialist workloads (BloodHound CE, Sliver C2, Ghidra MCP, …) come up only when the orchestrator calls ops_start(...) (see ADR-0006 ). Networks: management on decepticon-net ; sandbox + C2 server + targets on sandbox-net . Neo4j is dual-homed so the agent (on management) can persist findings written from inside the sandbox. → Architecture deep dive · Knowledge graph Agents 16 specialist agents organized by kill chain phase, with a fresh context window per objective — no accumulated noise. Orchestration · Reconnaissance · Exploitation · Post-Exploitation · Vulnerability Research · Domain Specialists (AD, Cloud, Smart Contracts, Reversing, Analyst). → Full agent roster and middleware stack Models & Providers Tier-based, credentials-aware fallback chain. You declare which credentials you have in priority order; Decepticon builds the primary→fallback chain at every tier from there. Profile Tier per agent Use case eco (default) Per-agent (HIGH for orchestrator/exploiter/patcher/analyst, MID for execution, LOW for recon/soundwave) Production max Every agent on HIGH High-value targets test Every agent on LOW Development / CI Tier-mapped providers : Anthropic, OpenAI, Google Gemini, MiniMax, DeepSeek, xAI, Mistral, OpenRouter, Nvidia NIM, Ollama (local). Subscription OAuth : Claude Max/Pro/Team, ChatGPT Pro/Plus/Team, Gemini Advanced, Copilot Pro, SuperGrok, Perplexity Pro. Configure via decepticon onboard . → Full model reference & fallback examples Documentation Topic Doc Installation and first engagement Getting Started Complete setup, OAuth, providers, dashboard Setup Guide All CLI commands and keyboard shortcuts CLI Reference All make targets Makefile Reference Agent roster and middleware Agents Model profiles and fallback chain Models Skill system and format spec Skills Web dashboard features and setup Web Dashboard System architecture and network isolation Architecture Neo4j knowledge graph Knowledge Graph End-to-end engagement workflow Engagement Workflow Offensive Vaccine loop Offensive Vaccine Contributing to Decepticon Contributing Contributing git clone https://github.com/PurpleAILAB/Decepticon.git cd Decepticon\nmake dogfood # Full OSS UX (launcher → onboard → CLI) on local code make dev # Backend hot-reload (compose watch) — daily dev loop → Contributing guide Community Join the Discord — ask questions, share engagement logs, discuss techniques. Disclaimer Do not use this project on any system or network without explicit written authorization from the system owner. Unauthorized access to computer systems is illegal. You are solely responsible for your actions. The authors and contributors assume no liability for misuse. License Apache-2.0",
+      "stars_today": 80,
+      "language": "Python"
+    },
+    {
+      "title": "sgl-project/sglang",
+      "slug": "sgl-project-sglang",
+      "url": "https://github.com/sgl-project/sglang",
+      "abstract": "SGLang: Fast inference for LLMs and multimodal models Docs | Cookbook | Website | Blog | Slack SGLang is an open-source inference framework for large language, vision-language, and diffusion models, optimized for agentic workloads, large-scale serving, and RL rollouts. SGLang Diffusion is its built-in image and video generation engine, included in this repository and the sglang Python package. 👋 Get started below, or meet the community at SGLang Events , including meetups, developer meetings, workshops, and office hours. Get Started Pull the Docker image, which includes SGLang and its dependencies: docker pull lmsysorg/sglang:latest Alternatively, install SGLang in an activated Python environment with uv: uv pip install --prerelease=allow sglang Next, launch your model: Quickstart : Run your first model and send a request. Cookbook : Choose your model and hardware to get a ready-to-run launch command. Supported Hardware SGLang supports a wide range of GPUs, TPUs, NPUs, CPUs, and Apple Silicon platforms. Platform Representative hardware NVIDIA B200/B300/GB200/GB300; H100/H200/H800/H20; A100; RTX 30/40/50 series, RTX 6000 Ada / PRO 6000; DGX Spark, Jetson Orin AMD Instinct MI300X, MI325X, MI350X, MI355X Google TPU v6e, v7; SGL-JAX / SGL-torchtpu Intel ( GPU / CPU ) Arc / Arc Pro B-Series GPUs, Xeon CPUs Apple Silicon Macs via Metal / MLX Huawei Ascend A2, A3, 950PR/DT NPUs Moore Threads MTT S5000 GPUs Integrations in progress: AWS Trainium, Alibaba T-Head PPU , Cambricon MLU , Qualcomm QAIC, MetaX, Hygon HCU/DCU, Iluvatar CoreX, and more. See the Cookbook and platform guides for model compatibility and setup. SGL Ecosystem Area Projects Purpose Diffusion SGLang Diffusion Built into SGLang for image and video generation with diffusion models. Audio SGLang Omni Audio model serving for text-to-speech (TTS) and automatic speech recognition (ASR). Speculative Decoding SpecForge Train draft models for speculative decoding and deploy them with SGLang. RL and Post-Training Miles , slime , AReaL , Tunix , verl Training frameworks that integrate SGLang for rollout generation. Deployment and Orchestration SMG , RBG , llm-d , Ray Serve , NVIDIA Dynamo Deploy and scale SGLang inference services with routing, load balancing, and cluster orchestration. Education Mini-SGLang , zero-to-sglang , DeepLearning.AI course Learn inference engine design and efficient text and image generation through code and hands-on courses. Development and Contributing Contributions are welcome, from bug fixes and documentation to model support and performance improvements. Development setup Start from the lmsysorg/sglang:dev Docker image, which provides development tools and most dependencies. Clone or mount your SGLang checkout inside the container, then install it in editable mode from the repository root so tests use your local Python changes: pip install -e \" python \" In an activated virtual environment, you can use uv pip install --prerelease=allow -e \"python\" instead. See the development guide for container setup and testing. Contribute Fork the repository and create a branch for your changes. For larger changes, discuss your proposal in a GitHub issue or on Slack . Make your changes, run the relevant tests, and add regression coverage for fixes or new behavior. Run pre-commit run --all-files before submitting. Open a pull request describing the change and how you tested it. Include benchmarks or accuracy evaluations when relevant. See the contributor guide for formatting, testing, and pull request instructions. Documentation contributors can start with the docs guide . Community and Sponsorship SGLang is hosted by LMSYS , a non-profit open-source organization. Community discussions: Join Slack for technical questions and development discussions. Events: Find meetups, workshops, and office hours on SGLang Events . Updates: Follow X and LinkedIn for project updates, and the LMSYS Blog for release announcements and technical articles. Project resources: Explore the documentation , Cookbook , roadmap , release notes , issue tracker , and contributor guide . Contact Us: For enterprise adoption and deployment, technical consulting, sponsorship, or partnership inquiries, please contact sglang@lmsys.org . Contributor sponsorship: Long-term active SGLang contributors are eligible for coding agent sponsorship, including Cursor, Claude Code, or OpenAI Codex. To apply, email sglang@lmsys.org with links to your key commits or pull requests. Trusted by Industry and Research SGLang serves production workloads across AI labs, cloud platforms, enterprises, and universities. Acknowledgment We learned the design and reused code from the following projects: Guidance , vLLM , LightLLM , FlashInfer , Outlines , and LMQL .",
+      "stars_today": 47,
+      "language": "Python"
+    },
+    {
+      "title": "Yeachan-Heo/oh-my-claudecode",
+      "slug": "yeachan-heo-oh-my-claudecode",
+      "url": "https://github.com/Yeachan-Heo/oh-my-claudecode",
+      "abstract": "English | 한국어 | 中文 | 日本語 | Español | Tiếng Việt | Português oh-my-claudecode For Codex users: Check out oh-my-codex — the same orchestration experience for OpenAI Codex CLI. Liked OmC but found it a bit overkill? Try gajae-code . Keeps Claude OAuth as-is while being faster, cheaper, simpler, and more powerful — with an SDK-based integration path built for OpenClaw, Hermes, Grokbot, and similar agent runtimes. Multi-agent orchestration for Claude Code. Zero learning curve. Don't learn Claude Code. Just use OMC. Get Started • Documentation • CLI Reference • Workflows • Migration Guide • Discord Core Maintainers Role Name GitHub Creator & Lead Yeachan Heo @Yeachan-Heo Ambassadors Name GitHub Sigrid Jin @sigridjineth Document Specialists Name GitHub devswha @devswha Top Collaborators Name GitHub Commits JunghwanNA @shaun0927 65 riftzen-bit @riftzen-bit 52 Seunggwan Song @Nathan-Song 20 BLUE @blue-int 20 Junho Yeo @junhoyeo 15 Quick Start Step 1: Install Marketplace/plugin install (recommended for most Claude Code users).\nThese are Claude Code slash commands — enter them one at a time (pasting both lines at once will fail): /plugin marketplace add https://github.com/Yeachan-Heo/oh-my-claudecode Then: /plugin install oh-my-claudecode If you prefer the npm CLI/runtime path instead of the marketplace flow: npm i -g oh-my-claude-sisyphus@latest Known npm warning: npm may print deprecated prebuild-install@7.1.3 during the CLI install.\nThis currently comes from the upstream better-sqlite3 native-addon dependency\n( better-sqlite3 -> prebuild-install ); prebuild-install@7.1.3 is still the latest\npublished version, so there is no safe repo-side dependency bump or override to remove\nthe warning yet. The warning is tracked in #2913 and does not by itself mean the OMC CLI install failed. Step 2: Setup # Inside a Claude Code / OMC session /omc-setup # From your terminal omc setup If you run OMC via omc --plugin-dir <path> or claude --plugin-dir <path> , add --plugin-dir-mode to omc setup (or export OMC_PLUGIN_ROOT before running it) so the installer doesn't duplicate skills/agents that the plugin already provides at runtime. See the Plugin directory flags section in REFERENCE.md for a complete decision matrix and all available flags. Step 3: Build something # Inside a Claude Code / OMC session /autopilot \" build a REST API for managing tasks \" # Natural-language in-session shortcut autopilot: build a REST API for managing tasks Named autopilot stage profiles (v1) Select a configured stage profile only through /autopilot --workflow <name> <task> : /autopilot --workflow plan-build-qa \"build a REST API for managing tasks\" Profiles are configured under autopilot.workflows in .claude/omc.jsonc (project) or ~/.config/claude-omc/config.jsonc (user). A v1 profile contains only version: 1 and stages : { \"autopilot\" : { \"workflows\" : { \"plan-build-qa\" : { \"version\" : 1 , \"stages\" : [ \" ralplan \" , \" execution \" , \" qa \" ]\n      }\n    }\n  }\n} The admitted sequences are [ralplan, execution] , [ralplan, execution, ralph] , [ralplan, execution, qa] , and [ralplan, execution, ralph, qa] . A project profile of the same name wholly replaces the user profile; different names coexist. Environment variables cannot define profiles. Profiles remain within autopilot's existing state, cancel, resume, Stop, and HUD lifecycle; legacy invocations without --workflow remain compatible. Named profiles currently require Linux with the flock utility because their transcript evidence boundary uses Linux no-follow file-descriptor traversal and their recoverable mutation lock uses kernel advisory locking. Unsupported environments reject explicit --workflow invocation before creating or changing autopilot state; legacy autopilot remains available. V1 intentionally excludes model fields or routing ( stageModels ), inline execution, dynamic commands/modes/state, arbitrary stages or plugins, and the separate custom-skill frontmatter parser mismatch. See Named Autopilot Stage Profiles ADR and Reference . That's it. Everything else is automatic. CLI Commands vs In-Session Skills OMC exposes two different surfaces: Terminal CLI commands : run omc ... from your shell after installing the npm/runtime path ( npm i -g oh-my-claude-sisyphus@latest ) or from a local checkout. In-session skills : run /... inside a Claude Code session after installing the plugin/setup flow. Feature Terminal CLI In-session skill Notes Setup omc setup /omc-setup Both are real entrypoints. Ask providers omc ask codex \"review this patch\" /ask codex \"review this patch\" Both route through the same advisor flow. Providers: claude , codex , gemini , antigravity , grok , cursor . Team orchestration omc team 2:codex \"review auth flow\" /team 3:executor \"fix all TypeScript errors\" Both exist, but they are different runtimes: omc team launches tmux CLI workers; /team runs the in-session native team workflow. Pre-flight danger scan omc lookout scan --brief \"...\" [--json] [--strict] — Advisory only: scans the task briefing and workspace before an unattended run and reports danger findings (findings/severity contract). Exit codes: 0 for successful non-strict scans (and strict scans without high-risk signals), 1 --strict with high-risk signals, 2 usage/scan error. Autopilot / Ralph / Execute / Deep Interview — /autopilot ... , /ralph ... , /execute ... , /deep-interview ... These are in-session skills. There is no omc autopilot / omc ralph / omc execute CLI subcommand in this repo. Autoresearch omc autoresearch ( hard-deprecated shim ) /deep-interview --autoresearch ... + /oh-my-claudecode:autoresearch Setup stays in deep-interview; execution now belongs to the stateful skill. VS Code, Agent SDK, and automation scope VS Code / IDE extension : OMC does not ship a VS Code extension and does not document extension-specific install or automation flows. Use the Claude Code plugin or terminal CLI surfaces above; IDE integrations are only an optional way to access Claude Code itself. Agent SDK / programmatic usage : the npm package exports TypeScript helpers such as createOmcSession() and prompt expansion utilities for local Node.js programs using @anthropic-ai/claude-agent-sdk . This is a library surface, not a replacement for the Claude Code plugin UI. CI/CD and headless automation : prefer deterministic terminal commands ( omc setup , omc ask , omc session search , repository scripts such as npm run sync-metadata:verify ) and set ANTHROPIC_API_KEY or provider-specific CLI auth in the runner environment. Do not rely on interactive slash commands ( /autopilot , /ralph , /execute , /team ) in CI; they require an active Claude Code session. Not Sure Where to Start? If you're uncertain about requirements, have a vague idea, or want to micromanage the design: /deep-interview \"I want to build a task management app\" The deep interview uses Socratic questioning to clarify your thinking before any code is written. It exposes hidden assumptions and measures clarity across weighted dimensions, ensuring you know exactly what to build before execution begins. Team Mode (Recommended) Starting in v4.1.7 , Team is the canonical orchestration surface in OMC. The legacy swarm keyword/skill has been removed; use team directly. /team 3:executor \" fix all TypeScript errors \" Use /team ... when you want Claude Code's in-session native team workflow. Use omc team ... when you want terminal-launched tmux CLI workers ( claude / codex / gemini panes). Team runs as a staged pipeline: team-plan → team-prd → team-exec → team-verify → team-fix (loop) Enable Claude Code native teams in ~/.claude/settings.json : { \"env\" : { \"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS\" : \" 1 \" }\n} If teams are disabled, OMC will warn you and fall back to non-team execution where possible. tmux CLI Workers — Codex, Gemini & Antigravity (v4.4.0+) v4.4.0 removes the Codex/Gemini MCP servers ( x , g providers). Use the CLI-first Team runtime ( omc team ...",
+      "stars_today": 44,
+      "language": "TypeScript"
+    },
+    {
+      "title": "appwrite/appwrite",
+      "slug": "appwrite-appwrite",
+      "url": "https://github.com/appwrite/appwrite",
+      "abstract": "Appwrite The open-source cloud for agents and developers. Appwrite is an MCP and agent-first platform for building and scaling apps. Give your agents Auth, Databases, Storage, Functions, Messaging, Realtime, and Hosting, all in one place. English | 簡體中文 Appwrite is an MCP and agent-first, open-source platform for building and scaling apps. MCP is included, so coding agents can operate on a live Appwrite project. Appwrite is available as a managed cloud platform and can also be self-hosted on infrastructure you control. It is designed for the AI agents in your workflow as well as for developers. Connect Cursor, Claude Code, Codex, and other agents through the hosted MCP server, or integrate an SDK into your app. Modular products stay unified from the first prototype to production scale. Find out more at https://appwrite.io . Table of Contents: Products Installation & Setup Self-Hosting Unix Windows CMD PowerShell Docker API version mismatch Upgrade from an Older Version One-Click Setups Getting Started Agents SDKs Client Server Architecture Contributing Security Follow Us License Products Appwrite Auth - Authenticate users securely with email, SMS, OAuth, anonymous sessions, and magic URLs. Appwrite Databases - Model, query, and scale with Appwrite databases or managed PostgreSQL and MySQL, so you can match your use case and team needs. Appwrite Storage - Store files with compression, encryption, image transformations, and access control. Appwrite Functions - Deploy serverless functions with secure isolated runtimes and event-driven execution. Appwrite Sites - Deploy static, SSR, and CSR frontends from Git with instant previews and Appwrite behind them. Appwrite Messaging - Send email, SMS, and push notifications through a unified messaging service. Appwrite Firewall - Protect apps with traffic rules, abuse controls, and edge security for every project. Appwrite Realtime - Subscribe and react to events across your project as they happen. Appwrite MCP - Connect agents to your Appwrite project, APIs, and docs. MCP is included on Cloud, with no local install required. Installation & Setup The easiest way to get started with Appwrite is by signing up for Appwrite Cloud . Cloud includes a Free plan so you can start building immediately, with paid plans when you need to scale. Self-Hosting Appwrite was designed from the ground up with self-hosting in mind. You can install and run Appwrite on any operating system that can run a Docker CLI . Running your server is as easy as running one command from your terminal. Before running the installation command, make sure you have Docker installed on your machine. The setup wizard listens on port 20080 and is published on localhost only. It also prints a one-time installer secret to STDOUT — open the printed URL (or send x-appwrite-installer-secret ) to complete setup. For a remote host, SSH-tunnel to 127.0.0.1:20080 rather than publishing the port on all interfaces. Unix docker run -it --rm \\\n    --publish 127.0.0.1:20080:20080 \\\n    --volume /var/run/docker.sock:/var/run/docker.sock \\\n    --volume \" $( pwd ) \" /appwrite:/usr/src/code/appwrite:rw \\\n    --entrypoint= \" install \" \\\n    appwrite/appwrite:2.4.0 Windows CMD docker run -it --rm ^ --publish 127.0.0.1:20080:20080 ^ --volume //var/run/docker.sock:/var/run/docker.sock ^ --volume \" %cd% \" /appwrite:/usr/src/code/appwrite:rw ^ --entrypoint= \" install \" ^ appwrite/appwrite:2.4.0 PowerShell docker run - it -- rm ` -- publish 127.0 . 0.1 : 20080 : 20080 ` -- volume / var / run / docker.sock: / var / run / docker.sock ` -- volume ${pwd} / appwrite: / usr / src / code / appwrite:rw ` -- entrypoint = \" install \" ` appwrite / appwrite: 2.4 . 0 Once the installer is running, open the URL printed in the terminal (it includes a one-time secret) to complete the setup wizard. After installation, go to http://localhost to access the Appwrite console from your browser. Please note that on non-Linux native hosts, the server might take a few minutes to start after completing the installation. Docker API version mismatch If install or upgrade fails with an error like client version 1.52 is too new. Maximum supported API version is 1.42 , the Docker CLI inside the Appwrite image is newer than your host Docker Engine. Pass DOCKER_API_VERSION set to the maximum API version from the error (or upgrade Docker on the host): docker run -it --rm \\\n    --env DOCKER_API_VERSION=1.42 \\\n    --publish 127.0.0.1:20080:20080 \\\n    --volume /var/run/docker.sock:/var/run/docker.sock \\\n    --volume \" $( pwd ) \" /appwrite:/usr/src/code/appwrite:rw \\\n    --entrypoint= \" install \" \\\n    appwrite/appwrite:2.4.0 Use the same --env DOCKER_API_VERSION=... flag with --entrypoint=\"upgrade\" when upgrading. For advanced production and custom installation, check out our Docker environment variables docs. You can also use our public docker-compose.yml and .env files to manually set up an environment. Upgrade from an Older Version If you are upgrading your Appwrite server from an older version, you should use the Appwrite migration tool once your setup is completed. For more information regarding this, check out the migration instructions . One-Click Setups In addition to running Appwrite locally, you can launch Appwrite using a pre-configured marketplace app for instant setup. Choose from one of the providers below: DigitalOcean Gitpod Akamai Compute AWS Marketplace For custom deployments on a cloud provider or PaaS, see the guides for AWS , DigitalOcean , Google Cloud , Azure , Coolify , and Dokploy . Getting Started Getting started with Appwrite is as easy as creating a new project, connecting an agent, or integrating an SDK into your code. You can start from a prompt, a quick start tutorial, or the hosted MCP server. Agents Designed for the AI agents in your workflow. Query a database, chart traffic, or ship a change: your agent does it on a live Appwrite project. The hosted MCP server uses OAuth, so you do not need to create or manage API keys. For a self-hosted instance, use the local MCP server instead. Add the remote server to Cursor, Claude Code, Codex, VS Code, and other MCP clients: { \"mcpServers\" : { \"appwrite\" : { \"url\" : \" https://mcp.appwrite.io/ \" }\n    }\n} You can also add the MCP server to Cursor in one click. Install language-specific agent skills so models generate correct SDK calls: npx skills add appwrite/agent-skills Browse quick start prompts , generate an AGENTS.md file for your repo, or see the AI tooling docs for IDE and vibe coding setup. Getting started with your platform of choice is also covered in the tutorials below. Platform Technology Web app Quick start for Web Quick start for Next.js Quick start for React Quick start for Vue.js Quick start for Nuxt Quick start for SvelteKit Quick start for Astro Quick start for TanStack Start Quick start for Refine Quick start for Angular Mobile and Native Quick start for React Native Quick start for Flutter Quick start for Apple Quick start for Android Server Quick start for Node.js Quick start for Python Quick start for .NET Quick start for Dart Quick start for Ruby Quick start for Deno Quick start for PHP Quick start for Kotlin Quick start for Swift Quick start for Go Quick start for Rust SDKs Below is a list of currently supported platforms and languages. If you would like to help us add support to your platform of choice, you can go over to our SDK Generator project and view our contribution guide . Client ✅ Web ✅ Flutter ✅ Apple ✅ Android ✅ React Native Server ✅ Node.js ✅ Python ✅ Dart ✅ PHP ✅ Ruby ✅ .NET ✅ Go ✅ Swift ✅ Kotlin ✅ Rust Looking for more SDKs? - Help us by contributing a pull request to our SDK Generator !",
+      "stars_today": 11,
+      "language": "TypeScript"
+    }
+  ],
+  "papers": {
+    "hf": [],
+    "others": [
+      {
+        "title": "SpatialTutorX: Exploring Shared AI Facilitation for Collaborative Procedural Learning in Mixed Reality",
+        "slug": "spatialtutorx-exploring-shared-ai-facilitation-for",
+        "url": "https://www.semanticscholar.org/paper/fd4c4e11e9c576ae03d5ab41f9d2a1eb6608c528",
+        "abstract": "SpatialTutorX: Exploring Shared AI Facilitation for Collaborative Procedural Learning in Mixed Reality.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-10",
+        "authors": [
+          "Duo Wang",
+          "Jian-Wei Ni",
+          "Qing-Xiao Zheng",
+          "Shandra Jamison",
+          "Mike Z. Yao"
+        ]
+      },
+      {
+        "title": "Rethinking Social Computing Research in the Age of AI: Agency, Collaboration, and Governance",
+        "slug": "rethinking-social-computing-research-in-the-age-of-ai-agency",
+        "url": "https://www.semanticscholar.org/paper/fbb55c83b93bcc412ac5b088c930eadb007a7d58",
+        "abstract": "Rethinking Social Computing Research in the Age of AI: Agency, Collaboration, and Governance.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-10",
+        "authors": [
+          "Yun Huang",
+          "N. Contractor",
+          "Tai-Quan Peng",
+          "Da-Shun Wang",
+          "Cui-Hua Shen",
+          "Man-Ling Li",
+          "Yi-Ren Liu",
+          "Hang-Yue Zhang",
+          "Sang-Ho Suh"
+        ]
+      },
+      {
+        "title": "PersonaTown: An Infrastructure for Live Design Fiction and Hybrid Intelligence Probing",
+        "slug": "personatown-an-infrastructure-for-live-design-fiction-and",
+        "url": "https://www.semanticscholar.org/paper/f9a4bfb6fc13b38decb3249e2574813a75d9e122",
+        "abstract": "PersonaTown: An Infrastructure for Live Design Fiction and Hybrid Intelligence Probing.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-10",
+        "authors": [
+          "A. Asadi",
+          "Jessica Kropczynski",
+          "Hazem Said"
+        ]
+      },
+      {
+        "title": "Unpacking GenAI-Supported Community Co-Design: Intergenerational Participation Pathways and Accountable Mediation",
+        "slug": "unpacking-genai-supported-community-co-design",
+        "url": "https://www.semanticscholar.org/paper/f1cfcc0b64325cb6e6443a92cd0c554313f0e407",
+        "abstract": "Unpacking GenAI-Supported Community Co-Design: Intergenerational Participation Pathways and Accountable Mediation.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-10",
+        "authors": [
+          "Shu-Zi Yin",
+          "Bing-Jie Gao",
+          "Yin Liu",
+          "Ruo-Xin Qiao",
+          "Dan-Qi Huang",
+          "Hai-Peng Mi"
+        ]
+      },
+      {
+        "title": "TracePlay: Collaborative Trace Translation for AI Coding Agents",
+        "slug": "traceplay-collaborative-trace-translation-for-ai-coding",
+        "url": "https://www.semanticscholar.org/paper/e4180a395818070836b6f8fc3234cd5ffd69359d",
+        "abstract": "TracePlay: Collaborative Trace Translation for AI Coding Agents.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-10",
+        "authors": [
+          "Yu-Shan Li",
+          "Chang-Hai Peng"
+        ]
+      },
+      {
+        "title": "AutoResearcHAR: A Multi-Agent Framework for Dataset Adaptive IMU Based Human Activity Recognition",
+        "slug": "autoresearchar-a-multi-agent-framework-for-dataset-adaptive",
+        "url": "https://www.semanticscholar.org/paper/da0f1d7d65650cdaa27979a548472d4c6ad2fbb2",
+        "abstract": "Building robust IMU-based human activity recognition (HAR) systems requires tuning the full sensing pipeline, not only the model. We present AutoResearcHAR, a multi-agent framework for dataset-adaptive HAR optimization. A Data Agent refines source selection, preprocessing, windowing, and sampling; a Model Agent improves architecture and training choices; and an Augmentation Agent designs IMU augmentation and synthetic-data strategies. An Orchestrator composes compatible proposals, while an LLM-based Judge filters candidate edits before empirical evaluation. The system performs iterative hill climbing over bounded code and configuration level changes, retaining candidates that improve Macro-F1. We evaluate AutoResearcHAR on 10 IMU-HAR datasets using leave-one-subject-out evaluation and 3 held out datasets using leave-one-dataset-out evaluation. AutoResearcHAR improves over the best non-agent baselines by 1.2 to 12.9 Macro-F1 points in LOSO and 2.3 to 8.9 points in LODO, showing the value of coordinated multi-agent pipeline search for wearable sensing.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-10",
+        "authors": [
+          "L. Ray",
+          "V. F. Rey",
+          "Si-Zhen Bian",
+          "Sung-Ho Suh",
+          "P. Lukowicz",
+          "Bo Zhou"
+        ]
+      },
+      {
+        "title": "Beyond Productivity: AI, Community, and Sustainability in Open Source Software",
+        "slug": "beyond-productivity-ai-community-and-sustainability-in-open",
+        "url": "https://www.semanticscholar.org/paper/d805b14f4617d488ff1cc84cb234b9984b447e75",
+        "abstract": "Beyond Productivity: AI, Community, and Sustainability in Open Source Software.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-10",
+        "authors": [
+          "Eli Min",
+          "Hana Frluckaj",
+          "Matthew Gaughan",
+          "Kaylea Champion",
+          "Kevin Crowston",
+          "B. Hill",
+          "James Howison"
+        ]
+      },
+      {
+        "title": "Not Asked to Deceive: Business-Euphemistic Prompts and Dark Pattern Laundering in Generative UI",
+        "slug": "not-asked-to-deceive-business-euphemistic-prompts-and-dark",
+        "url": "https://www.semanticscholar.org/paper/cdf2d5a9a8763272b98e71351272838986aecc67",
+        "abstract": "Not Asked to Deceive: Business-Euphemistic Prompts and Dark Pattern Laundering in Generative UI.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-10",
+        "authors": [
+          "Seunghyun Lim"
+        ]
+      },
+      {
+        "title": "HIROBA: A Configurable Open-Source Platform for Studying the Social Dynamics of AI-mediated Video Communication in Mixed Human-AI Groups",
+        "slug": "hiroba-a-configurable-open-source-platform-for-studying-the",
+        "url": "https://www.semanticscholar.org/paper/c64ea063c44a2ce92143cd2fea58bf6ebf674388",
+        "abstract": "HIROBA: A Configurable Open-Source Platform for Studying the Social Dynamics of AI-mediated Video Communication in Mixed Human-AI Groups.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-10",
+        "authors": [
+          "Ryo Ohara",
+          "Dániel Szabó",
+          "Tsai-Hsuan Lin",
+          "Takuji Narumi",
+          "Chi-Lan Yang"
+        ]
+      },
+      {
+        "title": "\"I Will Be Right Here Whenever You Need Me\": Designing AI-Mediated Collaborative Support for Adolescent Mental Health in Border Regions",
+        "slug": "i-will-be-right-here-whenever-you-need-me-designing-ai",
+        "url": "https://www.semanticscholar.org/paper/c2a0ca0f500326fce21b37a6e17d9f6456c42028",
+        "abstract": "\"I Will Be Right Here Whenever You Need Me\": Designing AI-Mediated Collaborative Support for Adolescent Mental Health in Border Regions.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-10",
+        "authors": [
+          "Wei Gong",
+          "S. Wo",
+          "Zhuo-Ai Liu",
+          "Ke-Jia Zhang"
+        ]
+      },
+      {
+        "title": "CO-CHAIR: A Multi-Party Human-AI Interactional Framework for Collaborative Writing Workshops",
+        "slug": "co-chair-a-multi-party-human-ai-interactional-framework-for",
+        "url": "https://www.semanticscholar.org/paper/b9e004b91b714f63614ca2157bf87c41e719bdf8",
+        "abstract": "CO-CHAIR: A Multi-Party Human-AI Interactional Framework for Collaborative Writing Workshops.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-10",
+        "authors": [
+          "Meredith Young-Ng",
+          "Sophia Minnillo",
+          "Carl Whithaus",
+          "Hao-Chuan Wang"
+        ]
+      },
+      {
+        "title": "The Non-Perceiving Listener: General-Purpose AI Chatbots’ Distinctive Affordance in Student Mental Health Support Ecologies",
+        "slug": "the-non-perceiving-listener-general-purpose-ai-chatbots",
+        "url": "https://www.semanticscholar.org/paper/b36524267ec4714f2e87ea1e6d7d2c692e7f86c0",
+        "abstract": "The Non-Perceiving Listener: General-Purpose AI Chatbots’ Distinctive Affordance in Student Mental Health Support Ecologies.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-10",
+        "authors": [
+          "Shyama Prasad Dash",
+          "Jyothsna Peddi",
+          "Shreya Kamath",
+          "Pin-Yun Wang",
+          "Dong Whi Yoo"
+        ]
+      },
+      {
+        "title": "Permissive Intimacy, Opaque Governance: A Qualitative Analysis of Policies Across Prominent Companion AI Applications",
+        "slug": "permissive-intimacy-opaque-governance-a-qualitative-analysis",
+        "url": "https://www.semanticscholar.org/paper/b3334bb2b1a7efc3de46bd6ebd82fde7d9ec3538",
+        "abstract": "Permissive Intimacy, Opaque Governance: A Qualitative Analysis of Policies Across Prominent Companion AI Applications.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-10",
+        "authors": [
+          "Tyler A. Chang",
+          "Jessica Y. Medina",
+          "Afsaneh Razi"
+        ]
+      },
+      {
+        "title": "CollabPEAS: A Collaborative VR System for Learning AI Agent Design Through the PEAS Framework",
+        "slug": "collabpeas-a-collaborative-vr-system-for-learning-ai-agent",
+        "url": "https://www.semanticscholar.org/paper/b239a5ce337d9c3668a0f5c304c421848ac1f855",
+        "abstract": "CollabPEAS: A Collaborative VR System for Learning AI Agent Design Through the PEAS Framework.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-10",
+        "authors": [
+          "Wanru Jovie Li",
+          "Y. Yu",
+          "Qiao Jin"
+        ]
+      },
+      {
+        "title": "Hidden Profile Decision Making in Multi-Agent LLM Groups",
+        "slug": "hidden-profile-decision-making-in-multi-agent-llm-groups",
+        "url": "https://www.semanticscholar.org/paper/aceec619ee2f9e73be3515da3e1c4f11c26119ee",
+        "abstract": "Hidden Profile Decision Making in Multi-Agent LLM Groups.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-10",
+        "authors": [
+          "Carlos Toxtli",
+          "M. Delaflor"
+        ]
+      },
+      {
+        "title": "Constructing Knowledge for LLMs: Human Labor, AI Mediation, and Dataset Pipelines",
+        "slug": "constructing-knowledge-for-llms-human-labor-ai-mediation-and",
+        "url": "https://www.semanticscholar.org/paper/aa18b35648bfb8cb23a5ddb05e77d30f304436fe",
+        "abstract": "Constructing Knowledge for LLMs: Human Labor, AI Mediation, and Dataset Pipelines.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-10",
+        "authors": [
+          "Adriana Alvarado Garcia",
+          "Marisol Wong-Villacrés",
+          "I. Ogbonnaya-Ogburu"
+        ]
+      },
+      {
+        "title": "Folk Theories of Federated Moderation: How Users Make Sense of Cross-Instance Action on Mastodon and Bluesky",
+        "slug": "folk-theories-of-federated-moderation-how-users-make-sense",
+        "url": "https://www.semanticscholar.org/paper/9f6b6569b7a4912eba8f92e8014746506ad62dd6",
+        "abstract": "Folk Theories of Federated Moderation: How Users Make Sense of Cross-Instance Action on Mastodon and Bluesky.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-10",
+        "authors": [
+          "Iman Mohammadi",
+          "Shayan Salehi"
+        ]
+      },
+      {
+        "title": "\"I Am the Gatekeeper\": Clinician Visions of AI Collaboration in Exposure Therapy",
+        "slug": "i-am-the-gatekeeper-clinician-visions-of-ai-collaboration-in",
+        "url": "https://www.semanticscholar.org/paper/99983307ffa8d06b3cf2096c2df31a0a6c58715b",
+        "abstract": "\"I Am the Gatekeeper\": Clinician Visions of AI Collaboration in Exposure Therapy.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-10",
+        "authors": [
+          "Sam Moradzadeh",
+          "Andrew M. Sherrill",
+          "Christopher W. Wiese",
+          "Rosa I. Arriaga",
+          "Saeed Abdullah"
+        ]
+      },
+      {
+        "title": "PersuaBridge: Real-Time Coaching for Negotiating with Value-Embedded AI Agents",
+        "slug": "persuabridge-real-time-coaching-for-negotiating-with-value",
+        "url": "https://www.semanticscholar.org/paper/9479867261a066348291e4d92fc0e97e18fc4269",
+        "abstract": "PersuaBridge: Real-Time Coaching for Negotiating with Value-Embedded AI Agents.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-10",
+        "authors": [
+          "Rong-Ching Chang",
+          "Hao-Chuan Wang"
+        ]
+      },
+      {
+        "title": "?The damage has been done?: AI Diplomacy and the Impact of Geopolitical Tensions on AI Tool Acceptance in Denmark in Q1 2026",
+        "slug": "the-damage-has-been-done-ai-diplomacy-and-the-impact-of",
+        "url": "https://www.semanticscholar.org/paper/8810c647312f2eb5686ec3937a65c96a7980fbcd",
+        "abstract": "?The damage has been done?: AI Diplomacy and the Impact of Geopolitical Tensions on AI Tool Acceptance in Denmark in Q1 2026.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-10",
+        "authors": [
+          "Eszter Vigh",
+          "Louise Barkhuus"
+        ]
+      },
+      {
+        "title": "Relational Prompting: How Older and Younger Adults Co-Create Civic Futures through Generative AI",
+        "slug": "relational-prompting-how-older-and-younger-adults-co-create",
+        "url": "https://www.semanticscholar.org/paper/78a9503a1b1a98f4df67015cc2faa93a9c058d81",
+        "abstract": "Relational Prompting: How Older and Younger Adults Co-Create Civic Futures through Generative AI.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-10",
+        "authors": [
+          "Kamarin Merritt",
+          "Shi-Chao Zhao"
+        ]
+      },
+      {
+        "title": "COMPASS: The 2nd International Workshop on Socio-technical Approaches to Content Moderation and Platform Governance",
+        "slug": "compass-the-2nd-international-workshop-on-socio-technical",
+        "url": "https://www.semanticscholar.org/paper/751a217085e28939352e28979626b7d081ac4673",
+        "abstract": "COMPASS: The 2nd International Workshop on Socio-technical Approaches to Content Moderation and Platform Governance.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-10",
+        "authors": [
+          "Robyn Caplan",
+          "Stefano Cresci",
+          "Catalina Goanta",
+          "Shagun Jhaver",
+          "Sanjay R. Kairam",
+          "Koustuv Saha",
+          "Savvas Zannettou"
+        ]
+      },
+      {
+        "title": "When Culture Becomes Costume: How Africans Interpret and Contest AI-Generated Traditional Attire",
+        "slug": "when-culture-becomes-costume-how-africans-interpret-and",
+        "url": "https://www.semanticscholar.org/paper/60bbb7760299ff230d1959bed4cc2de2194fffb7",
+        "abstract": "When Culture Becomes Costume: How Africans Interpret and Contest AI-Generated Traditional Attire.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-10",
+        "authors": [
+          "T. Ikwunne",
+          "R. B. Bamimore Akodu",
+          "Kriza Del Moro",
+          "C. Oyewale",
+          "Moushira Issa",
+          "Norah Abokhodair",
+          "Houda Elmimouni"
+        ]
+      },
+      {
+        "title": "JENNIE: Joint Expression of Narrative, Nurturing, Inquiry, and Engagement",
+        "slug": "jennie-joint-expression-of-narrative-nurturing-inquiry-and",
+        "url": "https://www.semanticscholar.org/paper/577a50fcae42bf4d6c1ca235dbc0db38ec19d2cf",
+        "abstract": "JENNIE: Joint Expression of Narrative, Nurturing, Inquiry, and Engagement.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-10",
+        "authors": [
+          "Jaehoon Pyon",
+          "Koeun Choi",
+          "Young-Ho Kim",
+          "Sang Won Lee"
+        ]
+      },
+      {
+        "title": "So What If It Was AI Generated? It Conveys a Message\": How X Community Notes Debates Norms Around Synthetic Media",
+        "slug": "so-what-if-it-was-ai-generated-it-conveys-a-message-how-x",
+        "url": "https://www.semanticscholar.org/paper/5418ca271eef1a7644fcd903f45c025c79d7c965",
+        "abstract": "So What If It Was AI Generated? It Conveys a Message\": How X Community Notes Debates Norms Around Synthetic Media.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-10",
+        "authors": [
+          "A. Asadi",
+          "Jessica Kropczynski"
+        ]
+      },
+      {
+        "title": "From Dialogue to Decision: A Traceability-Oriented Framework for Studying Language-Mediated Coordination",
+        "slug": "from-dialogue-to-decision-a-traceability-oriented-framework",
+        "url": "https://www.semanticscholar.org/paper/48a1286cc2259311705c4761b519b200a7ba2f1b",
+        "abstract": "From Dialogue to Decision: A Traceability-Oriented Framework for Studying Language-Mediated Coordination.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-10",
+        "authors": [
+          "Yong-Sheng Chi",
+          "Ming-Xuan Liu",
+          "Yee-Hung Hong",
+          "Hao-Ran Li",
+          "Xun Liang"
+        ]
+      },
+      {
+        "title": "Industry-CSCW Dynamics in the Age of Generative AI: Perspectives on Future Trajectories of Academia-Industry Collaboration",
+        "slug": "industry-cscw-dynamics-in-the-age-of-generative-ai",
+        "url": "https://www.semanticscholar.org/paper/46af026ae507e408b0925585f96723ca6b2f2ab9",
+        "abstract": "Industry-CSCW Dynamics in the Age of Generative AI: Perspectives on Future Trajectories of Academia-Industry Collaboration.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-10",
+        "authors": [
+          "Guo Freeman",
+          "Elizabeth D. Mynatt",
+          "Heloisa Candello",
+          "K. Inkpen",
+          "K. Karahalios",
+          "D. Shamma",
+          "Meredith Ringel Morris"
+        ]
+      },
+      {
+        "title": "Caste and Technology: Interpretations and Explorations in CSCW and Beyond",
+        "slug": "caste-and-technology-interpretations-and-explorations-in",
+        "url": "https://www.semanticscholar.org/paper/46821fd4c7a15792b737b23b8b35c418b050703e",
+        "abstract": "Caste and Technology: Interpretations and Explorations in CSCW and Beyond.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-10",
+        "authors": [
+          "Divyanshu Kumar Singh",
+          "Palashi Vaghela",
+          "Dipto Das",
+          "Srravya Chandhiramowuli",
+          "Meenakshi Yadav",
+          "Rida Qadri",
+          "Ashwin Rajadesingan",
+          "Koustuv Saha",
+          "Bryan C. Semaan"
+        ]
+      },
+      {
+        "title": "AI-Mediated Ecological Participation: Connecting Public Feedback, Institutional Response, and Wetland Data through Generative AI",
+        "slug": "ai-mediated-ecological-participation-connecting-public",
+        "url": "https://www.semanticscholar.org/paper/420a4997280c57cd8f733fa34e5ef3a2b2d688e3",
+        "abstract": "AI-Mediated Ecological Participation: Connecting Public Feedback, Institutional Response, and Wetland Data through Generative AI.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-10",
+        "authors": [
+          "You-Ting Wu",
+          "Zhi-Tao Yu"
+        ]
+      },
+      {
+        "title": "Designing for Field Awareness in Science Journalism",
+        "slug": "designing-for-field-awareness-in-science-journalism",
+        "url": "https://www.semanticscholar.org/paper/3aa787c06645dac748ae723ff8dc754d17ff6123",
+        "abstract": "Designing for Field Awareness in Science Journalism.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-10",
+        "authors": [
+          "Sachita Nishal",
+          "Emőke-ágnes Horvát",
+          "N. Diakopoulos"
+        ]
+      }
+    ]
+  }
+}
