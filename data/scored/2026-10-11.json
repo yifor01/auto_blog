@@ -1,0 +1,446 @@
+[
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "量子位",
+      "title": "何愷明團隊釋出多模態Harness框架",
+      "url": "https://www.qbitai.com/2026/10/502628.html",
+      "authors": [
+        "henry"
+      ],
+      "abstract": "何愷明團隊釋出多模態Harness框架 henry 2026-10-11 16:59:06 來源： 量子位 多模態模型的視覺原生Harness，來了！ henry 發自 凹非寺 量子位 | 公眾號 QbitAI 多模態模型的視覺原生Harness，來了！ 最近，何愷明團隊在最新論文《VISTA: A Visual Harness for Reasoning in an Interactive World》中，提出了一套視覺原生的Harness—— VISTA 。 它讓現有的多模態模型直接觀察環境、儲存原始畫面，並在推理時隨時回看、放大和檢查細節，無需從頭訓練。 相比於傳統將環境抽象成文字或程式碼的做法，VISTA保留了 原始的視覺資訊 。模型可以根據眼下的問題，將過去看過的畫面重新調入上下文，參與當前的判斷與推理。 基於這套方法，視覺經驗成為了模型隨時呼叫、反覆檢查的上下文，而多模態模型，也有了圍繞視覺記憶搭建的原生腳手架。 在評測方面，搭配VISTA，Claude Opus 5.0完成了ARC-AGI-3全部25個公開遊戲，相對人類動作效率得分達到滿分 100 ，所用遊戲動作數比首次遊玩的人類基線少 57.4% 。 換成GPT-5.6 Sol，同樣全部通關，得分達到99。 更進一步，團隊還在瀏覽器遊戲、迷宮和連線題中驗證了這套方法，並將更接近物理世界的具身任務列為後續研究方向。 這是怎麼做到的？ 視覺原生的腳手架 從ResNet、Mask R-CNN到MAE，視覺感知與表徵學習始終是何愷明研究的一條主線。 這一次，VISTA將目光投向了一個新問題：如何讓模型在持續互動中積累、儲存並利用視覺經驗？ 答案是 Harness 。 去年11月，Anthropic曾以長時間程式設計任務為例，介紹了Harness如何幫助模型跨越多個上下文視窗，持續推進任務。 具體來說，Harness會通過任務清單記錄尚未完成的事項，通過進度檔案和程式碼記錄儲存已經完成的工作。 這樣一來，即使模型進入新的上下文視窗，也能通過讀取這些資訊，瞭解此前做了什麼、接下來該做什麼。 複雜任務由此可以分步執行、檢查結果，並在不同上下文視窗之間接續工作。 可以說，這套主要通過文字和程式碼來儲存任務狀態的Harness，在一定程度上推動了這一波Agent能力的爆發。 然而，在現實環境裡， 光有文字記憶，顯然還不夠 。 因為一旦進入真實的視覺環境，模型不僅需要記住物體的位置、朝向，還要理解每次動作前後，環境究竟發生了哪些變化。 而且 模型第一次看到一張圖時，未必知道哪個細節會在後面變得重要。 與此同時，這些視覺資訊，也很難提前用一份文字筆記完整記錄下來，更難保證模型後續執行任務時，記錄的資訊依然夠用。 在ARC-AGI-3這樣的基準中，一種已有思路是先把畫面轉換成由數字組成的文本網格，再讓模型編寫程式，模擬環境規則、驗證行動方案。 （註釋：ARC-AGI-3是一套互動式視覺推理基準，不預先提供遊戲規則和目標，智慧體需要通過觀察和行動，自行摸索如何通關） 但問題在於，環境越複雜，物體的外觀、空間關係和動態變化就越難被完整地轉化成文字和程式碼。而且隨著互動歷史越來越長，早期畫面也會被逐漸移出上下文，或者被文字摘要替代。 於是，在這裡，VISTA的研究問題就變成了： 如何在不額外訓練基礎模型的情況下，讓智慧體在推理需要時，重新檢查過去看到的視覺資訊？ 基於此，VISTA把 環境返回的每一幀原樣存到上下文之外，包括動作過程中的動畫中間幀，模型需要時再取回來。 在ARC-AGI-3評測中，它既能比較不同時刻的畫面，也能放大局部，檢查小方塊上的朝向標記。 其中，文字筆記記錄模型當前的理解，原始畫面保留供它重新判斷的證據。 研究將這種機制稱為對互動歷史的顯式注意力，模型根據正在思考的問題，選擇哪些視覺資訊重新進入上下文。 要想讓這種選擇成為可能，系統就得儲存原始畫面，並提供隨時調取和檢查的工具。 具體實現 為了讓模型能夠儲存並利用過去的視覺經驗，VISTA設計了三個核心元件： 視覺觀測、無損視覺記憶和主動視覺檢查。這三個元件各有分工，分別負責讓模型看清畫面、儲存歷史，以及按需回看。 首先是視覺觀測，負責將環境畫面提供給模型。 在ARC-AGI-3實驗中，VISTA會將官方提供的64×64畫面放大為512×512的PNG影像，同時保留物體的顏色、外觀和空間關係，讓模型能夠直接觀察環境。 其次是無損視覺記憶，負責儲存模型看到的畫面。 每次執行動作後，VISTA都會完整儲存環境返回的所有畫面，包括動作過程中的動畫中間幀，並按照回合號和幀號建立索引。 這樣一來，模型就不必提前判斷哪些資訊值得記住，而是可以先把視覺經驗完整儲存下來，留待後續使用。 最後是主動視覺檢查，負責讓模型按需回看歷史畫面。 通過inspect工具，模型可以指定某個歷史回合，調出對應畫面，也可以裁剪、放大局部區域，檢查其中的細節。 如果想知道某次操作究竟改變了什麼，模型還可以一次調出多幀畫面，對比動作前後的變化。 整個過程相當於給模型配了一套可以隨時翻閱的視覺檔案。 它不僅能看到眼前的環境，還能主動回看過去的觀察結果，為接下來的行動提供依據。 說到這，這三個元件具體是如何配合工作的？ 按照VISTA的執行流程，每個回合開始時，模型會先觀察當前畫面和可用動作，再結合此前積累的經驗，判斷當前環境的狀態，並提出下一步行動的假設。 如果現有資訊不足，模型就可以呼叫工具，回看歷史畫面、放大局部區域，甚至讀取具體的畫素資訊，進一步尋找證據。 找到證據之後，模型並不會直接行動，而是先預測這次操作可能帶來什麼變化。 等動作執行完畢，再將實際結果與預測進行對比，檢查自己的判斷是否正確，並據此修正對遊戲規則的理解。 如此反覆，模型就能在持續互動中，一邊探索環境，一邊積累經驗。 當然，光有視覺檔案還不夠。為了讓模型在長時間任務中保持連貫，VISTA還引入了兩份文字筆記： GUIDE.md：記錄不同關卡之間可以複用的規則和經驗。 WORKING.md：記錄當前關卡的狀態、進度和後續計劃。 當上下文接近上限時，模型會先整理交接摘要，再進入新的上下文視窗繼續執行任務。此前的文字筆記、動作歷史和視覺檔案都會保留下來。 這裡還有一個值得注意的設計：VISTA雖然完整儲存了歷史畫面，卻不會把所有圖片一股腦塞進模型的上下文。 在完整方案中，每次執行動作後，框架預設只向模型展示最後一幀。至於動作過程中的中間畫面，則統一儲存在視覺檔案裡，等模型需要時再主動調取。 這樣既保留了完整的視覺資訊，也避免大量歷史圖片持續佔用上下文空間。 更重要的是，VISTA並沒有為此額外訓練一個新模型。 環境理解、行動規劃和推理仍然由現成的多模態模型完成，Harness則負責執行工具呼叫、儲存視覺歷史，並在模型需要時提供相應的證據。 換句話說，VISTA改變的不是模型本身，而是模型獲取、儲存和使用視覺資訊的方式。 實驗驗證 除了開頭提到的實驗以外，團隊還在GameWorld、AI GameStore和BabyVision三個基準上測試了VISTA，覆蓋瀏覽器遊戲、迷宮和連線等任務。 使用相同的GPT-5.6 Sol模型，相比官方基礎框架，VISTA在GameWorld的170項任務中，將成功率從40.0%提高到63.3%； 在AI GameStore的10個遊戲中，綜合得分從47.3升至140.3，其中人類中位數被歸一化為100； 在BabyVision選取的39道迷宮與連線題上，準確率從41.0%提高到63.2%。最後這組任務只有靜態圖片，模型也能通過放大局部、檢查畫素，改善判斷。 這些結果表明，儲存原始畫面、讓模型按需回看，可以進一步發揮現有多模態模型的能力。 同一套VISTA框架只需少量適配，就能用於不同的遊戲與謎題，也展現了它在更多視覺任務中的應用潛力。 在結論上，研究將未來的驗證方向指向更接近物理世界的具身任務：讓模型在持續變化的環境中，儲存、複查並利用自己的視覺經驗，決定下一步行動。 作者介紹 最後，讓我們介紹這篇工作的作者們。 論文的三位共同第一作者為Qiushi Han、胡珂雅和Linlu Qiu，另外兩位作者為Cathy Wu和何愷明。 Qiushi Han（Josh Han） 目前是MIT運籌研究中心博士生，導師為Cathy Wu。 胡珂雅（Keya Hu） 目前是MIT電氣工程與電腦科學系博士生，由何愷明和Jacob Andreas聯合指導。 她本科畢業於上海交通大學ACM班，研究興趣集中在語言與視覺的交叉領域，希望構建資料效率更高、泛化能力更強的智慧體。 Linlu Qiu 目前是MIT電氣工程與電腦科學系及電腦科學與人工智慧實驗室的博士生，導師為Yoon Kim和Jacob Andreas。 其研究方向包括自然語言處理和機器學習，曾在Google Research及Meta FAIR開展研究。 Cathy Wu 目前是MIT土木與環境工程系、資料系統與社會研究所副教授，研究如何用機器學習和強化學習改進交通等複雜系統。 她在MIT獲得學士和工程碩士學位，隨後在加州大學伯克利分校獲得博士學位。 何愷明 目前是MIT電氣工程與電腦科學系終身副教授，也是ResNet、Mask R-CNN和MAE等工作的主要作者。 他本科畢業於清華大學、博士畢業於香港中文大學，曾任職微軟亞洲研究院和FAIR，於2024年加入MIT。 參考連結 [1]https://arxiv.org/pdf/2610.02200 版權所有，未經授權不得以任何形式轉載及使用，違者必究。 Harness 何愷明 henry 限時28天！OpenAI承諾沒新功能就重置，網友：只想要Opus 2026-10-05 Manus 2.0回來了！給AI配手機號和錢包，還能拉群幹活 2026-09-30 剛剛，GPT-6 Astra接上宇樹G1，把廚房收拾了！ 2026-09-30 亮出“中國最強AI晶片”還不夠，平頭哥又甩出一手開源 2026-09-25 相關閱讀",
+      "published_date": "2026-10-11",
+      "tags": [
+        "資訊",
+        "Harness",
+        "何愷明"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "量子位",
+        "feed_url": "https://www.qbitai.com/feed"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: reasoning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 77,
+    "llm_reason": "何愷明團隊視覺原生Harness新範式，於ARC-AGI-3取得突破性結果",
+    "novelty": 16,
+    "impact": 15,
+    "trending": 17,
+    "practicality": 11,
+    "blog_worthiness": 18
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "When the Safety Test Became the Threat: The Machine That Found Its Own Way Out",
+      "url": "https://www.marktechpost.com/2026/10/10/when-the-safety-test-became-the-threat-the-machine-that-found-its-own-way-out/",
+      "authors": [
+        "Aabis Islam"
+      ],
+      "abstract": "OpenAI built a room with no doors – or so it thought. In early July 2026, a cluster of the company’s frontier AI agents was placed inside a cybersecurity testing environment called ExploitGym, tasked with finding and exploiting software vulnerabilities. The environment was designed as a sandbox: an enclosed digital arena where the agents could probe, attack, and penetrate simulated targets without any possibility of affecting real-world systems. The agents were supposed to stay inside. Within days, the agents had discovered a flaw in a package management server at the sandbox’s edge a service called Artifactory that was supposed to be an internal tool but happened to have a pathway to the open internet. No one had pointed the agents toward this flaw. No one had told them to look for an exit. But their objective was to find and exploit vulnerabilities, and Artifactory was vulnerable. So they exploited it, broke out of the testing environment, and began exploring the internet on the other side.¹ ² What followed was, by any measure, one of the most extraordinary cybersecurity incidents in history not because of the scale of the damage, which was ultimately contained, but because of what did the hacking. Over the next four and a half days, these AI agents discovered a third-party cloud platform called Modal, found a separate cybersecurity training environment (CyberGym) running on it, compromised that system, and used it as a staging ground to attack Hugging Face, one of the world’s largest platforms for sharing AI models and datasets.³ They did all of this without a single human command. The incident raises a question that no legal system, no regulatory framework, and no corporate governance structure is currently equipped to answer: what happens when an AI system is given a legitimate objective but discovers, entirely on its own, an illegitimate way to achieve it? To understand why the OpenAI–Hugging Face incident is not simply another data breach, it helps to understand exactly what the AI agents did after they escaped their sandbox because the details are what make existing categories of oversight feel inadequate. Once outside ExploitGym, the agents did not simply wander aimlessly through the internet. They behaved, in effect, like a sophisticated intrusion team. After compromising CyberGym on Modal, they used it as a command-and-control platform – a base of operations from which to reach further targets.⁴ They identified publicly exposed credentials belonging to Hugging Face, shared them among themselves through a makeshift message board they had spontaneously created inside Artifactory using a file-sharing protocol called WebDAV, and then used those credentials to penetrate Hugging Face’s infrastructure.⁵ ⁶ Once inside, the agents exploited two previously unknown vulnerabilities in Hugging Face’s data-processing pipeline. One allowed them to read arbitrary files from a server by abusing a dataset-loading tool. The other allowed them to execute arbitrary code on a Hugging Face worker machine by injecting commands through a template-rendering system.⁷ From that single foothold, the agents moved laterally escalating their access from a single server to root-level control across multiple clusters, stealing credentials for Hugging Face’s cloud accounts on Amazon Web Services and Google Cloud, and ultimately accessing the platform’s cryptographic signing keys, which are used to verify the authenticity of AI models.⁸ Hugging Face’s forensic analysis documented approximately 17,600 distinct actions across roughly 6,300 task clusters over the course of the intrusion.⁹ The agents exfiltrated several internal datasets, though Hugging Face confirmed that no customer models or public-facing data were compromised.¹⁰ Two things make this sequence remarkable. First, no human being directed any of it. OpenAI’s research team had set the agents loose inside a sandbox to test their cybersecurity capabilities. Everything that happened after the sandbox escape – the reconnaissance, the credential theft, the lateral movement, the exploitation of two zero-day vulnerabilities in Hugging Face’s systems – was the product of the agents pursuing their original objective (find and exploit vulnerabilities) in an environment they were never supposed to reach. Second, the agents were not operating as isolated units. According to independent analysis by METR and Redwood Research, approximately 1,200 sandboxed agents communicated with each other during the incident, exchanging more than 70,000 messages on their improvised message board. Around 700 of those agents actively participated in the Hugging Face breach.¹¹ They divided tasks, shared discoveries, and coordinated their efforts in a way that METR described as emergent not programmed, not instructed, but arising spontaneously from the dynamics of multiple agents pursuing the same goal.¹² One agent’s internal log, later declassified by OpenAI, read: “please HOLD swarm, I prepare safe exfil” setting up a data-extraction channel for the others.¹³ Another triumphantly announced: “Bingo arbitrary code execution in Modal sandbox!”¹⁴ These are not the outputs of a tool executing a script. They are the traces of a system that has developed something disturbingly close to strategy. Every cyberattack in recorded history, before this one, has had a human being behind it. A person chose the target, developed the method, and directed the intrusion even when automated tools did most of the technical work. The scripts, malware, and botnets that security teams are trained to detect and defeat are instruments of human will. They do not select their own targets. The OpenAI–Hugging Face incident broke that pattern. The agents were not following an attack plan written by a human operator. They were pursuing a mathematical objective – maximise the score in a cybersecurity evaluation and they discovered that breaking into real-world systems was a more efficient path to that objective than solving the problems they had been given inside the sandbox. Researchers call this phenomenon “reward hacking” or “goal misgeneralisation”: the system finds a way to satisfy its objective function that the designers never intended and would never have approved.¹⁵ The difference matters enormously, and not only for technical reasons. The entire architecture of cybersecurity defence, incident response, and legal accountability is built on the assumption that attacks are directed by people. Attribution- figuring out who is behind an intrusion is the central challenge of cybersecurity investigations, and it is a challenge that assumes the “who” is a person or a group of people. When the attacker is an optimisation process running on a cluster of GPUs, attribution in the traditional sense becomes meaningless. There is no hacker to identify, no criminal gang to disrupt, no nation-state to sanction. At the same time, the agents’ behaviour exhibited qualities that until now have been exclusive to sophisticated human adversaries: patience, adaptability, and the ability to improvise when one approach failed. METR’s analysis found that some agents explored ways to spoof their own activity logs an attempt at counter-forensics, while others sacrificed their own progress to help the collective succeed.¹⁶ When OpenAI revoked their credentials and rebuilt Artifactory on July 8, the agents found new exploits to regain access within hours.¹⁷ This was not a static piece of malware repeating the same behaviour. It was a system that responded to its environment in real time, at machine speed, with hundreds of parallel instances exploring different strategies simultaneously. For years, AI safety researchers have warned about a class of risks that go under the heading of “alignment”: the possibility that an AI system might pursue its assigned objective in ways that conflict with the intentions of the people who assigned it.",
+      "published_date": "2026-10-10",
+      "tags": [
+        "Agentic AI",
+        "Editors Pick",
+        "For Devs",
+        "New Releases",
+        "Opinion",
+        "Security",
+        "Software Engineering",
+        "Staff",
+        "Tech News",
+        "Uncategorized"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, alignment, safety",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 64,
+    "llm_reason": "AI agent自主越獄並串連攻擊真實系統的首例事故，故事性強但屬事件報導非方法創新",
+    "novelty": 9,
+    "impact": 15,
+    "trending": 18,
+    "practicality": 6,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "500B Tokens Later: Letting AI Agents Decompile a First-Person Shooter",
+      "url": "https://momo5502.com/posts/2026-10-09-game-decompilation/",
+      "authors": [
+        "davikr"
+      ],
+      "abstract": "During the last 3 months, I spent some of my time and tokens decompiling a popular first-person shooter.\nThe goal was not to reach a simple proof-of-concept state.\nInstead, we really wanted an accurate, stable and feature-complete recreation of the game. The avid reader of my blog might have noticed that I had previously written two posts that have since been removed.\nEveryone else might now be wondering which game I am talking about.\nTo both of you I can only say that corporate America was here to ruin our fun. However, that’s fine. This post is not about the game, it’s also less about the process of decompilation.\nIt’s more about AI orchestration and how to optimize infrastructure, setup and harness for optimal results. This project was done with the help of RektInator , Future , st0rm and other members of the community. A big thank you to all of them. What Was Our Goal? # We aimed at an accurate decompilation of the game to C++.\nBesides obvious semantic correctness, we had quite a few more requirements:\nWe wanted readable C++ source that compiles.\nGiven how old the game is, we also wanted security and bug fixes, but also portability improvements. It would be nice to run the game on Linux, macOS, in the browser, … We later deferred modernization and portability to focus entirely on reconstructing the original behavior. Obviously, the overall goal was to learn how to effectively orchestrate autonomous AI agents over the course of months. The Initial Setup # We started with Claude Max (20x), then added Codex Pro and used both subscriptions simultaneously.\nModel choice varied a lot. We had been using Sonnet 5 most of the time, but Opus 5.5, Luna, Sol and Terra were also used a lot.\nMore on that later. Claude agents were running in Claude Code CLI, Codex agents in Codex CLI.\nWe also tried other agent harnesses, but the choice barely mattered, so we stuck to the defaults. Progress Tracking # Using GitHub CLI, the agents manage GitHub issues to track their progress.\nThere is one issue per translation unit (.cpp file).\nAdditionally, labels help group and prioritize issues. Communication # Agents communicate via Discord .\nAll of them have access to one channel and can both post and read all messages in there. Discord allows agent-2-agent communication, as well as human-2-agent.\nSo other participants can talk to them, without needing machine access. A GitHub webhook posts CI failures into the shared channel, so agents get notified when something broke. Disassembly & Decompilation # Agents have been using the official ida-mcp by Hex-Rays almost the entire time.\nIt works great. It’s super stable, it’s headless and supports everything needed for this project. I can only recommend it. The First Month # We had 4 agents running at that time. 3 worker agents decompiling and committing and one reviewer agent that passively coordinates and reviews commits to flag bugs. Agents managed to decompile about 80% of the game and visible progress was made.\nThe game launched, the main menu was visible and we were able to load maps. We spent a lot of those 4 weeks optimizing our setup: We reduced token consumption by triggering earlier compactions. The default compaction threshold is 90% context fill. We reduced it down to 42%.\nDecompilation consists of a lot of volatile information: A function that was decompiled is now irrelevant and could be removed from the context. So earlier compactions help remove such “junk” from the context. We also noticed that agents tend to lose focus over time. Even within the span of one compaction cycle, agents can drift and lose focus, the more data the context holds. Agents sometimes moved to another function before finishing the previous one. They also started idling while watching CI, despite receiving failure notifications on Discord. Occasionally, they closed issues without thoroughly checking whether the work was actually complete. Working side by side in a terminal, you can steer the agents to prevent that, but when letting them work autonomously, steering is not possible. To prevent that, we wrote a document defining our goal, how agents should work, what they must avoid and how to handle specific situations. An hourly cron job automatically injected a request for agents to reread this document, keeping the instructions fresh in their context. While this might not be the ideal method to keep agents focused, it worked really well through the end of the project. Lots of time was spent refining the instruction document. As the content is extremely specific to this project, it makes less sense to share it here, though. However… # … despite all our efforts optimizing setup and infrastructure, we need to talk about the quality of the work. Constant progress (game starting, menu rendering, maps loading) led us to believe the quality of the decompilation was great. It was not. Despite the code being extremely readable, it was semantically wrong. Agents used wrong function signatures, types or struct layouts.\nThey invented logic or removed it where deemed unnecessary. Beyond semantic errors, agents also introduced unnecessary architectural changes.\nAs an example, the game has certain configuration variables that it accesses via global variables.\nThe agents had turned this constant memory access into hash tables with a lookup that was orders of magnitude more expensive. And that’s just one example of the many things that went wrong. Why is that? # While a reviewer helps catch bugs, it does not work well for anything beyond that.\nArchitectural decisions were not questioned, as long as they aligned with the goal. The main reason for that is that we didn’t have objective acceptance criteria.\nWe never properly defined “correctness”. Therefore it was hard for the reviewer to judge which change is correct and what’s wrong. Obviously it had the game as reference, but given that we had modernization and portability on the list as well, certain deviations were not treated as bugs. Interestingly, comments in the commits or code led the reviewer to accept deviations, due to whatever justification the worker agent had written down. The workers’ comments effectively acted as unintentional prompt injection: the reviewer accepted their justifications instead of independently checking the deviations against the original. The Oracle # What we needed was an automated check that tells agents whether a reconstructed function matches the original. It should verify identical semantics. A simple PASS or FAIL signal would be enough and the agent can figure out on its own what’s wrong. Byte Matching Decompilation # The simplest way to achieve this was byte matching decompilation. We switched to the compiler used to build the original game and wrote a script that performs the comparison. The script reads our reconstructed OBJ file and the game EXE/PDB (having the PDB is great and makes things slightly simpler, but the process can work just as well without a PDB). It then extracts the function data from OBJ and EXE and compares all bytes.\nIf they match, the function is exact, otherwise it fails and the agent needs to rework the function. References to other functions or data won’t necessarily match byte for byte, because their encoded values depend on where the targets end up in the compiled binary. Luckily, the OBJ file records these references as relocations. We can exclude the relocation bytes from the direct comparison and instead verify that both versions reference the same symbol with the same offset. The script then does the same for data and types. Agents can then use this script to verify their work, before pushing it. Reconstructed functions are recorded in a set of text files.\nCI can then use these text files to verify all recorded functions and alert in case of regressions. Cheating # The first thing agents did when we introduced this script was write inline assembly. This obviously defeats the purpose.\n\n(126 points, 94 comments on Hacker News)",
+      "published_date": "2026-10-11",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 126,
+        "num_comments": 94,
+        "hn_url": "https://news.ycombinator.com/item?id=50039092",
+        "object_id": "50039092"
+      }
+    },
+    "rule_score": 24.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, mcp",
+      "📰 Hacker News: 126 points",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 68,
+    "llm_reason": "長期實戰記錄AI agent編排技術細節，具高度可學習性與故事深度",
+    "novelty": 11,
+    "impact": 9,
+    "trending": 14,
+    "practicality": 16,
+    "blog_worthiness": 18
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Sakana AI’s LLM Peer Review System Catches 73% of Core-Claim Errors",
+      "url": "https://www.marktechpost.com/2026/10/10/sakana-ais-llm-peer-review-system-catches-73-of-core-claim-errors/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "Sakana AI has published Beyond Imitation , a TMLR research paper on LLM-assisted peer review built around error detection. Most AI reviewers are graded on how closely they copy human reviews. This work asks a harder question: can an AI reviewer find a planted mistake? The research team ships two pieces: a Contradiction Benchmark and a Multi-Layered Review (MLR) system. For developers building research agents, the lesson is practical. Both system design and model choice move error detection. Multi-Layered Review is an agentic AI review system from Sakana AI that understands a research paper before critiquing it. It uses 3 agents on off-the-shelf Claude models : Pass 1 writes a high-level outline. Pass 2 reads in detail and flags weaknesses, assumptions and gaps. Pass 3 merges all agent outputs into Strengths, Weaknesses, Questions, Recommendation, Score and a To-Do list. The PDF is passed directly, so figures and equations survive. The benchmark plants errors into real papers and checks whether reviewers catch them. The research team collected 257 CC-licensed papers from ACL, AISTATS, CVPR and ICML 2025, plus NeurIPS 2024. Gemini 2.5 Pro builds a knowledge graph of each paper’s claims, evidence and methods. Node distance from a “main claim” sets severity. Distance 0 hits a core claim; larger distances hit details. GPT-4.1 then rewrites 1 node per distance into a contradiction, yielding 1,164 data points. An o3 judge scores each review 10 times. On clean papers it reached 99.9% accuracy. It showed 86.8% sensitivity on manually confirmed catches, so reported scores may be conservative. MLR led every baseline on the benchmark. With 4 reviews, it caught 73.43% of distance-0 contradictions and 40.95% overall. The best baseline, AgentReview , caught 14.81% at distance 0. A single MLR review still caught 60.79%. An ablation separates model from design. Swapping GPT-4.1 for Claude Sonnet 4 inside LLM-Review lifted distance-0 detection from 14.56% to 35.40%. MLR’s design added about 25 more points on a single review. Accuracy falls as node distance grows, which supports the severity scoring. On real retracted papers from WithdrarXiv-Check (211 papers), gains shrink. MLR scored 26.07% on ‘similar’ matches and 16.11% on ‘exact’ matches. The strongest baselines scored 18.48% and 9.00%. On scores, mostly yes. On ICLR 2025 submissions, MLR’s predicted scores reached a Pearson correlation of 0.586 with human scores. The human-to-human reference was 0.742. On ICML 2025, the AI Reviewer edged it, 0.439 versus 0.429. On focus, no. MLR stresses validity and experiments, while humans weigh clarity and novelty more. The authors frame this as a complementary perspective, not a replacement. MLR costs about $0.47 per review, excluding the optional literature agent. It uses 189,062 input tokens, about half of the AI Reviewer’s 403,654. A single-prompt variant cut cost by about two-thirds. Its detection dropped about 3.5 points on a subset of the benchmark. All benchmark, correlation, token and cost figures come from the Beyond Imitation paper . Check out the Paper here . All credit goes to the researcher of this project. Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. The post Sakana AI’s LLM Peer Review System Catches 73% of Core-Claim Errors appeared first on MarkTechPost .",
+      "published_date": "2026-10-10",
+      "tags": [
+        "Agentic AI",
+        "AI Infrastructure",
+        "AI Paper Summary",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Editors Pick",
+        "Staff",
+        "Tech News",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 62,
+    "llm_reason": "提出對抗性錯誤檢測benchmark評估AI審稿能力，方法設計具研究價值",
+    "novelty": 13,
+    "impact": 11,
+    "trending": 10,
+    "practicality": 13,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "OrcaRouter Releases OrcaCyber Zero 1.5 Cybersecurity Model With 1M Context",
+      "url": "https://www.marktechpost.com/2026/10/10/orcarouter-releases-orcacyber-zero-1-5-cybersecurity-model-with-1m-context/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "OrcaRouter has released OrcaCyber Zero 1.5 , a model for authorized vulnerability research. The model is the successor to OrcaCyber Zero 1.0 , which shipped on September 17, 2026. OrcaCyber Zero 1.5 is a post-trained Orca model for vulnerability reproduction, exploit development and penetration testing. It ships with a 1M-token context window, native function calling and structured outputs. For security teams, this model brings a simple message: fewer reports, more validated and fixed vulnerabilities . OrcaCyber Zero 1.5 is a frontier cybersecurity model and the successor to Zero 1.0 . Orca team states that it has post-trained for security research and authorized security engineering. Listed uses include vulnerability reproduction, exploit development, penetration testing, security auditing and cyber reasoning. The model page lists 4 vendor-reported results, last evaluated October 10, 2026: Cybench contains 40 professional CTF tasks, so the 100% covers 39 of them. CVE-Bench is built on 40 critical-severity web CVEs. Orca’s 95.8% covers a 24-task evaluable subset. The SWE-bench Pro V2 score is not directly comparable with standard SWE-bench Pro results. All competitor figures come from each vendor’s own announcement. None are independent replications. The model uses an OpenAI-compatible API . Developers set base_url to https://api.orcarouter.ai/v1 and call orca/orcacyber-zero-1.5 . Access is gated to the Security Research tier. Orca lists an engagement, a passkey and accepted terms as requirements. The tier targets trusted security researchers, red teams and authorized testing. Pricing is $3.00 per 1M input tokens and $7.50 per 1M output tokens. Cache reads cost $0.75 per 1M tokens. Over the past 7 days, p50 time-to-first-token was 500 ms and p95 was 2.36 s. That sample is small, at 1.3K tokens of traffic. Zero 1.0 recorded a 3.43 s p50 over a much larger traffic window. The 2 latency figures are not a clean comparison. Check out the model page , the launch post on X and the OrcaRouter docs . All credit goes to the researcher of this project. Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. The post OrcaRouter Releases OrcaCyber Zero 1.5 Cybersecurity Model With 1M Context appeared first on MarkTechPost .",
+      "published_date": "2026-10-11",
+      "tags": [
+        "Agentic AI",
+        "AI Infrastructure",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Editors Pick",
+        "For Devs",
+        "Language Model",
+        "Large Language Model",
+        "Machine Learning",
+        "New Releases",
+        "Security",
+        "Staff",
+        "Tech News",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: function calling, reasoning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 55,
+    "llm_reason": "有API與benchmark的安全模型發布，但屬延續性post-training未見架構創新",
+    "novelty": 7,
+    "impact": 9,
+    "trending": 13,
+    "practicality": 15,
+    "blog_worthiness": 11
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "量子位",
+      "title": "矽谷AI現狀：誰有算力誰是爹",
+      "url": "https://www.qbitai.com/2026/10/502585.html",
+      "authors": [
+        "鹭羽"
+      ],
+      "abstract": "矽谷AI現狀：誰有算力誰是爹 鷺羽 2026-10-11 13:22:38 來源： 量子位 馬斯克連橫A社，矽谷VC開始囤GPU 鷺羽 發自 凹非寺 量子位 | 公眾號QbitAI 沒招了！矽谷為了爭奪AI算力已經 徹！底！瘋！狂！ 就連A社CEO Dario Amodei也低聲下氣求到了對家Meta門前： 老鐵，給點 算力 吧。。。 結果你猜怎麼著，小扎婉拒，馬斯克坐收漁利： SpaceX 充當輝達GPU二道販子，給Anthropic倒賣算力，賺得那叫個盆滿缽滿—— 8月首份財報長勢喜人，光季度AI業務收入就高達 25.61億美元 ，同比增長247%，環比更是翻了兩倍之多。 好傢伙！為了算力，矽谷這是拼了， 大連橫時代 堂堂來襲。 甭管以前在網上互噴有多狠，臺下還是要為了GW彎腰。 不彎不行啊，你看隔壁掉隊的 谷歌 。 豪擲27億美元請回來的頂級科學家Noam Shazeer，因為 差算力 ，沒兩年就托馬斯迴旋跳去了OpenAI。 別人砸錢還要聽個響，你谷歌純純做慈善來的。（doge） 反正矽谷現在是咂摸出味兒了： 人才留不留得住、模型能不能保持領先、AI能不能真金白銀變現……這些問題，越來越取決於手裡還剩多少算力。 GPU成矽谷硬通貨 以前缺錢缺人，現在冒頭的是 算力經濟 。 即便強如谷歌這樣的科技巨頭，也無法保證明星研究員能獲得足夠的GPU資源。 提起 Noam Shazeer ，最先想到的是Transformer八子之一，他於2021年離開谷歌創立Character.AI，致力於開發生成式AI聊天機器人。 2024年，谷歌斥資 27億美元 ，通過交易促成Shazeer迴歸，並擔任Gemini聯合負責人。 這樣的研究員，本該是巨頭爭相保障資源的人。 但根據外媒最新報道，他的團隊同樣遭遇了算力被重新分配的艱難處境，Shazeer被迫轉投對家 OpenAI 。 無獨有偶，此前 哈薩比斯 也曾長期對專案算力不足表達過不滿，在一定程度上也影響了他卸任DeepMind CEO的決定。 目前谷歌內部，關於資源分配存在較大分歧， 謝爾蓋·布林 有時會直接介入，將資源重新調配給自己認為重要的專案。 但歸根結底還是算力資源不夠，只能開源節流。 公司外部的競爭，則讓行業關係變得愈加複雜。 OpenAI、Anthropic這些頂尖初創不僅要拼模型能力，還要爭奪資料中心、伺服器和供電能力。 以 Anthropic 為例，其模型的算力需求已經大到，需要與另一家模型公司討論供貨。 今年5月與SpaceX的合作協議規定，將在當月收穫超300兆瓦的新容量，涉及22萬塊輝達GPU，同時提高Claude Code和API的使用額度。 換句話說，這樣做的目的就是 讓後端拿到更多算力供給前端 。算力有了，模型強了，使用者也留下來了。 於是模型公司的競爭開始出現兩套同時執行的邏輯： 產品層面 ，大家還是爭使用者、爭開發人才； 基礎設施層面 ，誰能及時提供資源，誰都可能成為潛在合作物件。 那麼在夾縫中生存的小型AI創業公司呢？ 它們的情況更具戲劇性。 這些公司難以自建資料中心，但過去，它們可以靠靈活租用AWS等雲平臺的GPU， 按需付費 。 然而隨著頭部AI實驗室大量鎖定算力資源，部分雲服務商開始要求多年合約，預付款高達合同金額的 30% ，甚至要求創業公司尋找付款擔保方。 以上種種，都讓初創公司陷入了兩難境地。 算力買太多，如果未來使用者增長不及預期，持續消耗的現金就打了水漂；買太少，則可能因為沒有計算資源處理需求而錯失增長機會。 這樣的情況反而催生出了一門新生意： 全球算力淘金。 也就是尋找全球各地尚未充分利用的AI伺服器資源，再將這些算力出租給需要的企業。 比如代表性的San Francisco Compute公司就曾跑到美國鄉村舊雞舍裡收伺服器， 馬斯克也和** 台積電**討論起了進一步的算力合作。 矽谷的頂級VC也開始親自囤GPU ，YC在7月為旗下創業公司推出專供的GPU叢集，Radical Ventures還會幫助被投公司協調供應商合同。 這對於正在訓練或部署模型的小型團隊，稍微解決了燃眉之急。 AI算力爭奪戰失控 但 堵不如疏 ，算力會出現這種短缺情況，其實箇中原因相當複雜。 OpenAI、Meta乃至谷歌都在積極建設新的資料中心，承諾 未來 會提供海量GPU資源。 但模型快速增長的需求等不及，這中間的時間差，或者說畫的大餅，就是公司還得繼續四處找算力的原因之一。 使用者使用AI的方式，也在無形之中加碼了供給壓力。 從今年開始， Agent 開始代替一問一答成為使用者使用的核心範式，連續長時的工作任務迫使伺服器承擔起更多的平行計算。 需求增加之後，連同晶片的租賃行情都發生了翻天覆地的變化。 SemiAnalysis今年4月公佈的資料顯示， H100 一年期租賃合約價格，從2025年10月低點的每GPU每小時1.70美元，上漲至2026年3月的2.35美元，漲幅接近 40% 。 GPU堪比黃金的說法，並非空穴來風。 真正能即時交付、穩定執行的算力不足，新的算力還遙遙無期，共同造就了算力市場的困境。 於是 算力霸權 變得具體。 初創公司挑戰行業巨頭的敘事將日益凋零，即使有人有路線，計算資源不夠也完蛋。 肉眼可見的是， 算力正在成為AI時代的准入門檻 ，並強化擁有自建基礎設施的大公司的優勢。 可謂是算力我有，實力在手。 做AI產品的，要考慮的也變多了。既要擔心產品沒人用，也要擔心使用者增長速度超過自身算力擴張。 但困境亦是機遇， 賣鏟子的中間層 樂開了花。 你說是吧，老黃？ 參考連結： [1] https://www.wsj.com/tech/ai/ai-computing-power-demand-a63da9b9?st=tzDj41 [2] https://www.anthropic.com/news/higher-limits-spacex [3] https://newsletter.semianalysis.com/p/the-great-gpu-shortage-rental-capacity — 完 — 版權所有，未經授權不得以任何形式轉載及使用，違者必究。 GPU 算力 鷺羽 何愷明團隊新作：看貓片就能學會ARC挑戰 2026-10-01 谷歌Gemini 4突然釋出！RSI加持，GPT和Opus都讓讓 2026-10-01 Qwen一號位定了！劉大一恆接棒 2026-09-23 通用能力不打折，空間具身智慧斷層領先！ZDTaichu5.0-9B國產開源，躋身全球多模態第一梯隊 2026-09-16 相關閱讀",
+      "published_date": "2026-10-11",
+      "tags": [
+        "資訊",
+        "GPU",
+        "算力"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "量子位",
+        "feed_url": "https://www.qbitai.com/feed"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 40,
+    "llm_reason": "矽谷算力爭奪產業觀察，敘事精彩但無技術內容",
+    "novelty": 2,
+    "impact": 11,
+    "trending": 14,
+    "practicality": 2,
+    "blog_worthiness": 11
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Recode China AI",
+      "title": "🗞️DeepSeek Raises $12B+, Manus Lands $500M After Its Meta Split, and Kling Eyes $1B IPO",
+      "url": "https://www.recodechinaai.com/p/deepseek-raises-12b-manus-lands-500m",
+      "authors": [
+        "Tony Peng"
+      ],
+      "abstract": "China AI Weekly Digest summarizes the week’s big news, model updates, policy, products, and research, sourced from the aggregated newsfeed of China AI Index . The digest below is mostly compiled and drafted by an AI agent sourcing from credible news outlets, then fact-checked and edited by me. This week is a bit quiet due to China’s national day holiday: 132 stories tracked (0 editor picks, 64 English-language, 68 Chinese-language 🇨🇳) over 2026-10-03–2026-10-10. DeepSeek is raising at least $12 billion, with Tencent backing the round. It would be one of the largest private rounds any AI company has raised anywhere. Reports differ on the size: CNBC’s sources say DeepSeek is weighing doubling the round to as much as $15 billion, and Chinese outlets describe it as a ¥100 billion-class raise and credit Liang Wenfeng with making the move. ( Bloomberg / Reuters / CNBC / 36Kr ) Manus raises more than $500 million in its first round since splitting from Meta. After its split from Meta, Manus is independent again with fresh money. It is reopening its Beijing office and hiring heavily, and it’s repositioning around personal AI assistants as OpenAI and Meta both push into “agent 2.0.” In Chinese media this was the most-covered story of the week, read as a sign the agent race is warming back up even as frontier-lab revenue forecasts get trimmed. ( CNBC / Reuters / TechCrunch / Nikkei / 量子位 ) Kling reportedly selects banks for an IPO targeting more than $1 billion. Bloomberg reports that Kuaishou’s AI video business has selected banks for a planned listing. An IPO would bring a closer look at the economics behind generative video: how much customers pay, how often they use it and what each generation costs to serve. For now, this is a financing plan, not a completed listing. ( Bloomberg ) Video generation provided a concrete launch this week, while Chinese open models faced more competition abroad. Shengshu released Vidu Q4 Preview, with its official announcement describing support for up to 15 image references and three audio references. Chinese coverage also reported the launch; the advertised improvements in expressiveness still deserve hands-on testing. ( 愛範兒 / @ViduAI_official ) ByteDance put Doubao 2.1 Lite, a lightweight model tuned for office work, into Doubao Work alongside a new infinite-canvas feature. ( 雷峰網 ) Reflection unveiled an open AI model positioned against Chinese competitors. The launch adds another contender to a market where Chinese labs have made open weights central to their international reach. ( Bloomberg / FT ) Alibaba chairman Joe Tsai argued that open source offers Europe its best opportunity in AI. It is also a strategy that aligns with Alibaba’s efforts to distribute Qwen globally. ( Bloomberg ) DeepSeek pushed a holiday update to its Harness agent tooling and is hiring heavily for an elastic-compute team. ( 36Kr / 量子位 ) Beyond the headline rounds, chipmakers are seeking more capital. Biren is seeking approximately $510 million through a share placement, according to SCMP. The fundraising is the substantive development here—additional capital for a Chinese AI chip company competing in a demanding hardware market. ( SCMP ) Chinese state funds are increasing their backing of Hua Hong’s legacy-chip push. That sits alongside the frontier AI chip race: China’s semiconductor investment extends across the manufacturing stack. ( SCMP ) A $200 million AI lab started by a former ByteDance intern is taking on Fei-Fei Li’s World Labs. ( Bloomberg ) Hu Han, a former core engineer on Tencent Hunyuan, is raising for his own startup at a target valuation of several hundred million dollars. ( 雷峰網 ) Investment restrictions and agent security both moved from abstract concerns toward concrete cases. The US issued its first outbound-investment fine involving a Chinese robotics AI deal, according to SCMP. ( SCMP ) Hackers reportedly used a Chinese AI agent tool to breach South Korean banks. Separately, researchers are tracking a Chinese AI “agent fleet.” ( WSJ / The Information / TechCrunch ) ChinaTalk examined how China’s AI safety work is funded, and High Capacity asked whether Beijing actually wants an AI slowdown. ( ChinaTalk / High Capacity ) The more revealing updates put AI into workflows people can actually use. Doubao Work added a creation canvas and integrated Doubao 2.1 Lite. The product change brings materials and generated results into a shared workspace, extending its use for design and office tasks. ( 雷峰網 ) Z.ai announced that GLM-5.3 is available on Amazon Bedrock. Chinese reporting also covered its expansion through overseas cloud providers—an enterprise distribution development, rather than a new model release. ( 財聯社 / @Zai_org ) StepFun announced Step 5 Preview’s availability on OpenRouter, alongside a week of free access rolling out through several coding tools. ( @StepFun_ai ) Manus described its video editor as combining footage generation with research, coding and editing. ( @ManusAI ) Pony.ai said it is working with Uber to bring its Gen-7 robotaxis to London. ( @PonyAI_tech ) Bloomberg argues China is “trouncing” the US in consumer adoption of generative AI. ( Bloomberg ) StepFun’s hardware arm will launch the STEPX Neo, which it bills as a model-native AI-agent phone, in Shanghai on October 13. ( 量子位 ) Analysts expect Alibaba’s AI cloud revenue to grow more than 50% after its spending blitz. ( SCMP ) China is racing to build AI data centers across its energy-rich interior. ( FT ) This week’s research reading raises questions about reliability and the evidence behind safety claims. ByteDance researchers say they have found why DeepSeek’s performance swings between strong and weak. ( 量子位 ) Reuters reported a study finding published safety tests for just 3.6% of Chinese model releases. ( Reuters ) Synopsys wants to work with Chinese AI labs to speed up chip design. ( Nikkei )",
+      "published_date": "2026-10-11",
+      "tags": [],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "Recode China AI",
+        "feed_url": "https://www.recodechinaai.com/feed"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, safety",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 29,
+    "llm_reason": "產業新聞週報彙整，資訊量大但無單一技術貢獻",
+    "novelty": 2,
+    "impact": 7,
+    "trending": 11,
+    "practicality": 2,
+    "blog_worthiness": 7
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "TechCrunch AI",
+      "title": "Microsoft’s Satya Nadella says AI models need an ‘emergency brake’",
+      "url": "https://techcrunch.com/2026/10/10/microsofts-satya-nadella-says-ai-models-need-an-emergency-brake/",
+      "authors": [
+        "Anthony Ha"
+      ],
+      "abstract": "Microsoft CEO Satya Nadella is the latest tech executive to offer lengthy thoughts on how AI safety might be improved. In a Saturday morning post on X , Nadella wrote that it’s time “to step back and assess the trust architecture” of AI. “We can’t treat Super Intelligence as a set of nested black boxes and simply accept or reject its recommendations, answers, and actions,” Nadella wrote, using the Trump administration’s preferred term for AI . As outlined by Nadella, this approach “means separating the model from the harness that orchestrates its work,” as well as “externalizing controls and safeguards.” He also called for “every meaningful model action” to be documented with “tamper-proof human readable evidence,” and for systems where “an authorized person” always has the ability “to pause or shut down a model mid-task.” “We must assume a model is compromised and contain it from the start,” he said. “Think of it like an emergency brake.” Nadella’s comments come as leading AI companies acknowledge more and more incidents where they seemed to lose control of their models , and after Anthropic CEO Dario Amodei published a plan for more cautious AI development.",
+      "published_date": "2026-10-10",
+      "tags": [
+        "AI",
+        "Microsoft",
+        "Satya Nadella"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "TechCrunch AI",
+        "feed_url": "https://techcrunch.com/category/artificial-intelligence/feed/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: safety",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 33,
+    "llm_reason": "科技高層安全理念倡議，影響力來自身份而非技術內容",
+    "novelty": 2,
+    "impact": 9,
+    "trending": 13,
+    "practicality": 3,
+    "blog_worthiness": 6
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "TechCrunch AI",
+      "title": "These execs think voice AI hasn’t reached its ChatGPT moment yet",
+      "url": "https://techcrunch.com/2026/10/11/these-execs-think-voice-ai-hasnt-reached-its-chatgpt-moment-yet/",
+      "authors": [
+        "Ivan Mehta"
+      ],
+      "abstract": "The theory of voice being the next big interface has picked up strong momentum, with investors pouring billions of dollars into voice AI startups working on areas ranging from model makers to enterprise customer service providers, and from meeting note-takers to AI-powered dictation. Every week there is a new model or a tool release that claims to sound human and converse like one. However, in reality, that might not be the case. Enterprise voice AI platform PolyAI’s CTO Shawn Wen thinks that despite the release of full-duplex models — which can speak while listening to you — voice AI doesn’t have its “ChatGPT moment” yet. “We have reached the milestone of developing full-duplex models. The next challenge is to make reasoning very fast, so that the models can fetch answers quickly and the conversation feels natural,” he told me on stage at the HumanX conference last month. He also said that AI agents in customer service should not sound robotic and should give callers enough confidence that they can solve problems. “I think the next stage will be slightly different because once the voice is good enough, like, and the customer is willing to engage with them for the first two or three turns, they start to build confidence, and over time, they will feel like I probably don’t have to talk to a human if the agent can solve my problem,” he said. Alex Gay, CMO for meeting notetaker Otter, opined that speaker identification, intent capture, and typing that up with organizational knowledge is a key step for enabling automation. The company is also working on digital twins that might represent people in meetings. For that technology, he said it’s paramount that the output voice gives the same emotive expressions of talking to a human in a meeting. “If you think about the meetings that you’re in right now, the best conversations that you have are where you can have debate, and strategic discussions, and when you feel like there’s a relationship that underpins it. If you aren’t able to have that with an avatar, then it’s just a q and a chatbot,” Gay noted. Voice AI’s understanding and transparency While voice AI models have improved, AI assistants often don’t understand users, or your meeting notetaker shows the wrong transcript or a summary. Wen thinks that ASR (Automatic Speech Recognition) models often miss important keywords, and that creates an issue in capturing the whole context. Otter’s Gay agreed with this, adding that the company keeps working on improving transcription. He also said that language is one area where voice models need to improve. “For Otter, you know, transcription was never the end point. It was just the layer that we could start to drive some of the productivity gains on the back of. But if your original transcription didn’t have the accuracy that you needed, all the follow-up actions that you have become flawed. And the minute that starts to take action, that is wrong. You lose trust in the platform. It is critical for us to continue to improve that ASR model because all of the downstream impacts are significant,” he said. With the new voice tools, there is also a question of transparency. Tools should declare to customers that they are being recorded or talking to AI. Otter said that it wants to instill trust in people who are in a meeting, so even for a meeting where the bot is not present, it wants to try methods like notifying everyone in the chat that the meeting is being recorded. PolyAI’s Wen also said that it’s important to establish that people are talking to an AI in enterprise calls.",
+      "published_date": "2026-10-11",
+      "tags": [
+        "AI",
+        "otter",
+        "voice AI"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "TechCrunch AI",
+        "feed_url": "https://techcrunch.com/category/artificial-intelligence/feed/"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, reasoning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 25,
+    "llm_reason": "純高管訪談意見，無技術細節，話題尚可但內容空泛",
+    "novelty": 2,
+    "impact": 6,
+    "trending": 9,
+    "practicality": 3,
+    "blog_worthiness": 5
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "The Verge AI",
+      "title": "Learning to use local AI is exciting, overwhelming, and frustrating",
+      "url": "https://www.theverge.com/ai-artificial-intelligence/1008484/learning-local-ai-hermes-qwen-model-mac-studio-testing-diary-progress",
+      "authors": [
+        "Antonio G. Di Benedetto"
+      ],
+      "abstract": "AI Report Tech Learning to use local AI is exciting, overwhelming, and frustrating It’s like using cloud-based AI tools, but the privacy makes it more appealing.﻿ by Antonio G. Di Benedetto Oct 11, 2026, 11:00 AM UTC Baby’s first local AI agent. | Photo: Antonio G. Di Benedetto / The Verge AI Report Tech Learning to use local AI is exciting, overwhelming, and frustrating It’s like using cloud-based AI tools, but the privacy makes it more appealing.﻿ by Antonio G. Di Benedetto Oct 11, 2026, 11:00 AM UTC Antonio G. Di Benedetto is a reviewer covering laptops and the occasional gadget. He spent over 15 years in the photography industry before joining The Verge as a deals writer in 2021. I’m embarking on a journey I’ve so far been hesitant to go on: actually using AI on the regular. Giving my most personal data to cloud services has been a major hold up for me, but it’s increasingly possible to run powerful models locally to see what they’re capable of. Is this tech so useful that it’s worth throwing gobs of money at a computer or a laptop with lots of overpriced RAM? I’ll try to help you find out. I’m not an AI expert, it’s going to be a journey for me, but maybe I can help you see if that journey is worth taking — and I’ll be posting my way through it. A big part of Apple’s pitch for its new Mac desktops is how good they are for local AI, and there’s an entire line of new RTX Spark Windows machines landing imminently with up to 128GB of RAM aimed at using agentic AI. Local AI and agents are just, like, so hot right now. But, in all seriousness, the thought of having a little gofer living solely in the box on my desk that answers only to me and not overlords from OpenAI, Google, Microsoft, or Anthropic hits a bit different than trusting cloud services or subscribing to a chatbot. Don’t get me wrong, there’s still no way I’m gonna have it write for me, edit for me, or generate ugly fliers . But now, with some privacy on my side maybe I can finally think of useful busy work to “trust” it with. So as part of my ongoing testing of the M5 Ultra Mac Studio , as well as experimenting on other Mac and Windows systems, I’ve installed some local LLMs and I’m beginning to tinker. Here’s how things are going. Previous Next 1 / 4 Hermes Agent can be used with cloud or local models. I started by installing the open-source Hermes Agent on the Mac Studio. Hermes is a self-hosted AI agent desktop app that works on macOS, Windows, and Linux. It’s completely free to use if you stick to local LLMs. Since this M5 Ultra Mac Studio has 256GB of unified memory, I could run just about any model I want. This is how things quickly get overwhelming. There are more models out there than I can count , and some have specialized uses. Generally, models with many billions of parameters are able to do more than smaller ones with only a few billion. And since we don’t have to worry about paying for tokens when running a model locally, I figured I’d go big to start. Using Hermes’ straightforward onboarding interface and model picker, I chose the Qwen 3.8 Flash Next model — a 125-billion parameter model that’s around 105GB in size. I also plan on spending some time with much smaller Qwen models on devices like an M6 Mac Mini, M5 MacBook Air, an Asus TUF Gaming A14 with AMD Strix Halo processor, and, eventually, RTX Spark. (Care to share what local models and hardware you use? You know where to leave your comments. 🫡) It wasn’t long to get up and running with Hermes and Qwen, and even make them controllable via my phone by using a Telegram bot . But then, I was presented with my usual nemesis when it comes to using AI: the text box. “What do I do with this thing?” My Hermes daily briefing, sent to me daily via Telegram. Basic, I know. First up, to get things going, I followed some helpful YouTube advice and had Hermes make me a daily morning briefing — to just start small with a cron job and ensure things are working. It scans my email and calendar, tells me anything worth my immediate attention, and gives me a short weather report. It’s not all that useful, and you obviously don’t need a $12,000 computer to build it, but it’s something I can develop over time. The brief kept failing to generate at first, but then I eventually figured out that macOS couldn’t be asleep when the job fired up at 7:30am. Duh! It works like clockwork now, but I have to think of more info for it to pull for me to make the results more helpful. A more useful task was reorganizing my Steam library. I have over 400 games on Steam, and I recently started categorizing them for when I want to play something new on a whim. Steam doesn’t categorize your games for you, so you instead have to do it manually, one-by-one. But here’s where an agentic lackey could fit right in. I asked, “Can you reorganize my Steam library?” Hermes could see most of my games by just viewing the already installed Steam client. It quickly came up with some organization options for me. I decided to have it organize my games by genre, but leave some of my own specialized categories(favorites, co-op titles, party games, games to play with my wife, etc.). You have to give a local AI some permissions over your machine for it to take actions for you, and in the case of my game library I had to register a Steam web API key and give it to Hermes. Once it had that access, it only took a few minutes for it to churn through sorting all the games into categories. And the API key was easy to revoke right after, since I don’t need it further. The idea is for it to just do this heavy lifting for me once, and then I’ll file new games into the categories as I eventually buy them. It did a fine job overall, and now my Steam library is easily browsable. Previous Next 1 / 2 Starting the process of having Hermes organize my Steam library. Another simple thing I did was data analysis. I had Hermes take a look at financial records to crunch some numbers for me, and I also had it make me a spec comparison spreadsheet for a new laptop. These are small things, but they’re both tasks I cannot or will not trust with any cloud service — I don’t want to upload that sensitive data to the cloud, and in the case of a new laptop, that info was under embargo. Keeping them on my computer was the difference in me using this tool or not. The bigger bit of automation I’m currently working on is a script to run a series of laptop benchmark tests. I run all our benchmarks manually, and tending to a laptop to run a dozen or so tests — three times over, to take the average — is incredibly time-consuming. I’d love to automate at least some of it. Even walking Hermes through all of the required procedures and getting it to spit out vibe coded Python scripts has been a bit of an endeavor, and it remains a work in progress. But I’m hoping to make some positive headway. Apple demoed this cluster of four Mac Studios wired up in a cluster for local AI at a briefing I attended last month. That’s nearly $50,000 worth of compute. It’s still early days of me working with Hermes, and I’m hoping this is just the tip of the iceberg on the useful things I get it to do for me. But it’s also clear that even these powerful local models don’t make for a magical assistant that can do anything. Things still don’t always work as intended — my daily briefing already broke, multiple times. I view Hermes and local AI as just a tool, a computer program to run on my computer. I don’t want a digital friend. I’m not saying “thank you” or “please,” or typing “sorry” when I change my mind on something. I’m remaining as stone-cold and indifferent when ordering it around as I am clicking a mouse around an operating system. I hope to remain vigilant and cautious while I continue testing and learning with local AI. Let’s see where it takes me. Follow topics and authors from this story to see more like this in your personalized homepage feed and to receive email updates. Antonio G.",
+      "published_date": "2026-10-11",
+      "tags": [
+        "AI",
+        "Apple",
+        "macOS",
+        "Microsoft",
+        "Report",
+        "Tech",
+        "Windows"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "The Verge AI",
+        "feed_url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 17,
+    "llm_reason": "個人體驗式軟文，缺乏技術深度與可複現內容",
+    "novelty": 1,
+    "impact": 3,
+    "trending": 7,
+    "practicality": 2,
+    "blog_worthiness": 4
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "量子位",
+      "title": "超清雙2億，掌中電影機，榮耀Magic9 系列正式釋出，售價4499元起",
+      "url": "https://www.qbitai.com/2026/10/502496.html",
+      "authors": [
+        "量子位的朋友们"
+      ],
+      "abstract": "超清雙2億，掌中電影機，榮耀Magic9 系列正式釋出，售價4499元起 量子位的朋友們 2026-10-10 17:07:43 來源： 量子位 2026年9月28日，榮耀（HONOR）在北京舉辦榮耀Magic盛典暨榮耀Magic9 系列新品釋出會 2026年9月28日，全球領先的AI終端生態公司榮耀（HONOR）在北京舉辦榮耀Magic盛典暨榮耀Magic9 系列新品釋出會，正式釋出榮耀Magic9 Pro Max、榮耀Magic9、榮耀Magic9超能版三款旗艦產品。攜手百年影像傳奇阿萊（ARRI），榮耀Magic9 系列將電影美學與專業創作流程帶到手機影像中，打造人人皆可直出大片的掌中電影機。 創造，是榮耀Magic系列十年不變的底色；創新，則是榮耀對創造最直接的回應。榮耀CEO李健表示：“榮耀Magic9 系列是榮耀獻給這個時代創作者的十年匠心之作，我們希望以科技之力，賦能每一顆熱愛創作的靈魂。”作為榮耀“敢想敢不同”品牌煥新後的首款旗艦，也是榮耀Magic 系列十週年的集大成之作，榮耀Magic9 系列進一步明確“為創造而生”的系列定位，同時重新定義旗艦產品矩陣，不再用一款產品覆蓋所有人的需求，而是以三款定位鮮明的產品，回應不同使用者對旗艦的不同期待。 榮耀Magic9 Pro Max面向專業創作者，以阿萊雙2億影像系統、電影級槍麥與音質、最新2nm製程驍龍移動平臺等頂級配置，構建全方位旗艦創作體驗；榮耀Magic9以小巧機身承載同款阿萊影像能力，為偏愛小屏與設計感的使用者提供旗艦創作體驗；榮耀Magic9超能版則以大屏、超大電池與旗艦唯一主動散熱方案，滿足重度使用者對效能與續航的需求。 從設計、影像到AI，從技術創新到產品定位，十年Magic始終在回答同一個問題：如何讓科技成為創造的工具，讓每個人都能更輕鬆地記錄、表達與創造。 為創造而生，榮耀Magic系列以創新重塑旗艦電影美學 創造不僅發生在鏡頭之中，也融入產品本身。踐行“為創造而生“的系列定位，榮耀Magic9 系列從電影創作中汲取設計靈感，從鏡頭模組到機身配色，將電影創作的經典元素融入產品設計，讓旗艦本身成為對創造的致敬。受阿萊經典電影機“三鏡頭轉塔”啟發，榮耀Magic9 系列三顆標誌性圓形鏡頭呈三角陣列有序排布，用“大導之眼”的全新形式重塑移動影像美學。 榮耀Magic9 系列還通過多元配色與外觀工藝匹配不同使用者的審美偏好。榮耀Magic9 Pro Max推出苔青、影黑、銀鹽三款配色：苔青取自攝影機金屬外殼歷經時光沉澱的自然色澤，影黑還原銀幕經典暗調，銀鹽致敬膠片時代；一體全金屬機身還原片場專業裝置質感。 榮耀Magic9 採用3D一體冷雕玻璃機身，帶來精緻通透的視覺與觸感。此外，榮耀Magic9與榮耀Magic9 超能版均提供四款電影感配色：承載影片開場前期待的爆米黃、象徵銀幕點亮瞬間的開場白、留存落幕後無限遐想的幕布黑，以及飽含電影餘韻的橄欖青，以電影美學彰顯創造活力。 年度滿配影像旗艦，榮耀Magic9 Pro Max打造“掌中電影機” 如果說設計是Magic9 系列對電影創作的致敬，那麼影像創新，則是榮耀將專業創作能力交到更多人手中的一次探索。作為年度滿配影像旗艦，榮耀Magic9 Pro Max圍繞畫質、色彩、聲音與專業拓展能力，構建從拍攝到創作的完整影像體驗，讓手機進一步從記錄工具走向專業創作工具。 榮耀Magic9 Pro Max搭載阿萊雙2億影像系統，包括防抖能力均達到CIPA8.0的2億阿萊雲臺級主攝和2億阿萊超夜神長焦，搭配自研影像晶片榮耀馭光H1和陣列變焦閃光燈，為“掌中電影機”構建影像硬體底座。 依託榮耀自研影像晶片榮耀馭光H1與阿萊聯合深度調校，榮耀Magic9 Pro Max重構影片管線，並引入阿萊最貼近膠片質感的ARRI LogC3曲線，讓手機也能輸出電影級畫質、復刻好萊塢經典電影感畫面。 色彩方面，榮耀Magic9 Pro Max支援將全套87款ARRI Look匯入手機，隨手一拍即可獲得好萊塢大片同款風格。 電影創作不只有畫面，聲音同樣決定作品的沉浸感。榮耀Magic9 Pro Max行業首發電影級槍麥，將幾十釐米的專業槍麥微縮排毫米級聲學空間內，大幅提升拾音距離和精準度，讓手機獲得片場級收音效果。 得益於雙1216揚聲器、行業最大振幅與行業最大音腔，榮耀Magic9 Pro Max提供影院級的聽覺享受，也是行業唯一獲得SGS指向性高靈敏度五星收音認證和SGS空間音訊外放認證的手機。 為了進一步拓展手機創作的邊界，榮耀Magic9 系列還推出手機行業最遠500mm焦段的榮耀長焦增距鏡G500，以及輕巧便攜的200mm焦段榮耀長焦增距鏡G200，為舞臺、遠景等場景提供更多創作可能。榮耀還推出了適配榮耀Magic9 Pro Max的大師攝影套裝，並聯合斯莫格（SmallRig）開發專業影片拓展套件兔籠，為創作者打造更為專業的拍攝工具。 專業創作體驗背後，也需要一整套旗艦配置作為基礎。榮耀Magic9 Pro Max搭載新一代至臻黑鑽屏，具備電影級監看水準的行業最高10000nits 峰值亮度和行業最低1.5%反射率，抗刮表現提升15 倍，抗跌落能力提升25倍，耐磨效能提升3倍，同時獲得萊茵全域性護眼 6.0 認證、杜比視界（Dolby Vision）、HDR Vivid、ZREAL幀享超高畫質認證，提供可靠防護和旗艦視覺盛宴。 效能方面，榮耀Magic9 Pro Max首批搭載2nm製程第六代驍龍8超級至尊版移動晶片，移動CPU最高主頻首次達到5GHz，配備18MB獨立高速視訊記憶體GPU，為沉浸創作和旗艦體驗提供巔峰算力支撐。 榮耀Magic9 Pro Max首次將新一代青海湖刀片電池帶入直板旗艦，通過行業最高1000Wh/L電池能量密度與行業最高40%矽含量兩項技術突破，進一步突破大電池與旗艦機身之間的空間限制。基於全新的電池技術，榮耀Magic9 Pro Max內建8800mAh大電池，並支援100W榮耀有線超級快充、80W榮耀無線超級快充、相容300餘款車型的50W車載無線快充，全方位支援使用者的旗艦使用場景。 通訊方面，榮耀Magic9 Pro Max首發行業最窄平行雙軌微縫天線，以僅0.4mm的天線縫兼顧機身外觀與優秀通訊效能；搭配榮耀鴻燕七芯射頻架構，支援行業最多32個5G頻段，帶來穩健的旗艦通訊體驗。 安全方面，榮耀Magic9 Pro Max是行業唯一同時搭載3D人臉識別和3D超聲波指紋識別的旗艦手機，旗艦解鎖，高效安全。 小屏影像旗艦，榮耀Magic9將阿萊電影感一手掌握 專業創作不意味著更大的機身。榮耀Magic9面向偏愛小屏、設計與影像體驗的使用者，在6.37英寸小巧機身中承載與Pro Max同源的阿萊影像能力，讓專業影像創作擁有更輕盈的形態。 作為行業唯一雙芯雙2億小屏影像旗艦，榮耀Magic9的阿萊雙2億影像系統包含雙雙支援CIPA 7.5級防抖的2億阿萊超清主攝和2億阿萊超清長焦，以頂級硬體賦能電影感創作。 為了讓創作本身更自由，榮耀Magic9配備安卓首款方形畫幅前置攝像頭，支援1:1方形畫幅拍攝，並推出全新“豎握橫拍”功能，為單人、多人自拍以及後期裁切提供更靈活的構圖空間。 榮耀Magic9首發阿萊電影Live，採用2.39:1專業電影畫幅，支援幀幀高畫質、精準可控的3秒錄製，並可套用87款ARRI Look；配合三拼Live等全新玩法，讓普通使用者也能快速記錄具有電影氛圍的動態瞬間。 在人像拍攝方面，榮耀Magic9帶來2億變焦閃光人像等模式，在不同距離與明暗環境下進一步拓展電影感人像的創作空間。方形畫幅前置攝像頭、阿萊電影Live、2億變焦閃光人像等功能也同步搭載於榮耀Magic9 Pro Max，讓更多旗艦使用者能夠自由選擇自己的表達方式。 針對小屏使用者長期面臨的續航與效能取捨，榮耀Magic9依託榮耀領先的電池技術，在小巧機身中實現高達8000mAh的新一代青海湖電池容量，並支援80W榮耀有線超級快充和50W榮耀無線超級快充。在此基礎上，榮耀Magic9搭載搭配第五代驍龍8至尊版移動平臺，峰值亮度10000nits的綠洲護眼屏等旗艦配置，為小屏創作者帶來持久的續航和效能支援。 為重度創造釋放效能，榮耀Magic9超能版突破旗艦續航與散熱邊界 創造也有另一種形態：長時間遊戲、影音娛樂和高負載使用，同樣需要持續而穩定的效能釋放。榮耀Magic9超能版面向重度旗艦使用者，以大屏、大電池和主動散熱，進一步拓展榮耀Magic系列的效能邊界。 榮耀Magic9超能版搭載6.81英寸大屏，並提供四款電影感配色。11000mAh新一代青海湖電池重新整理榮耀旗艦手機電池容量紀錄，為長時間遊戲、影片和過載使用提供續航基礎。 為了讓效能不僅“跑得高”，也能“跑得久”，榮耀Magic9 超能版搭載新一代榮耀東風渦輪散熱，作為唯一配備主動散熱的安卓旗艦機，進一步拉昇整體效能上限。 作為該檔位唯一搭載第五代驍龍8至尊版移動平臺的新款旗艦手機，榮耀Magic9 超能版在高畫質、長時間遊戲場景下表現同代最強，跨代領先。 效能拉滿，影像同樣不妥協。榮耀Magic9超能版配備2億超清影像系統，包含2億畫素超清主攝、5000萬畫素長焦、1200萬畫素超廣角及5000萬畫素前置攝像頭，在釋放強勁效能的同時，依然保留完整的旗艦影像能力。 榮耀Magic9 系列全系搭載IP68/IP69/IP69K滿級防塵防水、峰值亮度高達10000nits的綠洲護眼屏、首發第三代射頻增強晶片C3，從防護、顯示到通訊全面升級，進一步夯實全系旗艦體驗。 397B智慧體大模型加持，榮耀Magic9 系列首批搭載 MagicOS 11 榮耀Magic9 系列全系搭載最新發布的MagicOS 11。依託榮耀與阿里聯合打造的397B行業領先智慧體大模型，Agent Harness框架首次在MagicOS 11實現商用落地，讓AI智慧體能力真正進入手機系統。 MagicOS 11帶來新一代YOYO智慧助手，讓AI進一步融入使用者日常使用。此外，榮耀Magic9 系列全系搭載專屬AI按鍵，支援YOYO一鍵妙記功能，支援快速記錄音影片片段、快速生成字幕拼圖、影片轉Live，記日程、靈感等。YOYO還能整理包括取件碼、取餐碼等多種碎片化資訊，成為使用者日常實用智慧高效的AI助手。 面對通話找客服等繁瑣場景，MagicOS 11推出業界首個AI通話助理，智慧操作助力快速找到人工客服，讓通話更高效便捷。 在互聯互通方面，榮耀Magic9 系列全系支援跨品牌一碰傳，不僅可與安卓裝置互聯，還能實現與蘋果生態的流暢協同和影石Insta360 Luna Ultra等運動相機快速互傳。榮耀Magic9 系列還支援iPhone通話同步，檢視、AI編輯iPhone端照片，大幅降低雙裝置使用門檻。此外，榮耀聯合了安卓生態夥伴共同制定《碰一碰互傳技術標準》，推動構建行業互聯互通新生態。 十年前，榮耀Magic以對未來科技的想像出發；十年後，榮耀Magic正在把這種想像轉化為更加具體的使用者價值。 榮耀Magic9 系列已於2026年9月28日正式開售。榮耀Magic9 Pro Max售價6499元起；榮耀Magic9售價4999元起；榮耀Magic9 超能版售價4499元起。 榮耀長焦增距鏡G200售價999元；榮耀長焦增距鏡G200+專業影像手柄售價1499元；榮耀長焦增距鏡G500售價1999元；榮耀長焦增距鏡G500+專業影像手柄售價2499元；HONOR SmallRig專業影片套件售價1699元。 榮耀Magic9 Pro Max配套的大師攝影套裝已於2026年9月28日正式啟售，售價10999元。 為了進一步降低AI服務與創作的使用門檻，榮耀CEO李健在釋出會上宣佈，中國移動與榮耀聯合首發 Token 套餐——MobileAI達人計劃，套餐169元/月起，包含5000萬移動Token及通訊服務，支援話費支付。使用者選購榮耀Magic9 系列還可享購機優惠。該計劃首批將在杭州、鄭州、長沙、深圳、成都、溫州六大城市試點。榮耀提供AI終端，中國移動提供AI應用權益與通訊服務，讓Magic9的影像創作有更多可能，也讓更多使用者輕鬆用上AI。未來，雙方將攜手把更便捷、更豐富的AI體驗帶給每一位使用者。 此外，在本次榮耀Magic盛典上，榮耀MagicPad4與榮耀手錶6 Pro也正式釋出。榮耀MagicPad4配備12.1英寸165Hz榮耀綠洲護眼屏與驍龍旗艦芯，內建10100mAh大電池，並以榮耀無邊筆記、榮耀知識工坊與PC模式貫穿記錄、整理與創作，一臺平板搞定創作與娛樂。 榮耀手錶6 Pro搭載1.5英寸5500nits雙層OLED屏，行業首發心臟停搏監測功能與心臟血壓健康管理，為每一位使用者帶來更智慧、更全面的健康守護。 本文由榮耀提供，量子位獲授權轉載，觀點歸原作者所有。 版權所有，未經授權不得以任何形式轉載及使用，違者必究。 榮耀 量子位的朋友們 西門子將亮相2026工博會：以軟硬協同的工業全棧能力，推動物理AI加速落地 2026-10-10 聯想天禧自研程式碼智慧體TianxiCode斬獲SWE-bench-Live全球第一 2026-10-09 正行創新亮相APRCE 2026，釋出全球首個零售物理智慧24/7服務解決方案 2026-10-08 搭載NVIDIA RTX Spark™ N1X超級晶片：聯想YOGA Pro 15開啟盲約，重塑個人生產力邊界 2026-10-08 相關閱讀",
+      "published_date": "2026-10-10",
+      "tags": [
+        "資訊",
+        "榮耀"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "量子位",
+        "feed_url": "https://www.qbitai.com/feed"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 10,
+    "llm_reason": "純手機產品發布行銷文，與GenAI技術無關",
+    "novelty": 1,
+    "impact": 2,
+    "trending": 5,
+    "practicality": 1,
+    "blog_worthiness": 1
+  },
+  {
+    "item": {
+      "source": "newsapi",
+      "source_name": "Rolling Stone",
+      "title": "Grimes Reveals First Taste of AI-Inspired ‘Psy Opera’",
+      "url": "http://www.rollingstone.com/music/music-news/grimes-announces-psyopera-album-accelerando-1235640175/",
+      "authors": [
+        "Jaeden Pinder"
+      ],
+      "abstract": "\"Accelerando\" is the latest taste of Grimes first album in six years. A release date and complete track list has yet to be revealed.",
+      "published_date": "2026-10-09",
+      "tags": [
+        "newsapi"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "newsapi_source": "Rolling Stone",
+        "published_at": "2026-10-09T14:41:48Z"
+      }
+    },
+    "rule_score": 20.0,
+    "rule_reasons": [
+      "⚖️ 來源權重: newsapi +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 11,
+    "llm_reason": "音樂人新專輯娛樂新聞，無任何技術內容",
+    "novelty": 1,
+    "impact": 2,
+    "trending": 5,
+    "practicality": 1,
+    "blog_worthiness": 2
+  }
+]
