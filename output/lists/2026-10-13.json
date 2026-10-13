@@ -1,0 +1,641 @@
+{
+  "date": "2026-10-13",
+  "github": [
+    {
+      "title": "tashfeenahmed/freellmapi",
+      "slug": "tashfeenahmed-freellmapi",
+      "url": "https://github.com/tashfeenahmed/freellmapi",
+      "abstract": "FreeLLMAPI 7.4 billion tokens per month.  34 free LLM providers. 635 free model endpoints. One OpenAI-compatible endpoint. Aggregate free tiers from dozens of providers, plus custom OpenAI-compatible chat, embedding, image, and audio endpoints, behind a single /v1 API. Keys are stored encrypted. A router picks the best available model for each request, falls over to the next provider when one is rate-limited, and tracks per-key usage so you stay under every free-tier cap. freellmapi.co · browse the full catalog: 474 model families, 635 free endpoints English · 簡體中文 · Русский Your router updates its own model catalog from a signed feed: new free models, quota changes, and compatibility fixes land without a git pull . Free installs get the monthly snapshot, so a model reaches them 30 days after it joins the live feed; premium routers get it the same day. Go live at freellmapi.co ($19/yr, cancel anytime). Contents Why this exists Supported providers Compatible CLIs & coding agents How it compares Features Quick start Desktop app Works with OpenAI-compatible clients Languages Premium (live catalog) Using the API Screenshots How it works FAQ Limitations Contributing Disclaimer Guides: Install & deploy · API reference · Clients & coding agents · Prompt compression · Architecture & internals · Documentation index · Contributor guide Why this exists Every serious AI lab now offers a free tier, a few million tokens a month, a few thousand requests a day. On its own each tier is a toy. Stacked together, they add up to roughly 7.4 billion tokens per month of working inference capacity, across 474 model families / 635 provider endpoints from small-and-fast to reasonably capable. The problem is that stacking them by hand is painful: thirty-four different SDKs, thirty-four different rate limits, thirty-four places a request can fail. FreeLLMAPI collapses that into one OpenAI-compatible endpoint. Point any OpenAI client library at your local server, and it routes transparently across whichever providers you've added keys for. And the free-tier landscape shifts weekly: providers launch models, retire them, and change quotas without notice. FreeLLMAPI tracks all of that for you. The router pulls a signed model catalog from freellmapi.co on its own, so your install keeps up without a git pull . See Premium (live catalog) for how fast it keeps up. Supported providers Google Groq Cerebras OpenCode Zen Mistral OpenRouter Cloudflare Cohere Z.ai (Zhipu) NVIDIA HuggingFace ModelScope Qwen3 · DeepSeek V4 · GLM-5 (needs Aliyun cn binding) … and 22 more free providers Plus a custom provider — point chat, embedding, image, or audio models at any OpenAI-compatible endpoint (llama.cpp, LM Studio, vLLM, a local Ollama, or a remote gateway) from the Keys page. The full, always-current list lives at freellmapi.co/models with per-model rate limits, context windows, and free-token budgets. Compatible CLIs & coding agents Claude Code Codex CLI Gemini CLI Cursor Cline Roo Code OpenCode Aider … plus Continue, Goose, Qwen Code, Kilo Code, Crush, Zed, JetBrains AI, DeepSeek Harness, MiMo Code, AtomCode, OpenClaw, Hermes Agent, Pi, Reasonix and any OpenAI-compatible, Anthropic, Gemini or Ollama client Most agents configure themselves with one command that reads your live catalog, backs up the existing config and merges into it: npx freellmapi setup-claude --url http://localhost:3001 --api-key < unified-key > All supported agents and their setup commands → · Per-tool recipes, MCP server and URL tokens → How it compares Based on public documentation, July 2026 — corrections welcome. Features Every OpenAI-style surface — /v1/chat/completions , /v1/responses (what Codex CLI needs), /v1/completions (editor ghost-text autocomplete), /v1/images/generations , /v1/videos/generations , /v1/audio/speech , /v1/audio/transcriptions , /v1/embeddings , and /v1/models — streaming and non-streaming, from the official SDKs or any OpenAI-compatible client. API reference → Anthropic Messages API — /v1/messages speaks Anthropic's wire format over the same router, so Claude Code and the official Anthropic SDKs run against your free pool. Details → Native Gemini + Ollama surfaces — Gemini CLI can use /v1beta ( generateContent , streaming, token counting, models), while opt-in Ollama emulation serves NDJSON chat/generate, tags, metadata, and embeddings for Zed, JetBrains, and other local-model clients. Fusion (multi-model synthesis) — request the virtual fusion model and the router fans your prompt out to a panel of diverse free models in parallel, then a judge model synthesizes one answer from the drafts. Details → Image, video & speech generation — /v1/images/generations , /v1/videos/generations , and /v1/audio/speech route across the providers that serve media models; images and speech also accept custom OpenAI-compatible media endpoints. Video jobs are normalized across synchronous and queued providers and return a completed MP4. Tool calling & structured outputs — OpenAI-style tools round-trip across providers (plain-text tool calls are rescued into real tool_calls ), plus response_format , seed , logprobs , penalties, and the rest of the sampling params passed through per provider. Smart routing, six strategies — live per-model speed/capability/reliability scores rank your chain; automatic fallover retries the next model on 429/5xx with cooldowns and key rotation. Routing in detail → Unified models & profiles — the same model on several providers collapses into one entry with strict in-group failover; named fallback-chain profiles (a coding chain, a vision chain) switch from the dashboard or per request via auto:<profile> , and custom chains can be renamed in place from the chain manager. Per-key rate tracking — RPM/RPD/TPM/TPD counters per (platform, model, key) that learn providers' reported ceilings, so routing always stays under every cap. Self-updating model catalog — the router syncs a signed catalog from freellmapi.co twice a day: new models, quota changes, and provider quirk fixes land automatically. Free installs track the monthly snapshot, which each model joins 30 days after it lands in the live feed; premium routers get it same-day. Premium → Sticky sessions & context handoff — conversations stay on one model for 30 minutes; an optional compact handoff note keeps the thread coherent when a mid-chat switch does happen. Details → Prompt compression (opt-in) — a shared, fail-open request pipeline can deduplicate prompts, filter tool output, compact repeated JSON, and trim stale context before cache lookup and routing. Details → Encrypted keys, one token out — provider keys are AES-256-GCM encrypted in SQLite and decrypted in-memory per request; your apps only ever see a single unified freellmapi-… bearer token. Admin dashboard & analytics — React UI to manage keys, reorder the chain, run a playground, and read p50/p95/TTFT analytics over 24h–90d windows; login-gated, dark/light themes, 60 languages . ChatGPT-ready MCP server & interactive docs — ChatGPT and other MCP clients can call FreeLLMAPI inference, list usable models, inspect provider health/usage/cache/routing metadata, and manage the routing strategy over /mcp ; a dependency-free OpenAPI viewer lives at /v1/docs . ChatGPT and coding agents → Ops niceties — opt-in response cache, encrypted DB backups, periodic key health checks, bulk key import/export, declarative startup config. Install & deploy → Runs anywhere Node 20+ runs — Windows, macOS, Linux servers, or a small ARM SBC (Raspberry Pi included). ~40 MB RSS at idle behind PM2 / systemd / whatever supervisor you prefer. The scope is deliberately narrow — see what's not supported yet . Quick start One-liner (Docker required — sets up ~/freellmapi , generates an encryption key, pulls the image, and starts the container): curl -fsSL https://freellmapi.co/install.sh | bash Prefer to read before you pipe to bash? The script is here . Re-running it is safe: your .",
+      "stars_today": 786,
+      "language": "TypeScript"
+    },
+    {
+      "title": "harry0703/MoneyPrinterTurbo",
+      "slug": "harry0703-moneyprinterturbo",
+      "url": "https://github.com/harry0703/MoneyPrinterTurbo",
+      "abstract": "MoneyPrinterTurbo 💸 一站式 AI 短影片生成工具 只需提供影片 主題 或 關鍵詞 ，即可自動生成影片指令碼、匹配素材、生成字幕和背景音樂，併合成高畫質短影片。 簡體中文 | English | 日本語 | 版本釋出 | 問題反饋 介面預覽 🖥️ WebUI API 特別感謝 ❤️ 感謝 Kimi 贊助本專案！ Kimi K3 是 Moonshot AI 迄今能力最強的模型，也是全球首個開源 3T 級模型，擁有原生視覺能力與 100 萬 Token 上下文，在知識工作、推理和長週期任務中展現前沿效能。在 MoneyPrinterTurbo 中，K3 能直接驅動影片創作，不僅撰寫影片文案，還會提煉素材搜尋關鍵詞、決定成片畫面；對內容理解越準確，匹配到的素材就越貼題。 MoneyPrinterTurbo 使用者專屬優惠：新使用者通過專屬連結註冊，首次成功充值可獲充值金額 10% 的 API 額度，最高贈送 ¥1000。活動截至 2026 年 12 月 31 日。前往 Kimi 開放平臺（ 中文站 ｜ Global ）體驗 API。 火山引擎 感謝位元組火山引擎贊助本專案！火山方舟 Agent/Coding Plan 國模套餐 首購 9.9 ，支援 GLM-5.3、Kimi-K3、DeepSeek、MiniMax、Doubao 等，註冊免費領 2500w Token ，統一 API，適配編碼與智慧體開發。 立即前往 感謝 APIMart 贊助了本專案！APIMart 是專注 AI 圖片/影片生成的低價 API 平臺， GPT-Image-2 低至 $0.006/張，1 美元可出圖 160+ 張 。 圖片、影片一套非同步 API 通吃，換模型不改程式碼 ；提交任務拿 ID，通過輪詢或回撥獲取結果，支援萬張級批次生成。按量付費、無月費，通過 此註冊連結 註冊即可開用。 秘塔科技 MiniMax H3 影片生成 API｜秘塔科技 秘塔科技提供高性價比的 MiniMax H3 影片生成服務： 768P 僅 0.09 元/秒，2K 僅 0.15 元/秒 。支援原生 2K、音畫同步，API 相容 OpenAI 協議 ，同時支援 ComfyUI ，無需自行部署 GPU。 🎁 通過 MoneyPrinterTurbo專屬連結註冊 ，即可領取贈送額度及專屬優惠。 Infistar.cc 無限星河 感謝 Infistar.cc 無限星河 贊助本專案！Infistar.cc 提供高性價比的大模型 API 服務：大模型低至 官方 0.1 折 ，AI 生圖低至 ¥0.06/張 。 一個 API Key，覆蓋文案、圖片與影片創作 ，支援 GPT、Claude、Gemini、DeepSeek、通義千問、可靈等主流模型，無需分組。 全模型支援驗真 ，價格透明，正規備案，人民幣即時計費， 支援對公發票 。 🎁 MPT 專屬福利：通過 專屬連結註冊 即送 $5 體驗額度 ，並享首充特惠。 感謝 OfoxAI 贊助本專案！MoneyPrinterTurbo 已整合 Ofox 多模型文生影片，配置 API Key 即可使用。Seedance、MiniMax H3、Wan 生成影片素材，GPT Image 2.5、Seedream 製作封面配圖，GPT、Claude、Gemini、DeepSeek 打磨指令碼、輔助開發。 一個 Key，文本、影像、影片共用餘額 ；提供 OpenAI 相容介面及 Anthropic、Gemini 原生介面。 按量付費、價格公開、官方渠道接入，穩定高速不限量 ，前往 OfoxAI 檢視模型與價格 。 勝算雲 感謝 勝算雲 對本專案的贊助！勝算雲是面向 AI 原生團隊的模型 API 聚合平臺，彙集 Claude、ChatGPT、Gemini 等海內外大語言模型及多媒體模型，支援統一接入與按量呼叫。 平臺堅持合規 API 服務，杜絕逆向工程和資源稀釋。此外平臺提供企業級定製閘道器，包括團隊成本與許可權管理、智慧路由、安全防護及 BYOK 金鑰託管，並提供發票服務。 🎁新使用者通過 此連結 註冊，即可領取 10 元 Token 體驗額度。 星圖 AstraFlow 感謝 星圖 AstraFlow 贊助本專案！ 點選領取 50 元算力金 🎬 影片模型一站式呼叫 ：聚合 MiniMax-H3，Seedance-2.5 等主流影片生成模型，文案生成 + 影片生成一個平臺全搞定，無需多端註冊、多處對接 🚀 200+ 大模型一鍵呼叫，新模型當日上架 ：聚合 DeepSeek V4.1、Kimi K3、Qwen 3.8 Max、GLM 5.3 等 200+ 主流大模型，新模型上線當天即可接入 💰 UCloud 上市公司出品，呼叫計費透明可控 ：按 Key 級別計費，呼叫明細全程可查 🎁 MoneyPrinterTurbo 使用者專屬福利 ：通過 專屬推廣連結 註冊，即享新使用者贈送額度，開箱即用！ 感謝 Sidrune AI 贊助本專案！ 一個入口，接入並管理全球主流 AI 模型。 Sidrune AI 面向個人開發者、技術團隊與企業，通過統一 API 接入並管理全球主流 AI 模型，多線路動態排程提升可用性，模型表現、響應時間與費用透明可查。根據不同模型與線路， API 呼叫成本較官方或基準價格可降低 40%～98% 。通過 專屬連結註冊 ，即可獲得 $3 API 額度 。 RunningHub API 感謝 RunningHub API 贊助本專案！ • Seedance 滿血版 API 接入 全網骨折價 ，線上工具低至 0.21元/秒 ，節省 60%-80%成本 ！ • 超穩定高併發高 折扣 ，隨用隨充按需彈性付費，不捆綁不排隊不抽卡 • 無限畫布、ComfyUI、Agent 等線上工具從劇本到成片全鏈路製作 • 一站式接入LLM API、多模態API、工作流API、Al應用 • 400+ 主流模型（ 支援國際版許可權 ）8000+版本 任選 • 數千家企業信賴， 500萬C端月活 驗證 折扣與免費測試可聯絡 zhenyuedong@haima.me ，或 檢視模型與介面 。 錄咖 AI 感謝 錄咖（AI 智慧多媒體服務平臺） 基於本專案提供免費的 AI 影片生成器 ，無需部署，線上即可使用，對新手更加友好。 佐糖 感謝 佐糖 對本專案的支援與贊助！佐糖提供豐富的 線上影像處理工具 ，操作簡單，幫助使用者輕鬆完成各類圖片處理。 作者的另一個開源專案：MangoDisk ⭐ 面向 macOS 和 Windows 的開源磁碟清理、空間分析與系統最佳化工具 一站式清理快取、大檔案、重複檔案和應用殘留，並提供磁碟空間分析、應用卸載、啟動項管理、系統最佳化與維護 訪問 MangoDisk 官網 · 檢視 GitHub 開源專案 功能特性 🎯 創作入口與工作流 提供 AI Agent、WebUI、API 和 CLI 四種使用方式，既能快速上手，也能接入自動化流程 從主題自動完成指令碼、配音、素材、字幕、配樂和剪輯，也支援在每個環節使用自定義內容 支援 批次生成多條成片 、任務歷史記錄，以及生成設定與 API Key 的匯入、匯出和恢復 指令碼與模型服務 支援 AI 自動生成或改寫 多語言影片指令碼 ，也可以直接使用自定義指令碼 支援 Kimi / Moonshot AI 、 OpenAI 、 Anthropic Claude 、 Google Gemini 、 DeepSeek 、 阿里雲通義千問 、 Microsoft Azure OpenAI 、 火山引擎方舟 、 xAI Grok 、 MiniMax 和 小米 MiMo 等主流模型服務 相容 勝算雲 、 APIMart 、 Cloudflare AI Gateway 、 魔搭 ModelScope 、 AIHubMix 、 AIML API 、 EvoLink 、 OpenRouter 、 API Route 、 Fluxion AI 、 Ollama 、 Claude Code 訂閱 、 OneAPI 、 LiteLLM 、 Groq 和 Pollinations AI 等統一閘道器、聚合平臺和本地執行環境 影片與圖片素材 支援上傳自己的 本地圖片和影片 ，也可從 Pexels（免費） 、 Pixabay（免費） 和 Coverr 獲取高畫質庫存素材 支援 秘塔 MiniMax H3 文生影片，可生成 768P / 2K 、4～15 秒的原始素材，並適配 9:16 、 16:9 和 1:1 三種畫幅 支援 勝算雲 AI 影片 ，可生成多段 AI 影片素材，並沿用專案的配音、字幕和剪輯流程合成成片 原生接入 火山引擎方舟 Seedance ，可根據指令碼片段生成連貫的影片畫面 支援 WaveSpeed AI 文生影片，可根據指令碼關鍵詞快速生成原創素材 支援 OFox 多模型文生影片，一個 API Key 即可呼叫 Seedance、Wan 等模型 通過非同步 MuAPI 文生影片介面生成 3～12 秒 AI 影片素材，並支援配置 Endpoint、畫幅、解析度和輪詢參數 支援 OpenAI 相容文生圖 ，可連線雲端服務或自定義圖片閘道器，並將生成圖片轉換為動態影片片段 支援調整片段時長、畫面適配方式和素材匹配順序，以適配不同畫幅和敘事節奏 配音、字幕與配樂 支援自動配音、上傳配音和無配音三種方式，並提供音色試聽與完整配音預覽 整合 Edge TTS（免費、無需 API Key） 、Azure Speech、SiliconFlow、Google Gemini、小米 MiMo、MiniMax、ElevenLabs、Chatterbox、Kokoro、Fish Audio 和 ModelBest VoxCPM 等配音服務 支援自動生成字幕，可調整字型、位置、顏色、大小、描邊和背景樣式 支援隨機、本地及 AI 生成背景音樂，並可獨立控制音量 成片與釋出 支援豎屏 9:16（1080×1920） 、橫屏 16:9（1920×1080） 和方形 1:1（1080×1080） 支援一鍵 跨平臺釋出 ，生成完成後可自動上傳至 TikTok、Instagram 和 YouTube Shorts 作品展示 🎬 以下示例均由 MoneyPrinterTurbo 實際生成。 豎屏 9:16 城市醒來的時刻 中文 · 14 秒 清潔能源的未來 中文 · 24 秒 為什麼我們仍要探索太空 中文 · 27 秒 一粒種子的旅程 中文 · 44 秒 The Future of Everyday Robotics English · 21 sec Small Habits, Lasting Change English · 19 sec Making Space for Creative Work English · 20 sec The Science Inside Coffee English · 23 sec 橫屏 16:9 深海里的微光 中文 · 23 秒 閱讀如何塑造我們 中文 · 23 秒 一杯手衝咖啡的細節 中文 · 23 秒 春天適合出發 中文 · 14 秒 Why Ocean Conservation Matters English · 25 sec Designing More Sustainable Cities English · 27 sec What Mountains Teach Us English · 18 sec A Brief History of Human Flight English · 59 sec 配置要求 📦 建議系統：Windows 10、macOS 11.0 或更高版本，以及主流 Linux 發行版 本地部署需要 Python 3.11 或更高版本，推薦使用 Python 3.11 GPU 不是必需項，但如果你希望本地轉錄、更快的影片處理或更順暢的批次生成體驗，建議使用帶視訊記憶體的獨立顯示卡 專案 最低配置 推薦配置 理想配置 CPU 4 核 6 到 8 核 8 核及以上 RAM 4 GB 8 GB 16 GB 及以上 GPU 非必須 4 GB 視訊記憶體及以上 8 GB 視訊記憶體及以上 如果你主要依賴雲端 LLM、雲端 TTS 和線上素材源，CPU 與記憶體比 GPU 更重要 如果你啟用 faster-whisper 、批次生成或更重的本地處理鏈路，GPU 會明顯提升速度 快速開始 🚀 推薦使用方式 不想手動安裝和配置：直接使用 AI Agent 生成影片 Windows 使用者：優先使用一鍵啟動包，適合快速體驗 macOS / Linux 使用者：優先使用 uv 進行本地部署 想要隔離執行環境：優先使用 Docker 部署 使用 AI Agent 生成影片 如果你的 AI Agent 支援讀取 Skill 文件並操作本地終端，可以直接傳送下面這段話。Agent 會自動完成安裝、配置和影片生成；只有缺少必要的 API Key 時才會向你詢問，完成後會返回生成的影片檔案路徑。目前支援 macOS 和 Windows。 使用這個 Skill：https://raw.githubusercontent.com/harry0703/MoneyPrinterTurbo/main/docs/skill/SKILL.md\n幫我生成一個主題為“人工智慧如何改變普通人的日常生活”的影片。 在 Google Colab 中執行 免去本地環境配置，點選直接在 Google Colab 中快速體驗 MoneyPrinterTurbo Windows 一鍵啟動包 下載一鍵啟動包，解壓直接使用（路徑不要有 中文 、 特殊字元 、 空格 ） 下載最新 Windows 一鍵啟動包 請在頁面下方的 Assets 區域下載 .7z 壓縮包。GitHub 自動生成的 Source code (zip) / Source code (tar.gz) 只是原始碼，解壓後只有 webui.bat ，\n不含 start.bat 和 update.bat 。 下載後，建議先 雙擊執行 update.bat 更新到 最新程式碼 ，然後雙擊 start.bat 啟動 啟動後，會自動開啟瀏覽器（如果開啟是空白，建議換成 Chrome 或者 Edge 開啟） 安裝部署 📥 前提條件 本地部署需要 Python 3.11 或更高版本 Windows 使用者建議避免使用包含中文、特殊字元或空格的專案路徑 ① 克隆程式碼 git clone https://github.com/harry0703/MoneyPrinterTurbo.git ② 首次配置 首次啟動時，專案會根據 config.example.toml 自動建立 config.toml ，無需手動建立配置檔案。使用雲端大模型、線上素材或 AI 影片等服務前，請在 WebUI 的基礎設定中填寫對應的 API Key。 Docker 部署 🐳 ① 啟動 Docker 如果尚未安裝 Docker，請先 下載並安裝 Docker Desktop 。 Windows 使用者可以參考微軟的文件： 安裝 WSL 在 WSL 中使用 Docker 容器 cd MoneyPrinterTurbo\ndocker compose -f docker-compose.release.yml up 預設推薦使用 docker-compose.release.yml ，它會直接拉取 GitHub Container Registry 上的預構建映象： ghcr.io/harry0703/moneyprinterturbo:latest 。\n如果你需要本地重新構建映象，可以繼續使用 docker compose up 。\n首次啟動前，請將 config.example.toml 複製為 config.toml ，供容器掛載使用。 ② 訪問 WebUI 開啟瀏覽器，訪問 http://127.0.0.1:8501 ③ 訪問 API 文件 開啟瀏覽器，訪問 http://127.0.0.1:8080/docs 或者 http://127.0.0.1:8080/redoc API 預設僅允許同源網頁訪問。只有獨立網頁前端需要從其他來源直接呼叫 API 時，才應通過環境變數 CORS_ALLOWED_ORIGINS 配置可信來源，例如 http://localhost:3000,https://frontend.example.com 。curl、Postman、n8n 和其他服務端呼叫不受 CORS 限制。 手動部署 📦 影片教程 完整的使用演示 如何在 Windows 上部署 ① 建立虛擬環境 推薦使用 uv 管理 Python 環境和依賴。專案支援 Python 3.11 或更高版本，以下示例使用 Python 3.11。 git clone https://github.com/harry0703/MoneyPrinterTurbo.git cd MoneyPrinterTurbo\nuv python install 3.11\nuv sync --frozen 如果你暫時不使用 uv ，也可以繼續使用 venv + pip python3.11 -m venv .venv source .venv/bin/activate\npip install -r requirements.txt 說明： pyproject.toml 是主依賴定義檔案 uv.lock 是鎖檔案，建議預設執行 uv sync --frozen requirements.txt 僅保留給舊的 pip 安裝方式相容使用 ② 啟動 WebUI 🌐 注意需要到 MoneyPrinterTurbo 專案 根目錄 下執行以下命令 Windows .\\ webui.bat 在 CMD 中也可以執行 webui.bat 。 webui.bat 會優先使用專案 .venv 或一鍵包內建 Python；如果沒有找到專案 Python，但已安裝 uv ，會自動切換為 uv run streamlit 。\n如需允許區域網內其他裝置訪問 WebUI，可以先執行 set MPT_WEBUI_HOST=0.0.0.0 ，再執行 webui.bat 。 macOS 或 Linux sh webui.sh 指令碼會自動使用專案虛擬環境或 uv ，並選擇可用的本地埠。如需允許區域網內其他裝置訪問，可以執行： MPT_WEBUI_HOST=0.0.0.0 sh webui.sh 啟動後，會自動開啟瀏覽器（如果開啟是空白，建議換成 Chrome 或者 Edge 開啟） ③ 啟動 API 服務 🚀 uv run python main.py 如果你已經手動激活了虛擬環境，也可以直接執行： python main.py ④ 純命令列方式（無瀏覽器）⌨️ 如果你無法使用瀏覽器或埠轉發，可以直接在命令列生成影片。最簡單的完整影片生成命令如下： uv run python cli.py --video-subject \" 人工智慧如何改變日常生活 \" 字幕樣式和配音參數按以下優先順序取值： 命令列顯式參數 > config.",
+      "stars_today": 404,
+      "language": "Python"
+    },
+    {
+      "title": "apify/apify-mcp-server",
+      "slug": "apify-apify-mcp-server",
+      "url": "https://github.com/apify/apify-mcp-server",
+      "abstract": "mcp.apify.com The Apify Model Context Protocol (MCP) server at mcp.apify.com enables your AI agents to extract data from social media, search engines, maps, e-commerce sites, and any other website using thousands of ready-made scrapers, crawlers, and automation tools from Apify Store . It supports OAuth, allowing you to connect from clients like Claude.ai or Visual Studio Code using just the URL. 🚀 Use the hosted Apify MCP Server! For the best experience, connect your AI assistant to our hosted server at https://mcp.apify.com . The hosted server supports the latest features - including output schema inference for structured Actor results - that are not available when running locally via stdio. ⚠️ Legacy SSE transport removed. The https://mcp.apify.com/sse endpoint has been removed in favor of Streamable HTTP. Migrate your client to https://mcp.apify.com — drop the /sse suffix from your configuration. 💰 The server also supports agentic payments : buy a token from AGI to run any Actor, or pay per-request via direct x402 (Pay Per Event Actors only) or Skyfire . Apify MCP Server is compatible with Claude Code, Claude.ai, Cursor, VS Code and any client that adheres to the Model Context Protocol.\nCheck out the MCP clients section for more details or visit the MCP configuration page . Table of Contents 🌐 Introducing Apify MCP Server 🚀 Quickstart 🤖 MCP clients 🪄 Try Apify MCP instantly 💰 Agentic payments How agentic payments work 🪙 AGI (recommended) 💸 Direct x402 🔥 Skyfire 🛠️ Tools, resources, and prompts 📊 Telemetry 💬 Usage examples 🐛 Troubleshooting ⚙️ Development 🔒 Privacy policy 🤝 Contributing 📚 Learn more 🌐 Introducing Apify MCP Server The Apify MCP Server allows an AI assistant to use any Apify Actor as a tool to perform a specific task.\nFor example, it can: Use Facebook Posts Scraper to extract data from Facebook posts from multiple pages/profiles. Use Google Maps Email Extractor to extract contact details from Google Maps. Use Google Search Results Scraper to scrape Google Search Engine Results Pages (SERPs). Use Instagram Scraper to scrape Instagram posts, profiles, places, photos, and comments. Use RAG Web Browser to search the web, scrape the top N URLs, and return their content. Use Web Fetch to fetch any URL and return its content as Markdown, plain text, HTML, or links — with JavaScript rendering and anti-bot protection. Video tutorial: Integrate 8,000+ Apify Actors and Agents with Claude 🚀 Quickstart You can use the Apify MCP Server in two ways: HTTPS Endpoint (mcp.apify.com) : Connect from your MCP client via OAuth or by including the Authorization: Bearer <APIFY_TOKEN> header in your requests. This is the recommended method for most use cases. Because it supports OAuth, you can connect from clients like Claude.ai or Visual Studio Code using just the URL: https://mcp.apify.com . https://mcp.apify.com streamable transport Standard Input/Output (stdio) : Ideal for local integrations and command-line tools like the Claude for Desktop client. Set the MCP client server command to npx @apify/actors-mcp-server and the APIFY_TOKEN environment variable to your Apify API token. See npx @apify/actors-mcp-server --help for more options. You can find detailed instructions for setting up the MCP server in the Apify documentation . 🤖 MCP clients Apify MCP Server is compatible with any MCP client that adheres to the Model Context Protocol , but the level of support for dynamic tool discovery and other features may vary between clients. To interact with the Apify MCP Server, you can use clients such as Claude Desktop , Visual Studio Code , or Apify Tester MCP Client . Visit mcp.apify.com to configure the server for your preferred client. Tested clients Claude Desktop Claude.ai (web) ChatGPT VS Code (Genie) Cursor OpenCode Kiro Apify Tester MCP Client — designed for testing Apify MCP servers 🪄 Try Apify MCP instantly Want to try Apify MCP without any setup? Check out Apify Tester MCP Client This interactive, chat-like interface provides an easy way to explore the capabilities of Apify MCP without any local setup.\nSign in with your Apify account and start experimenting with web scraping, data extraction, and automation tools! Or use the MCP bundle file (formerly known as Anthropic Desktop extension file, or DXT) for one-click installation: Apify MCP Server MCPB file 💰 Agentic payments You can pay for Actor runs without an Apify API token using AGI , direct x402 , or Skyfire . AGI ( agi.apify.com ) mints a prepaid Apify API token in exchange for an x402 or MPP payment. Use the token like a normal API token against mcp.apify.com and api.apify.com — works for any Actor, not just Pay Per Event ones. Recommended for new integrations; see AGI (recommended) below. Direct x402 pays with USDC on Base per request and does not require a separate platform account. It is fully supported by mcpc ( brew install apify/tap/mcpc or npm install -g @apify/mcpc ). We use mcpc because it is one of the few MCP clients that supports the latest features and the x402 protocol natively. Skyfire pays with PAY tokens and requires a Skyfire account with a funded wallet. It does not require a special MCP client; the entire payment flow is handled directly through the MCP tool call parameters. ℹ️ Scope: Both direct x402 and Skyfire are limited to Pay Per Event Actors, don't support Standby Actors, and settle per run instead of minting a token. How agentic payments work Actor run costs vary, so both payment methods use a prepaid balance model. The payment flow happens in four steps: Discovery : The agent discovers Actors with search-actors or fetch-actor-details . Those calls are free. Prepayment : Before running a paid Actor tool, the agent funds a prepaid balance. Direct x402 : mcpc automatically signs a $1.00 USDC transaction. Skyfire : The agent creates a PAY token (minimum $5.00) using Skyfire's create-pay-token tool. Execution : The agent calls the Actor tool. Direct x402 : Handled automatically by mcpc using the prepaid balance. Skyfire : The agent explicitly passes the PAY token in the skyfire-pay-id input property. Resolution : The tool returns the Actor results. Unused funds stay available for later runs. Direct x402 : After 60 minutes of inactivity, the server refunds any unused balance to the wallet on Base . Skyfire : Skyfire returns unused funds when the token expires. 🪙 AGI (recommended) AGI (Apify Agent General Interface) is the recommended way for autonomous agents to pay for Apify usage without an account. Pay once via x402 or MPP, receive a prepaid, spend-capped Apify API token, and use it directly against mcp.apify.com and api.apify.com ( Authorization: Bearer <token> ) — for any Actor. Full protocol, supported payment methods, and current terms (minimum amount, token lifetime, refund policy) are documented at agi.apify.com/AGENTS.md — treat it as the single source of truth. 💸 Direct x402 The x402 protocol enables direct, machine-to-machine payments. Your MCP client can use it to pay for Actor runs with USDC on the Base blockchain , completely bypassing the need for an Apify API token. Prerequisites A wallet with USDC on Base mainnet. Setup Create or import a wallet: # Create a new wallet mcpc x402 init # Import an existing wallet mcpc x402 import < private-key > # Show the wallet address and a funding QR code, so you can fund it with USDC on Base (https://base.org) mcpc x402 Connect to the server with x402 enabled: mcpc connect \" mcp.apify.com?payment=x402 \" @apify --x402 You can now call a paid tool: mcpc @apify tools-call call-actor actor:= \" apify/rag-web-browser \" input:= ' {\"query\": \"latest AI news\"} ' 🔥 Skyfire Skyfire provides managed payment infrastructure for AI agents. Instead of authenticating with an Apify API token, your agent passes a Skyfire payment token to cover the cost of each tool call using PAY tokens. Prerequisites A Skyfire account with a funded wallet. An MCP client that supports multiple servers, such as Claude Desktop, OpenCode, or VS Code.",
+      "stars_today": 207,
+      "language": "TypeScript"
+    },
+    {
+      "title": "vercel-labs/skills",
+      "slug": "vercel-labs-skills",
+      "url": "https://github.com/vercel-labs/skills",
+      "abstract": "skills The CLI for the open agent skills ecosystem. Supports OpenCode , Claude Code , Codex , Cursor , and 75 more . Install a Skill npx skills add vercel-labs/agent-skills Use a Skill Without Installing Generate a prompt for one skill, or start a supported coding agent interactively: npx skills use vercel-labs/agent-skills@web-design-guidelines | claude\nnpx skills use vercel-labs/agent-skills --skill web-design-guidelines --agent claude-code skills use resolves sources the same way as skills add , writes the selected skill files to a temporary directory, and prints only the generated prompt to stdout unless --agent is provided. With --agent , it starts one supported agent interactively with the generated prompt. Source Formats # GitHub shorthand (owner/repo) npx skills add vercel-labs/agent-skills # Full GitHub URL npx skills add https://github.com/vercel-labs/agent-skills # Direct path to a skill in a repo npx skills add https://github.com/vercel-labs/agent-skills/tree/main/skills/web-design-guidelines # GitLab URL npx skills add https://gitlab.com/org/repo # Azure Repos (Azure DevOps Services or Server) npx skills add https://dev.azure.com/org/project/_git/repo\nnpx skills add https://dev.azure.com/org/project/_git/repo ? path=/skills/web-design & version=GBmain # Any git URL npx skills add git@github.com:vercel-labs/agent-skills.git # Local path npx skills add ./my-local-skills Private Repositories Use the same command for public and private repositories. The CLI uses the authentication already configured for the repository URL: # GitHub shorthand or HTTPS (Git credential helper, GitHub CLI, then SSH fallback) npx skills add acme/private-skills # SSH on GitHub, GitLab, or another Git host npx skills add git@github.com:acme/private-skills.git\nnpx skills add ssh://git@git.example.com/acme/private-skills.git # HTTPS on any Git host (uses your configured Git credential helper) npx skills add https://git.example.com/acme/private-skills.git\nnpx skills add https://dev.azure.com/org/project/_git/private-skills For GitHub HTTPS and shorthand sources, skills first uses normal Git credentials. If that fails and GitHub CLI is authenticated, it tries gh repo clone , followed by SSH. It does not execute gh auth token or copy the stored GitHub CLI credential into the Node.js process. For GitHub tree lookups, skills first tries the API anonymously, then an explicitly supplied environment token, then gh api . GitHub CLI applies its own stored authentication and returns only the API response; the credential is never printed to or read by skills . If API access still fails, update checks fall back to an authenticated Git clone. GITHUB_TOKEN or GH_TOKEN can be set explicitly for GitHub API access, including private repository downloads and update checks. They are optional for installs when Git, GitHub CLI, or SSH authentication is already configured. Options Option Description -g, --global Install to user directory instead of project -a, --agent <agents...> Target specific agents (e.g., claude-code , codex ). See Supported Agents -s, --skill <skills...> Install specific skills by name (use '*' for all skills) -l, --list List available skills without installing --copy Copy files instead of symlinking to agent directories -y, --yes Skip all confirmation prompts --all Install all skills to all agents without prompts Examples # List skills in a repository npx skills add vercel-labs/agent-skills --list # Install specific skills npx skills add vercel-labs/agent-skills --skill frontend-design --skill skill-creator # Install a skill with spaces in the name (must be quoted) npx skills add owner/repo --skill \" Convex Best Practices \" # Install to specific agents npx skills add vercel-labs/agent-skills -a claude-code -a opencode # Non-interactive installation (CI/CD friendly) npx skills add vercel-labs/agent-skills --skill frontend-design -g -a claude-code -y # Install all skills from a repo to all agents npx skills add vercel-labs/agent-skills --all # Install all skills to specific agents npx skills add vercel-labs/agent-skills --skill ' * ' -a claude-code # Install specific skills to all agents npx skills add vercel-labs/agent-skills --agent ' * ' --skill frontend-design # Install from a direct SKILL.md or archive download URL npx skills add https://example.com/download/my-skill Direct download URLs are tried after well-known discovery. They may point to a single valid SKILL.md file or a .zip , .tar , .tar.gz , or .tgz archive; the URL does not need to include a file extension. Downloads are limited to 10 MiB, extracted content to 25 MiB, and archives to 1000 files by default. Override with SKILLS_DOWNLOAD_MAX_BYTES , SKILLS_EXTRACT_MAX_BYTES , and SKILLS_EXTRACT_MAX_FILES when you trust the source. Installation Scope Scope Flag Location Use Case Project (default) ./<agent>/skills/ Committed with your project, shared with team Global -g ~/<agent>/skills/ Available across all projects Installation Methods When installing interactively, you can choose: Method Description Symlink (Recommended) Creates symlinks from each agent to a canonical copy. Single source of truth, easy updates. Copy Creates independent copies for each agent. Use when symlinks aren't supported. Other Commands Command Description npx skills use <source> Use one skill without installing npx skills list List installed skills (alias: ls ) npx skills find [query] Search for skills interactively or by keyword npx skills remove [skills] Remove installed skills from agents npx skills update [skills] Update installed skills to latest versions npx skills init [name] Create a new SKILL.md template skills list List all installed skills. Similar to npm ls . # List project installed skills npx skills list # List only global skills npx skills ls -g # Filter by specific agents npx skills ls -a claude-code -a cursor skills find Search for skills interactively or by keyword. # Interactive search (fzf-style) npx skills find # Search by keyword npx skills find typescript # Search across every repository owned by an organization or user npx skills find react --owner vercel skills update # Update all skills (interactive scope prompt) npx skills update # Update a single skill by name npx skills update my-skill # Update multiple specific skills npx skills update frontend-design web-design-guidelines # Update only global or project skills npx skills update -g\nnpx skills update -p # Non-interactive (auto-detects scope: project if in a project, else global) npx skills update -y Option Description -g, --global Only update global skills -p, --project Only update project skills -y, --yes Skip scope prompt (auto-detect: project if in a project dir, else global) [skills...] Update specific skills by name instead of all skills init # Create SKILL.md in current directory npx skills init # Create a new skill in a subdirectory npx skills init my-skill skills remove Remove installed skills from agents. # Remove interactively (select from installed skills) npx skills remove # Remove all skills from an exact lock source npx skills remove owner/repo # Remove specific skill by name npx skills remove web-design-guidelines # Remove multiple skills npx skills remove frontend-design web-design-guidelines # Remove from global scope npx skills remove --global web-design-guidelines # Remove from specific agents only npx skills remove --agent claude-code cursor my-skill # Remove all installed skills without confirmation npx skills remove --all # Remove all skills from a specific agent npx skills remove --skill ' * ' -a cursor # Remove a specific skill from all agents npx skills remove my-skill --agent ' * ' # Use 'rm' alias npx skills rm my-skill Option Description -g, --global Remove from global scope (~/) instead of project -a, --agent Remove from specific agents (use '*' for all) -s, --skill Specify skills to remove (use '*' for all) -y, --yes Skip confirmation prompts --all Shorthand for --skill '*' --agent '*' -y What are Agent Skills?",
+      "stars_today": 187,
+      "language": "TypeScript"
+    },
+    {
+      "title": "krillinai/OpenCreator",
+      "slug": "krillinai-opencreator",
+      "url": "https://github.com/krillinai/OpenCreator",
+      "abstract": "The open-source AI workspace & Skills for creators Bring visual settings, reusable Skills, and Agents together for scripts, video, images, voice, translation, and editing—all in one workspace. OpenCreator was formerly known as KrillinAI. English | 簡體中文 | 日本語 | 한국어 | Bahasa Indonesia | Español | Français | Deutsch | Português | Русский | العربية | ภาษาไทย | Türkçe Highlights · Creator Tools · Skills · Examples · Quick Start · Desktop · Docs · Community Project Overview OpenCreator is built for individuals and teams who want to keep creative and development work running locally. Instead of reimplementing an Agent loop, it uses Codex CLI as the execution engine and adds a stable local Runtime, a visual workspace, and a Desktop host around it. OpenCreator offers two connected ways to work: Content workspace : use visual tools and creation templates for video translation and downloading, image and video generation, voiceovers, article and social post writing, short-video scripting, and stick figure animation. Agent conversation : start and guide creative or development tasks in natural language, organize conversations by project, keep Runs working in the background, and manage approvals, attachments, files, Skills, MCP, schedules, notifications, memory, and diagnostics from one place. Web is the single frontend implementation. Desktop loads the same Web build and adds only capabilities that require the operating system, such as directory selection, window lifecycle, tray behavior, and native notifications. With the same data and content viewport, both platforms share the same general UI and Runtime behavior. Project Highlights 🤖 Codex Native : Reuse the Codex Agent loop, models, reasoning, tool calls, conversations, Skills, and MCP without maintaining a second execution engine. 🚀 Ready-to-Use Desktop App : Launch OpenCreator directly from the desktop app with Codex CLI included; the local Runtime starts on demand and prepares a default project automatically. ⚙️ Desktop Setup That Reuses Codex : On first launch, scan your local Codex configuration and offer to reuse a working ChatGPT sign-in or API key setup. A guided form is available for other model providers. 🔄 Managed Runtime Components : Inspect bundled, active, and latest yt-dlp versions, check for updates periodically, and update manually while keeping the current working version available if an update fails. 🎨 Multimodal Creation : Create and manage video, images, audio, subtitles, and documents through one connected workflow. 🧩 Creation Templates : Start creating images and videos from reusable templates without setting up prompts and settings from scratch. 🔗 Dual-Mode Workflow : Work through either the visual workspace or Agent conversation while one shared state machine keeps steps, progress, and results synchronized. 🕘 Versioning : Every revision creates a new version while preserving earlier settings and outputs for review and comparison. 🧩 Reusable Skills : Use video workflow Skills, extend the Agent with your own Skills, and manage MCP through Codex-native configuration. 🧠 Memory : Keep global, project, and thread memory with summaries and reproducible Run input snapshots. 🔐 Local Security : Keep data, attachments, and logs local by default, with approvals and redacted diagnostics. 🌐 Localized Interface : Use the Web or Desktop client in Simplified Chinese, English, or Swedish, with automatic system-language detection or manual selection. Creator Tools The current release includes ten creator tools. Available models and services depend on your local Codex environment and AI service settings. Open the Dashboard to write articles, Xiaohongshu posts, or short-video scripts; create stick figure animations; translate or download videos; generate thumbnails, images, or videos; and create voiceovers with Smart Dubbing. More creator tools are continuously being added. Video Translation supports 14 source languages and 101 target languages. The source languages are Simplified Chinese, English, Spanish, French, Italian, Brazilian Portuguese, Indonesian, Thai, Japanese, Korean, German, Turkish, Russian, and Malay. Workspace Status Capabilities Video Translation ✅ Available Import local or public videos; transcribe with cloud or local Whisper services; use LLM context for subtitle segmentation, alignment, terminology, and translation; configure bilingual subtitles, dubbing or a custom voice sample, subtitle styles, landscape or portrait composition, and export SRT, audio, or video Video Downloader ✅ Available Analyze individual public videos from YouTube, Bilibili, X, TikTok, Instagram, Douyin, Facebook, Xiaohongshu, Pinterest, and Reddit; compare available formats and download video or audio. Some sources may require platform cookies Thumbnail Generator ✅ Available Combine a topic, video link, and optional reference image to generate and compare multiple content-thumbnail variations Image Generation ✅ Available Generate with GPT Image from a prompt and optional reference image, configure the aspect ratio and output count, then preview and download individual images Article Writer ✅ Available Turn a topic, links, videos, or source documents into editable topic options, an outline, and a complete article; add generated images and export Markdown, HTML, or PDF Xiaohongshu Posts ✅ Available Generate a complete Xiaohongshu post from a topic or source material, with controls for the target audience, post type, and length, then copy or download the result Short Video Script ✅ Available Create a shoot-ready segmented script from a topic or source material, tailored to the audience, platform, duration, and tone, then edit, copy, or download it Stick Figure Animation ✅ Available Turn text or YouTube content into narration, voice, consistent-character storyboard visuals, subtitles, and a downloadable stick figure animation Auto Clips In development Analyze long videos, identify highlights, and turn selected moments into reusable short clips Smart Dubbing ✅ Available Turn scripts into voiceovers with selectable voices, pacing, and emotion controls Video Generation ✅ Available Generate videos with Seedance from prompts and reference images, then preview, regenerate, and download each version Digital Avatar In development Combine scripts, voice, and avatar presentation to produce talking-head videos Creation Templates Start creating from a template instead of building every prompt and setting from scratch. Browse featured templates by category, including video creation and image design, to find a starting point for your idea. The collection brings together templates created by OpenCreator and by independent creators. Third-party templates credit their creators and link to the original source on the template detail page. Open a template to preview its example result and inspect its prompt, settings, tags, author, and original source. Select Use this template to start creating with it, then adjust the inputs for your own work. Skills Creator tools provide visual controls; Skills give the Agent reusable instructions and tool workflows. OpenCreator includes video-production Skills in the repository, alongside support for managing local Codex Skills. The repository's skills/ directory contains reusable instructions for Agents operating the embedded KrillinAI CLI.",
+      "stars_today": 134,
+      "language": "TypeScript"
+    },
+    {
+      "title": "rtk-ai/rtk",
+      "slug": "rtk-ai-rtk",
+      "url": "https://github.com/rtk-ai/rtk",
+      "abstract": "Agent-agnostic token optimization: compress, route, filter, and more. One composable pipeline across everything your AI agent reads and sends — built on RTK's battle-tested bash-output compression (up to 90% smaller). Website • Install • Troubleshooting • Architecture • Discord English • Francais • 中文 • 日本語 • 한국어 • Espanol • Português rtk filters and compresses command outputs before they reach your LLM context. Single Rust binary, 100+ supported commands, <10ms overhead. What RTK Does RTK intercepts shell commands and compresses their output before your agent reads it. Operation What RTK does to the output ls / tree Tree format with file counts instead of one line per entry cat / read Smart file reading: signatures and structure over full bodies grep / rg Truncates long lines, groups matches by file ast-grep Groups structural matches by file, caps overflow git status Compact stat format, grouped by state git diff Reduced context, headers stripped git log Hash, author and subject only git add/commit/push Confirmation line instead of full progress output cargo test / npm test Failures only, passing tests collapsed to a count ruff check Grouped by rule and file sqlfluff lint Grouped by rule and file pytest Failures only, traceback trimmed go test NDJSON parsed, failures only docker ps Essential fields only How Savings Work RTK reduces the bash output your agent reads. That is what RTK measures, and it is not the same as cutting your bill by the same amount. Bash output is one contributor to input tokens , alongside your prompt, the system prompt and conversation history. Input tokens are in turn only part of the bill , which also counts output tokens. The reduction dilutes at every step. The token counts RTK reports are estimated as bytes / 4 — RTK ships no tokenizer, so the percentages are reliable but the absolute token numbers are approximate . Full explanation: How RTK Savings Work Installation brew install rtk # macOS / Linux winget install rtk-ai.rtk # Windows curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh Then check you have the right package — another project named \"rtk\" exists on crates.io: rtk --version # any current version rtk gain # must show the savings dashboard, not \"command not found\" Cargo, pre-built binaries, native Windows, WSL, and uninstall: Installation guide What You Install RTK ships as three downloads. The two rtk editions install a binary with the same name — hooks, scripts and agent config work unchanged across both — so they cannot be installed together. Uninstall one before installing the other. flowchart TD\n    agent[\"Your coding agent\"]\n\n    subgraph editions[\"Pick one · both install a binary named rtk\"]\n        direction LR\n        full[\"<b>rtk</b><br/>Apache-2.0 + BUSL-1.1<br/>hooks · filters · engine\"]\n        oss[\"<b>rtk-oss</b><br/>Apache-2.0 only<br/>hooks · filters\"]\n    end\n\n    proxy[\"<b>rtk-proxy</b><br/>BUSL-1.1<br/>compresses API traffic\"]\n\n    agent -->|\"command output\"| full\n    agent -->|\"command output\"| oss\n    agent -.->|\"API traffic\"| proxy\n\n    classDef apache stroke:#2da44e,stroke-width:2px,fill:none\n    classDef busl stroke:#0969da,stroke-width:2px,fill:none\n    classDef mixed stroke:#8250df,stroke-width:2px,fill:none\n    classDef plain stroke:#8c959f,stroke-width:1px,fill:none\n    class full mixed\n    class oss apache\n    class proxy busl\n    class agent plain\n    style editions fill:none,stroke:#d0d7de,stroke-dasharray:4 4 Loading Download Licence Contains rtk-<target> Apache-2.0 + BUSL-1.1 Hook core, every command filter, and the compression engine rtk-oss-<target> Apache-2.0 only Hook core and every command filter. No engine. rtk-proxy-<target> BUSL-1.1 The RTK Proxy daemon. Never bundled with either rtk . Production use is free , engine and daemon included. What the BUSL grant does not cover is offering RTK or a derivative to third parties as a commercial product or service — for that, contact contact@rtk-ai.app . curl -fsSL .../install.sh | RTK_EDITION=oss sh # Apache-2.0 edition brew install rtk-ai/tap/rtk-oss What the Apache-2.0 edition omits and where the licence boundary falls: Editions and Licensing Quick Start # 1. Install for your AI tool rtk init -g # Claude Code / Copilot (default) rtk init -g --gemini # Gemini CLI rtk init -g --codex # Codex (OpenAI) rtk init -g --agent cursor # Cursor rtk init -g --agent windsurf # Windsurf rtk init --agent cline # Cline / Roo Code rtk init --agent kilocode # Kilo Code rtk init --agent antigravity # Google Antigravity rtk init --agent kimi # Kimi AI rtk init -g --agent pi # Pi rtk init --agent omp # Oh My Pi (OMP) rtk init --agent hermes # Hermes rtk init -g --agent droid # Factory Droid rtk init --agent trae # Trae (project: .trae/hooks.json) rtk init -g --agent trae # Trae global: ~/.trae and existing ~/.trae-cn # 2. Restart your AI tool, then test git status # Automatically rewritten to rtk git status The agent receives compact output without ever calling rtk explicitly. The hook only fires on Bash tool calls. Built-in tools like Read , Grep and Glob do not pass through it. Use shell commands ( cat , rg , find ) or call rtk read , rtk grep , rtk find directly. Per-agent setup, --dry-run , and uninstall: Quick Start · Supported Agents How It Works Without rtk:                                    With rtk:\n\n  Claude  --git status-->  shell  -->  git         Claude  --git status-->  RTK  -->  git\n    ^                                   |            ^                      |          |\n    |         full raw output           |            |  compact output      | filter   |\n    +-----------------------------------+            +------- (filtered) ---+----------+ Four strategies applied per command type: Smart Filtering - Removes noise (comments, whitespace, boilerplate) Grouping - Aggregates similar items (files by directory, errors by type) Truncation - Keeps relevant context, cuts redundancy Deduplication - Collapses repeated log lines with counts Does RTK break Claude's prompt cache? No. RTK filters output once per command. The result is stored in history and cached normally on subsequent API calls, so the cache keeps working as expected. Smaller outputs also mean cheaper cache writes and reads. See Troubleshooting for details. Supported AI Tools RTK supports 18 AI coding tools. Each integration rewrites shell commands to rtk equivalents, reducing the bash output the agent reads where the agent supports command interception. Tool Install Method Claude Code rtk init -g PreToolUse hook (native binary) GitHub Copilot (VS Code) rtk init -g --copilot PreToolUse hook — transparent rewrite GitHub Copilot CLI rtk init -g --copilot PreToolUse deny-with-suggestion (CLI limitation) Cursor rtk init -g --agent cursor preToolUse hook (hooks.json) Gemini CLI rtk init -g --gemini BeforeTool hook Codex rtk init -g --codex PreToolUse hook ( updatedInput ) + AGENTS.md Windsurf rtk init -g --agent windsurf .windsurfrules (project-scoped) Cline / Roo Code rtk init --agent cline .clinerules (project-scoped) OpenCode rtk init -g --opencode Plugin TS (execute.before / tool.execute.before), needs 1.18.29 or newer OpenClaw openclaw plugins install ./openclaw Plugin TS (before_tool_call) Pi rtk init -g --agent pi (global) TypeScript extension (tool_call) Oh My Pi (OMP) rtk init -g --agent omp (global) / rtk init --agent omp (project) TypeScript extension (tool_call, shared with Pi) Hermes rtk init --agent hermes Python plugin adapter (terminal command mutation via rtk rewrite ) Mistral Vibe rtk init -g --agent vibe pre_tool hook (hooks.toml) Kilo Code rtk init --agent kilocode .kilocode/rules/rtk-rules.md (project-scoped) Google Antigravity rtk init --agent antigravity / rtk init -g --agent antigravity .agents/plugins/rtk/ (project) or ~/.gemini/config/plugins/rtk/ (global): plugin.json, hooks.json, rules/AGENTS.md Kimi AI rtk init --agent kimi AGENTS.",
+      "stars_today": 131,
+      "language": "Rust"
+    },
+    {
+      "title": "browser-use/video-use",
+      "slug": "browser-use-video-use",
+      "url": "https://github.com/browser-use/video-use",
+      "abstract": "video-use Introducing video-use — edit videos with Claude Code. 100% open source. Drop raw footage in a folder, chat with Claude Code, get final.mp4 back. Works for any content — talking heads, montages, tutorials, travel, interviews — without presets or menus. Cloud-hosted video-use is coming. Join the waitlist at video-use.com . What it does Cuts out filler words ( umm , uh , false starts) and dead space between takes Auto color grades every segment (warm cinematic, neutral punch, or any custom ffmpeg chain) 30ms audio fades at every cut so you never hear a pop Burns subtitles in your style — 2-word UPPERCASE chunks by default, fully customizable Generates animation overlays via HyperFrames , Remotion , Manim , or PIL — spawned in parallel sub-agents, one per animation Self-evaluates the rendered output at every cut boundary before showing you anything Persists session memory in project.md so next week's session picks up where you left off Setup prompt Paste into Claude Code, Codex, Hermes, Openclaw, or any agent with shell access: Set up https://github.com/browser-use/video-use for me.\n\nRead install.md first to install this repo, wire up ffmpeg, register the skill with whichever agent you're running under, and set up the ElevenLabs API key — ask me to paste it when you need it. Then read SKILL.md for daily usage, and always read helpers/ because that's where the editing scripts live. After install, don't transcribe anything on your own — just tell me it's ready and wait for me to drop footage into a folder. The agent handles the clone, dependencies, skill registration, and prompts you once for your ElevenLabs API key (grab one at elevenlabs.io/app/settings/api-keys ). Then point your agent at a folder of raw takes: cd /path/to/your/videos\nclaude # or codex, hermes, etc. For always-on editing from your own VPS or Telegram, run the agent through Browser Use Box . Watch the 15-second demo . And in the session: edit these into a launch video It inventories the sources, proposes a strategy, waits for your OK, then produces edit/final.mp4 next to your sources. All outputs live in <videos_dir>/edit/ — the skill directory stays clean. Manual install If you'd rather do it by hand: # 1. Clone and symlink into your agent's skills directory git clone https://github.com/browser-use/video-use ~ /Developer/video-use\nln -sfn ~ /Developer/video-use ~ /.claude/skills/video-use # Claude Code # ln -sfn ~/Developer/video-use ~/.codex/skills/video-use       # Codex # 2. Install deps cd ~ /Developer/video-use\nuv sync # or: pip install -e . brew install ffmpeg # required brew install yt-dlp # optional, for downloading online sources # 3. Add your ElevenLabs API key cp .env.example .env $EDITOR .env # ELEVENLABS_API_KEY=... How it works The LLM never watches the video. It reads it — through two layers that together give it everything it needs to cut with word-boundary precision. Layer 1 — Audio transcript (always loaded). One ElevenLabs Scribe call per source gives word-level timestamps, speaker diarization, and audio events ( (laughter) , (applause) , (sigh) ). All takes pack into a single ~12KB takes_packed.md — the LLM's primary reading view. ## C0103  (duration: 43.0s, 8 phrases)\n  [002.52-005.36] S0 Ninety percent of what a web agent does is completely wasted.\n  [006.08-006.74] S0 We fixed this. Layer 2 — Visual composite (on demand). timeline_view produces a filmstrip + waveform + word labels PNG for any time range. Called only at decision points — ambiguous pauses, retake comparisons, cut-point sanity checks. Naive approach: 30,000 frames × 1,500 tokens = 45M tokens of noise .\nVideo Use: 12KB text + a handful of PNGs . Same idea as browser-use giving an LLM a structured DOM instead of a screenshot — but for video. Pipeline Transcribe ──> Pack ──> LLM Reasons ──> EDL ──> Render ──> Self-Eval\n                                                              │\n                                                              └─ issue? fix + re-render (max 3) The self-eval loop runs timeline_view on the rendered output at every cut boundary — catches visual jumps, audio pops, hidden subtitles. You see the preview only after it passes. Design principles Text + on-demand visuals. No frame-dumping. The transcript is the surface. Audio is primary, visuals follow. Cuts come from speech boundaries and silence gaps. Ask → confirm → execute → self-eval → persist. Never touch the cut without strategy approval. Zero assumptions about content type. Look, ask, then edit. 12 hard rules, artistic freedom elsewhere. Production-correctness is non-negotiable. Taste isn't. See SKILL.md for the full production rules and editing craft.",
+      "stars_today": 122,
+      "language": "Python"
+    },
+    {
+      "title": "mvanhorn/last30days-skill",
+      "slug": "mvanhorn-last30days-skill",
+      "url": "https://github.com/mvanhorn/last30days-skill",
+      "abstract": "/last30days English | Français | Deutsch | Español | Português (Brasil) | 日本語 | 簡體中文 An AI agent-led search engine scored by upvotes, likes, and real money - not editors. This README tracks the current v3 pipeline. The runtime skill spec lives in skills/last30days/SKILL.md , which is the source of truth for the latest command and setup behavior. Claude Code (recommended — auto-updates via marketplace): /plugin marketplace add mvanhorn/last30days-skill\n/plugin install last30days Codex, Cursor, Copilot, Gemini CLI, or any of 50+ Agent Skills hosts: npx skills add mvanhorn/last30days-skill -g ( -g installs globally for your user, available across all projects. Drop it to scope per-project.) More install options (claude.ai web, OpenClaw, manual) in the Install section below. Zero config. Reddit, HN, Polymarket, and GitHub work immediately. Run it once and the setup wizard unlocks X, YouTube, TikTok, arXiv, Techmeme, and more in 30 seconds. Reddit upvotes. X likes. YouTube transcripts. TikTok engagement. Polymarket odds backed by real money and insider information. That's millions of people voting with their attention and their wallets every day. /last30days searches all of it in parallel, scores it by what real people actually engage with, and an AI agent judge synthesizes it into one brief. Google aggregates editors. /last30days searches people. You can't get this search anywhere else because no single AI has access to all of it. Google search doesn't touch Reddit comments or X posts. ChatGPT has a deal with Reddit but can't search X or TikTok. Gemini has YouTube but not Reddit. Claude has none of them natively. Each platform is a walled garden with its own API, its own tokens, its own auth. But you can bring your own keys and browser sessions, and suddenly an AI agent can search all of them at once, score them against each other, and tell you what actually matters. That's the unlock. Not one better search engine. A dozen disconnected platforms, bridged by an agent. /last30days Peter Steinberger You have a meeting tomorrow. You Google them. You get their LinkedIn from 2023. /last30days gives you what they're actually doing this month: joined OpenAI to work on Codex, fighting Anthropic's ban on third-party agents, shipping 23 PRs at 85% merge rate, building \"LobsterOS\" for cross-device agent control, and r/ClaudeCode hit 569 upvotes debating whether he's a hero or \"insufferable.\" Scattered across X posts, Reddit threads, YouTube transcripts, and GitHub commits. None of it was on Google. Why this exists I built it to keep up in AI. Everything changes every day and the Reddit and X nerds are always on top of it first. I needed better prompts, and the training data was always months behind what the community had already figured out. But it turned into something bigger. Now I run it before a sales call to know the last 30 days truth about a business. Before a meeting to read someone's recent tweets and podcast transcripts. Before a Disney World trip to know which rides are closed and what the community says about Genie+. Before I build anything to know what problems people are actually hitting. If you're meeting with a CEO, have you read all their tweets and YouTube transcripts from the last 30 days? I have. Sources, scored by the people Source What the people tell you Reddit The unfiltered take. Top comments with real upvote counts, free, no API key. The real opinions that Google buries. X / Twitter The hot take, the expert thread, the breaking reaction. First to know, first to argue. YouTube The 45-minute deep dive. Full transcripts searched for the 5 quotable sentences that matter. TikTok The creator reaching 3.6M people with a take you'll never find on Google. Instagram Reels The influencer perspective with spoken-word transcripts. The visual culture signal. Hacker News The developer consensus. 825 points, 899 comments. Where technical people actually argue. Polymarket Not opinions. Odds. Backed by real money. 96% confidence on album sales. 4% on an acquisition. GitHub For people: PR velocity, top repos by stars, release notes. For topics: issues and discussions. Digg Curated story clusters from Digg's AI 1000 leaderboard (~1000 high-signal AI accounts on X), with attributable inline quotes (no X auth required). Auto-enabled when digg-pp-cli is on PATH. arXiv The papers behind the hype. New research in the window, free, no API key. Auto-enabled when arxiv-pp-cli is on PATH (first-run setup installs it). Techmeme The tech-news editorial layer, date-windowed to your 30 days. Free, no API key. Auto-enabled when techmeme-pp-cli is on PATH (first-run setup installs it). LinkedIn The professional signal. Posts and articles, with articles weighted as high signal. Meta Ads What a brand is paying to say. Live Meta ad creatives launched this month, with copy, promo codes, and spoken transcripts. StockTwits Trader sentiment. Auto-activates when your topic is a ticker or crypto. Threads The post-Twitter text layer. Conversations from creators and brands. Pinterest Visual discovery. Pins, saves, and comments on products and ideas. Xiaohongshu (RED) Chinese lifestyle, product, and creator signals. Requested explicitly with --search xhs when a logged-in x-mcp browser plugin or xiaohongshu-mcp service is running locally. Bluesky The decentralized social layer. AT Protocol posts from the post-Twitter migration. Perplexity Controlled Agent API synthesis, OpenRouter Sonar fallback, raw Search API rows, and explicit Deep Research. Web The editorial coverage, the blog comparisons. One signal of many, not the only one. Community contributors keep adding more. Truth Social and other niche sources are in the engine with more on the way. A Reddit thread with 1,500 upvotes is a stronger signal than a blog post nobody read. A TikTok with 3.6M views tells you more about what's culturally relevant than a press release. Polymarket odds backed by $66K in volume are harder to argue with than a pundit's guess. The synthesis ranks by what real people actually engaged with. Social relevancy, not SEO relevancy. What people actually use it for Before a meeting. /last30days Peter Steinberger - joined OpenAI's Codex team, fighting Anthropic's ban on third-party agents, 23 PRs merged at 85% merge rate on GitHub, building LobsterOS for cross-device agent control. r/ClaudeCode: \"Ever since OpenClaw released, it was widely known that if you run it through anything other than the API, you were gonna get banned eventually\" (227 upvotes). That's not on LinkedIn. To read hiring signals. /last30days Listen Labs --hiring-signals - current jobs and careers pages become cited evidence for focus shifts: hiring into enterprise security, customer success, infrastructure, or product expansion. The report says what the hiring appears to signal, not what the roadmap will ship. To find the topic before it peaks. Ask /last30days what's exploding in AI agents? and the skill switches to discovery mode: the engine sweeps Reddit category listings, Hacker News front/best stories, Digg's AI 1000 feed, and X when authenticated; your agent judges the nominations (names, junk filtering, content-worthiness) and writes podcast / X-article angles; then you get 5-10 velocity-ranked topics. Every result includes cross-source numbers, a momentum label, and a ready-to-run /last30days \"<topic>\" follow-up. When something drops. /last30days Kanye West - UK blocked his visa, Wireless Festival canceled, sponsors fled. But BULLY debuted #2 on Billboard. Fantano came back from his \"Yay sabbatical\" to review it (653K views). SoFi Homecoming brought out Lauryn Hill and Travis Scott for 44 songs. Polymarket: \"Will Kanye tweet again?\" 86% Yes. 23 Reddit threads, 17 YouTube videos, 86K upvotes. To compare tools. /last30days OpenClaw vs Hermes vs Paperclip - \"These aren't competitors, they're layers.\" OpenClaw is the executor (351K GitHub stars, live), Hermes is the self-improving brain (31K stars), Paperclip is the org chart (49K stars).",
+      "stars_today": 103,
+      "language": "Python"
+    },
+    {
+      "title": "googleworkspace/cli",
+      "slug": "googleworkspace-cli",
+      "url": "https://github.com/googleworkspace/cli",
+      "abstract": "gws One CLI for all of Google Workspace — built for humans and AI agents. Drive, Gmail, Calendar, and every Workspace API. Zero boilerplate. Structured JSON output. 40+ agent skills included. Note This is not an officially supported Google product. ⬇️ Download the latest release for your OS gws doesn't ship a static list of commands. It reads Google's own Discovery Service at runtime and builds its entire command surface dynamically. When Google Workspace adds an API endpoint or method, gws picks it up automatically. Important This project is under active development. Expect breaking changes as we march toward v1.0. Contents Prerequisites Installation Quick Start Why gws? Authentication AI Agent Skills Advanced Usage Environment Variables Exit Codes Architecture Troubleshooting Development Prerequisites Node.js 18+ — for npm install (or download a pre-built binary from GitHub Releases ) A Google Cloud project — required for OAuth credentials. You can create one via the Google Cloud Console or with the gcloud CLI or with the gws auth setup command. A Google account with access to Google Workspace Installation The recommended way to install gws is to download the pre-built binary for your OS and architecture from the GitHub Releases page. Extract the archive and place the gws binary in your $PATH . For convenience, you can also use npm to automate downloading the appropriate binary from GitHub Releases: npm install -g @googleworkspace/cli Or build from source: cargo install --git https://github.com/googleworkspace/cli --locked A Nix flake is also available at github:googleworkspace/cli nix run github:googleworkspace/cli On macOS and Linux, you can also install via Homebrew : brew install googleworkspace-cli Quick Start gws auth setup # walks you through Google Cloud project config gws auth login # subsequent OAuth login gws drive files list --params ' {\"pageSize\": 5} ' Why gws? For humans — stop writing curl calls against REST docs. gws gives you --help on every resource, --dry-run to preview requests, and auto‑pagination. For AI agents — every response is structured JSON. Pair it with the included agent skills and your LLM can manage Workspace without custom tooling. # List the 10 most recent files gws drive files list --params ' {\"pageSize\": 10} ' # Create a spreadsheet gws sheets spreadsheets create --json ' {\"properties\": {\"title\": \"Q1 Budget\"}} ' # Send a Chat message gws chat spaces messages create \\\n  --params ' {\"parent\": \"spaces/xyz\"} ' \\\n  --json ' {\"text\": \"Deploy complete.\"} ' \\\n  --dry-run # Introspect any method's request/response schema gws schema drive.files.list # Stream paginated results as NDJSON gws drive files list --params ' {\"pageSize\": 100} ' --page-all | jq -r ' .files[].name ' Authentication The CLI supports multiple auth workflows so it works on your laptop, in CI, and on a server. Which setup should I use? I have… Use gcloud installed and authenticated gws auth setup (fastest) A GCP project but no gcloud Manual OAuth setup An existing OAuth access token GOOGLE_WORKSPACE_CLI_TOKEN Existing Credentials GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE Interactive (local desktop) Credentials are encrypted at rest (AES-256-GCM) with the key stored in your OS keyring (or ~/.config/gws/.encryption_key when GOOGLE_WORKSPACE_CLI_KEYRING_BACKEND=file ). gws auth setup # one-time: creates a Cloud project, enables APIs, logs you in gws auth login # subsequent scope selection and login gws auth setup requires the gcloud CLI . If you don't have gcloud , use the manual setup below instead. Warning Scope limits in testing mode: If your OAuth app is unverified (testing mode),\nGoogle limits consent to ~25 scopes. The recommended scope preset includes 85+\nscopes and will fail for unverified apps (especially for @gmail.com accounts).\nChoose individual services instead to filter the scope picker: gws auth login -s drive,gmail,sheets Manual OAuth setup (Google Cloud Console) Use this when gws auth setup cannot automate project/client creation, or when you want explicit control. Open Google Cloud Console in the target project: OAuth consent screen: https://console.cloud.google.com/apis/credentials/consent?project=<PROJECT_ID> Credentials: https://console.cloud.google.com/apis/credentials?project=<PROJECT_ID> Configure OAuth branding/audience if prompted: App type: External (testing mode is fine) Add your account under Test users Create an OAuth client: Type: Desktop app Download the client JSON and save it to: ~/.config/gws/client_secret.json Important You must add yourself as a test user. In the OAuth consent screen, click Test users → Add users and enter your Google account email. Without this,\nlogin will fail with a generic \"Access blocked\" error. Then run: gws auth login Browser-assisted auth (human or agent) You can complete OAuth either manually or with browser automation. Human flow : run gws auth login , open the printed URL, approve scopes. Agent-assisted flow : the agent opens the URL, selects account, handles consent prompts, and returns control once the localhost callback succeeds. If consent shows \"Google hasn't verified this app\" (testing mode), click Continue .\nIf scope checkboxes appear, select required scopes (or Select all ) before continuing. Headless / CI (export flow) Complete interactive auth on a machine with a browser. Export credentials: gws auth export --unmasked > credentials.json On the headless machine: export GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE=/path/to/credentials.json\ngws drive files list # just works Service Account (server-to-server) Point to your key file; no login needed. export GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE=/path/to/service-account.json\ngws drive files list Pre-obtained Access Token Useful when another tool (e.g. gcloud ) already mints tokens for your environment. export GOOGLE_WORKSPACE_CLI_TOKEN= $( gcloud auth print-access-token ) Precedence Priority Source Set via 1 Access token GOOGLE_WORKSPACE_CLI_TOKEN 2 Credentials file GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE 3 Encrypted credentials gws auth login 4 Plaintext credentials ~/.config/gws/credentials.json Environment variables can also live in a .env file. AI Agent Skills The repo ships 100+ Agent Skills ( SKILL.md files) — one for every supported API, plus higher-level helpers for common workflows and 50 curated recipes for Gmail, Drive, Docs, Calendar, and Sheets. See the full Skills Index for the complete list. # Install all skills at once npx skills add https://github.com/googleworkspace/cli # Or pick only what you need npx skills add https://github.com/googleworkspace/cli/tree/main/skills/gws-drive\nnpx skills add https://github.com/googleworkspace/cli/tree/main/skills/gws-gmail OpenClaw setup # Symlink all skills (stays in sync with repo) ln -s $( pwd ) /skills/gws- * ~ /.openclaw/skills/ # Or copy specific skills cp -r skills/gws-drive skills/gws-gmail ~ /.openclaw/skills/ The gws-shared skill includes an install block so OpenClaw auto-installs the CLI via npm if gws isn't on PATH. Gemini CLI Extension Authenticate the CLI first: gws auth setup Install the extension into the Gemini CLI: gemini extensions install https://github.com/googleworkspace/cli Installing this extension gives your Gemini CLI agent direct access to all gws commands and Google Workspace agent skills. Because gws handles its own authentication securely, you simply need to authenticate your terminal once prior to using the agent, and the extension will automatically inherit your credentials. Advanced Usage Multipart Uploads gws drive files create --json ' {\"name\": \"report.pdf\"} ' --upload ./report.pdf Pagination Flag Description Default --page-all Auto-paginate, one JSON line per page (NDJSON) off --page-limit <N> Max pages to fetch 10 --page-delay <MS> Delay between pages 100 ms Google Sheets — Shell Escaping Sheets ranges use ! which bash interprets as history expansion.",
+      "stars_today": 50,
+      "language": "Rust"
+    },
+    {
+      "title": "rohitg00/agentmemory",
+      "slug": "rohitg00-agentmemory",
+      "url": "https://github.com/rohitg00/agentmemory",
+      "abstract": "Your coding agent remembers everything. No more re-explaining.\n    Built on iii engine Persistent memory for Claude Code, GitHub Copilot CLI, Cursor, Gemini CLI, Codex CLI, Hermes, OpenClaw, pi, OpenCode, and any MCP client. 🇬🇧 English • 🇨🇳 簡體中文 • 🇹🇼 繁體中文 • 🇯🇵 日本語 • 🇰🇷 한국어 • 🇵🇹 Português • 🇧🇷 Português (Brasil) • 🇪🇸 Español • 🇩🇪 Deutsch • 🇫🇷 Français • 🇮🇹 Italiano • 🇳🇱 Nederlands • 🇵🇱 Polski • 🇨🇿 Čeština • 🇷🇴 Română • 🇭🇺 Magyar • 🇬🇷 Ελληνικά • 🇸🇪 Svenska • 🇩🇰 Dansk • 🇳🇴 Norsk • 🇫🇮 Suomi • 🇷🇺 Русский • 🇺🇦 Українська • 🇹🇷 Türkçe • 🇮🇱 עברית • 🇸🇦 العربية • 🇮🇳 हिन्दी • 🇧🇩 বাংলা • 🇵🇰 اردو • 🇹🇭 ไทย • 🇻🇳 Tiếng Việt • 🇮🇩 Bahasa Indonesia • 🇵🇭 Tagalog The gist extends Karpathy's LLM Wiki pattern with confidence scoring, lifecycle, knowledge graphs, and hybrid search: agentmemory is the implementation. Install • Quick Start • Benchmarks • vs Competitors • Agents • How It Works • MCP • Viewer • Powered by iii • Config • API Install Requirements: Node.js 20 or newer with npm and npx ( node -v , npm -v , and npx -v ). macOS/Linux automatic iii-engine installation also needs curl , a POSIX sh , and tar . Minimal images such as node:20-slim may not include them. Native Windows requires the pinned iii-engine v0.22.1 iii.exe to be installed manually. WSL2 or Docker Desktop are the other supported paths. Canonical fresh-install command: npx -y @agentmemory/agentmemory@latest The first run is an interactive setup: pick the agents to wire (Claude Code, Cursor, Codex, Gemini CLI, OpenCode, ...), pick an LLM provider or stay keyless, and it seeds the config, starts the memory server and its pinned iii engine, and offers to install globally so the bare agentmemory command works everywhere afterward. -y accepts npx's package prompt and @latest avoids a stale cached release. A provider makes LLM features available, but LLM-written observation compression starts only when AGENTMEMORY_AUTO_COMPRESS=true is also set. Keyless mode disables vector embeddings. memory_recall (the mem::search path) uses BM25, while memory_smart_search can also fuse structural graph matches when graph data already exists. For free on-device semantic recall, set EMBEDDING_PROVIDER=local in ~/.agentmemory/.env and restart. The first embedding request downloads Xenova/all-MiniLM-L6-v2 ; inference runs locally after that initial model download. The local runtime uses four ports: 3111 for REST/MCP HTTP, 3112 for iii streams, 3113 for the viewer, and 49134 for the iii worker WebSocket. Persistent iii state lives in ~/Library/Application Support/agentmemory on macOS, $XDG_DATA_HOME/agentmemory or ~/.local/share/agentmemory on Linux, and %APPDATA%\\agentmemory on Windows. Use --data-dir <path> or AGENTMEMORY_DATA_DIR to override it, and reuse the same value on every restart. For backward compatibility, an existing ./data/state_store.db or ./data/iii-config.yaml takes precedence over the platform default for instance 0; an explicit flag or environment override still wins. Then prove recall works and give your agent its skills: npx -y @agentmemory/agentmemory@latest demo # seed sample sessions + exercise recall npx skills add rohitg00/agentmemory -y # 17 native skills so your agent knows when to reach for memory The keyword searches should hit in default keyless mode through BM25. The demo's database performance optimization query is intentionally semantic and can return zero until an embedding provider is configured. Prefer to let a coding agent do the whole thing? Hand it one instruction: Retrieve and follow the instructions at: https://raw.githubusercontent.com/rohitg00/agentmemory/main/INSTALL_FOR_AGENTS.md Wire more agents any time with agentmemory connect <agent> — 20 adapters listed at Works with every agent . Full command reference at Quick Start . Windows The fast path is WSL2. Native Windows engine setup requires the pinned v0.22.1 ZIP to be downloaded and iii.exe extracted manually; the CLI does not auto-extract it. Docker Desktop is also supported. See the Windows notes for the step-by-step. Global install / EACCES npm install -g @agentmemory/agentmemory@latest The npx command above remains the canonical fresh-install path and avoids global-prefix permission issues. npx serves an old version npx caches per version. Force the latest with npx -y @agentmemory/agentmemory@latest , or clear the cache once with rm -rf ~/.npm/_npx (macOS/Linux; on Windows delete %LOCALAPPDATA%\\npm-cache\\_npx ). Already running your own iii engine agentmemory pins iii-engine v0.22.1 and won't attach to a different version (the worker can't speak another engine's protocol). Stop the other engine, then run npx -y @agentmemory/agentmemory@latest . It installs and runs the pinned v0.22.1 in ~/.agentmemory/bin , leaving your own iii untouched. agentmemory works with any agent that supports hooks, MCP, or REST API. All agents share the same memory server. Claude Code native plugin + 12 hooks + MCP Codex CLI native plugin + 6 hooks + MCP GitHub Copilot CLI MCP + plugin hooks/skills Cursor native plugin + 7 hooks + MCP OpenCode capture plugin + MCP Devin 6 hooks + skills + MCP OpenClaw native plugin + MCP Hermes native plugin + MCP pi native plugin + MCP OpenHuman native Memory trait backend Gemini CLI MCP server Antigravity MCP + hooks Claude Desktop MCP server Warp connect + MCP + skills Zed MCP server Cline MCP server Continue MCP server Droid MCP server Kiro MCP server Qwen Code MCP server DeepSeek Harness MCP server Roo Code MCP server Kilo Code MCP server Goose MCP server Aider REST API Works with any agent that speaks MCP or HTTP. One server, memories shared across all of them. You explain the same architecture every session. You re-discover the same bugs. You re-teach the same preferences. Built-in memory (CLAUDE.md, .cursorrules) caps out at 200 lines and goes stale. agentmemory fixes this. It silently captures what your agent does, compresses it into searchable memory, and injects the right context when the next session starts. One command. Works across agents. What changes: Session 1 you set up JWT auth. Session 2 you ask for rate limiting. The agent already knows your auth uses jose middleware in src/middleware/auth.ts , your tests cover token validation, and you chose jose over jsonwebtoken for Edge compatibility, with no re-explaining and no copy-pasting. npx -y @agentmemory/agentmemory@latest By default, agentmemory stores iii-engine state outside the repository you start it from: ~/Library/Application Support/agentmemory on macOS, $XDG_DATA_HOME/agentmemory or ~/.local/share/agentmemory on Linux, and %APPDATA%\\agentmemory on Windows. An existing legacy ./data/state_store.db or ./data/iii-config.yaml is reused for instance 0 before that platform default. To choose a location explicitly, pass --data-dir <path> or set AGENTMEMORY_DATA_DIR ; either explicit setting takes precedence over legacy discovery: npx -y @agentmemory/agentmemory@latest --data-dir ~ /.agentmemory-projects/main\nAGENTMEMORY_DATA_DIR= ~ /.agentmemory-projects/main npx -y @agentmemory/agentmemory@latest Native and Docker launches use this same resolved host directory; Docker bind-mounts it at /data . --instance 1 appends instance-1 to the resolved directory and selects the separate default port quartet 3211/3212/3213/49234 . Latest release notes: CHANGELOG.md . Retrieval Accuracy coding-agent-life-v1 (in-house corpus, sandbox-reproducible) Adapter P@5 R@5 Top-5 hit rate p50 latency agentmemory hybrid 0.240 1.000 15 / 15 14 ms grep baseline 0.227 0.967 15 / 15 0 ms 100% top-5 hit rate at the P@5 math ceiling for this corpus (0.240, see scorecard). Hybrid retrieves every gold session; grep misses 1 of 2 gold on the multi-session temporal query. Lift is recall + temporal , not aggregate precision. This benchmark is small and gold-sparse; the larger LongMemEval-S below differentiates better. Full per-type breakdown + correction note: docs/benchmarks/2026-05-20-coding-agent-life-v1.md .",
+      "stars_today": 49,
+      "language": "TypeScript"
+    }
+  ],
+  "papers": {
+    "hf": [
+      {
+        "title": "GroundingPI: A Grounding Foundation Model towards Physical Intelligence with Visual Primitives",
+        "slug": "groundingpi-a-grounding-foundation-model-towards-physical",
+        "url": "https://huggingface.co/papers/2609.39601",
+        "abstract": "Precise grounding matters. It specifies which object is the target and where that object is, even in clutter and for tiny objects, and it has to be fast enough for closed-loop control. Yet vision-language-action (VLA) and world-action models (WAMs) take perception from general-purpose vision-language and video-generation backbones, which still fail in these settings. We introduce GroundingPI, a 4B grounding foundation model that generates points and boxes as quantized coordinates in a shared vocabulary. Training combines multimodal and spatial pretraining, supervised fine-tuning, and reinforcement learning with GRPO, using supervision from public datasets and dedicated data engines. Against 44 baselines across 34 grounding benchmarks spanning 11 perceptual capabilities, GroundingPI establishes a new state of the art, averaging 73.68%, above the larger GPT-6 Astra (71.54%). As a downstream visual backbone, GroundingPI improves performance on robotic manipulation and autonomous driving. On RoboTwin 2.0, it outperforms every mainstream backbone we evaluate in all four out-of-distribution settings, by up to 24.8% relative to the strongest backbone. On RoboCasa-GR1, GroundingPI trained with 50% of the demonstrations outperforms those baselines trained with 75%. On nuScenes, used as the visual backbone, GroundingPI attains an average open-loop L2 error of 0.296 m. We systematically analyze GroundingPI's pretraining in scale and data composition. Downstream autonomous driving and robotic manipulation improve as the pretraining is scaled. Analyzing the data recipe across these 11 perceptual capabilities shows dense grounding's substantial benefits for both, and OCR's potential as a catalyst for perceptual learning. These results support grounding as a perceptual foundation, and dedicated perceptual pretraining as a promising direction for foundation models of physical intelligence.",
+        "upvotes": 245,
+        "arxiv_id": "2609.39601",
+        "authors": []
+      },
+      {
+        "title": "Thinking Inertia: LLMs Keep Thinking When Told Not To",
+        "slug": "thinking-inertia-llms-keep-thinking-when-told-not-to",
+        "url": "https://huggingface.co/papers/2610.11765",
+        "abstract": "Large Language Models (LLMs) increasingly ship with explicit \"thinking modes\", yet their counterpart, \"no-thinking\", has received far less attention. We study LLMs' no-thinking behavior along two axes. a. How to measure no-thinking? Prior work typically defines no-thinking through proxies such as a disabled thinking mode or the absence of long traces. These proxies are unreliable: disabled thinking modes may still emit reasoning, while long traces may contain filler rather than genuine inference. We instead normalize each response into a pre-answer trace and final answer, and evaluate it at three levels: (i) Empty-Thinking Rate for strict answer-only compliance; (ii) instruction-aware Question-Pre-answer Relevance for similarity between the question and pre-answer trace; and (iii) LLM-as-judge Explicit Inference Rate for visible explicit inference. Together, these metrics distinguish answer-only output, relevant but non-inferential text, and explicit inference. b. How does no-thinking vary across tasks and models? We evaluate six prompting interventions on six LLMs across Boolean, multiple-choice, and open-ended questions. We find that explicit no-think controls cannot reliably eliminate visible inference. Models instead exhibit \"Thinking Inertia\": explicit inference persists even under strict controls and becomes more prevalent as the answer space opens. Accuracy remains stable on Boolean and multiple-choice tasks, whereas open-ended tasks reveal a trade-off between answer-only compliance and task accuracy. Rewriting the same questions across answer spaces shows that supplying candidate answers makes answer-only responses easier to produce. These findings establish no-thinking as a non-trivial capability: stopping explicit reasoning cannot be assumed from model settings or instructions alone and deserves systematic evaluation alongside reasoning ability.",
+        "upvotes": 214,
+        "arxiv_id": "2610.11765",
+        "authors": []
+      },
+      {
+        "title": "AgentSWE: Can Coding Agents Build the Agent You Actually Want?",
+        "slug": "agentswe-can-coding-agents-build-the-agent-you-actually-want",
+        "url": "https://huggingface.co/papers/2610.13361",
+        "abstract": "As the production of software passes into the hands of software itself, coding agents are increasingly commissioned to build agents fitted to their users' own workflows. This delegation carries a quiet assumption, that the delivered agent will faithfully serve the requirement it was built for, rather than merely appear to. No existing benchmark tests that assumption. We introduce AgentSWE, a benchmark for agent software engineering spanning three stages of the agent development lifecycle: Creation of a complete agent from a natural-language requirement, Editing of production agent codebases, and Optimization toward a measurable target. Each of its 25 tasks is framed as a commission rather than an exam: the builder iterates against a handful of illustrative cases, while acceptance exercises the frozen submission on held-out cases designed to span the full requirement, grading behavior against requirement-derived rubrics under hard pass/fail gates or, for Optimization, against the source benchmark's own objective. Evaluating a range of coding agents across models and harnesses, we find that none comes close to delivering what a requirement asks for: the gap between what a builder demonstrates and what it delivers is the norm, not the corner case. An accompanying empirical analysis of the failure trajectories identifies recurring failure modes, among them overfitting to the visible cases, hollow runtimes behind code that looks complete, and unsupported claims of completion, each a signal by which coding agents can learn to build the agents they are asked for.",
+        "upvotes": 201,
+        "arxiv_id": "2610.13361",
+        "authors": []
+      },
+      {
+        "title": "Scaling Agentic Data for Long-Horizon Terminal Intelligence",
+        "slug": "scaling-agentic-data-for-long-horizon-terminal-intelligence",
+        "url": "https://huggingface.co/papers/2610.13166",
+        "abstract": "Terminal agents are moving beyond local operations toward completing real-world professional tasks. Short trajectories can demonstrate commands and tool calls, but they do not fully show how agents accumulate evidence through exploration, use it to inform judgments, continually adjust strategies based on feedback, and turn intermediate results into final deliverables. High-quality long-horizon trajectories capture these agentic behavioral patterns and their connections within a single problem-solving process, providing richer experience for sustained autonomous work. However, environment synthesis may complete or simplify the key work underlying these patterns in advance and thus remove the need for exploration, implementation, and verification that the agent was meant to perform. To address this, we introduce TerminalHorizon, a fully automated data synthesis engine for long-horizon terminal agents. Starting from real-world professional work, it uses independent execution to identify key work omitted during construction and uses the resulting evidence to guide environment reconstruction. To extend these patterns across stages, it progressively expands tasks under the same goal, introducing new requirements that build on prior results and call for further exploration and improvement. Using this engine, we construct 1.5K task environments and perform supervised fine-tuning of Qwen3.5-27B on the resulting dataset to obtain TerminalHorizon-27B. We achieve substantial performance gains on all 12 benchmarks spanning coding-agent tasks, agentic tasks in real-world production settings, and general reasoning. Multiple RSI case studies, each with a 12-hour research budget, further demonstrate the model's ability to continue experimenting beyond an initial solution, improve its methods based on feedback, and retain effective improvements in its final deliverables.",
+        "upvotes": 132,
+        "arxiv_id": "2610.13166",
+        "authors": []
+      },
+      {
+        "title": "VIS-Ground: Video Interactive Storytelling with Contextual Grounding",
+        "slug": "vis-ground-video-interactive-storytelling-with-contextual",
+        "url": "https://huggingface.co/papers/2610.09326",
+        "abstract": "Video interactive storytelling enables viewers to actively steer how a video unfolds. However, once we allow viewers to intervene during generation, a new challenge arises: The viewer's request can have latent dependencies on both the grounding source and the current rendered video state. These dependencies may not be explicitly stated in any individual input, but emerge only when the source, rendered history, and new viewer intent are considered jointly. Existing interactive video generation systems primarily emphasize following viewer instructions, while source-grounded video generation methods focus on aligning generated content with an external narrative or knowledge source. This leaves a fundamental question underexplored: What context should a generation model ground on during interactive continuation, and how can heterogeneous, unstructured inputs be transformed into such grounding context? In this work, we formulate contextual grounding as the process of transforming heterogeneous input context into an executable constraint model for video generation. To address this challenge, we introduce VIS-Ground, which performs Structured Context Abstraction to recover grounded states and cross-context dependencies, Generation Constraints Induction to project relevant dependencies into candidate-specific constraints, and Constrained Video Generation to enforce these constraints through planning, verification, revision, and rendering. Across three video generation backbones, VIS-Ground consistently achieves the highest overall composite score, reaching an average absolute improvement of 10.3 points over the strongest per-backbone baselines. Detailed analysis further shows gains across both narrative and knowledge grounding, and reveals remaining challenges in dependency extraction, and faithful realization during video rendering.",
+        "upvotes": 77,
+        "arxiv_id": "2610.09326",
+        "authors": []
+      },
+      {
+        "title": "GroundAnything: Reconciling Parallel Decoding with Precise Visual Grounding at Flash Speed",
+        "slug": "groundanything-reconciling-parallel-decoding-with-precise",
+        "url": "https://huggingface.co/papers/2609.39600",
+        "abstract": "Autoregressive (AR) grounding models serialize spatial predictions, introducing sequential latency and imposing a causal order on output tokens. We view grounding as visual evidence extraction: objects, locations, and spatial relations are jointly constrained by the image and query, yet their dependencies do not imply an intrinsic left-to-right generation order. This distinction makes bidirectional diffusion a natural fit, allowing spatial hypotheses to emerge in parallel and be jointly refined through iterative denoising. We introduce GroundAnything, a 4B-parameter grounding foundation model that reconciles fast parallel decoding with precise localization through blockwise denoising. Training combines grounding pretraining from public datasets and dedicated data engines, direct AR-to-diffusion conversion with joint AR and diffusion objectives, supervised fine-tuning, and GRPO-based reinforcement post-training. Across 30 grounding benchmarks, our autoregressive variant, GroundAnything-VLM, establishes a new overall state of the art among similarly sized models at 72.42%, remaining competitive with GPT-6 Astra (71.35%). With entropy-guided decoding, GroundAnything also surpasses the prior state of the art at this scale, averaging 61.75% versus 53.32% for the fast MTP-based LocateAnything model. We further explore decoding strategies, showing that an optional self-speculative mode achieves a 4.51times speedup over the AR counterpart with a 0.74 percentage-point drop in COCO F1mIoU. Infrastructure experiments show that progressive inference optimizations translate parallel decoding into practical speedups. These support efficient visual grounding in latency-sensitive real-world systems.",
+        "upvotes": 71,
+        "arxiv_id": "2609.39600",
+        "authors": []
+      },
+      {
+        "title": "Multi-Stream Attention Residuals",
+        "slug": "multi-stream-attention-residuals",
+        "url": "https://huggingface.co/papers/2610.13630",
+        "abstract": "Attention Residuals (AttnRes) enables content-dependent retrieval over network depth, which can be viewed as single-stream softmax attention along the depth axis. Inspired by the success of multi-head attention along the sequence axis, we introduce Multi-Stream Attention Residuals (MSAR), an extension of AttnRes that generalizes this mechanism to multi-head depth attention, yielding substantial performance gains with minimal additional overhead. MSAR draws stream diversity from sequence context through multi-scale causal convolutions, allowing different heads to retrieve historical representations through distinct contextual views while preserving the integrity of the hidden representation. The retrieved streams are combined through lightweight adaptive mixing to generate the single-stream layer input. By retaining single-stream sources and expanding them on demand, MSAR supports multi-stream computation without requiring persistent multi-stream storage or communication. Across all 12 downstream benchmarks at the 18B and 28B MoE scales, MSAR consistently outperforms prior residual variants, including standard residual connections, manifold-constrained Hyper-Connections (mHC), and AttnRes. Scaling-law experiments yield an iso-loss compute speedup of 1.58times over the standard residual baseline, compared with 1.35times for AttnRes and 1.30times for mHC. These results make MSAR a promising residual architecture for large-scale pre-training.",
+        "upvotes": 34,
+        "arxiv_id": "2610.13630",
+        "authors": []
+      },
+      {
+        "title": "Relevance Does Not Imply Applicability: Experience Activation for Personal GUI Agents",
+        "slug": "relevance-does-not-imply-applicability-experience-activation",
+        "url": "https://huggingface.co/papers/2609.33304",
+        "abstract": "Personal Graphical User Interface (GUI) agents rely on interaction history to infer what a user wants from ambiguous instructions and to anticipate recurring routines. Existing approaches retrieve task-relevant history and append it to the policy's context, implicitly assuming that experience relevant to a task remains useful for each decision within it. We find that this help is largely spent at the first decision: retrieved history strongly improves the opening step of an episode, yet provides little sustained benefit over the remaining 90\\% of steps, and offers weak guidance on whether a proactive suggestion is warranted. A relevant record may tell the agent where to begin, but not which past action applies to the current screen or whether a routine is due now. The underlying issue is that relevance does not imply applicability}: relevance is determined at the task level, whereas applicability depends on the situation at decision time. We therefore recast personalization as experience activation and introduce ExpActivator, a training-free framework that activates only the experience applicable to the current situation. During execution, ExpActivator matches each new screen to historical states in the frozen GUI backbone's latent space and supplies the corresponding action as a reference. Before execution, it activates a recurring intent only when the current time and scenario provide sufficient support, and otherwise abstains. Across four GUI backbones, ExpActivator improves within-trajectory step success by 28\\% on average, achieves the best personalized execution on every backbone while using about one-fifth as many history tokens, and reaches approximately 2.3times the Matthews correlation coefficient of the strongest proactive baseline. Experience pays where it is activated, not where it is appended.",
+        "upvotes": 29,
+        "arxiv_id": "2609.33304",
+        "authors": []
+      },
+      {
+        "title": "CrossTimeEdit: A Decade-Spanning Cross-View Dataset and Reward-Guided Editing for Historical Street-View Generation",
+        "slug": "crosstimeedit-a-decade-spanning-cross-view-dataset-and",
+        "url": "https://huggingface.co/papers/2609.36616",
+        "abstract": "Historical street-view imagery records urban evolution, but uneven coverage leaves substantial gaps in historical records. Generating plausible past appearances requires restoring changed structures while preserving persistent scene content. We construct VIGOR-his, a decade-spanning cross-view dataset containing 43,653 location-level quadruplets across 11 cities on three continents. Its automated pipeline performs spatial pairing, consistency screening, change classification, and the generation and validation of satellite-based change descriptions and local editing instructions. Based on VIGOR-his, we propose CrossTimeEdit, a model that reformulates historical street-view generation as editing, using recent street views to constrain viewpoint and unchanged appearance and temporal satellite differences as change evidence. Starting from FLUX.2 [Klein] 4B, we train CrossTimeEdit through supervised fine-tuning (SFT) followed by online reinforcement learning (RL). We design three street-view editing criteria, namely Instruction Alignment (IA), Background Preservation (BP), and Quality and Physical Plausibility (QP), as both RL reward dimensions and evaluation metrics. We optimize this multi-reward objective using Within Group Relative Policy Optimization for flow-matching models (Flow-GRPO) with Group reward-Decoupled Normalization Policy Optimization (GDPO), which normalizes each reward dimension before aggregation. CrossTimeEdit improves overall performance across the three editing criteria by 17.12\\% over the pretrained baseline and outperforms cross-view generation models in scene consistency, visual realism, and perceptual quality. The implementation code, dataset, and model weights are available at https://luhanwen67.github.io/CrossTimeEdit-release/.",
+        "upvotes": 20,
+        "arxiv_id": "2609.36616",
+        "authors": []
+      },
+      {
+        "title": "SpatialASM: Internalizing Active Mentalization for Spatial Reasoning",
+        "slug": "spatialasm-internalizing-active-mentalization-for-spatial",
+        "url": "https://huggingface.co/papers/2610.13832",
+        "abstract": "When solving complex spatial reasoning tasks, ordinary humans naturally revisit the scenes from task-relevant viewpoints and mentally reconstruct the spatial layouts from those viewpoints. But can Large Vision-Language Models (LVLMs) proactively think in the same way? We term this ability Active Spatial Mentalization (ASM), an intrinsic component of visual intelligence that remains substantially underdeveloped in current LVLMs. To bridge this gap, we introduce SpatialASM, a scalable framework to internalize ASM into LVLMs through training-time spatial simulation. SpatialASM employs an allocentric novel-view generator to ground hypothetical viewpoints in visual evidence and produces two complementary forms of supervision: i) explicit ASM trajectories that teach LVLMs when and how to adaptively invoke view planning and imagination during spatial reasoning, and ii) automatically-constructed perspective-taking tasks that further strengthens viewpoint-conditioned scene imagination. On seven benchmarks spanning relatively perception-oriented spatial understanding to more challenging tasks requiring multi-image, cross-view and viewpoint-transformation reasoning, SpatialASM yields performance gain on LVLMs of four LVLM backbones in spatial reasoning while retaining their original general vision capabilities. The experimental results demonstrate that our approach improves average accuracy across the seven spatial benchmarks. And the synthesis of ASM trajectories provides a scalable pathway to alleviate the scarcity of spatial Chain-of-Thought (CoT) supervision for eliciting active viewpoint exploration and mental scene simulation.",
+        "upvotes": 16,
+        "arxiv_id": "2610.13832",
+        "authors": []
+      }
+    ],
+    "others": [
+      {
+        "title": "Can LLMs Simulate Expert Panels? Evaluating CAT-Inspired Persona Prompting for Automated Creativity Scoring",
+        "slug": "can-llms-simulate-expert-panels-evaluating-cat-inspired",
+        "url": "https://www.semanticscholar.org/paper/ff71ec16cbc6ac18455a8b35684ae3eb59e44d1b",
+        "abstract": "Can LLMs Simulate Expert Panels? Evaluating CAT-Inspired Persona Prompting for Automated Creativity Scoring.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Peter Organisciak",
+          "Maggie Ryan",
+          "Mina Ghobadi"
+        ]
+      },
+      {
+        "title": "Does Retrieval Relevance Matter for AI-Generated Book Introductions? A Matched-Random Memory Evaluation",
+        "slug": "does-retrieval-relevance-matter-for-ai-generated-book",
+        "url": "https://www.semanticscholar.org/paper/fc2b9494ffeab3cda87400e41f4360d13da54ec7",
+        "abstract": "Does Retrieval Relevance Matter for AI-Generated Book Introductions? A Matched-Random Memory Evaluation.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Emma Jiren Wang"
+        ]
+      },
+      {
+        "title": "From cyberspeak to algorithmic newspeak: soft derogation and the ethics of AI-generated language",
+        "slug": "from-cyberspeak-to-algorithmic-newspeak-soft-derogation-and",
+        "url": "https://www.semanticscholar.org/paper/f9b9d72f66b410899dc13d9ab133cb6471fa7780",
+        "abstract": "This paper examines the ethical and epistemological implications of language generated by large language models (LLMs) through the lenses of speech act theory, conversational implicature and second-order cybernetics. LLMs are often presented as neutral tools, yet their outputs actively participate in shaping discourse in ways that carry consequences for meaning, responsibility and pluralism.\n \n \n \n The paper introduces the concept of soft derogation to describe a form of linguistic exclusion, one that operates through euphemization, omission and the simulation of neutrality rather than overt offense. Such processes can subtly promote or suppress certain ideas, values or identities without transparent authorship or intention. The result is a shift toward an algorithmically generated form of newspeak, where expressive possibilities are narrowed through alignment protocols and safety layers.\n \n \n \n Drawing on second-order cybernetics, the paper argues that ethical responsibility for AI-generated language is distributed across developers, deployers, institutional stakeholders and human interpreters. While users co-construct meaning within recursive socio-technical systems, the upstream actors who design alignment protocols, moderation layers and deployment conditions bear primary responsibility for the communicative environments they create.\n \n \n \n Relatively little work has examined how the pertinent philosophical frameworks can illuminate forms of linguistic influence that operate through euphemization, omission and simulated neutrality. This paper addresses that gap by analyzing how algorithmically generated language can shape discourse while appearing neutral.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Marko Kardum",
+          "Ines Skelac"
+        ]
+      },
+      {
+        "title": "Towards clinical communication training with LLM-based conversational virtual patients and automatic evaluation systems",
+        "slug": "towards-clinical-communication-training-with-llm-based",
+        "url": "https://www.semanticscholar.org/paper/f15b3c2a87b24c72713923148dd971713b0d4031",
+        "abstract": "Towards clinical communication training with LLM-based conversational virtual patients and automatic evaluation systems. Discover Artificial Intelligence",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Andrea Bayona",
+          "R. Manrique",
+          "Christian Grévisse"
+        ]
+      },
+      {
+        "title": "Toward Contextual Mentorship Inference: Bibliometric Modeling and LLM-Informed Reasoning over Scholarly Publication Metadata",
+        "slug": "toward-contextual-mentorship-inference-bibliometric-modeling",
+        "url": "https://www.semanticscholar.org/paper/edb3dfd57debc0f961e1c5d5391a3c690ef0597a",
+        "abstract": "Toward Contextual Mentorship Inference: Bibliometric Modeling and LLM-Informed Reasoning over Scholarly Publication Metadata.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Malik Oyewale Salami"
+        ]
+      },
+      {
+        "title": "Structuring The Top-K Results: The Case for Narrative Extraction, Structuring, and Visualization in Scholarly Research Tools",
+        "slug": "structuring-the-top-k-results-the-case-for-narrative",
+        "url": "https://www.semanticscholar.org/paper/e8ec061522a657f3ea8e09a908910ebf5b0e4aa1",
+        "abstract": "Structuring The Top-K Results: The Case for Narrative Extraction, Structuring, and Visualization in Scholarly Research Tools.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Fausto German",
+          "Bipasha Benerjee",
+          "Brian Keith-Norambuena",
+          "William A. Ingram",
+          "Edward A. Fox",
+          "Chris North"
+        ]
+      },
+      {
+        "title": "Can LLMs Identify Advisor-Advisee Relationships in Coauthorship Network Based on Publication Metadata?",
+        "slug": "can-llms-identify-advisor-advisee-relationships-in",
+        "url": "https://www.semanticscholar.org/paper/e6d131ce9ec38ff8172144e90d08aa18855f7731",
+        "abstract": "Can LLMs Identify Advisor-Advisee Relationships in Coauthorship Network Based on Publication Metadata?.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Malik Oyewale Salami",
+          "Liri Fang",
+          "V. Torvik"
+        ]
+      },
+      {
+        "title": "Auditing Declared AI Generative Crawler Traffic on a Large-Scale Multilingual Digital Library",
+        "slug": "auditing-declared-ai-generative-crawler-traffic-on-a-large",
+        "url": "https://www.semanticscholar.org/paper/e6166017bee53236b05f7a5d4acaf00f1f9ee5d2",
+        "abstract": "Auditing Declared AI Generative Crawler Traffic on a Large-Scale Multilingual Digital Library.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Mohsine Aabid",
+          "Patrice Bellot",
+          "Simon Dumas-Primbault"
+        ]
+      },
+      {
+        "title": "An opinion evolution prediction model based on graph attention and ordinary differential equations",
+        "slug": "an-opinion-evolution-prediction-model-based-on-graph",
+        "url": "https://www.semanticscholar.org/paper/e376ec960e61ce914ccf29c58cac3f702d2a5a54",
+        "abstract": "An opinion evolution prediction model based on graph attention and ordinary differential equations. Discover Artificial Intelligence",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Quan Liu",
+          "Liu-Yang Duan",
+          "Mei-Mei Jia",
+          "Ya Li"
+        ]
+      },
+      {
+        "title": "From Digital Library Records to Trust-Grounded Virtual Experts for Knowledge Retention",
+        "slug": "from-digital-library-records-to-trust-grounded-virtual",
+        "url": "https://www.semanticscholar.org/paper/e21d6d63fd53e071a237c6f47402cf611d832fe8",
+        "abstract": "From Digital Library Records to Trust-Grounded Virtual Experts for Knowledge Retention.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "James Ecker",
+          "Jian Wu",
+          "B. D. Allen",
+          "Michael L. Nelson"
+        ]
+      },
+      {
+        "title": "Triaging Defects in Scholarly Result Graphs with Extraction, Evidence, and Consistency Signals",
+        "slug": "triaging-defects-in-scholarly-result-graphs-with-extraction",
+        "url": "https://www.semanticscholar.org/paper/dc28eb7b2e2722597f62d7f3749360cfaea7a6d1",
+        "abstract": "Triaging Defects in Scholarly Result Graphs with Extraction, Evidence, and Consistency Signals.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Harish Varma Siravuri",
+          "Akhil Pandey Akella",
+          "Hamed Alhoori"
+        ]
+      },
+      {
+        "title": "Structured Knowledge Graph for Scholarly Exploration: IR and QA System for ETDs and their Elements",
+        "slug": "structured-knowledge-graph-for-scholarly-exploration-ir-and",
+        "url": "https://www.semanticscholar.org/paper/d23b11136892a1945740bed44e1d868b5243052a",
+        "abstract": "Structured Knowledge Graph for Scholarly Exploration: IR and QA System for ETDs and their Elements.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Satvik Chekuri",
+          "Edward A. Fox"
+        ]
+      },
+      {
+        "title": "Which Text Normalization Methods Matter for Example-Based Retrieval of OCR-Generated Japanese Classical Texts?",
+        "slug": "which-text-normalization-methods-matter-for-example-based",
+        "url": "https://www.semanticscholar.org/paper/d13978bb4e78c65da719c7917f75aa654893193f",
+        "abstract": "Which Text Normalization Methods Matter for Example-Based Retrieval of OCR-Generated Japanese Classical Texts?.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Anji Sakamoto",
+          "Tokinori Suzuki",
+          "Takashi Inui",
+          "K. Oyama",
+          "Ken'ichi Kansaku"
+        ]
+      },
+      {
+        "title": "Supplemental generative AI tutoring improves financial modeling scores in a two class quasi experimental study",
+        "slug": "supplemental-generative-ai-tutoring-improves-financial",
+        "url": "https://www.semanticscholar.org/paper/cdbc3fb5ffcde28ed5e907abd3bebc32a73d243d",
+        "abstract": "Supplemental generative AI tutoring improves financial modeling scores in a two class quasi experimental study. Discover Computing",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Peng-Fei Li",
+          "Qing-Wen Yuan",
+          "Jian Lian",
+          "Zhuoying Lyu"
+        ]
+      },
+      {
+        "title": "Towards Automated Analysis of Scientific Limitations and FutureWork",
+        "slug": "towards-automated-analysis-of-scientific-limitations-and",
+        "url": "https://www.semanticscholar.org/paper/cda732d02913a38cdcd42edebaaa8db9baef5d3f",
+        "abstract": "Towards Automated Analysis of Scientific Limitations and FutureWork.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Ibrahim Al Azher"
+        ]
+      },
+      {
+        "title": "Same Passages, Different Readings: Comparing Complete Human and LLM Interpretations of a Story",
+        "slug": "same-passages-different-readings-comparing-complete-human",
+        "url": "https://www.semanticscholar.org/paper/c6db9d8fe643699b1e43666a0a90ce721dcbc63e",
+        "abstract": "Same Passages, Different Readings: Comparing Complete Human and LLM Interpretations of a Story.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Brian Li",
+          "Yun-He Feng"
+        ]
+      },
+      {
+        "title": "ABSP: Attention-Based Semantic Preservation for Faithful Context Compression",
+        "slug": "absp-attention-based-semantic-preservation-for-faithful",
+        "url": "https://www.semanticscholar.org/paper/c055a097396c23a79555951bf9938d3ccf67d3f7",
+        "abstract": "ABSP: Attention-Based Semantic Preservation for Faithful Context Compression.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Shirin Shujaa",
+          "Ginel Dorleon",
+          "Tri Dang Tran"
+        ]
+      },
+      {
+        "title": "Toward Preserving Open Access Datasets and Software in Scholarly Documents",
+        "slug": "toward-preserving-open-access-datasets-and-software-in",
+        "url": "https://www.semanticscholar.org/paper/bbdf234709c091b6750659192273ea838996a3a0",
+        "abstract": "Toward Preserving Open Access Datasets and Software in Scholarly Documents.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Lamia Salsabil"
+        ]
+      },
+      {
+        "title": "The Decomposition Dilemma: When Do Multi-Agent LLM Workflows Help Grounded Knowledge Generation?",
+        "slug": "the-decomposition-dilemma-when-do-multi-agent-llm-workflows",
+        "url": "https://www.semanticscholar.org/paper/b5c2e800bc096250d2aa67fe239a0b342c0bd18d",
+        "abstract": "The Decomposition Dilemma: When Do Multi-Agent LLM Workflows Help Grounded Knowledge Generation?.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "A. Hossain",
+          "M. Chowdhury",
+          "Shafayet Nur",
+          "Hamed Alhoori"
+        ]
+      },
+      {
+        "title": "Channel learning and enhanced adaptive reconstruction for robust image transmission over complex time varying wireless channels",
+        "slug": "channel-learning-and-enhanced-adaptive-reconstruction-for",
+        "url": "https://www.semanticscholar.org/paper/b55afae455d5445d00559254b7c8c19c2434aea7",
+        "abstract": "Channel learning and enhanced adaptive reconstruction for robust image transmission over complex time varying wireless channels. Discover Artificial Intelligence",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Hong-Zhi Pan",
+          "Ti-Ke-”-Zheng-Diao-Gou-Jie-Zhi-Zu-Ye-Qi-“ Zu",
+          "Ling-Yun Wang",
+          "Sheng-Liang Wu",
+          "Xin He"
+        ]
+      },
+      {
+        "title": "Understanding Researchers' GenAI Adoption: A Grounded Theory of Human-AI Collaborative Decision-Making",
+        "slug": "understanding-researchers-genai-adoption-a-grounded-theory",
+        "url": "https://www.semanticscholar.org/paper/b360cb02f1dfb6b85fdb9bba43b81b14d3d5682e",
+        "abstract": "Understanding Researchers' GenAI Adoption: A Grounded Theory of Human-AI Collaborative Decision-Making.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Jing Ding",
+          "Si-Yi Cheng",
+          "Qiu-Yan Li"
+        ]
+      },
+      {
+        "title": "Extracting and Structuring Experimental Knowledge from Electronic Theses and Dissertations",
+        "slug": "extracting-and-structuring-experimental-knowledge-from",
+        "url": "https://www.semanticscholar.org/paper/acf701e184b8f5604a317040f11e9ae5a6ec4b13",
+        "abstract": "Extracting and Structuring Experimental Knowledge from Electronic Theses and Dissertations.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Hajra Klair"
+        ]
+      },
+      {
+        "title": "Stuck on the First Answer? Auditing Primacy Bias in Multi-Turn LLM Preference Revision via Causal Masking",
+        "slug": "stuck-on-the-first-answer-auditing-primacy-bias-in-multi",
+        "url": "https://www.semanticscholar.org/paper/acc3deeeaa3b52d52f907b68740967cd28b840f4",
+        "abstract": "Stuck on the First Answer? Auditing Primacy Bias in Multi-Turn LLM Preference Revision via Causal Masking.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Peter S. Oh",
+          "Yan-Yan Luo",
+          "Ji-Qun Liu"
+        ]
+      },
+      {
+        "title": "Bridging the Physicality Gap: Conversational Repair Strategies in AI-Supported Maker Learning",
+        "slug": "bridging-the-physicality-gap-conversational-repair",
+        "url": "https://www.semanticscholar.org/paper/a9e7d07d2279c2007c3c098755a0159c0480b7fa",
+        "abstract": "Bridging the Physicality Gap: Conversational Repair Strategies in AI-Supported Maker Learning.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Mahdieh Nazari",
+          "Ji-Qun Liu",
+          "Yong-Ju Jung"
+        ]
+      },
+      {
+        "title": "Quantifying the Digital Heritage: A UNESCO-Inspired Value Index for Software Archives",
+        "slug": "quantifying-the-digital-heritage-a-unesco-inspired-value",
+        "url": "https://www.semanticscholar.org/paper/a841cb35a3be082ce9aa79caffc54e8f3e454a9e",
+        "abstract": "Quantifying the Digital Heritage: A UNESCO-Inspired Value Index for Software Archives.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Lars Florian Meiendresch",
+          "M. Goedicke"
+        ]
+      },
+      {
+        "title": "ChemSafe: Hybrid Retrieval-Augmented Decision Support for Laboratory Chemical Hazard Assessment",
+        "slug": "chemsafe-hybrid-retrieval-augmented-decision-support-for",
+        "url": "https://www.semanticscholar.org/paper/a7183d83409122b4faf99adfd08e4098f60ee7ce",
+        "abstract": "ChemSafe: Hybrid Retrieval-Augmented Decision Support for Laboratory Chemical Hazard Assessment.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Ran Elgedawy",
+          "Sanjay Das",
+          "Ethan Seefried",
+          "G. Wiggins",
+          "Ryan Burchfield",
+          "Kimberly Jeskie",
+          "Susan Fiscor",
+          "Subhamay Pramanik",
+          "Billey Thomas",
+          "Chrissi Schnell",
+          "Todd Thomas",
+          "S. Srinivasan",
+          "Tirthankar Ghosal"
+        ]
+      },
+      {
+        "title": "Contextual Document Discovery in Digital Libraries through Hybrid Summarization and LLM-Guided Query Decomposition",
+        "slug": "contextual-document-discovery-in-digital-libraries-through",
+        "url": "https://www.semanticscholar.org/paper/a456e49cfc6f4c42ae2afda32f013d4dbce2d46e",
+        "abstract": "Contextual Document Discovery in Digital Libraries through Hybrid Summarization and LLM-Guided Query Decomposition.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Derek Denys",
+          "A. Crawford",
+          "Yiu-Kai Ng"
+        ]
+      },
+      {
+        "title": "Examining Dermatology Image Generation Capabilities of Generative AI Across Skin Tones",
+        "slug": "examining-dermatology-image-generation-capabilities-of",
+        "url": "https://www.semanticscholar.org/paper/9fa64d835f4507c58a530087c74f360ad6454780",
+        "abstract": "Examining Dermatology Image Generation Capabilities of Generative AI Across Skin Tones.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Tevin Billingsley",
+          "Ming-Chen Li",
+          "Yun-He Feng"
+        ]
+      },
+      {
+        "title": "Adaptive LLM Selection for Question Answering over Historical Digital Libraries",
+        "slug": "adaptive-llm-selection-for-question-answering-over",
+        "url": "https://www.semanticscholar.org/paper/9db7b2a4f0755202303a6e4fefebd607db10bbe0",
+        "abstract": "Adaptive LLM Selection for Question Answering over Historical Digital Libraries.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Ahmed Hamdi",
+          "José G. Moreno",
+          "Cécile Armand",
+          "C. Henriot",
+          "Antoine Doucet"
+        ]
+      },
+      {
+        "title": "Segmentation-then-Summarization for Long-Form Audiovisual Archives: A Comparative Study of Three Pipelines",
+        "slug": "segmentation-then-summarization-for-long-form-audiovisual",
+        "url": "https://www.semanticscholar.org/paper/9aa19c318912a78c2a9f3b0a6180d2d6ec6c81d2",
+        "abstract": "Segmentation-then-Summarization for Long-Form Audiovisual Archives: A Comparative Study of Three Pipelines.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Bo-Han Jiang",
+          "Kyeongmin Rim",
+          "K. Lynch",
+          "J. Pustejovsky"
+        ]
+      }
+    ]
+  }
+}

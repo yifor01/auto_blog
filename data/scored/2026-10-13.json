@@ -1,0 +1,710 @@
+[
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "HuggingFace Blog",
+      "title": "Run fast, private agents on-device with LFM2.5-24B-A2B",
+      "url": "https://huggingface.co/blog/LiquidAI/lfm25-24b-a2b",
+      "authors": [],
+      "abstract": "Back to Articles Run fast, private agents on-device with LFM2.5-24B-A2B Team Article Published October 13, 2026 Upvote 28 +22 Raahul Vignesh Raahul26 Follow LiquidAI Song Duong sduong Follow LiquidAI Akhilesh Deepak Gotmare akhileshdeepakgotmare Follow LiquidAI Fernando Fernandes Neto fernandofernandes Follow LiquidAI Jiahui Wang WWWjiahui Follow LiquidAI Mayank Agarwal mayankagarwal Follow LiquidAI nathan ranchin nathanrchn Follow LiquidAI Sergei Tilga tilgasergey Follow LiquidAI Sinoué GAD GAD-cell Follow LiquidAI Tim Seyde tseyde Follow LiquidAI Zetian Li zetianli Follow LiquidAI changyi yang changyiyang Follow LiquidAI Simon Lee yungisimon Follow LiquidAI Leonie Monigatti iamleonie Follow LiquidAI Maxime Labonne mlabonne Follow LiquidAI Karthik Macherla karthikrmacherla Follow LiquidAI Alfred Eng alfredeng Follow LiquidAI Khoi Nguyen KTLK Follow LiquidAI Paul Pak paulpak58 Follow LiquidAI xx tugot17 Follow LiquidAI Tarek Dakhran tdakhran Follow LiquidAI Anthony Maltsev amaltsev Follow LiquidAI Aldo Gael Carranza agcarranza Follow LiquidAI Tyler Murray undfined Follow LiquidAI Aditya Tadimeti adityatadimeti Follow LiquidAI Jimmy T.H. Smith jimmysmith1919 Follow LiquidAI Yuri Khrustalev ykhrustalev Follow LiquidAI LFM2.5-24B-A2B is a 24B-parameter reasoning model with just 2B active parameters, built for fast, private agents on-device. It thinks before it answers, calls tools, and works through multi-step tasks inside popular agent harnesses. Because only 2B parameters are active per token, each reasoning token is cheap, so you can run agents continuously on your own hardware. Best-in-class agent: Competitive with Qwen3.6-35B-A3B, a model with ~50% more total and active parameters, on agentic and tool-use tasks, scoring 48.09 on LiveClaw versus 38.19. Reasoning at MoE speed: Always thinks before it answers. With only 2B active parameters per token, each reasoning token is cheap. Efficient inference: 184 tok/s on an Apple M5 Max and up to 21K output tok/s on a single NVIDIA B300 GPU. How we built a reasoning agent with 2B active parameters LFM2.5-24B-A2B builds on LFM2-24B-A2B and keeps its architecture: 40 layers, 64 experts per MoE block with top-4 routing, and the same hybrid of gated short convolutions and GQA. The context window grows from 32K to 131K tokens, and an in-place tokenizer expansion doubles the vocabulary from 65K to 128K tokens for better non-Latin tokenization. Unlike its predecessor, it is a reasoning-only model that produces an explicit chain of thought before its final answer. Pre-training was scaled up from ~17T to ~33T tokens. Mid-training then adds 2T tokens at 32K context, weighted toward reasoning, math, code, instruction following, and multilingual text, and 300B tokens at 131K context, weighted toward long-context data. Tool calls and multi-turn trajectories appear throughout both phases. Post-training turns the base model into an agent in five stages: Supervised fine-tuning (SFT) Teacher specialization Multi-domain on-policy distillation (MOPD), non-agentic: distill the specialist teachers on non-agentic tasks. MOPD, agentic: a second distillation stage focused on agentic tasks. Agentic reinforcement learning (Agentic RL): train the model inside agent harnesses, such as OpenClaw , Hermes Agent , Pi , and OpenCode . Benchmark results We evaluated LFM2.5-24B-A2B against Qwen3.6-35B-A3B, Gemma-4-26B-A4B-it, and Nemotron-3.5-Lightning on 16 benchmarks covering tool use and agentic workflows, knowledge, instruction following, math, and coding. It is the smallest model in the group, yet it is competitive with MoEs with ~50% more total and active parameters. Benchmark LFM2.5-24B-A2B Qwen3.6-35B-A3B Gemma-4-26B-A4B-it Nemotron-3.5-Lightning (30B-A3B) AutomationBench 27.69 8.72 5.46 2.61 BFCLv4 65.01 65.00 57.09 53.78 ToolSandbox 80.71 75.02 72.09 75.13 LiveClaw 48.09 38.19 41.25 37.72 PinchBench 83.18 89.93 77.12 84.20 τ³-Bench Banking 8.04 7.63 4.54 7.01 WebArena Verified 26.75 37.62 25.62 28.69 GPQA Diamond 74.42 83.69 74.90 72.42 AA-Omniscience -24.90 -24.35 -59.39 -3.58 HLE 7.40 7.69 8.57 5.65 IFEval 96.75 93.06 92.00 94.19 IFBench 74.69 64.21 47.44 71.67 Multi-IF 84.38 81.53 82.19 82.34 MATH-500 96.04 96.73 95.66 96.40 SWE-Bench Verified (OpenCode) 51.00 66.20 25.80 53.40 SciCode 32.71 37.35 35.42 27.78 *All the models were evaluated with vLLM, using each benchmark's recommended generation parameters. For your app, the strengths are tool use and instruction following. LFM2.5-24B-A2B leads or matches the competition on five of the eight tool-use and agentic benchmarks (AutomationBench, BFCLv4, ToolSandbox, LiveClaw, and τ³-Bench Banking), and on AutomationBench it scores more than three times the next-best model. It also leads on all three instruction-following benchmarks. Larger models keep an edge on knowledge-heavy benchmarks like GPQA Diamond, HLE, and AA-Omniscience, and on coding benchmarks like SWE-Bench Verified (OpenCode) and SciCode, so pair LFM2.5-24B-A2B with retrieval or web search for knowledge-heavy workloads. These results make LFM2.5-24B-A2B a strong foundation for agents that need to reason, call tools, and run reliably on your device. Inference speed on CPU and GPU LFM2.5-24B-A2B ships with day-one support across the inference ecosystem, including llama.cpp, MLX, vLLM, SGLang, and ONNX. Edge inference. LFM2.5-24B-A2B is the fastest of the compared MoEs, decoding 184 tokens/s on an M5 Max and 114 tokens/s on a Ryzen AI Max+ 395. That is up to 1.7x faster than the next-best model, while using the least memory. GPU inference. LFM2.5-24B-A2B is the fastest model in its size class, reaching over 21K output tokens per second at high concurrency on a single B300. How to use LFM2.5-24B-A2B Reach for LFM2.5-24B-A2B when you need agents that reason, call tools, and run reliably on your device. Install the latest version of transformers (compatible with transformers>=5.0.0 ): pip install -U transformers Then load and run the model: from transformers import AutoModelForCausalLM, AutoTokenizer, TextStreamer model_id = \"LiquidAI/LFM2.5-24B-A2B\" model = AutoModelForCausalLM.from_pretrained( model_id, device_map= \"auto\" , dtype= \"bfloat16\" , # attn_implementation=\"flash_attention_2\" <- uncomment on compatible GPU )\ntokenizer = AutoTokenizer.from_pretrained(model_id)\nstreamer = TextStreamer(tokenizer, skip_prompt= True , skip_special_tokens= True ) prompt = \"What is C. elegans?\" input_ids = tokenizer.apply_chat_template( [{ \"role\" : \"user\" , \"content\" : prompt}], add_generation_prompt= True , return_tensors= \"pt\" , tokenize= True ,\n)[ \"input_ids\" ].to(model.device) output = model.generate( input_ids, do_sample= True , temperature= 0.1 , top_k= 50 , repetition_penalty= 1.05 , max_new_tokens= 512 , streamer=streamer,\n) Use it in your agent harness Serve LFM2.5-24B-A2B locally behind any OpenAI-compatible backend, then point your agent harness at it. For example, with Hermes Agent: hermes config set model.provider custom\nhermes config set model.base_url http://localhost:8080/v1\nhermes config set model.default LFM2.5-24B-A2B\nhermes config set model.context_length 131072\nhermes config set model.api_mode chat_completions\nhermes config set agent.tool_use_enforcement true The port depends on your serving backend: llama.cpp and MLX use 8080 , vLLM uses 8000 , SGLang uses 30000 , and LM Studio uses 1234 . See the model card for OpenClaw and Pi configs, and our guide for the full setup. Check out our release blog for video examples. Get Started with LFM2.5-24B-A2B Both LFM2.5-24B-A2B and LFM2.5-24B-A2B-Base are open-weight and available on Hugging Face today: Download: LFM2.5-24B-A2B-Base and LFM2.5-24B-A2B on Hugging Face. Use in your harness: follow our guide on how to run a local agent, like OpenClaw, Hermes Agent, and Pi. Fine-tune: adapt LFM2.5-24B-A2B to your task with our fine-tuning tutorials . We can't wait to see what you build.",
+      "published_date": "2026-10-13",
+      "tags": [],
+      "organization": "HuggingFace",
+      "raw_metadata": {
+        "feed_name": "HuggingFace Blog",
+        "feed_url": "https://huggingface.co/blog/feed.xml"
+      }
+    },
+    "rule_score": 38.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, tool use, reasoning, reasoning model",
+      "⚖️ 來源權重: rss +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 69,
+    "llm_reason": "小參數量MoE端側agent模型，開源可用但架構為既有稀疏化改良",
+    "novelty": 11,
+    "impact": 11,
+    "trending": 15,
+    "practicality": 17,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "Mixture-of-Experts kernel engineering on Amazon SageMaker AI",
+      "url": "https://aws.amazon.com/blogs/machine-learning/mixture-of-experts-kernel-engineering-on-amazon-sagemaker-ai/",
+      "authors": [
+        "Mona Mona"
+      ],
+      "abstract": "Mixture-of-Experts (MoE) is a sparsely-activated architecture that scales large language model (LLM) capacity while keeping per-token compute low. Because its operations account for a large share of total compute time, inefficiencies there directly raise request latency and cost. Therefore, optimizing MoE operations through kernel engineering offers the largest opportunity for performance gains. Fused MoE is a key optimization technique for the MoE architecture. A fused MoE system merges token routing, data shuffling, and specialized network calculations into a single batched operation on the GPU. This replaces executing those routing and expert computations as separate, sequential loop operations. While this provides latency advantages, it also brings complexity in kernel implementations and debugging capability. High GPU utilization for this architecture requires hardware-specific optimizations. In this post, we describe the different kernel optimizations we implemented for fused MoE models and show you how you can benefit from this work. We used a representative MoE model as our primary example. To maximize tensor processing throughput, the NVIDIA Hopper architecture relies on the Warp Group Matrix Multiply Accumulate (WGMMA) instruction protocol, which executes collectively across a cooperative warpgroup of 128 threads. This operand asymmetry is fundamentally an instruction set architecture (ISA)-level property. In the underlying wgmma.mma_async assembly definition, the hardware fixes the matrix row dimension (M) at a constant scale of 64 to define its parallel thread-mapping topology. The column dimension (N) remains highly variable. Operand A strictly maps across this fixed M dimension (using registers or shared memory), and Operand B maps across the variable N dimension (through a shared memory descriptor). These operand slots are therefore structurally non-interchangeable. Consequently, peak hardware tile utilization is governed by these rigid shape encodings, requiring that the M dimension equals or exceeds 64 to prevent compute execution lanes from sitting idle. This structural preference stems from how Hopper Tensor Cores partition memory blocks. The hardware enforces a fixed minimum layout shape for the leading dimension of the first operand, locking the block height to exactly 64 (M=64). When a mathematical matrix possesses a large, continuous leading dimension in this primary slot, Hopper’s internal hardware schedulers can cleanly map and distribute data across the physical computing grid. This structural asymmetry becomes a severe performance bottleneck during the decode phase of MoE networks. In a standard MoE layer, the linear algebra governing expert computation is formulated using traditional matrix notation: Where (M) represents the token row count (or batch size), (K) represents the hidden feature dimension, and (N) represents the expansive expert output dimension. During the decode phase, the system processes only one token per user sequence at a time. Consequently, the batch space or token row size is profoundly thin, regularly dropping to a profile where (M < 64), and frequently down to a single row (M = 1). Under this standard structural layout: Matrix (A) transforms into a thin, fragmented horizontal vector (for example, 1 x 4096). Matrix (B) (the core expert weights) remains in a large, dense vertical block (for example, 4096 x 8192). Because the row count (M) is tiny, Matrix (A) is physically incapable of filling the hardware’s fixed (64)-row layout bucket for Operand A. When the WGMMA instruction executes over this layout, it leaves a vast portion of the physical Tensor Core capacity completely starved. The silicon spends clock cycles processing empty spatial slots, leading to poor hardware utilization. In a standard dense LLM layer, weight matrices are static, unified, and perfectly contiguous. In an MoE layer, however, the workload is fractured across a fleet of independent subnetworks (experts). This creates unique memory and layout bottlenecks that make it hypersensitive to the WGMMA constraints of the Hopper GPU. In a standard dense layer, matrix multiplication multiplies a token vector by a single layer weight matrix. The output dimension (N) is the model’s hidden size (for example, 4096). In a Fused MoE kernel, the GPU isn’t only multiplying against one expert. It’s grouping and running math for all active experts simultaneously to avoid launching individual kernels for each expert. For a standard dense layer, N is the hidden size (4,096). For a fused MoE layer, N is the number of experts chosen multiplied by the expert intermediate size. For a model running a topk=8 routine, the effective N dimension inside the fused kernel explodes into tens or hundreds of thousands of parameters. Because the N dimension is so disproportionately large compared to the tiny decode token size (M=1), the layout asymmetry becomes extreme. Transposing the matrices moves this large, combined MoE dimension into the primary slot, unlocking hardware prefetching at a scale that standard dense layers cannot match. To resolve this hardware misalignment without altering the underlying mathematical integrity of the model, we exploit the algebraic property of matrix transposition: B T [N,K] x A T [K,M] —> C T [N,M] Figure 1: Swap-AB for WGMMA utilization By programmatically flipping the matrix multiplication before it reaches the PTX assembly layer, we realigned the software to match the exact topography of the Hopper silicon. This transposition triggers two immediate architectural advantages on the GPU. First, it saturates the physical layout. The expansive expert dimension (N = 8192) is promoted to the first operand position (B T ), and because (N) is large it easily floods the hardware’s mandatory (64)-row threshold. The Tensor Cores then operate at maximum local density with no wasted execution cycles. Second, it activates asynchronous prefetching. Hopper’s dedicated hardware copy engines can prefetch memory addresses asynchronously from shared memory straight into registers before the math execution block fires. Placing the continuous, large weight blocks (B T ) in the leading slot lets these engines trace the data layout smoothly and keep the compute pipeline saturated without CPU intervention. This produced a 2–4 percent end-to-end output throughput improvement across large-scale MoE models on H200. We upstreamed this optimization to vLLM, and it is available in version 0.24.0 or later. Beyond kernel internals, the choice of which backend executes the MoE computation has a large effect on performance. The vLLM MoE oracle routes different quantization schemes to Triton, FlashInfer+CUTLASS, or other backends. Profiling revealed that for FP8 tensor-quantized models on Hopper, the Triton backend consistently outperforms the default FLASHINFER_CUTLASS path. The Triton backend outperforms CUTLASS in low-concurrency MoE workloads primarily because it replaces rigid, framework-level matrix math configurations with custom, operator-level register fusion. CUTLASS relies on standard C++ template structures that treat FP8 tensor scaling, matrix multiplication, and expert aggregation as discrete mathematical operations. The Triton backend instead consolidates this entire pipeline into a single hardware pass. Data is pulled from global high-bandwidth memory (HBM) exactly once and processed entirely within the GPU’s ultra-fast local SRAM registers and compute execution files. It’s then streamed back to the final matrix destination. This removes the slow global VRAM read/write roundtrips that compromise CUTLASS when it is forced to constantly step through intermediate tensor scaling steps. Furthermore, this register-level fusion is specifically paired with dynamic scheduling layouts designed around variable token bucketing, resolving a severe structural flaw in traditional compilation templates.",
+      "published_date": "2026-10-13",
+      "tags": [
+        "Advanced (300)",
+        "Amazon SageMaker AI",
+        "Announcements"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: moe, mixture of experts, quantization",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 72,
+    "llm_reason": "MoE fused kernel與WGMMA底層優化，技術深度高且具實作細節",
+    "novelty": 12,
+    "impact": 13,
+    "trending": 13,
+    "practicality": 17,
+    "blog_worthiness": 17
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "Intel D270 GPU AI Accelerator–Up to 480 GB LPDDR5X",
+      "url": "https://www.intel.com/content/www/us/en/products/details/discrete-gpus/data-center-gpu/d-series.html",
+      "authors": [
+        "hurricanepootis"
+      ],
+      "abstract": "Intel® GPU D-series Scale inference, not infrastructure Intel® GPU D270 │ Inference-Optimized Data Center GPU Overview Use cases Features Get started Agentic AI is changing data center workloads Agents read far more than they write: long contexts, multistep workflows, compute dominated by prefill. As demands grow, challenges expand beyond bandwidth. Intel D-series GPUs are built for this new era of agentic AI, efficiently handling larger contexts, more concurrent sessions, and more tokens within practical power and cost limits. Memory up to 480 GB LPDDR5X per card Power 350 W Air-cooled Compute 32 Xᵉ Xᵉ3P cores Compute 256 XMX Xᵉ3P matrix engines Scaling agentic AI Agentic fleets Over thousands of steps, 100K token contexts, and dozens of concurrent sessions, keep agents resident to help sustain throughput across the agentic loop. Reasoning over more context Whole-context reasoning Keep more of the model and long context resident, for richer reasoning with fewer GPUs and no high bandwidth memory (HBM). Economics of inference Efficient token serving Dense, air-cooled, standard PCIe infrastructure helps maximize tokens per rack and watt, scaling serving capacity and keeping costs in check. More inference within the power and racks you already run As agentic AI drives longer prompts and more concurrent sessions, customers need scalable infrastructure without trade-offs in power, cost, or deployment complexity. Intel GPU D270 offers up to 480 GB LPDDR5X memory for power-efficient, memory-bound inference in data center environments. Built for AI Built for agentic workloads Die area reallocated from graphics and ray‑tracing pipelines to Xᵉ3P cores and matrix compute, improving inference efficiency. Built for compute Compute where it matters More prompt processing per watt: 32 Xᵉ3P cores and 256 XMX engines accelerate prefill, curbing long‑context and agentic costs. Built for the workload Precision for every workload From native low‑precision inference to FP64 scientific computing, the workload determines the precision—not the hardware. Built for efficiency Standard PCIe 5.0 Standard form factor, standard interconnect, using existing servers. No proprietary networking or bespoke systems required. Built for reliable power 350W air-cooled Passive cooling in the racks you already run, with no liquid‑cooling retrofit needed between evaluation and deployment. Built for your data center Open by design Zero-day support for leading open models, served on the frameworks you already run: vLLM and the open PyTorch ecosystem. Workload-first compute for modern AI Deliver an intelligent evolution in data center infrastructure. Built for the new era of AI inference. ﻿ Sign up to learn more about AI and data center innovations Stay up to date on Intel GPU D-series news and the latest AI resources for enterprise. Thanks for signing up! You'll start receiving updates soon. Frequently Asked Questions What is Intel GPU D270? Intel GPU D270 is an inference-optimized data center GPU designed for the agentic AI era. It is built to support enterprise AI, SaaS, GPUaaS, and government or sovereign-cloud deployments that need memory-rich, power-efficient AI acceleration. What types of AI workloads is Intel GPU D270 designed to support? Intel GPU D270 is designed for production AI inference workloads such as agentic AI, long-context retrieval-augmented generation (RAG), enterprise AI assistants, coding assistants, document understanding, multimodal AI, diffusion models, and high-concurrency serving. Why is Intel GPU D270 relevant for agentic AI? Agentic AI often turns one task into multiple rounds of model calls, tool use, retrieval, reasoning, and response generation. Intel GPU D270 is designed for the inference requirements that become important in those environments, including prefill processing, larger context, memory capacity, concurrency, and power efficiency. What does “inference-optimized” mean for Intel GPU D270? Inference-optimized means the GPU is designed for running AI models in production rather than training them at massive scale. Intel GPU D270 focuses on the needs of deployed AI applications, including prompt processing, high-concurrency serving, memory capacity, efficient power use, and system-level performance. How does Intel GPU D270 help with long-context AI workloads? Long-context AI workloads can require more memory to support larger prompts, retrieval-heavy workflows, and KV cache growth during inference. Intel GPU D270 is designed with high available memory capacity to help support larger models, longer context, and more concurrent sessions. Can Intel GPU D270 be used in existing data center infrastructure? Intel GPU D270 is designed around a standard PCIe 5.0 form factor and air-cooled deployment profile, helping enterprises evaluate AI inference acceleration within existing data center environments without requiring a specialized liquid-cooling retrofit. Who is the primary audience for Intel GPU D270? The primary audience includes AI system architects, AI platform architects, infrastructure and cloud engineering leaders, enterprise AI decision-makers, SaaS providers, GPUaaS providers, government or sovereign-cloud teams, and developers deploying production inference workloads. What should customers do if they want to learn more about Intel GPU D270? Customers should connect with Intel to learn more about Intel GPU D270, evaluate how it may fit their AI inference roadmap, and receive updates as additional product information becomes available. Disclaimers Performance projections vs RTX Pro 6000 are based on publicly available information and Intel internal analysis as of Feb 2026. Performance varies by use, configuration, and other factors. Memory capacity comparison at comparable bandwidth.\n\n(301 points, 175 comments on Hacker News)",
+      "published_date": "2026-10-13",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 301,
+        "num_comments": 175,
+        "hn_url": "https://news.ycombinator.com/item?id=50063365",
+        "object_id": "50063365"
+      }
+    },
+    "rule_score": 36.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agentic, tool use, reasoning, kv cache, multimodal",
+      "🔥 HN 爆紅: 301 points"
+    ],
+    "llm_score": 62,
+    "llm_reason": "LPDDR5X取代HBM做推理加速，話題熱但偏硬體規格宣傳",
+    "novelty": 10,
+    "impact": 13,
+    "trending": 17,
+    "practicality": 9,
+    "blog_worthiness": 13
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "Build long-horizon agents with Grok 4.7 on Amazon Bedrock",
+      "url": "https://aws.amazon.com/blogs/machine-learning/build-long-horizon-agents-with-grok-4-7-on-amazon-bedrock/",
+      "authors": [
+        "Suheel Farooq"
+      ],
+      "abstract": "SpaceXAI’s Grok 4.7 is now available on Amazon Bedrock, which offers a choice of foundation models (FMs) from multiple providers. According to SpaceXAI, Grok 4.7 is trained to work longer on more difficult tasks and knows when to check its own work. That matters most for agents, which carry a task through many steps and must verify what they find along the way. An agent that works this way has to do more than look things up. It has to form a candidate answer, check it against what it has learned, and refine it until it fits. Grok 4.7 exposes a reasoning effort setting that controls how much deliberation happens before each response, and for agent workloads a practical question is which level to run. In this post, we build a tool-calling agent on Grok 4.7 and evaluate it on three tasks that require search rather than lookup. The tasks are diagnosing a two-service outage from its alerts, scheduling maintenance under interacting constraints, and choosing an optimal set of migrations under a budget. Each task has exactly one correct answer, verified by brute force. We ran all three at every reasoning effort level, six times each, for 72 agent runs. The agent answered 67 of the 72 runs correctly. At xhigh it answered all 18 correctly, and at low it answered 15 of 18 while using about an eighth of the output tokens. That gives a clear trade-off you can tune per request, and we show how to measure it on your own tasks and how to monitor it in production. We report token counts rather than currency throughout. Token prices change, and the counts are what your own costs are derived from, so a measurement expressed in tokens stays valid. According to SpaceXAI, Grok 4.7 uses a larger base model than Grok 4.6 and was trained with a longer reinforcement learning run on a harder mix of tasks. This mix is weighted toward problems that take many hours to complete. SpaceXAI reports that the model is better at verifying its own work and at managing longer context. SpaceXAI’s published benchmark results follow that emphasis. The largest reported gains over Grok 4.6 appear in the categories that measure sustained work rather than single-turn answers. Source: SpaceXAI, Introducing Grok 4.7 ( https://x.ai/news/grok-4-7 ). Scores are as published by SpaceXAI at the time of the model launch. Benchmarks show how a model performs across standard tasks. For your own workload, the useful next step is to measure on tasks shaped like yours, which is what the rest of this post walks through. SpaceXAI lists a 500K token context window for Grok 4.7, with text and image input and text output. On Amazon Bedrock, the model supports configurable reasoning effort, tool calling, and structured output. Grok 4.7 runs on the bedrock-runtime endpoint and is accessed through a cross-Region inference profile. Two profiles are available: Cross-Region inference routes requests across multiple AWS Regions, which gives you higher throughput without managing capacity Region by Region. Requests name one of the inference profiles rather than a bare model ID. The model supports the OpenAI-compatible Chat Completions and Responses APIs, and the Amazon Bedrock Converse API. On Converse, reasoning is returned as a reasoningContent block alongside the text block. In inferenceConfig , set maxTokens only, and put model-specific parameters, such as reasoning effort, in additionalModelRequestFields . For the current list of supported Regions, service tiers, and token prices, see the Grok 4.7 model card in the Amazon Bedrock User Guide and the Amazon Bedrock pricing page ( https://aws.amazon.com/bedrock/pricing/ ). Your AWS Identity and Access Management (IAM) identity needs bedrock:InvokeModel on both the inference profile and your account’s default project: Include both resources in the policy statement. The default project permission is required in addition to the inference profile. For production use, we recommend generating a short-term bearer token from your existing AWS credentials, so authentication stays tied to your IAM identity and no long-lived secret is stored: Reasoning tokens count as output tokens and draw down max_completion_tokens before the answer text is produced, so size the limit to leave room for both. If the limit is reached during reasoning, the response returns without answer text, so check for empty content in agent code and raise the limit if you see it. Our runs used a limit of 32,768 tokens, which left headroom at every effort level. Grok 4.7 supports four effort levels: low , medium , high , and xhigh . Effort levels can change between model versions, so it is worth confirming them against the service rather than hardcoding a list: Many agent evaluations test diligence: read a record, filter it, add it up. Those tasks are worth having, but to see what reasoning effort contributes, a task has to require search: the answer can’t be read off the data, it has to be proposed and then checked. We built a synthetic environment of 20 services, exposed through seven tools, and three tasks on top of it. Every task has exactly one correct answer, and each is built so that a quick heuristic is not enough to find it. Four practices keep a measurement like this trustworthy, and they apply to most agent evaluations. State every rule the grader relies on. If the prompt leaves an edge case open, a reasonable answer can be scored as wrong, and the evaluation ends up measuring the specification rather than the model. The diagnosis prompt, for example, says explicitly that a failed service raises no alert of its own. Prove each task has one answer. Each environment is small enough to enumerate, so we checked every candidate answer before running anything. For the schedule, that is a few lines: Grade a required final line, not the whole response. Each prompt asks the agent to end with a line such as FINAL: auth, checkout . The grader reads only that line, so a response that discusses other candidates while explaining its reasoning is graded on its conclusion: Track format separately from correctness. A missing final line is a different signal from an incorrect one. In our runs, all 72 responses included a gradeable final line. Constrain tool parameters with an enum where the valid values are known, so every tool call targets a real resource: The system prompt is deliberately short, and asks the agent to check its answer before giving it: The agent loop is a standard tool-calling loop: call the model with reasoning_effort set, execute each returned tool call, append the result keyed by tool_call_id , and repeat until the model stops requesting tools. Tracking prompt_tokens and completion_tokens across the loop gives the token counts reported in the following section. Six runs of each task at each effort level, 72 runs in total. The agent answered 67 correctly. Figure 1: Share of runs answered correctly at each reasoning effort level (left), and mean output tokens per run with median seconds per run overlaid (right) xhigh answered every run correctly. All 18 runs across the three tasks were correct at xhigh , and medium and high answered 17 of 18 each. With six runs per task and level, the differences between levels are indicative rather than statistically conclusive, and the direction was consistent across all three tasks. Effort changes how much the agent reasons, not how much it explores. Tool calls were essentially flat, between 17.2 and 18.7 per run at every level. The agent gathered the same facts regardless of effort, and what changed was how much reasoning it applied to them, with output tokens rising from 1,184 at low to 9,147 at xhigh . low offers a strong cost-to-quality ratio. At low , the agent answered 15 of 18 runs correctly using about an eighth of the output tokens of xhigh , with a median run of 18 seconds. Where a slightly lower completion rate is acceptable, or where answers are reviewed downstream, low is an efficient choice.",
+      "published_date": "2026-10-13",
+      "tags": [
+        "Advanced (300)",
+        "Amazon Bedrock",
+        "Amazon Machine Learning",
+        "Artificial Intelligence",
+        "Foundation models",
+        "Generative AI",
+        "Technical How-to"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, reasoning, reinforcement learning, structured output",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 63,
+    "llm_reason": "72次實驗量化reasoning effort對agent準確率影響，方法嚴謹",
+    "novelty": 9,
+    "impact": 10,
+    "trending": 13,
+    "practicality": 15,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "Building agents that transact with Anchor Browser and AgentCore payments",
+      "url": "https://aws.amazon.com/blogs/machine-learning/building-agents-that-transact-with-anchor-browser-and-agentcore-payments/",
+      "authors": [
+        "Cher Simon"
+      ],
+      "abstract": "AI agents increasingly need to access web resources that are priced per request. For example, premium datasets charge by the query, research APIs meter by the call, and paywalled publishers gate content behind payment. When an AI agent encounters one of these resources, the server returns HTTP 402 Payment Required. The agent has no built-in payment mechanism, no budget attached to the session, and no programmatic way to satisfy the request. The task stalls and requires manual intervention. Anchor Browser with Agentic Payments handles machine-to-machine payment workflows on behalf of the agent. Developed in collaboration with the AWS Generative AI Innovation Center Partner Agent Factory , it’s now available on AWS Marketplace . This post covers how Anchor Browser integrates with Amazon Bedrock AgentCore payments so that AI agents can pay for x402-protected pages and APIs autonomously. The x402 protocol is an open standard for HTTP-based machine-to-machine payments. A server responds with 402 Payment Required along with the amount, accepted payment methods, and payment address that the agent uses to complete the transaction. Anchor Browser is a cloud-based browser automation solution purpose-built for AI agents. Each agent session runs inside a managed browser environment that maintains authentication state, handles navigation, captures network requests, and provides a live view of page interactions. Amazon Bedrock AgentCore provides capabilities to build, connect, and optimize agents at scale. Amazon Bedrock AgentCore payments is a fully managed capability within AgentCore that AI agents can use to discover, access, and pay for APIs, Model Context Protocol (MCP) servers, and web content autonomously. AgentCore payments manages wallet connectivity, enforces configurable spending limits at the infrastructure layer, and processes payments through the x402 protocol. It also provides observability into payment attempts, approvals, denials, and settlements through Amazon CloudWatch. When an agent running in Anchor Browser encounters a 402 response, AgentCore payments authorizes and completes the transaction within the configured budget. The workflow continues without interruption. When an autonomous agent encounters an x402-protected resource, the workflow stalls. The agent makes a request, such as fetching a premium research report or calling a paid data enrichment API, and the server responds with HTTP 402 Payment Required. Without a mechanism to pay, the task that was supposed to run autonomously now requires human intervention. Today, developers must build the entire payment stack. This effort spans four categories of complexity: Without a managed payment service, the agent must internalize the entire payment stack. On every x402-protected call that returns a 402 response, the agent must orchestrate the full payment flow internally, including: Each of these steps requires custom code that developers must build, secure, and maintain. Figure 1 illustrates this architecture. The agent contains eight tightly coupled components (Wallet, Private Keys, Budget Controls, Sign Proof, Attach Header, Retry Logic, Settle Payment, and Logging). The agent connects to an x402 API with a 402 challenge flowing back and a retry flowing forward. The security considerations extend beyond the engineering effort. Uncontrolled spending. Without hard spending limits enforced at the infrastructure level, a bug, retry loop, prompt injection, or inadvertent access can trigger unintended payments. An agent retrying a paid endpoint in a loop continues to authorize payments until manual intervention occurs. Key exposure. When private keys reside inside the agent runtime, they share an execution environment with untrusted web pages, third-party tools, and external dependencies. These vectors might inadvertently disclose the credentials that control real funds. Signing flow exposure. If the signing infrastructure is accessible from the runtime, a threat actor can attempt to access the key or redirect payments to an address under unauthorized control. Effective mitigation requires that the key doesn’t enter the runtime in the first place. Browser-based agents introduce an additional constraint: the payment must occur within the same browser session. Otherwise, session recordings and live view no longer match what actually executed. Anchor Browser and AgentCore payments address this complexity by moving the entire payment stack into managed infrastructure. Unlike a stateless tool call, Anchor Browser provides a real cloud browser with persistent identity, repeatable and deterministic workflows, and the session context needed to log in, navigate, and finish tasks reliably. Authentication, navigation, network requests, recordings, and live view happen inside the same browser session. When a payment is required, the transaction happens within that session. The recording captures the full sequence from request to 402 to payment to content delivery. Anchor agents include a built-in x402 tool that handles paid API calls natively within the browser context. The built-in tool requires no changes to existing Playwright, Puppeteer, or Chrome DevTools Protocol-based workflows. AgentCore payments serves as the payment layer. At the center of the service is the Payment Manager, the top-level resource that coordinates payment operations for the AWS account. Creating a Payment Manager requires specifying an authorizer type and an IAM role. AgentCore then provisions a corresponding workload identity in Amazon Bedrock AgentCore Identity. The remaining components connect the Payment Manager to external wallet infrastructure: Anchor Browser sets up wallets through AgentCore payments using a supported wallet provider, without placing wallet secrets or private keys inside the agent runtime. AgentCore payments handles wallet operations through the configured provider. For endpoint discovery, AgentCore provides a curated Coinbase x402 Bazaar MCP server through Amazon Bedrock AgentCore Gateway , so agents can discover available pay-per-use x402 endpoints programmatically. AgentCore payments restructures the payment architecture. Sensitive operations move out of the agent runtime and into a managed service layer. The Anchor Agent holds only two payment-related components: a budget session and the x402 tool. The infrastructure, including authentication, wallet secrets, payment limits, observability, and payment proof signing, resides in the AgentCore payments layer. Figure 2 shows the Anchor Agent connecting to the AgentCore payments managed layer, which handles wallet provider integration with Coinbase CDP or Stripe Privy. Figure 2: Anchor Browser integrates with AgentCore payments The following steps describe what happens end to end, from the moment a browser session encounters an x402-protected resource to the moment the agent receives the response and continues the task. Wallet credentials remain with AgentCore and the configured wallet provider throughout this flow. Before you begin, make sure that you have a valid Anchor Browser API key ( ANCHOR_API_KEY ). To create one, see the Anchor Browser Quick Start guide. Setting up agentic payments for Anchor Browser requires one session property. Set session.x402 to true . The property defaults to false . When enabled, the browser session can automatically access x402-protected websites with payments signed by AgentCore payments and retried inside the same browser session. Enabling session.x402 authorizes the browser to make real payments from the configured payment instrument. The following examples show how to create a payment-enabled session for Anchor Browser using cURL and JavaScript: After connected through Chrome DevTools Protocol, the agent navigates normally. You don’t need to include a wallet key or payment header in your automation code.",
+      "published_date": "2026-10-13",
+      "tags": [
+        "Amazon Bedrock AgentCore",
+        "Customer Solutions",
+        "Intermediate (200)"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, mcp, model context protocol",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 61,
+    "llm_reason": "x402協議與AgentCore整合實作，代理支付新興議題具體可循",
+    "novelty": 9,
+    "impact": 10,
+    "trending": 13,
+    "practicality": 15,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "The Verge AI",
+      "title": "Google finally releases Gemini 4 Argon",
+      "url": "https://www.theverge.com/ai-artificial-intelligence/1009862/google-releases-gemini-4-argon",
+      "authors": [
+        "Robert Hart"
+      ],
+      "abstract": "AI News Tech Google finally releases Gemini 4 Argon After months of trailing its rivals, Google says Argon competes with the industry’s best. After months of trailing its rivals, Google says Argon competes with the industry’s best. by Robert Hart Oct 13, 2026, 4:00 PM UTC Image: The Verge Robert Hart is a London-based reporter at The Verge covering all things AI and a Senior Tarbell Fellow. Previously, he wrote about health, science and tech for Forbes . After months sitting on the sidelines of the frontier AI race, Google has finally launched its long-awaited Gemini 4 Argon model, claiming it can compete with the best the industry has to offer. Google says Argon delivers “frontier reasoning and improved performance across complex workflows,” while cutting down on hedging, repetition, and the cliches that continue to plague AI chatbots. The company claims Argon outperforms rival models like GPT-6 Astra, Claude Fable 5.1, and Claude Opus 5.5 across a range of benchmarks, including coding, cybersecurity, science, finance, and law. Google says it’s already putting Argon to use internally, such as finding and patching cybersecurity vulnerabilities, halving the computing power needed to power YouTube’s comments section, and debugging the drone physics simulator for Alphabet’s drone delivery company Wing. The model is rolling out today to Google’s higher-tier Pro and Ultra subscribers in the Gemini app and AI mode in Search, as well to Ultra subscribers on its agentic development platform Antigravity. It is not clear when — or if — Argon will be available to Plus subscribers or free users. Google is pricing Argon very competitively. The model is launching with an introductory price of $2 per million input tokens and $10 per million output tokens, around a fifth the cost of OpenAI’s GPT-6 Astra and Anthropic’s Fable 5 models. Even after those costs double at the end November — when the introductory period finishes — Argon will still be significantly cheaper than its frontier rivals on a per-token basis, though this doesn’t necessarily translate to lower costs in practice, as models can use different numbers of tokens for the same tasks. The launch fills in some of the blanks left behind from when Google first teased Argon a few weeks ago. In line with other recent frontier model releases, the public rollout follows a limited release to a select set of “trusted cyber defenders” to be tested for potential risks. Argon is Google’s first major frontier release since Gemini 3 in late 2025. In the intervening months, impressive models from Anthropic and OpenAI have seen Google trail far behind its rivals. Seismic internal shakeups raised further doubts about the company’s ability — or desire — to reclaim its position and compete at the frontier of AI. But Argon’s arrival suggests we can’t count Google out of the AI race just yet. Landing just a day after Meta announced its own frontier model , Muse Wonder Full, Argon is a reminder of how quickly the balance of power can shift in AI, and that the frontier is far from a two-horse race. Follow topics and authors from this story to see more like this in your personalized homepage feed and to receive email updates. Robert Hart AI Google News Tech",
+      "published_date": "2026-10-13",
+      "tags": [
+        "AI",
+        "Google",
+        "News",
+        "Tech"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "The Verge AI",
+        "feed_url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agentic, reasoning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 66,
+    "llm_reason": "Google旗艦模型發布具產業影響，但摘要偏新聞缺技術細節",
+    "novelty": 7,
+    "impact": 15,
+    "trending": 19,
+    "practicality": 14,
+    "blog_worthiness": 11
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "NVIDIA Developer",
+      "title": "How to Rewrite Apache Spark UDFs for GPU Acceleration with AI Agents",
+      "url": "https://developer.nvidia.com/blog/rewrite-apache-spark-udfs-gpu-acceleration-ai-agents/",
+      "authors": [
+        "Elizabeth Goodman"
+      ],
+      "abstract": "Enterprise applications have become increasingly demanding. Agentic AI has compounded the need for vast amounts of enterprise data with frequent, complex queries across increasingly large datasets. Meeting that demand requires greater data throughput without a proportional increase in cost. NVIDIA cuDF addresses this challenge by leveraging the massive parallelism and high-bandwidth memory of GPUs for data analytics. Particularly, the NVIDIA cuDF plugin for Apache Spark brings this acceleration to Apache Spark , the industry-leading platform for big data processing and analytics, to achieve better TCO performance in major workloads. User-defined functions (UDFs) have long been problematic for accelerated query engines, introducing runtime overheads due to their opaque nature. While UDFs can often be replaced with more performant code, rewriting UDFs has long been a laborious process requiring careful validation. This post describes how to use agents to rewrite UDFs into GPU-accelerated equivalents within minutes, achieving 22x+ speedups in Apache Spark jobs . We’ll introduce the cuDF skills for Apache Spark , a set of skills to quickly break through the UDF bottleneck for end-to-end development, from testing, to benchmarking, through integration. The UDF challenge cuDF achieves seamless GPU acceleration in part due to Apache Spark’s declarative programming interface. The SQL / Dataframe abstractions are powerful because they separate what a query should produce from how the system should execute it. This enables the cuDF plugin to transparently parallelize row-wise operations using the massive SIMD capabilities of GPUs, without any change in user code. Apache Spark, however, also supports UDFs: custom routines to extend built-in functionality. While useful for implementing bespoke business logic, UDFs break the declarative abstraction—they contain arbitrary user code which the system cannot reason about or parallelize in any general sense. During execution, the GPU accelerator must convert the data from a columnar to row-wise format, and fall back to the CPU to execute the UDF row-by-row: Figure 1.A CPU UDF forces an otherwise GPU-resident pipeline to convert columnar batches to rows, execute on the CPU, and convert back to columnar format Thus in an otherwise accelerated query, UDFs have the following drawbacks: The UDF incurs a round-trip data transfer overhead due to fallback. The UDF forgoes potential compute speedup, had it been written using GPU-accelerated primitives. Accelerating UDFs With a small, targeted code change, many UDFs can be rewritten into a GPU-accelerable form by using the right primitives. Rewriting UDFs eliminates the overhead associated with accelerator fallback, and can yield speedups of over 20x . We outline three approaches to rewrite UDFs: Approach Complexity Best For SQL Low, highest level of abstraction Simple relational logic, e.g. small or inlined functions cuDF Medium, more flexibility and control over execution Most cases, e.g. moderately complex logic like string parsing, nested types CUDA High, maximum flexibility and kernel-level control Most complex or performance critical logic Table 1. Comparison of SQL, cuDF, and CUDA approaches for rewriting Spark UDFs, organized by complexity and best-fit use case To make these approaches concrete, consider a simple Scala UDF that converts temperature from Celsius to Fahrenheit: final class ToFahrenheit extends Function1[java.lang.Double, java.lang.Double] with Serializable { override def apply(celsius: java.lang.Double): java.lang.Double = { if (celsius == null) null else celsius * 9.0 / 5.0 + 32.0 }\n} spark.udf.register(\"to_fahrenheit\", new ToFahrenheit)\nspark.sql(\"\"\" SELECT *, to_fahrenheit(celsius) AS fahrenheit FROM temperatures\n\"\"\") Rewriting the UDF with SQL The most direct solution for simple UDFs is to replace the UDF with an equivalent Spark SQL expression: spark.sql(\"\"\" SELECT *, celsius * 9.0 / 5.0 + 32.0 AS fahrenheit FROM temperatures\n\"\"\") This makes the function visible in Spark’s expression tree. During query planning, the cuDF plugin will replace these expressions with their corresponding GPU implementations, keeping the data and execution fully on the GPU. Rewriting the UDF with cuDF When SQL primitives are insufficient or undesirable, the UDF can instead operate directly on GPU columns using the RapidsUDF interface, a contract provided by the cuDF plugin. The contract requires a single method, evaluateColumnar : import ai.rapids.cudf.{ColumnVector, Scalar}\nimport com.nvidia.spark.RapidsUDF\nimport scala.util.Using final class ToFahrenheit extends Function1[java.lang.Double, java.lang.Double] with Serializable with RapidsUDF { override def apply(celsius: java.lang.Double): java.lang.Double = { if (celsius == null) null else celsius * 9.0 / 5.0 + 32.0 } override def evaluateColumnar( numRows: Int, args: ColumnVector*): ColumnVector = { Using.Manager { use => val scale = use(Scalar.fromDouble(9.0 / 5.0)) val offset = use(Scalar.fromDouble(32.0)) val scaled = use(args.head.mul(scale)) scaled.add(offset) }.get }\n} The cuDF plugin recognizes instances of the RapidsUDF interface and passes a GPU-resident ColumnVector to the evaluateColumnar function. The function then composes operations from the Java API for cuDF operations to process the column in parallel. This approach provides a richer API for more complex processing. Rewriting the UDF with CUDA For highly complex logic that cannot be efficiently composed from existing cuDF operations, a RapidsUDF can invoke a custom CUDA kernel through the Java Native Interface (JNI) . We’ve elided the code for brevity, but examples of CUDA conversions can be found in the cuDF examples for Spark UDFs . Efficient rewrites with AI agents Despite the performance benefits, UDF rewrites can require significant engineering effort. They demand careful API selection, semantic validation, and performance measurement, while columnar APIs can be unfamiliar to practitioners with less experience in vectorized programming. Fortunately, much of this work is well suited to coding agents. With proper guardrails, an agent can search unfamiliar APIs, implement candidate rewrites, and iterate quickly while executable tests and performance measurements determine whether each change is acceptable. Available skills The cuDF skills for Apache Spark decompose the rewrite into four focused feedback loops. Each skill defines both the work to perform and the evidence required before proceeding to the next stage: Figure 2. Four skills guide agents through testing, conversion, benchmarking, and optimization, with verification-driven feedback loops at each stage Scaffolding and design Reliable agent execution begins with a reliable development environment. The skills provide a complete project template containing the cuDF- and Spark-specific scaffolding required for end-to-end development. This includes test and benchmark harnesses, encoded routines for output verification, and build configuration. By encoding this knowledge into code, the agent can focus on the UDF rather than repeatedly reconstructing specialized infrastructure. The skills also provide best practices for GPU programming with cuDF, including memory management and configuration. This serves as an advisory tips and tricks reference. To best leverage the power of frontier models, the agent remains free to explore different implementations based on surrounding context and select an approach based on measured correctness and performance. Performance results A major consumer technology company used this workflow to convert 30+ UDFs used in production data pipelines into GPU-accelerated implementations. The rewrites preserved the behavior of the original CPU UDFs while removing costly fallbacks from otherwise GPU-accelerated workloads. As an example, the following benchmark shows the resulting before-and-after performance for a UDF in one such workload: Figure 3.",
+      "published_date": "2026-10-13",
+      "tags": [
+        "Agentic AI / Generative AI",
+        "Data Science",
+        "Developer Tools & Techniques",
+        "Apache Spark",
+        "cuDF"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "NVIDIA Developer",
+        "feed_url": "https://developer.nvidia.com/blog/feed/"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 66,
+    "llm_reason": "用agent改寫UDF達22倍GPU加速，具體工具與量化成果",
+    "novelty": 10,
+    "impact": 11,
+    "trending": 12,
+    "practicality": 17,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "IBM Research",
+      "title": "Scaling AI-driven chip design with open agent factories",
+      "url": "https://research.ibm.com/blog/open-agent-factories-and-distributed-inference-for-chip-design?utm_medium=rss&utm_source=rss",
+      "authors": [],
+      "abstract": "As AI systems become more capable, researchers are increasingly asking a practical question: Can AI do more than help write code for computing systems? Specifically, can it actively participate in the design of complex computing systems and rapidly translate algorithms into silicon? New work in AI-driven chip design suggests the answer is yes. But a promising algorithm is only the beginning of a hardware design. Turning it into an efficient chip requires exploring how to organize computation, move data, and use limited hardware resources. Each choice opens up alternatives. Each alternative takes engineering effort to implement and evaluate. AI agents can expand that exploration. Working together, they can propose architectural changes, write implementations, check correctness, and use synthesis results to decide what to try next. The obstacle is cost: the LLM tokenomics for hardware design and the cost-efficiency of design space exploration. A single search campaign can consume hundreds of millions of tokens, and applying the approach across many components and design revisions could require hundreds of such campaigns. A new demonstration from IBM Research shows how open frontier models and efficient distributed inference can change the calculation. Using an agent factory to optimize hardware for quantum error correction, researchers achieved a 52-times speedup over the baseline design in high-level synthesis estimates for approximately $26 in inference cost. Under the same search budget, a proprietary frontier model configuration cost 11.5 times more than a configuration using open frontier models throughout — $299 versus $26, respectively. The proprietary configuration achieved higher speedup (204x), but the open-model configuration established a different result: Substantial hardware optimization can be achieved with a much smaller inference budget, along with the smallest area design. That cost advantage creates an opportunity to apply automated exploration more widely, and to reinvest the savings in finding better designs. The results also suggest that the practical value of AI-assisted chip design depends on more than the best design an agent can produce. It also depends on how much verified exploration an organization can afford. Model capability, the assignment of agent roles, and the infrastructure serving those models all shape the hardware improvements that are attainable within a real engineering budget. By combining open frontier models with llm-d’s low-cost distributed inference , IBM has demonstrated that AI agent factories can move beyond coding assistance and become active participants in hardware design, and they can do it affordably. From generating code to exploring architectures Hardware design remains one of the most expertise-intensive activities in computing. High Level Synthesis (HLS) raises the level of abstraction from register-transfer level (RTL), used in hardware design languages, to C or C++, but engineers must still make countless decisions about loop structure, parallelism, memory organization, dataflow, and synthesis directives. Those choices interact in complex ways. For example, performing more calculations simultaneously helps only if the memory system can supply their inputs. A design that runs faster may also require more hardware resources. Finding a useful balance requires repeated experiments, and the design space quickly becomes too large for humans to explore exhaustively. An ‘ agent factory ’ organizes that work. “An agent factory turns hardware optimization into a coordinated cycle of exploration: A coordinator agent directs parallel worker agents to develop and synthesize alternative designs within a defined search budget,” said Ruchir Puri, IBM fellow and IBM Research chief scientist. When these agents are set to their task, they independently explore optimization strategies. “A verifier checks that the proposed improvements are valid, and the designs are ranked by latency and hardware resource use. Those results guide the next round of exploration, allowing the factory to refine its search as it discovers better designs,” added Puri. Rather than searching for a single solution, the factory investigates many possibilities in parallel, using synthesis feedback to guide future exploration. In the new study, the coordinator planned the search and assigned optimization hypotheses to four parallel worker agents. The workers modified the decoder implementation, and correctness checks and HLS results provided feedback for subsequent rounds. Each configuration received a budget of 100 hypotheses. The agents explored changes with architectural consequences. One transformation reorganized message storage so that the synthesis tool could identify independent memory accesses and execute more work in parallel. Another replaced sequential reductions with tree structures that exposed parallel computation. The value came from connecting code changes to their hardware effects through repeated evaluation. A classical hardware challenge at the heart of quantum computing The key question addressed in the new paper was whether this approach can be scaled cost-effectively using open frontier models and distributed inference infrastructure. To evaluate that idea, Puri and his team demonstrated the approach using Relay-BP, a quantum error correction decoding algorithm, for the [[144,12,12]] bivariate bicycle code. Quantum error correction relies on classical computation. Measurements provide clues about errors affecting quantum information, and a decoder must interpret those clues and infer corrections. Doing that quickly, within practical hardware resource limits, is an essential part of building fault-tolerant quantum systems. Relay-BP is a useful test because its repeated message passing is inherently parallel, but the baseline implementation's sparse graph representation and memory-access patterns make that parallelism difficult for HLS tools to exploit. That also makes the decoder a demanding test of AI-driven hardware exploration because the agents must preserve the computation while changing how the hardware performs it. What the same search budget buys The researchers compared three configurations under the same 100-hypothesis budget: a proprietary frontier model as both coordinator and workers, an open frontier model in both roles, and a hybrid with a proprietary coordinator and open-model workers. The open model ran on premises through llm-d. Each configuration explored 100 hypotheses. Costs cover model inference, rather than the full hardware development workflow. All three found verified hardware improvements, but they produced distinct tradeoffs. Open and hybrid searches found useful compact designs, while the proprietary configuration more effectively converted additional resources into parallelism and lower latency. Each configuration was evaluated in one search run, so these results characterize the observed searches rather than establish a universal model ranking. The all-open search also used more tokens: approximately 241 million, compared with 216 million for the all-proprietary search. Its lower cost came from the economics of serving those tokens. This distinction matters for agent factories, where each hypothesis can involve many rounds of reasoning, coding, debugging, and interpreting tool results. Why inference infrastructure matters An agent factory repeatedly returns to much of the same information: source code, design constraints, earlier changes, and synthesis reports. Efficient serving can reuse computation associated with that shared context. The study used llm-d, an open-source distributed inference framework, to support this workload. Its cache-aware routing directs requests toward servers holding reusable context. It also separates prompt processing from token generation, allowing the system to allocate resources to each independently.",
+      "published_date": "2026-10-13",
+      "tags": [
+        "AI",
+        "AI Hardware",
+        "Generative AI",
+        "Logic Scaling",
+        "News"
+      ],
+      "organization": "IBM",
+      "raw_metadata": {
+        "feed_name": "IBM Research",
+        "feed_url": "https://research.ibm.com/rss"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, reasoning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 66,
+    "llm_reason": "AI agent自動化晶片設計並量化token成本與52倍加速，技術深度足",
+    "novelty": 14,
+    "impact": 13,
+    "trending": 13,
+    "practicality": 10,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "NVIDIA Developer",
+      "title": "NVIDIA Run:ai Is Now Open Source as Part of NVIDIA DSX AI Factory Platform",
+      "url": "https://developer.nvidia.com/blog/nvidia-runai-is-now-open-source-as-part-of-nvidia-dsx-ai-factory-platform/",
+      "authors": [
+        "Tanya Lenz"
+      ],
+      "abstract": "NVIDIA is making the full NVIDIA Run:ai platform available as open source software, giving customers, developers, and ecosystem partners access to production-grade AI workload and GPU orchestration capabilities. This release expands the NVIDIA DSX AI Factory Platform by establishing NVIDIA Run:ai as an open foundation that enables the broader ecosystem to bring differentiated solutions to market faster in response to evolving customer needs. Over the past several years, NVIDIA Run:ai has helped organizations run AI workloads on Kubernetes at scale by dynamically allocating GPU resources and managing workloads across the full lifecycle, from data processing and training to inference. By open sourcing NVIDIA Run:ai platform capabilities as part of NVIDIA DSX AI Factory, it is now possible for every NVIDIA DSX ecosystem partner and AI cloud to increase workload throughput, improve GPU utilization, and operate shared AI infrastructure more efficiently and effectively. This post details the open source release, which includes the complete NVIDIA Run:ai platform and four components that can also be adopted independently: KAI Scheduler, GPU Fractioning Operator , KAI Resource Management , Workload Map . Together with additional platform code, these components form the integrated NVIDIA Run:ai platform. Platform teams and ecosystem partners can adopt NVIDIA Run:ai as an integrated whole, build on it for their own products and services, or integrate individual components based on their requirements. How to adopt open source NVIDIA Run:ai NVIDIA Run:ai can be adopted directly as open-source software or through NVIDIA DSX ecosystem partner offerings. Deploy the open source platform directly The complete source code for NVIDIA Run:ai is available in the NVIDIA Run:ai repository within the NVIDIA DSX AI Factory GitHub organization . Teams can inspect the code, contribute to its development, build on top of the platform or adopt its modular components independently. The complete open source NVIDIA Run:ai platform is also available on NVIDIA NGC as a Community Product, with a Helm chart for installing the integrated stack. Note: The NVIDIA Run:ai source code is governed by its applicable open source licenses. Downloading the Community Product from NGC requires acceptance of the applicable NVIDIA Software License Agreement and Product-Specific Terms for NVIDIA AI Products. No paid NVIDIA Run:ai subscription or NVIDIA support entitlement is required for the Community Product, and NVIDIA enterprise support is not included. Adopt open source NVIDIA Run:ai through NVIDIA DSX ecosystem partners Open source NVIDIA Run:ai gives NVIDIA DSX ecosystem partners direct access to AI workload and GPU orchestration innovations they can use in their own NVIDIA DSX AI factory solutions. By adopting the complete platform or integrating individual components, partners can bring those innovations to market faster and respond more quickly to evolving customer and operational requirements. Crusoe integrates NVIDIA Run:ai with Crusoe Managed Kubernetes, combining GPU workload orchestration with managed Kubernetes and GPU infrastructure. Mirantis extends k0rdent AI with NVIDIA Run:ai to deliver a lifecycle-managed, Metal-to-Model AI factory stack that automates infrastructure provisioning and maximizes GPU utilization. Nebius offers NVIDIA Run:ai as a one-click application deployment in Nebius AI Cloud, giving customers a streamlined way to deploy and operate the complete platform on Nebius Managed Service for Kubernetes. OpenNebula Systems integrates NVIDIA Run:ai with the OpenNebula AI Cloud Platform through OneKS, combining GPU workload orchestration with infrastructure provisioning and lifecycle management for open and sovereign AI clouds. Rafay is expanding its NVIDIA Run:ai integration to deliver it as a fully managed service. Rafay automates the entire stack, from GPU infrastructure and clusters to the NVIDIA Run:ai control plane and tenants, so AI cloud providers and enterprises can offer it through their own self-service catalogs. Saturn Cloud integrates NVIDIA Run:ai to help AI cloud operators launch white-label AI inference services through its Token Factory platform, combining GPU orchestration with dedicated and multi-tenant model serving, per-token metering, and automated billing. Spectro Cloud integrates NVIDIA Run:ai into PaletteAI, enabling customers to deploy it through PaletteAI Studio and manage it with the same lifecycle automation used across their AI infrastructure. vCluster provides NVIDIA Run:ai through pre-validated deployment templates that stand up a complete environment per tenant, allowing operators to strengthen tenant boundaries while NVIDIA Run:ai continues to schedule across one GPU fleet. For NVIDIA Enterprise AI Factory deployments, NVIDIA Run:ai continues to be available through NVIDIA-supported commercial offerings including as a standalone product, through NVIDIA Mission Control and NVIDIA AI Enterprise, and select cloud marketplaces. Availability, licensing, and support terms vary by offering. For teams that already have a platform and need to fill a specific capability gap, the following sections describe when and how to use each modular component independently. Modular open source components of the NVIDIA Run:ai platform This section details the four components included in the open source release: KAI Scheduler, GPU Fractioning Operator, KAI Resource Management, and Workload Map. With additional platform code, these components form the integrated NVIDIA Run:ai platform. You can adopt NVIDIA Run:ai as an integrated whole or integrate individual components based on your unique requirements. KAI Scheduler: The scheduling engine behind NVIDIA Run:ai KAI Scheduler is the Kubernetes-native scheduler that powers the NVIDIA Run:ai platform. NVIDIA released KAI Scheduler as open source software under the Apache 2.0 license and contributed it to CNCF as a Sandbox project. KAI remains the upstream engine behind NVIDIA Run:ai, and all scheduler development happens in the community repository, so every improvement flows through the same codebase. NVIDIA continues to support the project’s maintainers and work with the broader ecosystem to advance AI workload scheduling at scale. KAI Scheduler is purpose-built for GPU workloads at scale, coordinating: Gang scheduling with prescheduling in-memory simulation, so multipod jobs are placed all-or-nothing and aren’t evicted needlessly Fair-share (including time-based fair-share) and quota allocation that keeps resource shares balanced across teams Topology awareness and bin-packing at the scheduling-decision level GPU sharing, which allows multiple workloads to share single or multiple GPUs (MIG, MPS, time sharing, HaMi, CUDA 13.4 MPS fractioning) Dynamic Resource Allocation (DRA) support To learn more about key features, visit the kai-scheduler/KAI-Scheduler GitHub repo. Use KAI Scheduler for diverse AI workloads that require fair access to cluster resources and topology-aware placement. It can be deployed in an existing cluster alongside the current software stack without requiring the complete NVIDIA Run:ai platform. Follow the project, ask questions in the #kai-scheduler channel on CNCF Slack, and contribute on the kai-scheduler/KAI-Scheduler GitHub repo. GPU Fractioning: An operator for GPU fractions on Kubernetes The NVIDIA Run:ai platform has long supported fractional GPU allocation, enabling multiple workloads to share a GPU with hard memory isolation. Fractions can be requested on demand and set up on the fly, with no per-node setup from an administrator in advance. It is one of the most widely used capabilities among ML teams running workloads that do not require the full memory of a GPU, including interactive notebooks and inference for smaller models. NVIDIA Run:ai pioneered that experience with a proprietary implementation.",
+      "published_date": "2026-10-13",
+      "tags": [
+        "Data Center / Cloud",
+        "Developer Tools & Techniques",
+        "MLOps",
+        "AI Factory",
+        "DSX",
+        "GB200",
+        "Open Source"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "NVIDIA Developer",
+        "feed_url": "https://developer.nvidia.com/blog/feed/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "⚖️ 來源權重: rss +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 69,
+    "llm_reason": "生產級GPU排程平台全面開源，MLOps社群實用性極高",
+    "novelty": 8,
+    "impact": 14,
+    "trending": 14,
+    "practicality": 18,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "Janas: Run LLMs larger than RAM by streaming experts from SSD",
+      "url": "https://github.com/prabanta-dev/janas",
+      "authors": [
+        "khalidkhair"
+      ],
+      "abstract": "Janas 37 tok/s from Qwen3-Next-80B (a 48 GB model) on a laptop with 32 GB of memory, 24 without drafts, where llama.cpp manages 2.8; reading a prompt, 62 tok/s against 16. Janas-LLM was faster than llama.cpp on every model compared on the same laptop (Debian 13 Linux, Intel Core Ultra 9 185H, its integrated Arc GPU, 32 GB, an NVMe SSD; 9-12 October 2026; the whole machine below ): Model reading 1,024 tokens: Janas-LLM llama.cpp writing: Janas-LLM llama.cpp Qwen3-Next-80B-A3B (48.4 GB, more than the memory) 62 tok/s 16 tok/s 24 tok/s 2.8 tok/s Qwen3-Coder-Next (48.4 GB, more than the memory) 66 tok/s 14 tok/s 22 tok/s 2.2 tok/s Qwen3.6-35B-A3B 104 tok/s 79 tok/s 19 tok/s 12 tok/s Qwen3-30B-A3B 135 tok/s 122 tok/s 32 tok/s 15 tok/s Gemma-4-26B-A4B-it 84 tok/s 76 tok/s 18 tok/s 12 tok/s Qwen3.8-27B (dense, 17.6 GB) 30.6 tok/s 25.6 tok/s 4.4 tok/s 2.1 tok/s Gemma-4-12B-it 65 tok/s 46 tok/s 9.9 tok/s 7.1 tok/s Qwen3.5-9B 111 tok/s 78 tok/s 14 tok/s 8.7 tok/s Gemma-4-E4B-it 122 tok/s 109 tok/s 20 tok/s 15 tok/s Qwen3-4B 193 tok/s 164 tok/s 27 tok/s 18 tok/s Gemma-4-E2B-it 191 tok/s 150 tok/s 38 tok/s 19 tok/s Qwen3.5-2B 441 tok/s 323 tok/s 52 tok/s 28 tok/s Qwen3.5-0.8B 799 tok/s 519 tok/s 109 tok/s 32 tok/s Qwen3-0.6B 939 tok/s 670 tok/s 130 tok/s 45 tok/s The same models from other hands, in the catalog beside them: Model reading 1,024 tokens: Janas-LLM llama.cpp writing: Janas-LLM llama.cpp Qwen3-30B-A3B, bartowski's Q4_K_M (importance matrix) 131 tok/s 122 tok/s 32 tok/s 16 tok/s Qwen3-30B-A3B, unsloth's UD-Q3_K_XL (3 bits) 100 tok/s 112 tok/s 36 tok/s 11 tok/s Qwen3-4B, bartowski's Q4_K_M (importance matrix) 191 tok/s 160 tok/s 26 tok/s 18 tok/s Qwen3.8-27B: llama.cpp measured on 12 October 2026 ( llama-bench -r 2 ), Janas-LLM on 13 October ( janas-bench --prompt 1024 --gen 16 , two rounds), once its prompt went whole to the GPU in one submission: 30.6 tok/s, where it read 26.4 the day before and 18.7 before the GPU's tiles for the IQ4_XS, IQ3_S and IQ4_NL weights of unsloth's UD mix. One exception: the 3-bit Qwen3-30B reads a prompt slower than llama.cpp, since its Q3_K weights do not go to the GPU's fast prompt yet; it writes three times as fast. How they were measured, and the speeds with the drafts: What works now . On another machine the figures will be other ones: janas-bench measures yours. Try it on Linux x86-64 (Ubuntu 22.04, Debian 12 and later): curl -LO https://github.com/prabanta-dev/janas/releases/latest/download/janas-linux-x86_64.tar.gz\ntar xf janas-linux-x86_64.tar.gz && cd janas\n./janas-chat # the models it knows: pick one, it is downloaded and checked Or on Windows 10 (1903 or later) and 11, x86-64: download janas-windows-x86_64.zip , unpack it, and in a terminal in its janas folder run .\\janas-chat . On the same laptop under Windows 11 (12 October 2026) Janas-LLM wrote as fast as on Linux (Qwen3-4B 25.6 tok/s, Qwen3-30B-A3B 34.2) and read a prompt as fast with the mixture (Qwen3-30B-A3B 132 tok/s) and 1.8 times as fast with the dense model (Qwen3-4B 346 tok/s against 193), whose whole blocks go to the GPU, through Intel's own Windows driver there. The models come already converted from Hugging Face ; building from the sources: Getting started . ▄███████████▄ ▄███████████████▄ ███ ▄ █████ ▄ ███ ▄ J A N A S\n███▄▄▄█████▄▄▄████ ▀█████▄▀▀▀▄█████▀ ▀ a family of tools for artificial intelligence, in C █████████████ █ █ █ █ █ █ █ █ ▀ ▀ ▀ ▀ ▀ ▀ ▀ ▀ Janas is a family of tools for artificial intelligence, written in C with no dependencies beyond the C library. Its first component, Janas-LLM , runs large mixture-of-experts language models on ordinary computers, with or without a GPU: the weights stay on disk, the experts each token needs are streamed from an NVMe SSD, and the ones that keep coming back stay in memory. An 80-billion parameter model runs, and answers, on a laptop with 32 GB of RAM. Designed and written by Maurizio \"camauri\" Cammalleri . ⚠️ Read this first This is an experiment, not a product. Stage Early development. The public API and the command line change without notice , and have changed several times a week. The models' files are the exception: the .jns files published on Hugging Face (format version 2) will be read by every later version of Janas-LLM. Stability Not verified. The engine is deliberately hard on the machine: it fills the free memory with its expert cache and reads the disk at full speed with O_DIRECT . On a machine with less headroom than it reckons, the desktop can be pushed into swap and become slow or unresponsive. Using a GPU has, once, caused a driver reset that took the desktop with it. Data It writes only in ~/.cache/janas (what it learns about your machine, and the system messages it has read, so as not to read them again) and where you tell it to put a converted model. It does not touch the model files it reads. Hardware Developed and run on one machine (below). On anything else it is untested: it may be slower, it may refuse the model, it may misbehave. If something goes wrong, Ctrl-C stops a reply and Ctrl-D leaves the chat; --cache <GiB> puts a hard limit on the memory it takes, and JANAS_GPU=0 keeps it off the GPU entirely. The machine it grew on Everything in this repository was written and measured on: Linux Debian 13 (trixie), x86-64, kernel 6.12.107; GPU driver Mesa 26.1.6 (Vulkan); built with GCC 14.2 Intel Core Ultra 9 185H (6 performance cores, 8 efficiency, 2 low-power; AVX2, FMA, F16C, AVX-VNNI; integrated Arc GPU) 32 GB of DDR5 RAM 1 TB NVMe SSD (about 5.7 GB/s reading) The Windows build was run on the same laptop under Windows 11 (build 26300), with Intel's own graphics driver: its tests pass there, and how fast it was is under Or on Windows , above. Everything the engine does is chosen from what it measures, so another machine will make other choices — that part is meant to travel. What has never been tried is the rest: other CPUs (especially without AVX-VNNI, or AMD), discrete GPUs, slower disks, more or less memory. If you run it somewhere else, the report from janas-bench is the single most useful thing you can send back (see Helping it run on more hardware ). What works now What Janas-LLM runs today, model by model and feature by feature: docs/features.md . On the machine above, with nothing else running, janas-bench reports this (measured on 10 October 2026, with the fast prompt the engine uses by default since that day): Model reading a prompt writing a reply with drafts, in a chat Qwen3.5-2B (dense, 1.3 GB) 395 tok/s 50 tok/s 67 tok/s Qwen3-4B (dense, 2.5 GB) 220 tok/s 28 tok/s see --draft below Qwen3.5-9B (dense, 5.7 GB) 103 tok/s 14 tok/s 24 tok/s Qwen3-30B-A3B (18.6 GB) 133 tok/s 34 tok/s — Qwen3.6-35B-A3B (22.3 GB) 86 tok/s 25 tok/s 34 tok/s Qwen3-Next-80B-A3B (48.4 GB) 64 tok/s 22 tok/s 37 tok/s Gemma-4-E2B-it (3.1 GB) 211 tok/s 38 tok/s 52 tok/s Gemma-4-E4B-it (5.0 GB) 133 tok/s 20 tok/s 32 tok/s Gemma-4-12B-it (dense, 7.1 GB) 71 tok/s 10 tok/s 14 tok/s Gemma-4-26B-A4B-it (18.3 GB) 90 tok/s 18 tok/s 26 tok/s Every figure is the mean of three rounds , not a best round, of the configuration the engine itself chose for each kind of pass - the one a chat runs: a prompt of 256 tokens, then 64 written. Here the integrated GPU reads every prompt (the fast prompt, below), and the threads the engine settled on were the performance cores' 12 for a prompt and for a single token on nearly every model, all the usable cores (performance and efficiency, not the low-power ones) for a few tokens at once. On another machine the engine may settle on other threads: the first passes of each kind try every core, one thread per performance core and the performance cores' threads, keep the fastest, and later try the others now and then, so that a machine that warms up can change the verdict (on an i9-14900HX every thread replied at less than half the speed of the performance cores' 16).\n\n(211 points, 84 comments on Hacker News)",
+      "published_date": "2026-10-13",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 211,
+        "num_comments": 84,
+        "hn_url": "https://news.ycombinator.com/item?id=50063717",
+        "object_id": "50063717"
+      }
+    },
+    "rule_score": 20.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: mixture of experts",
+      "⬆️ HN 熱門: 211 points"
+    ],
+    "llm_score": 71,
+    "llm_reason": "MoE專家SSD串流推理，提供實測對比llama.cpp的具體效能數據，可直接複現",
+    "novelty": 12,
+    "impact": 11,
+    "trending": 15,
+    "practicality": 17,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "AI models can provably hide arbitrary capabilities",
+      "url": "https://arxiv.org/abs/2610.13928",
+      "authors": [
+        "sbulaev"
+      ],
+      "abstract": "Computer Science > Machine Learning [Submitted on 9 Oct 2026] Title: AI Models Can Provably Hide Arbitrary Capabilities Authors: Andis Draguns , Sumeet Ramesh Motwani , Raymond Douglas , Christian Schroeder de Witt View a PDF of the paper titled AI Models Can Provably Hide Arbitrary Capabilities, by Andis Draguns and 3 other authors View PDF HTML (experimental) Abstract: Capability evaluations aim to surface dangerous model behaviors before deployment, but their reliability depends on the assumption that hidden capabilities can be elicited. We show this assumption does not hold under adversarial conditions by constructing backdoor attacks that embed encrypted neural networks within host model weights, decrypting and executing them only upon receiving a secret trigger. Using digital lockers, these hidden circuits remain provably hard to elicit and interpret under cryptographic assumptions, even given full access to model weights, extending prior work from hiding fixed strings to arbitrary computations. We implement our proof of concept constructions in PyTorch and evaluate elicitation through fine-tuning, weight noising, gradient-based trigger search, and latent adversarial training on a small chemical reaction prediction task - a proxy for CBRN-relevant capabilities. Our results demonstrate resistance to these methods and, together with our cryptographic guarantees, reveal a limit of elicitation-based capability audits. We release our models to support the improvement of defenses. Comments: Subjects: Machine Learning (cs.LG) ; Cryptography and Security (cs.CR) Cite as: arXiv:2610.13928 [cs.LG] (or arXiv:2610.13928v1 [cs.LG] for this version) https://doi.org/10.48550/arXiv.2610.13928 Focus to learn more arXiv-issued DOI via DataCite (pending registration) Submission history From: Andis Draguns [ view email ] [v1] Fri, 9 Oct 2026 17:55:06 UTC (878 KB) Full-text links: Access Paper: View a PDF of the paper titled AI Models Can Provably Hide Arbitrary Capabilities, by Andis Draguns and 3 other authors View PDF HTML (experimental) TeX Source view license Additional Features Audio Summary Current browse context: cs.LG < prev | next > new | recent | 2026-10 Change to browse by: cs cs.CR References & Citations NASA ADS Google Scholar Semantic Scholar export BibTeX citation Loading... BibTeX formatted citation × loading... Data provided by: Bookmark Bibliographic Tools Bibliographic and Citation Tools Bibliographic Explorer Toggle Bibliographic Explorer ( What is the Explorer? ) Connected Papers Toggle Connected Papers ( What is Connected Papers? ) Litmaps Toggle Litmaps ( What is Litmaps? ) scite.ai Toggle scite Smart Citations ( What are Smart Citations? ) Code, Data, Media Code, Data and Media Associated with this Article alphaXiv Toggle alphaXiv ( What is alphaXiv? ) Links to Code Toggle CatalyzeX Code Finder for Papers ( What is CatalyzeX? ) DagsHub Toggle DagsHub ( What is DagsHub? ) GotitPub Toggle Gotit.pub ( What is GotitPub? ) Huggingface Toggle Hugging Face ( What is Huggingface? ) ScienceCast Toggle ScienceCast ( What is ScienceCast? ) Demos Demos Replicate Toggle Replicate ( What is Replicate? ) Spaces Toggle Hugging Face Spaces ( What is Spaces? ) Spaces Toggle TXYZ.AI ( What is TXYZ.AI? ) Related Papers Recommenders and Search Tools Link to Influence Flower Influence Flower ( What are Influence Flowers? ) Core recommender toggle CORE Recommender ( What is CORE? ) IArxiv recommender toggle IArxiv Recommender ( What is IArxiv? ) Author Venue Institution Topic About arXivLabs arXivLabs: experimental projects with community collaborators arXivLabs is a framework that allows collaborators to develop and share new arXiv features directly on our website. Both individuals and organizations that work with arXivLabs have embraced and accepted our values of openness, community, excellence, and user data privacy. arXiv is committed to these values and only works with partners that adhere to them. Have an idea for a project that will add value for arXiv's community? Learn more about arXivLabs . Which authors of this paper are endorsers? | Disable MathJax ( What is MathJax? )\n\n(270 points, 136 comments on Hacker News)",
+      "published_date": "2026-10-13",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 270,
+        "num_comments": 136,
+        "hn_url": "https://news.ycombinator.com/item?id=50065692",
+        "object_id": "50065692"
+      }
+    },
+    "rule_score": 20.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: fine-tuning",
+      "⬆️ HN 熱門: 270 points"
+    ],
+    "llm_score": 70,
+    "llm_reason": "以密碼學方式證明可在模型權重中隱藏任意能力，對齊審查方法論的重大挑戰",
+    "novelty": 16,
+    "impact": 14,
+    "trending": 13,
+    "practicality": 10,
+    "blog_worthiness": 17
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "Natural language security queries at Orca Security using Amazon Bedrock",
+      "url": "https://aws.amazon.com/blogs/machine-learning/natural-language-security-queries-at-orca-security-using-amazon-bedrock/",
+      "authors": [
+        "Deniz Yilmaz"
+      ],
+      "abstract": "Security analysts need fast answers about their cloud infrastructure without deep familiarity with domain-specific query languages. Orca Security ’s tool covers over 900 cloud models (the resource types Sonar tracks, such as an Amazon Elastic Compute Cloud (Amazon EC2) instance or an Amazon Simple Storage Service (Amazon S3) bucket). Querying that data required precise model names, nested relationship navigation, and selection from 18 operators (comparison functions like equals or contains used to filter results). To solve this, Orca Security partnered with AWS to build Discovery AI, a natural language query agent on Amazon Bedrock . Orca provides context-aware security for cloud, code, and AI, and Sonar is its domain-specific query system where users search, filter, and explore across the entire data graph. In this post, we share the architecture and results of Discovery AI, which converts a natural language question into a Sonar query. As a result, Orca reduced query costs by 90 percent, input tokens by 93 percent, and latency by 75 percent compared to the initial baseline. Orca Security’s Sonar query system supports 900+ cloud infrastructure and application models with complex relationships between them. To query this data, users construct JSON objects that specify exact model names, select from 18 operators, and navigate parent-child hierarchies across cloud providers. Doing this well requires deep familiarity with the Sonar schema. To build this capability, the Orca team set out to build a natural language interface that can generate valid Sonar queries from plain text. Their initial proof of concept loaded the full Sonar schema into a single prompt on the largest available model. This included over 900 model definitions, every relationship type, and a generous set of example queries. The output quality was strong (design partners and internal users responded positively) but three significant drawbacks emerged at production scale. Token consumption was inefficient, at roughly 2 million input tokens per workload, which drove up cost. Latency was high, with end-to-end response times of around 60 seconds per workload. Accuracy on complex, multi-model queries was limited because nested relationships and multi-condition queries often required additional refinement. The Orca team validated that the concept worked. The next challenge was making it cost-effective, fast, and accurate enough for production. To address this, the Orca team designed and deployed a solution that handles thousands of queries per day at 15-second response times using Amazon Bedrock. Orca designed Discovery AI as a hybrid solution on Amazon Bedrock that combines Retrieval Augmented Generation (RAG) with schema-aware query construction. The system converts natural language questions into valid Discovery filters through a multi-stage pipeline, with each stage matched to the most appropriate Amazon Bedrock model. Orca chose Amazon Bedrock because it provides multi-model access through a single API, letting the team allocate different foundation models to each pipeline stage without managing separate integrations. Amazon Bedrock also inherits AWS governance controls through AWS Identity and Access Management (IAM), virtual private cloud (VPC) endpoints, and AWS CloudTrail, meeting Orca’s security requirements. The model-agnostic architecture meant the team could swap in newer model versions as they became available without rearchitecting the pipeline. The following diagram illustrates the nine-stage pipeline architecture. Figure 1: Multi-stage Discovery AI pipeline architecture showing the flow from natural language input to validated Discovery filter queries using foundation models on Amazon Bedrock The Discovery AI pipeline converts a natural language request into a validated Discovery filter through nine steps. Example retrieval emerged as the single biggest accuracy lever in the pipeline. Strong examples teach the Generator how to translate questions into Sonar queries more efficiently than schema alone, so the Orca team benchmarked several retrieval strategies on Amazon Bedrock. Each strategy traded off relevance, diversity, or speed in a different way, and comparing them directly showed which combination worked best. Pure top-K semantic search on Amazon Titan embeddings performed quickly, but it tended to return near-duplicate examples that starved the Generator of diversity. Maximal Marginal Relevance (MMR) improved diversity, but it traded off relevance when the top candidate was actually the right answer. Retrieving a larger candidate set and then reranking it pulled in a broader pool and used a reranker to select the most relevant subset, which pointed toward the winning approach. The winner was top-20 nearest-neighbor retrieval using Amazon Titan embeddings. Orca then reranked these results with Cohere Rerank 3.5 down to the top five. This approach gives the Generator a small, diverse, highly relevant set of examples without forcing a trade-off between coverage and precision at retrieval time. A core constraint shaped the architecture. It wasn’t feasible to include 900+ Sonar model schemas into every prompt. Even with long-context models, doing so degrades both cost and accuracy. The Model Selector resolves this. Running on Anthropic Claude Haiku 4.5, it works against compact, semantically rich representations of each model (name, purpose, key fields, and key relationships). Given the user’s question, it returns only the models the Generator actually needs. The Generator then receives full schema detail only for those selected models plus the relationships that connect them. To iterate confidently, the Orca team built a continuous evaluation harness early in the project. The harness combines a curated dataset, an automated scoring layer, and a slice-based measurement approach so the team can trust every change before it ships. Together these elements turn evaluation into a routine step rather than an afterthought. The curated evaluation dataset spans the question types, model families, and complexity tiers seen in production, so it reflects real usage. An LLM-as-judge scoring layer grades generated queries on correctness, completeness, and semantic equivalence to a reference query, which gives the team a consistent quality signal. The measurement methodology then breaks deltas down by slice, allowing the team to identify exactly where regressions occur and what to correct. Every change to a prompt, a model, a retrieval parameter, or an example flows through the harness before it ships to production. Sustaining accuracy as customer environments evolve and new question patterns emerge required more than a strong initial deployment. The Orca team built an internal labeling tool for product managers, support engineers, and security researchers. With the tool, they can flag queries, correct outputs, and push corrections into the example bank in one action. Furthermore, the system automatically collects production queries with low-confidence matching examples and routes them to the appropriate domain expert for daily labeling. The next pipeline run retrieves the new example through Cohere Rerank 3.5, and accuracy on that class of question improves the same moment, with no deployment. “The labeling UI is the single most important investment we made for long-term quality. It turns Discovery AI from a static deployment into a living system, with our domain experts continuously improving it inside their normal workflow.” — Or Gabay, Director of AI, Orca Security Combined with end-to-end pipeline observability and shared dashboards spanning product, engineering, and customer-facing teams, this feedback loop is what keeps Discovery AI improving after initial launch. After deploying Discovery AI to production, the new solution outperformed the initial baseline across cost, latency, and accuracy.",
+      "published_date": "2026-10-13",
+      "tags": [
+        "Amazon Bedrock",
+        "Customer Solutions"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, long context, rag, retrieval augmented",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 55,
+    "llm_reason": "NL轉查詢agent附具體成本與延遲量化成果，案例扎實",
+    "novelty": 8,
+    "impact": 9,
+    "trending": 9,
+    "practicality": 14,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Z.ai GLM-Legal Beats Claude Fable 5 and Kimi K3 on Harvey LAB",
+      "url": "https://www.marktechpost.com/2026/10/13/zai-glm-legal-harvey-lab-legal-ai-model/",
+      "authors": [
+        "Michal Sutter"
+      ],
+      "abstract": "Z.ai just released GLM-Legal . GLM-Legal is a legal AI model from Z.ai, built on GLM-5.3-Flash and trained for agentic legal work. It targets contract review, evidence analysis and compliance research. The key result is a 19.2% all-pass rate on Harvey’s Legal Agent Benchmark (LAB) . That is nearly 3x its base model’s 6.7%. For developers, the catch is access: the API is application-only for now. GLM-Legal is a domain-specialized version of GLM-5.3-Flash for law firms, in-house counsel and compliance teams. The base is Z.ai’s first natively multimodal GLM-5 model . It has 320B total parameters with 18B active. It mixes sparse and linear attention to cut long-context serving cost. It reads text, images, video and files, and outputs text. The Z.ai team also describes the agent harness co-evolving with the model during post-training. Edge cases in training exposed harness bottlenecks. Harness fixes then exposed the model to more realistic constraints. Harvey LAB is an open-source benchmark of 1,250 tasks across 24 practice areas . Over 75,000 expert-written rubric criteria grade the work. A task passes only if every criterion passes. Harvey calls this all-pass grading. Vals AI runs the held-out set with 2 LLM judges and internet disabled . Agents get file tools plus docx , pptx and xlsx skills. On that leaderboard, GLM-Legal scores 19.17% and ranks #7 of 79. Its base, GLM-5.3-Flash, scores 6.67%. The 12.5-point lift is the core claim, and an independent evaluator reproduced it. Z.ai’s launch chart shows GLM-Legal ahead of Kimi K3 (12.92%), Claude Fable 5 (11.25%) and GPT-6 Astra (5.42%). Those figures match Vals AI. The chart omits 6 models ranked higher, led by Muse Spark 1.2 at 25.42%. GLM-Legal also passes 92.5% of individual criteria. Top models sit near 90% to 95% on that measure. Roughly. Z.ai claims parity on LegalBench and the Chinese-focused PLawBench without publishing numbers. Vals AI scores GLM-Legal at 86.23% on LegalBench . Claude Fable 5 leads at 88.56% . Kimi K3 scores 86.21% . All benchmark scores, costs and durations are from Vals AI’s runs as of October 12, 2026. Vals ran both GLM models at $0.075 / $0.25 per 1M tokens. Law firms, legal-tech companies and in-house teams can apply for API access . Z.ai has published no price. No GLM-Legal repository exists on Hugging Face as of October 13, 2026. Z.ai says GLM-Legal will come to AutoClaw , its desktop agent app, but gave no date. The base model is available today at $0.15 / $0.50 per 1M tokens . Teams can prototype pipelines on it, then swap the model ID later. Check out the Z.ai tech blog , the Vals AI Harvey LAB leaderboard and the GLM-5.3-Flash model card . Apply for API access here .. All credit goes to the researcher of this project. Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. The post Z.ai GLM-Legal Beats Claude Fable 5 and Kimi K3 on Harvey LAB appeared first on MarkTechPost .",
+      "published_date": "2026-10-13",
+      "tags": [
+        "Agentic AI",
+        "AI Infrastructure",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Editors Pick",
+        "For Devs",
+        "Language Model",
+        "Large Language Model",
+        "Machine Learning",
+        "New Releases",
+        "Software Engineering",
+        "Staff",
+        "Tech News",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, post-training, multimodal, long context",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 54,
+    "llm_reason": "法律領域專精模型附具體benchmark提升，但API限制申請可用性",
+    "novelty": 10,
+    "impact": 10,
+    "trending": 10,
+    "practicality": 10,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "blog",
+      "source_name": "Latent Space",
+      "title": "[AINews] Meta Muse Wonder & Wonder Full: MSL’s Claude 5.5-tier Frontier Model",
+      "url": "https://www.latent.space/p/ainews-meta-muse-wonder-and-wonder",
+      "authors": [
+        "Latent Space"
+      ],
+      "abstract": "We have been coveringe MSL’s 14 month journey to becoming a frontier lab , but only today did the final ball drop: Meta’s Muse Wonder to match Spark and Glimmer , the way that OpenAI has Sol/Terra/Luna and Anthropic has Opus/Sonnet/Haiku. Interestingly, while Muse doesn’t claim a specific size, Muse Wonder Full does beat Fable and Astra on some benchmarks, and with various degrees of posttraining it is a little unclear if Wonder is more of a Fable/Astra class model or not. We have included a full breakdown of launch details below. AI News for 10/10/2026-10/12/2026. We checked 12 subreddits, 544 Twitters and no further Discords. AINews’ website lets you search all past issues. As a reminder, AINews is now a section of Latent Space . You can opt in/out of email frequencies! Top Story: Meta launches Muse Wonder and Muse Wonder Full Meta Superintelligence Labs (MSL) shipped Muse Wonder (codename “Watermelon” 🍉), its second-generation model family. Third-party evals put it near the frontier, roughly 14 months after the lab was founded. The run-up. Hours before launch, insiders posted watermelon teasers: @rpnickson (”It is a BIG watermelon…”), @alexandr_wang , @finkd (”Muse ordered me 🍉”) and @EdwardSun0909 . @kimmonismus relayed leaked pricing from @synthwavedd: $4/M input, $20/M output, a 1M context window, and the max-reasoning “Wonder Full” tier exclusive to MuseCode Power/Maximum Usage plans. Two models. @finkd announced the family. He explained that Muse Spark was MSL’s first family and Wonder is “a much larger and more advanced class of models that brings us to the frontier.” The two releases are Muse Wonder (fast frontier) and Muse Wonder Full (the full model). Availability is split ( @AIatMeta , Newsroom ): Wonder is available via the Meta Model API and Muse Code. Full is available only to Muse Code subscribers. Wonder will power the Muse personal-agent product, subscribers first ( @finkd ). Muse Code installs with curl dev.meta.ai/install.sh | bash ( @alexandr_wang ). Positioning. Meta pitches the models as SOTA for “personal and professional agentic work.” @alexandr_wang named three headline features: Active Memory: memory across days, weeks and months. Active Focus: working through blockers to finish tasks. Domain expertise: SOTA in finance and legal, “strong in health.” Training story. Wang says Meta continued scaling both pre-training and RL since Muse Spark shipped in April ( post ; research blog ). @AIatMeta framed it as going “from rebuilding our foundation to pushing the frontier in 14 months.” Safety claims. @AIatMeta says the family was trained for robustness to adversarial instructions and for careful handling of private information. No detailed system card was referenced. Launch-day usage-limit bug. Wonder and Wonder Full were draining Muse Code quotas abnormally fast ( @alexandr_wang , follow-up ). It was fixed the same day, with a quota reset for all users ( fix ; @mjdouglas ). Wang noted “there’s definitely still issues we’re trying to iron out” ( post ). Media. Zuckerberg and Wang went on Stripe’s Cheeky Pint ( @collision ). Chapters include “Betting $100B,” agentic commerce, OpenRouter, “Why AI won’t be winner-take-all,” and MSL org structure. Artificial Analysis ( @ArtificialAnlys ) — the most detailed third-party read: Intelligence Index v4.3: Wonder Full (max) scores 56 and Wonder (max) scores 52, up from Muse Spark 1.3 (max) at 48. The gap between Spark 1.3 and Wonder releases was only 6 weeks. Opus 5.5 leads at 58 ( @TheRundownAI ). Wonder Full improved on all ten index evals. The largest gains were agentic: GDPval-AA v2.1: 1681 → 1857 Elo Where Wonder Full ranks: top three on 6 of 10 evals. #1 on GDP.pdf (33%) and on CritPt (33%) #3 on AA-Briefcase, AutomationBench-AA (71%) and SciCode (63%) Wonder (non-Full) gains: Terminal-Bench 33% → 52%; AutomationBench 58% → 68%. Output: both models use about 54k, down ~10% from Spark 1.3’s 60k. For comparison: Gemini 4 Argon 62k, Fable 5.1 78k, GPT-6.1 Sol 38k, GPT-6 Astra 27k. Input: Full uses 6.44M versus Wonder’s 7.69M. Cost per index task: Wonder costs $4.52, driven by high input usage. The table also lists: ModelCost per taskFable 5.1$7.63Opus 5.5$5.98Sonnet 5.5$5.46Astra$3.26Argon$1.99Sol$0.72Spark 1.3$1.60 Wonder Full has no published token price, so its cost can’t be computed. Coding Agents Index: Wonder Full in Muse Code scores 68, tying Claude Code + Sonnet 5.5 (68) and ahead of Opus 5.5 (66). Wonder scores 63; Spark 1.3 scored 54. Input: text, image, video and audio; output: text only Pricing: $4 input / $0.20 cached input / $20 output per M tokens Wonder Full (Max): #5 on the Vals Index, +6.4 points over its predecessor and ahead of every OpenAI model. ProofBench (private): 94/100, versus 58 for Spark 1.3. The top models score 99–100 ( post ). Terminal-Bench 4: more than doubled, tying Fable 5.1 for #4 ( post ). It used about 30% fewer output tokens on Terminal-Bench, 40% fewer on ProofBench, and half the steps on Vibe Code Bench for the same score ( post ). Wonder: #10, up 7.9 points ( post ). About 37 min per task versus 57 for Full. Terminal-Bench 4 +38.9 points with about 20% fewer tokens. Meta-reported headline numbers (via @kimmonismus , @Yuchenj_UW , @TheRundownAI ): BenchmarkWonder FullComparisonSWE-Marathon57.5%Opus 5.5 46.3%, GPT-6 Astra 42.5%DeepSWE v1.179.0%Opus 74.2%, Astra 74.1%Harvey LAB13.1Astra 8.6MemoryBench85.5Opus 81.5 @cline confirms Wonder leads DeepSWE. @OfirPress flagged strong ProgramBench results. @iScienceLuvr notes HealthBench Pro is on par with Fable 5.1. @AravSrinivas says it compares favorably to Fable 5.1 on Perplexity’s WANDR evals. Arena added it to Agent Arena and Code Arena; scores are pending ( @arena ). @petergostev ran cost-annotated one-shot comparisons. Independent partner notes from @RayanKrishnan : Token efficiency is the biggest unlock. Zero refusals on their cyber benchmarks, where Wonder outscored Full. MSL has made “serious progress on alignment.” The models are strong executors but weaker at scientific-discovery intuition; their RSI Index results are pending. META stock rose 3% on the day. Performance on non-post-trained tasks versus post-trained tasks, meant as evidence against benchmaxxing and as “big model smell.” @giffmana singled this out approvingly; @scaling01 confirmed the ID-vs-OOD plot is Meta’s. Out-of-distribution gains over Spark 1.3, highlighted by @ren_hongyu and @jack_w_rae . @shuchaobi gave the most substantive insider account: Optimization targets “personal empowerment,” not job automation. Major work on very long-horizon instruction following. Explicit training against “laziness,” so the model is persistent before giving up. Defining and grading behaviors, with alignment investment to counter reward hacking under high optimization pressure. Claims the model one-shots most IMO problems and some open research problems with scaffolding. He separately describes using it for immigration, house-buying and estate planning ( post ). @alexandr_wang says research “starts with evals”: MSL built an internal Personal Superintelligence Index (PSI) rather than chasing external benchmarks, and claims “big model smell (which we quantified!).” @_jasonwei : “scaling prevails.” Much of Meta pivoted to support the model, including business development teams hiring human experts for data review. He also calls it “great for multimodal.” @hwchung27 — “something magical about big models.” @EdwardSun0909 — internal naming 🍉 / 🍉 Ultra; agent team at TBD Labs. @benparr — Active Memory reduces re-explaining. @yashvarpatel — demo of computer-use agents (CUA) as a verifier: a generation agent paired with a CUA verification sub-agent on the same model, iterating as test-time scaling. @Answeror — Muse Code is built with Wonder Full. Further staff posts: @shengjia_zhao , @ren_hongyu , @ananyaku , @Han_Fang_ . Amplification.",
+      "published_date": "2026-10-13",
+      "tags": [
+        "blog"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "blog_name": "Latent Space",
+        "blog_url": "https://www.latent.space/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, computer use, reasoning, alignment",
+      "⚖️ 來源權重: blog +15"
+    ],
+    "llm_score": 52,
+    "llm_reason": "frontier模型發布新聞彙整，八卦敘事多於技術細節",
+    "novelty": 9,
+    "impact": 13,
+    "trending": 17,
+    "practicality": 4,
+    "blog_worthiness": 9
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Apple ML",
+      "title": "Mix, Don't Tune: Bilingual Pre-Training Outperforms Hyperparameter Search in Data-Constrained Settings",
+      "url": "https://machinelearning.apple.com/research/mix-dont-tune",
+      "authors": [],
+      "abstract": "research area Speech and Natural Language Processing content type paper published October 2026 Mix, Don’t Tune: Bilingual Pre-Training Outperforms Hyperparameter Search in Data-Constrained Settings Authors Paul Jeha†**, Anastasiia Sedova, Louis Béthune, Skyler Seto, Jes Frellsen†‡, Pierre Ablin‡, Natalie Schluter‡ View publication Copy Bibtex For most languages of the world, language model pre-training operates in a data-constrained regime where models must repeat their training data many times, degrading generalization. Two remedies exist: aggressive hyperparameter tuning such as high weight decay, and mixing in data from a high-resource auxiliary language to directly aid the low-resource target. While hyperparameter tuning regularizes the model by shrinking weights to restrict network capacity, auxiliary data mixing uses a tunable mixing ratio to expand the training distribution and diversify the training signal with new knowledge. Both offer a principled way to improve training in a data-constrained domain. We compare these levers systematically across four model scales from 150M to 1.43B parameters, using Arabic as the low-resource target and English as the auxiliary, over approximately 1000 pre-training runs. Three findings emerge. First, mixing yields larger improvements than hyperparameter tuning on both validation loss and downstream task accuracy, and the gap grows with model size. Second, we quantify how much mixing helps: it boosts performance by an amount equivalent to 2–3× the unique target data on validation loss and 2–13× on downstream task accuracy, with the gain scaling steeply with model size. Third, this divergence reveals that target-language validation loss systematically underestimates mixing’s value. Mixing regularizes by diversifying the training signal and contributes knowledge the repeated target corpus cannot supply; validation loss captures only the first effect. Our practical recommendations are: mix in a high-resource language, prioritize the mixing ratio over hyperparameter tuning, and transfer hyperparameters from a small proxy model via μP. † DTU ‡ Equal senior authorship ** Work done while at Apple Related readings and updates. Completed Hyperparameter Transfer across Modules, Width, Depth, Batch and Duration February 13, 2026 research area Methods and Algorithms conference ICLR Hyperparameter tuning can dramatically impact training stability and final performance of large-scale models. Recent works on neural network parameterisations, such as μP, have enabled transfer of optimal global hyperparameters across model sizes. These works propose an empirical practice of search for optimal global base hyperparameters at a small model size, and transfer to a large size. We extend these works in two key ways. To handle scaling… Read more Scaling Laws for Forgetting During Finetuning with Pretraining Data Injection June 20, 2025 research area Methods and Algorithms conference ICML A widespread strategy for obtaining a language model that performs well in a target domain is to fine-tune it by training it to do unsupervised next-token prediction on data from that domain.\nFine-tuning presents two challenges: i) if the amount of target data is limited, as is the case in most practical applications, the model will quickly overfit, and ii) the model will drift away from the original model and forget the pre-training… Read more Discover opportunities in Machine Learning. Our research in machine learning breaks new ground every day. Work with us",
+      "published_date": "2026-10-13",
+      "tags": [],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "Apple ML",
+        "feed_url": "https://machinelearning.apple.com/rss.xml"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: fine-tuning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 57,
+    "llm_reason": "近千次預訓練實驗系統比較資料混合與超參數調優，證據紮實",
+    "novelty": 12,
+    "impact": 11,
+    "trending": 8,
+    "practicality": 11,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "How ShipStation Global built an AI IT help desk on Amazon Bedrock AgentCore",
+      "url": "https://aws.amazon.com/blogs/machine-learning/how-shipstation-global-built-an-ai-it-help-desk-on-amazon-bedrock-agentcore/",
+      "authors": [
+        "Kenneth Salmon"
+      ],
+      "abstract": "This post is co-written with Kenneth Salmon, Edward Boswell, Jack Armstrong, Robert Bahn, and Nick Ciubotariu from ShipStation Global. Answering the same IT questions and clearing routine tickets drains time that IT teams could spend elsewhere. To reclaim it, the ShipStation Global Engineering team built Deckhand , an AI-powered IT help desk agent for Slack, on Amazon Bedrock AgentCore . ShipStation Global is the leading intelligent shipping and logistics platform for small and mid-sized shippers, and it operates on a simple belief: the more efficient its teams are, the better it delivers for customers. Deckhand puts that belief to work. It answers routine IT and company questions from a curated knowledge base, reads error-message screenshots, and creates and updates Jira Service Management tickets. In this post, we discuss how ShipStation architected Deckhand, which resulted in resolving 97.5 percent of incoming channel queries while earning a 96 percent positive feedback rating by employees (Figure 1). Figure 1: 3-month channel coverage and positive feedback The problem Deckhand solves is the one every IT team will recognize: the same questions are routinely asked, error messages are posted after business hours, and information needs to be gathered from different teams. At ShipStation Global, those conversations lived in a busy help desk Slack channel, where employees asked, and IT answered, one thread at a time. The answers usually already existed in a Confluence how-to article, on a company intranet page, or in a thread from eight months earlier. Finding them was the hard part. The channel data made the scale concrete. In the 12 months before launch: “We created Deckhand because getting help should be as simple as asking a question in Slack, not deciphering a ticket form or sending an email into the void. We believe that tickets are an indication of operational friction not productivity. Deckhand resolves common questions on the spot and, when it can’t, converts the conversation into a fully contextualized ticket with one click, improving the employee experience and freeing our team from endlessly repeating the phrase: ‘Please file a ticket.’” — Chris Collins, Senior Director IT at ShipStation Global Deckhand works in Slack like any teammate—joining channels, reading the conversation, and drawing context from Slack profiles to answer IT questions in place. We run it on Amazon Bedrock AgentCore, a platform to build, connect, and optimize agents at scale, with any framework or model. AgentCore runtime, a capability of Amazon Bedrock AgentCore, hosts the agent in isolated sessions, so we run no servers or containers. The solution has four main components, shown in Figure 2: Figure 2: Architecture diagram showing Slack events entering the Slack service and Amazon Bedrock AgentCore runtime, with separate paths to an Amazon Bedrock knowledge base, AgentCore Gateway-backed Lambda tools, Jira Service Management, and DynamoDB feedback. When an employee posts in a channel where Deckhand is a member, the Slack service assembles the full thread history and user context. It then invokes the agent through the AgentCore runtime API. The agent searches the knowledge base and calls tools as needed. When it finds an answer, it returns a final response (Figure 3). When it doesn’t, it asks a clarifying question or offers to create a ticket (Figure 4). Figure 3: Deckhand responds with self-service steps Figure 4: Deckhand offers to create a ticket This section walks through how Deckhand is implemented, from prerequisites to a working deployment. To implement this pattern, you need the following: The agent is intentionally lightweight. Using the open source Strands Agents SDK , an agent consists of a model, a set of tools, and a system prompt. The SDK manages the reasoning loop, allowing the model to select tools, process results, and iterate until it produces an answer. Deckhand’s agent service is implemented in a few lines of Python. The model ID is set through an environment variable, which allows switching models without modifying application code. Tools are integrated with the agent in two ways. Amazon Bedrock Knowledge Bases retrieval is a native Strands tool that supports knowledge base search with a single import. Other functions, including classification, ticket management, user resolution, and image analysis, are handled by a Lambda function registered on AgentCore Gateway. The Gateway exposes these as MCP tools, and the Lambda routes each invocation by tool name. This separation allows tool logic to be updated independently, and the agent can access new tools from the Gateway without requiring a rebuild. AgentCore runtime hosts the agent as a container, avoiding the need for server or session management. The Slack service calls the agent synchronously for each message, providing the thread transcript and user context, and posts the final response. Since context, including the employee’s profile, is included with every request, the agent can complete ticket details automatically. Deckhand answers from a single Amazon Bedrock knowledge base with core S3-backed data sources: Each document includes metadata such as title, source URL, content type, and event dates. This allows the agent to filter content, for example, when users ask about upcoming events or weekly lunch menus in the Austin office. The most valuable data source is the archive of resolved support threads. Before Deckhand existed, Slack was where problems got solved: years of employees describing issues and IT walking them through fixes. That history is an organic knowledge base, validated by the best possible reviewer: the person whose problem got fixed. It’s also noisy: a raw export mixes banter, automated alerts, and threads that never actually got resolved. Indexing an unverified fix or a garbled summary means the knowledge base surfaces an incorrect answer with the same confidence as a correct one, so extraction needs to be precise. The mining process follows a three-stage pipeline (Figure 5): Figure 5: Export classification and extraction workflow of the Slack conversation We chose RLM because it maintains the entire Slack history in a persistent sandbox variable space, allowing iterative reasoning over the export and consistent output structure. As a result, when an employee encounters a problem previously solved by a colleague, Deckhand provides the proven solution, often as actionable, numbered steps. An AI bot in a shared channel fails socially before it fails technically. Deckhand’s most refined logic decides when to stay quiet: Each answer includes feedback buttons. A thumbs-up is recorded directly, while a thumbs-down prompts a brief “what went wrong” field. Ratings are stored in DynamoDB with the original question and the bot’s response. Negative feedback is a valuable dataset used to improve the system prompt and agent behavior, and to update incorrect knowledge base information. Prompt rules enhance behavior but do not replace access controls. Enforcement is managed through code and infrastructure: Deckhand launched in April 2026. It started at about 30 messages a day and reached as many as 100 by early summer. In its first three months it handled 1,935 messages, started 1,221 agent conversations, and opened 409 Jira tickets. It replied to 97.5 percent of messages. A third of the questions came in after hours, when no one on the IT team was working, and Deckhand answered 94 percent of those. People who would have waited until the next morning got an answer that night. Feedback improved as the team worked on it. Positive ratings went from 82 percent in April to 96 percent in June, after they revised the system prompt and knowledge base to fix what people complained about. The clearest win was ticket deflection. An agent conversation is a question that would otherwise have become a Jira ticket. Of the 1,221 conversations, only 409 turned into tickets.",
+      "published_date": "2026-10-13",
+      "tags": [
+        "Advanced (300)",
+        "Amazon Bedrock AgentCore",
+        "Customer Solutions"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, mcp, reasoning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 40,
+    "llm_reason": "常見RAG客服bot模式，缺乏架構創新",
+    "novelty": 4,
+    "impact": 7,
+    "trending": 8,
+    "practicality": 12,
+    "blog_worthiness": 9
+  },
+  {
+    "item": {
+      "source": "newsapi",
+      "source_name": "Pypi.org",
+      "title": "agentx-harness added to PyPI",
+      "url": "https://pypi.org/project/agentx-harness/",
+      "authors": [
+        "sw-dl-dynamo@nvidia.com"
+      ],
+      "abstract": "SemiAnalysis AgentX inference benchmark harness, built on AIPerf",
+      "published_date": "2026-10-12",
+      "tags": [
+        "newsapi"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "newsapi_source": "Pypi.org",
+        "published_at": "2026-10-12T22:14:53Z"
+      }
+    },
+    "rule_score": 35.0,
+    "rule_reasons": [
+      "🏢 頂流機構: NVIDIA",
+      "⚖️ 來源權重: newsapi +15"
+    ],
+    "llm_score": 35,
+    "llm_reason": "僅為PyPI套件上架通知，技術資訊過於單薄",
+    "novelty": 5,
+    "impact": 6,
+    "trending": 6,
+    "practicality": 12,
+    "blog_worthiness": 6
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "The Verge AI",
+      "title": "Shopify opens its catalog up to more AI agents",
+      "url": "https://www.theverge.com/news/1010365/shopify-opens-its-catalog-up-to-more-ai-agents",
+      "authors": [
+        "Mia Sato"
+      ],
+      "abstract": "News AI Tech Shopify opens its catalog up to more AI agents Shopify previously announced a partnership with Meta’s Muse for AI-powered shopping and checkout.﻿ Shopify previously announced a partnership with Meta’s Muse for AI-powered shopping and checkout.﻿ by Mia Sato Oct 13, 2026, 7:42 PM UTC CANADA - 2025/07/20: In this photo illustration, the Shopify logo is seen displayed on a smartphone screen. (Photo Illustration by Thomas Fuller/SOPA Images/LightRocket via Getty Images) Mia Sato is features writer with five years of experience covering the companies that shape technology and the people who use their tools. More AI agents will soon be able to browse and purchase from Shopify listings, marking an expansion of the company’s agentic commerce ambitions. Shopify announced Tuesday it will let shoppers configure their AI agents to purchase products on their behalf, giving more agents access to over a billion listings in Shopify’s catalog. (The catalog consists of both items on and off Shopify storefronts.) In September, Shopify announced it was partnering with Meta to allow its Muse agent to browse and purchase items on a human’s behalf; now, shoppers can use any agent without a partnership integration. To set up the feature, customers connect an agent with their account on Shop, a Shopify-owned platform that consolidates orders, tracks packages, and recommends products. Like the Muse partnership, customers use the one-click Shop Pay feature to check out within the conversation with the agent. Orders placed through the agent are funneled back to the Shop app. Shopify is marketing the feature as a “personal shopper” that humans can give rules to, like setting budget guardrails or only displaying products with fast shipping. Buyers must approve each purchase. E-commerce has become one of the battlegrounds in the era of AI — it’s no coincidence that many demos of agentic tools end with a transaction, whether it’s buying clothing, booking a flight, or ordering takeout on a human’s behalf . The tech industry, including big commerce players like Google and Amazon , are investing in AI-driven shopping tools where the end goal is an “agent” purchasing things for a human user. It’s also the basis of an ongoing fight between Amazon and AI companies like Perplexity — and more recently, Meta’s Muse — over whether agents should be able to shop on a customer’s behalf. Follow topics and authors from this story to see more like this in your personalized homepage feed and to receive email updates. Mia Sato AI News Online Shopping Tech",
+      "published_date": "2026-10-13",
+      "tags": [
+        "AI",
+        "News",
+        "Online Shopping",
+        "Tech"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "The Verge AI",
+        "feed_url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 41,
+    "llm_reason": "電商平台開放agent存取，屬商業合作公告",
+    "novelty": 4,
+    "impact": 9,
+    "trending": 13,
+    "practicality": 7,
+    "blog_worthiness": 8
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "量子位",
+      "title": "退差價、約保養、訂球場、跟客服磨賠償，千問Go什麼都想管",
+      "url": "https://www.qbitai.com/2026/10/502849.html",
+      "authors": [
+        "克雷西"
+      ],
+      "abstract": "退差價、約保養、訂球場、跟客服磨賠償，千問Go什麼都想管 克雷西 2026-10-13 12:04:22 來源： 量子位 丟一句話進去，事兒就辦完了 克雷西 發自 凹非寺 量子位 | 公眾號 QbitAI 今天千問搞了個大事情。 過去這一陣，Meta發了Muse，OpenAI亮了Dots……全球最頭部的AI公司集中把同一張牌拍到了桌上。 這張牌叫Personal Agent，a.k.a.代表你去辦事的AI。 然後今天，千問直接把自己的答卷亮出來了：「千問Go！」 它能幹嘛呢？ 部分被幸運地灰度到的使用者分享了自己的體驗。 整體看下來，這麼說吧，像常規的機票酒店預訂對它來說只能算入門操作。 那些你自己都找不到的入口，它能翻出來；那些你壓根不知道存在的冷門功能，它會操作； 甚至需要的時候，它還能拿起鍵盤跟真人客服一輪一輪地磨。 反正就是全程你幾乎什麼都不用管，除非是登入賬號這類沒法代勞的操作。 丟一句話進去，該幹嘛幹嘛，回頭收到一條訊息，事兒就辦完了。 航班延誤補償，千問替你battle 第一個案例，關於坐飛機出行。 不過可不是一般的訂票值機，這對現在的Agent來說太基礎了。 我們坐飛機的時候，遇上各種bug延誤絕不是什麼罕見的事。 航班延誤並不少見，事後申請賠償卻往往要費一番功夫。 這個使用者展示的案例更特別： 她的反射弧超長，飛完很長時間之後才想起來自己之前的航班有過延誤。 甚至連延誤的是哪趟都已經忘了。 講真，遇到這種情況，很多人也就自認倒霉了，但千問Go偏偏全盤接過了這位「馬大哈」的委託，去代辦理賠了。 問題是，得先找到延誤的具體是哪趟航班，使用者只給千問Go提供了當時的購票平臺和起始地。 於是，千問Go問使用者要了賬號和驗證碼，登入了當時的購票平臺，開始搜尋蛛絲馬跡。 通過查閱訂單歷史，千問Go把目標縮小到了幾個航班上，但由於訂單頁面沒有直接展示延誤狀態，依然沒有最終確定是哪趟航班發生了延誤。 然後，千問Go選擇了一個i人遇到絕對會被勸退的選項——給客服打電話。 真的是太敬業了。 只可惜電話沒能打通。 說真的，如果我有這樣一個助理，能做到這份上，哪怕沒有結果，我也不好意思責備了。 但千問Go依然沒氣餒，既然電話打不通，那就去找App內的人工客服。 經過一番不懈努力，總算是在平臺人工客服的幫助下把延誤的班次「揪」了出來。 而且千問Go依然記得，使用者的要求是完成索賠，找到航班號離完成任務還差得遠，於是彙報完便馬不停蹄地進入了後續流程。 簡單說，依然是和真人客服對線。 一番周折之後的結果是，千問Go成功爭取到了70元……的代金券。 好傢伙，為了這70塊錢的醋，還得包一盤餃子，而且其中還有兩張國際機票券，難不成專門出趟國？ 所以對這個結果，使用者當然是不滿意。 好在千問Go也堅定地站在使用者這邊，繼續去和客服battle，最終在據理力爭之下，成功把這70元的補償談成了現金。 換作是真人，在被航班延誤搞得焦頭爛額的情景下，卡在任何一箇中間環節，都有可能考慮放棄。 但有了千問Go，我們就不會被隨便糊弄了。 還有一個異曲同工的場景，是電商價格保護。 這其實是一個非常好的政策，東西買貴了，在一定的時間之內，不用退了重買，直接就能退差價。 現在，查訂單、核對價保條件、申請退差價，這些都可以交給千問Go代勞把關。 在使用者分享的案例裡，千問Go盡職盡責地查了一圈，最後真的給使用者爭取到52元的保價退款。 當然，除了這些特殊場景還有更日常的。 比如你跟它說想做個汽車保養，給它車型、門店、到店時間，它直接聯絡服務商，問完價格幫你把預約也做了； 想打羽毛球，告訴它球館名字和時間偏好，它幫你把場地訂好； 買冰箱，它跑去淘寶比同款價格，把你能用的補貼、優惠券、舊機回收、送裝費用全算進去，總價低於你的預期了才通知你。 不管是日常場景還是Corner case，千問Go的態度只有一個：「你別煩了，交給我來」。 特殊情況，也能把事辦成 回頭看前面這些case，千問Go已經不只是「替你辦事」，連那些你自己都搞不定的邊角場景也能代表你出面handle。 語音客服轉不了人工，它知道還能走圖文通道；代金券不滿意，它還能跟客服多磨一輪要現金。 坦率地講，我看到這的時候是有點愣住的。 因為一般的Agent幫你辦事碰壁了，實誠一點的會坦白跟你說「搞不定」，過分一些的乾脆就陷入死迴圈，甚至胡編亂造一個結果。 但千問Go遇到問題會自己琢磨有沒有辦法「曲線救國」，換個法子繼續搞。 為什麼它能做到這種程度？ 首先是模型，它的底層有今年9月雲棲大會剛釋出的Qwen 3.8 Agentic能力撐著。 而且千問Go其實不是零幀起手，它是千問APP里長出來的新能力，天然就帶著千問已經積累的使用者和對話理解，對你的習慣、偏好有些許瞭解。 再加上淘寶、飛豬、高德這些都是自家生態，如果遇到這些應用，千問Go對每一個入口每一個流程更是如數家珍。 能辦簡單的事不稀奇，能在複雜場景裡把事兒辦成，這才是理想型的Personal Agent。 Personal Agent，全球都在搶這條賽道 說真的，最近一個月Personal Agent這個方向的成果已經多到讓人眼花繚亂了。 先是9月9號，Meta發了Muse，一個能幫你打電話、發訊息、操作手機APP的AI助手，扎克伯格親自站臺，說這是Meta AI的下一個重心。 9月底OpenAI DevDay上，GPT-6 Astra亮相，順帶推了Dots，一個能主動幫你處理日常事務的Agent產品。 兩家矽谷巨頭，前後腳把籌碼壓到了同一個方向上。 巨頭如此，創業公司就更瘋狂了。 Instinct，一家專門做Personal Agent的舊金山初創公司，產品還在內測階段，就拿到了紅杉領投的10億美金C輪，估值直接幹到100億美金。 國內廠商同樣躍躍欲試。 多家頭部AI公司都在佈局Personal Agent方向，有的已經開始內測。 如此觀之，國內外的賽道共識已經形成了。 千問Go選在這個節點亮出來，底氣也是實打實的。 去年11月上線以來，千問一直在佈局AI辦事。從立足阿里生態打通購物、打車、理財等場景，到今天千問Go落地，為個人打造專屬助理這條路，千問已經走了很久。 這張牌，是水到渠成的結果。 版權所有，未經授權不得以任何形式轉載及使用，違者必究。 千問 克雷西 單輪23億，累計43億，無問芯穹重新整理國產AI Infra賽道融資雙重紀錄 2026-10-13 AI算力之爭不靠堆卡！浪潮資訊捅破智算「能力天花板」，還瓦解了「產能焦慮」 2026-09-22 DeepSeek新論文公開Agent訓練！梁文鋒署名 2026-09-23 AGI最難一戰，竟在醫院！中國AI登上Science，醫生不怕失業還催著上線 2026-09-18 相關閱讀",
+      "published_date": "2026-10-13",
+      "tags": [
+        "資訊",
+        "首頁輪播",
+        "千問"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "量子位",
+        "feed_url": "https://www.qbitai.com/feed"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 46,
+    "llm_reason": "Personal Agent實際跨平台辦事案例生動，但缺乏技術架構揭露",
+    "novelty": 7,
+    "impact": 9,
+    "trending": 13,
+    "practicality": 6,
+    "blog_worthiness": 11
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "量子位",
+      "title": "魔法原子具身Agent框架拿下MolmoSpaces全球第一",
+      "url": "https://www.qbitai.com/2026/10/503107.html",
+      "authors": [
+        "量子位的朋友们"
+      ],
+      "abstract": "魔法原子具身Agent框架拿下MolmoSpaces全球第一 量子位的朋友們 2026-10-13 19:05:39 來源： 量子位 讓VLA從“演示可用”逼近“產線可用” 近日，在由艾倫人工智慧研究所（AI2）發起的全球權威具身智慧零樣本評測基準MolmoSpaces最新榜單上，魔法原子旗下面向通用機器人操作的VLM Agent框架EchoPolicy-0以75.4%的機器人操作平均成功率位列MolmoSpaces Combined榜單全球第一，覆蓋全部4個v1任務。 同一榜單、同一分組下，魔法原子自研具身智慧Agent框架MagicBrain憑藉3.4B參數規模，以72.4%的機器人操作平均成功率位列MolmoSpaces Combined榜單全球第四，其抓取成功率達到94.4%，遠超行業平均水平。 MolmoSpaces榜單是目前全球具身智慧領域最具公信力的零樣本評測基準，面向操作、導航與更長程的具身任務。MolmoSpaces生態包含超過23萬個室內環境、約13萬個物體資產，為評測提供了豐富的變化來源。機器人需要面對超出固定演示環境的情況，在不同背景、幾何結構與物體分佈下尋找目標，並根據局部條件完成任務。 同時，MolmoSpaces包含可移動的剛體物體和帶關節的互動物件，機器人不僅要在影像中找對目標，還必須通過真實的模擬接觸改變物件狀態，讓機器人的作業任務具有實質難度。 MolmoSpaces的基準明確給出初始場景、機器人與相機配置、任務指令和成功條件，完整清單、統一計分與公開結果能夠把零散演示轉化為可比較的資料。魔法原子EchoPolicy-0與MagicBrain框架參與的四項務分別涉及自由物體抓取、關節物體互動和多階段操作，從不同側面考察具身智慧Agent框架的系統能力，而不是隻看一個單項指標。 2026年以來，具身智慧正從演示階段走進真實產線，競爭重心上移到機器人的“大腦”——具身智慧大模型。隨著機器人運動控制能力快速提升，機器人的身體更靈活、更耐用，大腦的實際應用也隨身體邊界的開啟而快速演進。相應地，市場的研究方向正在轉向：如何完成更複雜的任務，如何快速上手新任務。MolmoSpaces的評測，也同樣關注具身智慧大模型的泛化能力。 魔法原子研發實驗室MagicLab Studio負責人表示：“在具身大腦路線的選擇上，我們認可分層架構這種方式，並發現指令遵循能力是當前模型在通用任務上遇到的一個難點。EchoPolicy通過Agent框架及軌跡打分的方式來保證指令遵循能力；MagicBrain通過端到端視覺引導的方式來最佳化指令遵循效果，兩者均取得了較好的結果。” EchoPolicy-0 ：讓機器人多工共享一套思考與行動方式 機器人要完成一項任務，需要把語言目標、視覺觀察與物理動作持續連線起來。例如抓住物體之後，要判斷是否真的拿穩；開啟櫃門之前，要找到可互動的位置；一次動作沒有達到預期，機器人需要根據新情況調整計劃。 這些動作看起來不同，但屬於具身智慧機器人跨任務需要面對的共通問題：目標在哪裡，當前狀態是什麼，應該呼叫哪種能力，動作是否達到目的，以及失敗後如何繼續。 魔法原子MagicLab Studio圍繞這些跨任務共通的問題，將視覺語言模型、幾何操作工具與通用動作策略組織為統一的VLM Agent框架EchoPolicy-0 ，讓觀察環境、理解目標、選擇能力、執行動作，以及觀測驗證結果形成閉環。不同任務共享這套機制，具體的接觸和運動由相應執行器完成。 EchoPolicy-0框架研發負責人表示：“ EchoPolicy-0的通用性體現在讓能力能夠被統一呼叫、組合和驗證。 EchoPolicy-0當前版本已在Franka單臂平臺上完成四類操作驗證。” 在VLA的使用方式上，魔法原子MagicLab Studio引入了VLM目標引導的多候選軌跡選擇：讓動作模型先提出多種可能的運動，將候選投影到影像平面，再依據VLM指定的目標選擇更匹配的軌跡，並在執行後持續驗證。高層視覺理解由此參與低層動作選擇，而不僅停留在任務分解。 EchoPolicy-0框架在MolmoSpaces的四項操作任務上完成了3915局全量評測，取得了75.4% 的四項任務等權平均成功率，截至2026年10月13日，位列MolmoSpaces Combined榜單球第一。 魔法原子MagicLab Studio將EchoPolicy-0框架在MolmoSpaces上的四項評測視為統一框架的一次系統驗證，同時用逐局結果指導後續迭代。EchoPolicy-0展示了一條面向通用機器人操作的系統路線，統一Agent框架能夠組織不同型別的操作能力：由VLM Agent組織語義目標和任務狀態，由幾何工具提供可檢查的空間互動，由通用動作策略生成候選，通過VLM目標引導的軌跡選擇約束動作方向，再由持續驗證把它們連線起來。 EchoPolicy-0針對具身智慧模型落地場景，回答了一個問題：模型提出來的動作，怎麼保證選的是對的那一個。 它不改模型的輸入，而是在模型給出的多套候選動作裡，按視覺目標篩出更匹配的一條，並在執行後持續驗證。對下游客戶而言，這條路線的價值不在單點成功率上——新增一類任務時，不必再從零搭一套系統，只要把能力接進同一套框架即可。 自研大腦：MagicBrain讓模型能“看見” 從“演示可用”逼近“產線可用” 具身智慧Agent框架MagicBrain來自魔法原子MagicLab Studio ，在MolmoSpaces的抓取、抓取放置、開啟與關閉四項操作任務上， MagicBrain完成了3915局全量評測，四項v1任務平均成功率全球第四。其中，抓取（Pick-v1）、抓取放置（Pick & Place-v1）兩項任務均拿下了所在任務榜單的全球第一，抓取任務成功率更是高達94.4%。 視覺-語言-動作（VLA）是當前具身智慧領域備受關注的一類模型架構，其語言跟隨能力是行業內一個由來已久的共性問題。讓模型執行“把蘋果放進籃子”這類指令，包含了兩件對它並不容易的事：先理解“蘋果”這個名詞，再在畫素層面找出哪個是“蘋果”。 魔法原子MagicLab Studio在研發測試中發現，抓取失敗的案例裡，絕大多數不是動作執行不穩，而是抓錯了物件，或者放錯了位置。換句話說，VLA在動作學習上已經足夠強，真正的短板在把名詞短語綁定到影像區域，這也是它訓練訊號最稀疏的一環——想抓“蘋果”卻抓成旁邊的“梨”，錯不在手，而在眼睛。 實際上，VLA對視覺訊號的跟隨能力，強於對語言指令的跟隨：“聽懂話”是VLA的短板，“看懂圖”才是長板。為此，MagicBrain採用了一套被稱為In-Context Visual Guidance（上下文視覺引導）的技術路線，VLA只負責做動作，找目標這件事，交給更擅長看圖的VLM Agent。 未來，這套視覺引導技術也可以遷移到互動等更多場景——畢竟，給模型“畫”出該看的東西，不只適用於抓取。MagicBrain提供了一個更省力的分工範式。語言說清“做什麼”，畫素說清“是哪個、在哪裡”，把兩路資訊各交給擅長的模型，它沒有引入新的模型結構，沒有堆砌更大的參數量，只是重新排布了資訊的傳遞路徑。 “我們在VLA理解語言的基礎上，讓它進一步去‘看見’，並且知道該看什麼”，魔法原子MagicLab Studio負責人表示，這一技術路線不依賴提升參數規模來換取大模型效能，此次參與評測的模型參數規模僅為3.4B。 這意味著，任何具備基礎資料能力的團隊都能低成本復現，不卷模型大小也能拿到增益——在具身智慧走向規模化的路上，“組合而非全能”的分工思路，或許比“一個模型通吃”更接近現實。 行業層面，魔法原子回答了一個備受關注的問題：VLA到底能不能用得起、用得上。抓取與放置是具身智慧從實驗室走向真實場景的高頻基礎動作——工廠分揀、倉儲搬運、家庭整理都依賴它。抓取成功率從此前70% 到94.4% 的跨越，意味著VLA正從“演示可用”逼近“產線可用”的臨界線。對行業而言，每一點成功率提升，都在擴大可商業化的場景邊界。 魔法原子的 “具身大腦” 設計哲學 “在MolmoSpaces榜單上拿到了全球第一，但魔法原子關心的，是榜單背後那個真正的問題：具身智慧機器人的大腦，到底應該怎麼長，長在哪裡。”魔法原子MagicLab Studio負責人表示。 魔法原子認為，具身智慧應沿著分層協同的技術路線推進：由上層模型負責理解、規劃與糾錯，由底層模型負責將任務意圖轉化為可靠的物理動作。 上層模型要承擔視覺理解、任務分解、規劃決策、錯誤修正和記憶管理。目前前沿基礎模型在這些方面已有較好基礎，但仍需針對具身場景中的空間關係、物理約束和持續互動做適配。上述負責人認為，行業短期應重點建設圍繞模型執行的Harness，將上下文管理、工具呼叫、執行反饋和評測機制組織起來，並探索以反饋驅動的迭代最佳化，包括RSI方向；長期則需要依託真實場景資料開展自主訓練與後訓練，逐步增強模型本身的具身理解和決策能力。 該負責人表示，承擔動作生成與控制執行的底層模型，可以採用VLA、WAM或其他混合架構。架構選擇應服務於實際任務，重點考察指令遵循、動作精度、執行效率及泛化能力。 目前，分層架構本身在行業內已被廣泛討論，其中一個關鍵問題仍未得到充分解決：上層的任務意圖，如何被底層準確理解並穩定執行。 魔法原子MagicLab Studio在實驗中發現，現有動作模型在分佈外（OOD）場景下仍容易出現目標選擇錯誤、空間約束理解偏差等情況。為此，團隊嘗試了兩種互補的解決思路。 第一種是本次拿下MolmoSpaces榜單第一的EchoPolicy-0，通過Agent排程、候選選擇和閉環驗證，提高執行與指令的一致性。其中，上層模型將任務分解為明確的子目標，系統對底層模型生成的多條候選動作軌跡進行評估，選擇更符合當前指令的候選；執行後，再依據新觀測判斷進展，決定繼續、重試、重規劃或回退，並按需呼叫幾何工具完成特定操作。 這一技術路線的優勢在於可以在不重新訓練底層模型的情況下，通過改進排程、選擇和驗證機制快速迭代，提升已有模型的任務完成能力。 MagicBrain的思路是通過顯式視覺引導和配套訓練，提高動作生成階段的目標對齊能力。 其中值得借鑑的是上下層之間的視覺引導機制。MagicBrain將上層識別出的互動目標、放置區域以及短期運動歷史，以視覺標記的形式注入底層模型的觀測，讓任務意圖直接對應到影像中的具體位置。該方法無需改變VLA的網路架構，通過配套後訓練，使模型學會將視覺標記與操作語義、動作行為聯絡起來，從而降低僅依賴語言指令時的歧義。 兩種思路分別作用於“動作生成”與“執行、選擇、驗證”兩個環節，具有較強的互補性：視覺引導幫助底層生成更符合目標的動作，Agent排程則負責選擇、執行、檢查和糾錯。 此次EchoPolicy-0拿下第一、MagicBrain拿下第四，兩條路徑的有效性都得到了驗證。 談及未來，魔法原子表示：“下一階段，我們將進一步探索二者結合，形成從任務理解到物理執行的完整反饋閉環，並進入真實工業場景，持續檢驗任務成功率、執行穩定性和部署成本，並在這一過程中完善資料與模型平臺。將經過驗證的能力沉澱為可複用的技能模組、標準介面和解決方案，同時系統積累成功、失敗及人工糾正資料，建立“部署—採集—訓練—評測—再部署”的持續迭代機制，推動工程經驗轉化為基礎模型能力。” 版權所有，未經授權不得以任何形式轉載及使用，違者必究。 具身智慧 魔法原子 量子位的朋友們 梁文鋒投了Swin Transformer作者！DeepSeek開始佈局具身大腦 2026-10-13 “模態進化”：第八屆億邦產業網際網路年會暨首屆產業智慧體大會雙會合體定檔 2026-10-13 優必選上榜 2026 年《財富》全球未來成長 120 強，位列全球第 11、中國企業第一 2026-10-13 具身智慧回到產業現場， 思靈機器人Agile Robots攜12款展品亮相2026工博會 2026-10-12 相關閱讀",
+      "published_date": "2026-10-13",
+      "tags": [
+        "資訊",
+        "具身智慧",
+        "魔法原子"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "量子位",
+        "feed_url": "https://www.qbitai.com/feed"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 45,
+    "llm_reason": "VLA agent框架在權威具身智慧榜單奪冠，但細節偏公關化",
+    "novelty": 10,
+    "impact": 9,
+    "trending": 9,
+    "practicality": 7,
+    "blog_worthiness": 10
+  }
+]
