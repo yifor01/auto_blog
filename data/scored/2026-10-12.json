@@ -1,0 +1,723 @@
+[
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Amazon Science",
+      "title": "Can we change an AI model’s architecture without retraining it from scratch?",
+      "url": "https://www.amazon.science/blog/can-we-change-an-ai-models-architecture-without-retraining-it-from-scratch",
+      "authors": [],
+      "abstract": "AI agents are rapidly scaling: longer sessions, deeper reasoning chains, more autonomy. But the Transformer architecture underneath them still pays a memory tax that grows with the number of tokens it processes. As agents become more capable, that cost scales with them. Now, there’s a proliferation of hybrid architectures that use some combination of methods to achieve a better balance of memory, speed, and quality. Those methods include sparse attention, which selects a subset of past tokens to consider when selecting the next token; sliding-window attention, which preserves only the most recent tokens; and state space models, which compress information from the full history into a fixed-size state. These hybrid architectures can be understood as points in a sequence-model design space: to differing degrees, they mix information while traversing a sequence and passing through different states. What distinguishes them from each other is how they retain and use the past. Until now, exploring this design space has required training every new architecture from scratch, using trillions of tokens and hundreds of thousands of GPU-hours. This has made controlled comparisons of hybrid architectures extremely expensive. In a new paper, “Priming: Hybrid state space models from pre-trained Transformers,” our team at Amazon Web Services addresses this problem. We introduce priming, a method that leverages pretrained Transformer weights as a starting point to reduce the pretraining cost of hybrid architectures by more than 99%. With priming, model developers can ask questions that were previously too expensive to answer at scale: Which attention layers can be replaced by more-efficient layers? How many attention layers can be replaced without sacrificing quality? Which state space layer works best? And what does the trade-off between speed and accuracy look like? In our paper, we compare hybrid models that use three different types of state space models (Gated KalmaNet, Gated DeltaNet, and Mamba-2). Some of our findings: Not all state space models are equal. Under controlled conditions, Gated KalmaNet (GKA) performs best, followed by Gated DeltaNet (GDN) and then Mamba-2. GKA uniquely offers variable-length inference computation without retraining and gives the user direct control over its position on the speed-accuracy frontier. A good lossy summary of everything beats a perfect recording of the most recent past. State space models consistently outperform sliding-window attention (SWA), even when SWA gets twice the memory budget. Same quality, twice the throughput. A 32-billion-parameter GKA-based hybrid model matches its source Transformer on reasoning benchmarks while decoding up to twice as quickly with 128,000 tokens of context and reaching correct answers in as little as two-thirds of the wall-clock time. To foster further research on hybrid architectures, we have released a zoo of primed hybrid models at the eight-billion-parameter and 32-billion-parameter scales for long-context reasoning and instruction following, together with training code, optimized kernels, and a vLLM-serving plugin under the Apache 2.0 License. The attention mechanism A Transformer’s attention mechanism — which determines how relevant previously seen tokens are to the token currently being processed — relies on three different vectors, which take their names from database design: the query, the key, and the value. For each token, the query captures what that token is “looking for,” the key captures what it “offers,” and the value carries the actual information it will pass along. Relevance is computed by comparing the current token’s query against every other token’s key; the closer the match, the more that token’s value contributes to the output of attention. Each of these vectors is produced by multiplying the token by a learned weight projection matrix. The Transformer outputs one token at a time, and each output token becomes a new input, so the context grows one token at a time as well. To save computation, the Transformer thus stores the key and value projections of each new input in a “KV cache”. Two kinds of memory layers: Eidetic versus fading The attention mechanism gives Transformers what we call eidetic memory: verbatim recall of every past token. The possibility of recalling over an LLM’s entire context window is what made in-context learning, long-document reasoning, and retrieval-augmented generation possible. But it comes at a cost that scales with the number of input tokens. However, not all attention layers do the same job. Some perform long-range retrieval across tens of thousands of tokens. Others operate more locally, tracking the current clause, copying nearby tokens, and the like. The local ones don't need a growing cache: a compact, fixed-size summary of the past — what we call fading memory — suffices. Hybrid models mix both: attention layers (eidetic, growing cache) for the layers that need global recall and state space layers (fading, fixed size) for the rest. The result is a model with a reduced memory footprint that still has access to verbatim recall where it matters. Priming: Knowledge isn't locked to the architecture Exploring hybrids’ design space has been impractical because each hybrid configuration would normally require pretraining from scratch. Priming sidesteps this by reusing the stored knowledge in a pretrained Transformer's weights. Priming is possible because a Transformer is itself a special case of a state space realization. The outputs of both attention and SSM layers can be expressed as the result of multiplying the value sequence by a “mixing” matrix that decides how much each past token contributes to each current token. Attention computes the mixing matrix by multiplying the query and key matrices; an SSM produces a similar output through a recurrent state of fixed dimension that all past information must pass through. Priming takes advantage of this structural similarity: if an SSM with a fixed-dimensional state can produce a mixing matrix close enough to the attention layer's, the query, key, and value projections from the source Transformer can be reused as the SSM's own input projections, with only the SSM-specific parameters needing to be learned. Whether the approximation holds depends on whether the attention layer performs complex, long-range retrievals or simple, local operations. We distinguish between the two using a cheap empirical proxy: replace each layer with an SWA — which preserves only a fraction of the context — and measure the degradation. Layers that tolerate this substitution are natural candidates for SSM conversion: their mixing matrices don’t need to capture long-range relationships, so the state of an SSM can faithfully represent what they do. This proxy connects to a formal quantity from dynamical-systems theory, the Hankel rank of the layer's mixing matrix, which measures how much information must pass through the state bottleneck and therefore the minimum SSM state dimension required to realize the layer exactly. Priming proceeds in three stages: Layer selection: identify which layers can be faithfully compressed into a fixed-size state while retaining the rest as attention; Weight transfer and alignment: initialize SSM layers from the corresponding attention weights, then run a short distillation process aligning each SSM to the behavior of the layer it replaces; End-to-end adaptation: fine-tune the full hybrid model on next-token prediction, letting all layers coadapt. The entire pipeline consumes less than 0.5% of the source model's pretraining token budget, and it works across Transformer families (Qwen, Llama, Mistral), model classes (dense or MoE), and scales (eight billion to 32 billion and more).",
+      "published_date": "2026-10-12",
+      "tags": [],
+      "organization": "Amazon",
+      "raw_metadata": {
+        "feed_name": "Amazon Science",
+        "feed_url": "https://www.amazon.science/index.rss"
+      }
+    },
+    "rule_score": 53.0,
+    "rule_reasons": [
+      "🏢 頂流機構: Amazon",
+      "🔥 熱門關鍵字: reasoning, alignment, moe, mamba, distillation",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 74,
+    "llm_reason": "免從頭訓練即可將Transformer轉為混合架構，對架構研究有實質貢獻",
+    "novelty": 16,
+    "impact": 14,
+    "trending": 15,
+    "practicality": 13,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "NVIDIA Developer",
+      "title": "ReplaySSM: Rethinking State Storage for Faster Hybrid-Model Decoding",
+      "url": "https://developer.nvidia.com/blog/replayssm-rethinking-state-storage-for-faster-hybrid-model-decoding/",
+      "authors": [
+        "Michelle Horton"
+      ],
+      "abstract": "Hybrid models interleave state-space model (SSM) layers with a few attention layers. NVIDIA Nemotron 3 , Qwen3.5 through Qwen3.8 , Kimi-K3 , and GLM-5.3-Flash are all built this way, with Mamba-2 , Gated DeltaNet (GDN) , or Kimi Delta Attention (KDA) as the SSM layer. SSM layers are designed to make decoding fast: they use a fixed-size state in place of a key-value (KV) cache that grows with context length. At serving batch sizes, however, the SSM layers, not attention, can be the latency bottleneck up to 100K tokens of context. SSM layers also complicate two techniques that reliably speed up attention decoding: speculative decoding and quantization. ReplaySSM makes SSM layers the fast part again. It represents the SSM state as a checkpoint plus a buffer of recent inputs. This separates output computation from state updates and addresses three challenges in current SSM decoding: state traffic, rollback for speculative decoding, and error accumulation in a quantized state. ReplaySSM is joint work between NVIDIA and the Dao AI Lab at Princeton. The paper, ReplaySSM: Cache SSM Inputs, Not State , details all three benefits and presents the full evaluation. It is available on arXiv, with code on GitHub . It is integrated into NVIDIA TensorRT-LLM, vLLM, and FlashInfer, and also runs in production in GLM-5.3-Flash and Kimi-K3. Figure 1. Conventional decoding loads and stores the full state at every step. ReplaySSM caches recent inputs, computes outputs from the checkpoint plus buffer, and writes the checkpoint only when the buffer fills Why SSM layers can become a decoding bottleneck Take the Mamba-2 layer used in NVIDIA Nemotron 3 Ultra as an example. It decodes one token with the following recurrence: S t = α t S t − 1 + v t k t ⊤ , o t = S t q t , S_t = \\alpha_t S_{t-1} + v_t k_t^\\top, \\qquad o_t = S_t q_t, where S t S_t is the state, α t \\alpha_t is a data-dependent decay, and v t v_t , k t k_t , and q t q_t are the token’s inputs. Each step loads S t − 1 S_{t-1} from high-bandwidth memory (HBM), applies the decay and a rank-1 update, computes the output with q t q_t , and stores S t S_t back. GDN and KDA add a delta-rule correction, but their updates can be written in the same outer-product form, so what follows applies to them too. During decoding, the state does two jobs. It is read to produce this token’s output, and it is updated to become the next token’s state. Conventional decoding does both at once: each step updates the state, reads the output from it, and stores it for the next step. All three challenges come from this fusion. Figure 2. Three challenges of conventional SSM decoding and the ReplaySSM answer to each. Left: decode-step latency breakdown for Nemotron-3-Super-NVFP4 at batch size 256 on one NVIDIA Blackwell Ultra B300 GPU State memory traffic An SSM decoding step loads and stores the full state while performing little arithmetic on it, so the kernel is bound by HBM bandwidth, not compute. At serving batch sizes, that makes the SSM layers, not attention, the largest component of the decode step up to 100K tokens on Nemotron-3-Super-NVFP4 at batch size 256 on one NVIDIA Blackwell Ultra B300 GPU (Figure 2, left). Two factors drive this: Layer count: The model has five times as many SSM layers as attention layers. State size: One layer’s FP32 state is 4 MiB per sequence, while an FP8 KV entry is 0.5 KiB per token, so an SSM layer’s state is the size of an attention layer’s KV cache for 8K tokens. Rollback for speculative decoding Speculative decoding has a drafter propose T tokens, verifies them in one pass through the target model, and rolls back to the last accepted token. Attention naturally supports rollback by moving the KV cache pointer. But once an SSM has summarized the drafts into its state, the update has no easy inverse, so rollback becomes expensive. Serving engines such as vLLM work around this by storing a state snapshot after every draft token and picking the one that matches the accepted prefix. That is one read and T writes per step on a memory-bound path, and the snapshots cap how many requests fit in GPU memory. As a result, speculative decoding, a reliable speedup for Transformers, barely helps SSMs at serving batch sizes. State quantization The quantized state produces the output and is the input to the next update, so its rounding error re-enters the recurrence at every step. A KV cache has no such loop: a quantized entry is read many times but never written back into itself, which is why KV caches tolerate lower precision than SSM states. Qwen3.5-122B-A10B-NVFP4, for example, uses the NVIDIA NVFP4 4-bit floating-point format for its weights, with an FP8 KV cache and an FP32 SSM state. How ReplaySSM represents the state The SSM recurrence can be unrolled over a window of h tokens: S t = α t S t − 1 + v t k t ⊤ = γ h S c k p t + ∑ j = 1 h γ j + 1 : h v j k j ⊤ , S_t = \\alpha_t S_{t-1} + v_t k_t^\\top = \\gamma_h\\, S_{\\mathrm{ckpt}} + \\sum_{j=1}^{h} \\gamma_{j+1:h}\\, v_j k_j^\\top, where S c k p t S_{\\mathrm{ckpt}} is the state before the window and γ \\gamma is the cumulative decay. Conventional decoding follows the left side step by step. ReplaySSM uses the right side: it represents the state as a checkpoint plus a small buffer of recent input records ( α j \\alpha_j , v j v_j , k j k_j ) for Mamba-2. On most steps, which we call non-flush steps, it appends the current inputs to the buffer and computes the output from the checkpoint and the buffer without storing a state. When the buffer of L records fills, a flush step folds the buffered inputs into the checkpoint, writes the new checkpoint to HBM once, and clears the buffer. The outputs match conventional decoding up to floating-point differences. ReplaySSM’s approach can be summarized in three questions: 1 What does ReplaySSM do? It caches recent SSM inputs and represents the state as a checkpoint plus those inputs. 2 What does this change? It separates output computation from state updates: outputs are computed every step, while the checkpoint is updated once per window. 3 What does this achieve? It reduces state memory traffic, simplifies speculative rollback, and supports low-precision state reads without propagating their rounding error through recurrent updates. How we evaluated ReplaySSM We evaluate four hybrid models from two families, Nemotron 3 with Mamba-2 layers and Qwen3.5 with GDN layers, from 4B dense models on one NVIDIA H100 Tensor Core GPU to 120B-class mixture-of-experts (MoE) models on one NVIDIA Blackwell Ultra B300 GPU (Table 1). We implemented ReplaySSM in vLLM and compared it with vLLM’s own kernels at their best launch configuration. Performance runs keep the SSM state in FP32, the default precision for these models, and use a window of L = 16, the best-performing window size for all four models. Speculative decoding tests use each model’s multi-token prediction (MTP) head to generate draft tokens. Model SSM layer Weights GPU SSM / attention layers Nemotron-3-Nano-4B Mamba-2 BF16 1×H100 21 / 4 Nemotron-3-Super-120B-A12B Mamba-2 NVFP4 1×B300 40 / 8 Qwen3.5-4B GDN BF16 1×H100 24 / 8 Qwen3.5-122B-A10B GDN NVFP4 1×B300 36 / 12 Table 1. Evaluated models and hardware. Each model runs on one GPU without tensor parallelism Benefit 1: Reduce state memory traffic Over a window of L tokens, conventional decoding reads the state L times and writes it L times. ReplaySSM still reads the checkpoint on every step, because the output needs it, but writes it only once, during the flush. A non-flush step has one job—computing the output—and writes only the new input record, a few vectors instead of a full matrix. This roughly halves the dominant state traffic. At serving batch sizes, memory bandwidth limits the conventional kernel’s performance, so reducing state memory traffic speeds up decoding. At batch size 1, other sources of latency dominate, and ReplaySSM provides no speedup in these tests. At batch size 256, the kernel runs 1.46× to 1.",
+      "published_date": "2026-10-12",
+      "tags": [
+        "Agentic AI / Generative AI",
+        "AI Inference",
+        "Inference Performance",
+        "Nemotron",
+        "research",
+        "TensorRT-LLM",
+        "vLLM"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "NVIDIA Developer",
+        "feed_url": "https://developer.nvidia.com/blog/feed/"
+      }
+    },
+    "rule_score": 38.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: moe, mixture of experts, mamba, state space model, quantization",
+      "⚖️ 來源權重: rss +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 83,
+    "llm_reason": "已整合進TensorRT-LLM/vLLM並用於生產模型，解決SSM解碼瓶頸且有開源程式碼",
+    "novelty": 14,
+    "impact": 16,
+    "trending": 16,
+    "practicality": 19,
+    "blog_worthiness": 18
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Microsoft Research",
+      "title": "Simulating student learning for better AI tutoring",
+      "url": "https://www.microsoft.com/en-us/research/blog/simulating-student-learning-for-better-ai-tutoring/",
+      "authors": [
+        "Ke Yang, Chenglong Wang, Michel Galley, Jeevana Priya Inala, ChengXiang Zhai, Jianfeng Gao"
+      ],
+      "abstract": "In research settings, teams are exploring how AI-powered tutoring systems can help explain a math problem, suggest an edit to a writing assignment, or guide a learner through a chess position. Yet the quality of teaching cannot be measured only from the tutor’s answer. A tutor needs to know what happens after the guidance reaches a student. Did the student correct the original mistake? Did the hint help them reason toward the answer, or did it give away too much? Would a different student need a different kind of support? In today’s AI tutor research, answering these questions often requires real learner studies. Those studies are valuable, but they are slow and costly to run, which makes it hard to use student feedback during fast model iteration. StudentSim is an AI system that creates personalized simulators of individual students, modeling how they answer questions and how their answers change after receiving a tutor’s guidance. The goal is to make student feedback more available during AI tutor development. This research also introduces StudentSimEval, a benchmark and evaluation protocol spanning chess, second-language English writing, and mathematics. Importantly, the goal is not to replace teachers or classroom learning. Instead, StudentSim helps researchers evaluate and improve AI tutoring systems during the research and development process before testing them with real learners. The research uses only publicly available learner datasets released for research use with de-identified records; no personally identifying information is used at any stage. A simple way to build a student simulator is to ask a large language model to role-play a learner. For example, a prompt might say, “You are an elementary-school student who struggles with math.” The model can change its tone and express uncertainty. The harder part is preserving the learner’s actual ability boundary. A model may speak in a young student’s voice while still relying on knowledge and reasoning far beyond that student’s level. For training an AI tutor, this can produce misleading feedback: the tutor may appear effective because the simulated student is too capable. Traditional student modeling approaches face a different limitation. Knowledge tracing and behavior prediction models are grounded in real learning records and can estimate a student’s current knowledge, skills, and learning habits. Many of these models, however, were not designed to take natural-language tutor guidance as input. They can help describe what a student has done, but they do not always tell us how a student would respond to a particular explanation, hint, or Socratic question. StudentSim defines the target through two dimensions inspired by education research. Educators often distinguish what a learner can do independently from what they can do with support. Vygotsky’s zone of proximal development captures this gap between current independent performance and performance with guidance. StudentSim turns this idea into two evaluation goals. Behavioral fidelity measures whether a simulator matches a specific student’s recorded responses on held-out problems. Guidance responsiveness measures whether the simulator updates its response after reading tutor guidance. These two goals are complementary. A simulator that only matches past student behavior may be useful for prediction, but it does not show whether a teaching intervention helped. A simulator that always follows the tutor may respond fluently, but it may fail to represent a particular student’s strengths, weaknesses, and likely mistakes. AI tutor training needs both signals: the learner’s starting point and how guidance affects the learner’s performance. StudentSimEval is built entirely from publicly available learner datasets that are released for research use with de-identified records. The records carry no personally identifying information, and each personalized simulator is trained only on the de-identified records of the student it represents. Real student data is often sparse at the individual level. A learner may contribute only a small number of essays, answers, or interactions. Training a separate simulator from scratch for each student would risk overfitting and would require each model to relearn common patterns in the domain. StudentSim uses a two-stage training pipeline. In the first stage, the model trains on records pooled across many students in the same domain. This stage learns common response formats, common errors, and common ways students revise after guidance. In the second stage, the model is specialized on one student’s own records, producing a personalized simulator for that student. The evaluation covers three domains with different response types. In chess, the simulator predicts a player’s next move and how that player may revise after coaching. In second-language English writing, it generates essays with error patterns matching a learner and predicts corrections after teacher feedback. In mathematics, it predicts a student’s multiple-choice answer and whether the student updates after an explanation. Across these domains, StudentSimEval uses the same principle: compare all methods on the same per-student training records and the same held-out evaluation records. StudentSim outperforms leading baselines across the three domains. In chess, for example, StudentSim reaches behavioral fidelity of 0.5150 and guidance responsiveness of 0.9067. GPT-5.4 reaches 0.2316 and 0.7186, respectively. Maia2, a chess-specific human move prediction model, reaches 0.4535 and 0.2721. The comparison illustrates the difference between the baseline families: GPT-5.4 can respond to guidance but does not reliably match a specific student’s behavior, while Maia2 predicts human chess moves more closely but lacks a natural-language guidance pathway. The research also tests whether a trained student simulator can provide feedback for tutor optimization. In a chess tutor reinforcement learning study, the tutor receives a position and a real student’s previous wrong move, then generates guidance. The student simulator’s own parameters are held fixed during this process, and it reads the guidance and produces a revised move. The reward is based on the improvement in move quality from the student’s previous move to the simulator’s revised move, using Stockfish as an independent chess engine signal. The study compares three conditions: a supervised fine-tuned tutor with no reinforcement learning, a tutor trained with GPT-5.4 as the simulated student reward source, and a tutor trained with StudentSim as the reward source. All conditions use the same tutor policy, supervised starting point, and reinforcement learning setup. Human chess experts then evaluate the tutor responses blind to condition. The StudentSim reward produces the highest-rated tutor on all reported dimensions. The tutor trained with StudentSim reaches 90.5% accuracy, compared with 75.7% for the no-RL baseline and 71.6% for the GPT-5.4 reward condition. It also receives higher ratings for guidance quality and personalization. The result is a proof of concept that student simulators trained on real learner data can provide useful feedback for improving AI tutors. StudentSim does not remove the need for real learners in education research. Human studies remain essential for measuring learning outcomes, safety, usability, and classroom fit. The role of student simulators is earlier in the development process: they can help researchers test tutor strategies, compare models, and refine training signals before moving to more expensive studies with real students. The broader direction is to build AI tutor systems that learn from student reactions, not only from expert-written explanations or static correctness labels.",
+      "published_date": "2026-10-12",
+      "tags": [
+        "Research Blog"
+      ],
+      "organization": "Microsoft",
+      "raw_metadata": {
+        "feed_name": "Microsoft Research",
+        "feed_url": "https://www.microsoft.com/en-us/research/feed/"
+      }
+    },
+    "rule_score": 53.0,
+    "rule_reasons": [
+      "🏢 頂流機構: Microsoft",
+      "🔥 熱門關鍵字: reasoning, reinforcement learning, safety",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 49,
+    "llm_reason": "用模擬學生評估AI家教的新方法，具研究巧思但應用面偏窄",
+    "novelty": 11,
+    "impact": 8,
+    "trending": 7,
+    "practicality": 10,
+    "blog_worthiness": 13
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Apple ML",
+      "title": "Self-Compacting Language Model Agents",
+      "url": "https://machinelearning.apple.com/research/self-compacting-language-agents",
+      "authors": [],
+      "abstract": "research area Speech and Natural Language Processing conference NeurIPS content type paper published October 2026 Self-Compacting Language Model Agents Authors Tianjian Li†, Jingyu Zhang†, William Jurayj†, Xi Wang†, Chuanyang Jin†, Mehrdad Farajtabar, Eric Nalisnick†, Daniel Khashabi† View publication Copy Bibtex Long agent traces composed of chains of thought and tool calls accumulate stale content that anchor subsequent generations, and eventually outgrow the context window. Existing scaffolds mitigate it with fixed-interval compaction triggered at a token threshold. Such triggers pay no heed to trajectory structure, risking discard of partial results mid-derivation or mid-search. We propose SELFCOMPACT, a scaffold that allows the model itself to decide when and how to compact. Specifically, it pairs two inference-time elements: (i) a compaction tool the model invokes to summarize the accumulated context, and (ii) a lightweight rubric specifying when to fire (a sub-task has resolved, or the trajectory is converging) and when to suppress (mid-derivation, or when stuck). Both are needed. The tool alone is unevenly used across open-weight models, often invoked at unhelpful moments or not at all; the rubric alone cannot act. Together, they elicit effective adaptive compaction without any fine-tuning or external supervision. We present empirical results on six benchmarks (competitive math and agentic search) and seven models. Our results show that SELFCOMPACT matches or exceeds fixed-interval summarization at a fraction of the token cost, improving over a no-summarization baseline by up to 18.1 points on math and 5–9 points on agentic search at 30–70% lower per-question cost. Our results expose a meta-cognitive gap: although unprompted models cannot reliably tell when their own context is rotting, a lightweight rubric closes this gap, reframing when to compact as a capability that scaffolds can supply without training. † Johns Hopkins University Related readings and updates. RISED: Rubrics for Agentic Multi-Environment Selection and Self-Distillation October 6, 2026 research area Data Science and Annotation , research area Speech and Natural Language Processing Training a single LLM agent jointly across diverse interactive environments has attracted increasing attention as a route to generalist agents. Existing curriculum and data-selection strategies often allocate training at the environment level or prioritize local reward-based signals, without explicitly considering relationships between current rollouts across environments for prompt-group selection. Meanwhile, as environments are learned at… Read more From Preferences to Principles: Rubric-Based Alignment for Grounded Knowledge Answers August 27, 2026 research area Methods and Algorithms , research area Speech and Natural Language Processing Designing effective reward signals for open-domain question answering is challenging because high-quality responses must simultaneously satisfy multiple aspects of answer quality that are difficult to capture with a holistic scalar objective. We introduce a rubric-based reward framework that generates query-specific rubrics grounded in retrieved evidence and decomposed into multiple quality dimensions, providing fine-grained supervision during… Read more Discover opportunities in Machine Learning. Our research in machine learning breaks new ground every day. Work with us",
+      "published_date": "2026-10-12",
+      "tags": [],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "Apple ML",
+        "feed_url": "https://machinelearning.apple.com/rss.xml"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, alignment, fine-tuning, distillation",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 66,
+    "llm_reason": "讓模型自主決定上下文壓縮時機，針對agent痛點提出無需微調的新scaffold",
+    "novelty": 13,
+    "impact": 11,
+    "trending": 15,
+    "practicality": 12,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "量子位",
+      "title": "華為AI靠RSI通關25款遊戲！操作次數比人類少56%",
+      "url": "https://www.qbitai.com/2026/10/502654.html",
+      "authors": [
+        "一水"
+      ],
+      "abstract": "華為AI靠RSI通關25款遊戲！操作次數比人類少56% 一水 2026-10-12 13:48:36 來源： 量子位 遊戲打到21:0，AI甚至不用再呼叫大模型了 一水 發自 凹非寺 量子位 | 公眾號 QbitAI 一邊打遊戲，一邊給自己升級？ 好傢伙，華為這波直接讓AI學會了《邊玩邊變強》啊？！ 最新一項研究，華為諾亞方舟實驗室聯合UCL等團隊拿出了一個名叫 Memento 3 的AI智慧體系統—— 直接把ARC-AGI-3公開集裡的25款遊戲、183個關卡，全部打通了。 還不是靠無腦試錯硬闖過去的。 人類完成同樣一套關卡，需要17135次操作。 而Memento 3只用了7518次， 比人類少操作約56%，最終拿下了滿分100的RHAE成績 （Relative Human Action Efficiency，相對人類行動效率）。 更離譜的是， 這套系統以Claude Opus 5為底模，全程沒有更新模型權重，也沒有針對遊戲進行微調 。 它就這麼自己上手玩，自己琢磨規則，自己寫程式碼，玩錯了還會反思、修改。 然後就……滿分通關了。 作為對比，Claude Opus 5在ARC Prize官方標準測試框架下，平均RHAE只有約40.7分。 同樣的底模，換了套智慧體系統，成績居然直接飆升了59.3分。 還沒完。 這套方法不光能玩解謎遊戲，研究團隊還讓它跑去打了Atari經典遊戲Pong（乒乓球）。 結果，AI自己摸索出控制策略，隨後不用再向大模型請求推理，就連續三局把對手打成了21：0。 不是，大模型都不參與後續操作了，遊戲居然還能打得這麼溜？！ 關鍵就藏在這項研究的題目裡： Model-Based Recursive Self-Improvement，基於世界模型的遞迴自我改進 。 華為AI直接通關25款遊戲，操作次數比人類還少56% 先說說這25款遊戲到底什麼來頭。 它們來自ARC Prize推出的ARC-AGI-3，關注AI評測的朋友，對ARC系列應該不陌生。 但這一代有個非常明顯的變化： 不再只是出題解題那一套了，這次是直接把AI扔進陌生的遊戲世界 。 規則，是需要AI自己猜的；目標，是需要AI自己找的；操作會產生什麼效果，是需要AI自己試的。 AI：合著全都靠我唄~ 這25款公開遊戲一共包含183個關卡，畫面大多由簡單的畫素、方塊、顏色和圖形組成。 乍一看，甚至有點像幾十年前的小遊戲合集。 但可別被這樸素的畫風騙了。 對AI來說，怎麼操作不是最難的，最麻煩的是壓根不知道這個世界怎麼運轉。 踩上特殊地板會發生什麼？一扇門打不開，是顏色沒對上，還是形狀不匹配？ 更麻煩的是，後面的關卡還可能出現新規則，把之前摸索出的經驗全部推翻。 別說AI了，人類玩家也會卡住 。 ARC Prize的測試資料顯示，在一款需要操控變形蟲移動、變色的益智遊戲r11l中，10名參與者全部通關；而另一款考驗符號破譯能力的解謎遊戲tr87，12人挑戰，只有6人成功。 在華為AI之前，各路研究團隊就已經卷得相當激烈了： 普林斯頓大學推出的Continual Harness只通關了3款遊戲，拿下20.5分。 輝達研究人員參與開發的DreamTeam稍好一些，通關6款，得分38.1。 再往上，獨立研究者David Courtis開發的OPINE-World，以及輝達團隊的NOOA，分別拿到了78.4分和85.1分。 最猛的是獨立開發者Sergey Rodionov的baseline1，不僅把25款遊戲全部打通，還拿到了99分，距離滿分只差1分。 但華為團隊這次，直接把最後這1分也補上了 。 Memento 3不僅以100分的成績通關全部25款遊戲、183個關卡，還把總操作次數壓到了7518次，比baseline1的8347次又少了829次。 不光通關了，而且還用更少的步驟通關。 怎麼做到的？？ 不用訓練大模型，AI靠給自己寫攻略實現“打怪升級” 翻了下論文，Memento 3的核心方法叫 Code as Model（程式碼即模型） 。 聽著有點抽象，其實就是讓AI在玩遊戲的過程中，給自己準備兩樣東西： 一本不斷更新的遊戲攻略，以及一套能模擬遊戲執行的程式碼。 Rulebook（規則手冊）：一份Markdown文件，記錄AI在遊戲裡摸索出的規律，比如什麼操作會觸發什麼效果、怎樣才能通關，還有哪些規則沒搞明白。 Executable World Model（可執行世界模型）：AI會把自己總結出的規則，直接寫成能夠執行的Python程式碼，相當於自己搓了一個簡化版的遊戲模擬器。 有了這兩樣東西，AI就能先在自己搭建的模擬器裡推演不同路線，再決定下一步怎麼走。 但問題來了，萬一一開始理解的遊戲規則就是錯的呢？ 別急， Memento 3不僅會自己寫攻略，發現寫錯了，還能自己推翻重來 。 論文裡就展示了一個例子。 AI在一款解謎遊戲中遇到特殊地板，起初以為踩上去後，角色攜帶的圖案會根據進入方向發生映象翻轉。 結果真正試過才發現，圖案不是翻轉，而是順時針旋轉90度，並且與進入方向無關。 於是AI修改規則手冊，對應的Python程式碼也跟著更新。 不過，改完還得驗。 系統會重新模擬此前的操作，逐格對比64×64的遊戲畫面，確認程式碼能準確復現真實結果。 對不上，就繼續改。 就這樣，AI一邊探索，一邊糾錯，規則越改越準。 而且前面學到的經驗，還能帶到後面的關卡 。 比如符號解密遊戲tr87，AI最初分不清符號朝向是否影響含義，後來發現不同方向的符號可能代表同一個字母。 隨著新關卡出現，它又推翻了之前對游標位置的理解。 整場遊戲下來，同一份規則手冊迭代了11個版本。 為了方便回溯，研究團隊甚至引入了Git版本管理。 每次修改規則和程式碼都會留下記錄，發現哪裡改錯了，還能翻看歷史版本，必要時直接恢復。 好傢伙，打個遊戲還順手維護起程式碼倉庫了。 這也正是研究團隊所說的遞迴自我改進（RSI）。 大模型參數不用動，AI通過不斷積累經驗、修改規則和程式碼，就能讓自己越玩越熟練。 而且，這套方法還真有資料支撐。 研究團隊在三款遊戲中做了對照實驗： 保留規則手冊時，AI總共用了617次操作；去掉規則手冊，只保留程式碼世界模型，則需要677次。 相當於有了這本攻略，操作次數減少約9%，智慧體執行輪次也減少了約18% 。 但研究團隊還不滿足於此。 既然一個世界模型能幫助AI少走彎路，那同時用兩個呢？ 於是，他們讓AI同時維護兩套世界模型，共享遊戲操作記錄，但各自推演不同的規則假設。 結果，在遊戲wa30中，單世界模型需要899次操作才能通關，換成雙世界模型後，直接降到了597次。 操作次數又減少了約34% 。 當然，這一提升目前只在wa30上得到驗證，還不能直接推廣到其他遊戲。 但至少在這些實驗裡，Memento 3證明了一件事： 不用重新訓練大模型，AI也能靠不斷修正自己對世界的理解，越玩越強。 遊戲打到21：0，AI甚至不用再呼叫大模型了 那這套方法只能用來玩解謎遊戲嗎？ 研究團隊決定再加點難度，直接把Memento 3拉去挑戰經典街機遊戲Atari Pong（乒乓球）。 和前面的解謎遊戲不同，這次小球會不斷移動、反彈，AI不僅要摸清遊戲規則，還得即時判斷球的運動軌跡，控制球拍接球。 結果這一試，還真試出了點新東西 。 一開始，AI同樣不知道球的反彈規律，只能邊打邊摸索。 它最初以為，球拍可以分成四個區域，小球打在不同位置，就會朝對應方向彈出去。 結果打著打著，突然出現了一次水平反彈。 誒？這和之前總結的規則對不上啊。 於是AI重新分析碰撞位置，修改反彈公式，後來又遇到新的軌跡偏差，就繼續調整，逐漸總結出更符合實際情況的運動規律。 等到控制策略成熟，研究團隊乾脆讓這套程式獨立上場。 不再呼叫Claude Opus 5，也不再更新規則。 結果， 三次不同開局，全部打出了21：0 。 好傢伙，前面還在摸索怎麼接球，後面直接把對手打了個零封？？？ 而且注意了，這時候的大模型已經不用親自上場了。 它只負責前期摸索規則、總結打法，等策略學會了，直接交給程式碼執行。 作為對比，如果不使用世界模型，只讓大模型根據眼前的畫面決定下一步怎麼操作，最終得分只有-19，和隨機亂按的-20.7差不了多少。 這一對比，差距就出來了。 與其讓大模型每一步都重新思考，不如先讓它學會怎麼玩，再把打法交給程式 。 而且效率也挺誇張。 論文資料顯示，Memento 3大約只用了 9500幀遊戲畫面 ，就學出了這套控制策略。 相比之下，部分傳統強化學習方法往往需要數十萬甚至上億幀訓練資料。 當然，這不代表Memento 3沒有成本。 畢竟，它背後用的是開啟Extra-High推理強度的Claude Opus 5，探索、生成程式碼和驗證的過程，都需要消耗不少Token和算力。 而且目前實驗主要針對規則相對明確的遊戲環境，如果換成更加複雜、多變的現實世界，這套方法還能不能奏效，仍有待驗證。 不過，這項研究倒是指出了一個值得關注的方向： 遞迴自我改進（RSI）並不一定要動模型底層權重。通過構建可檢查、可執行、可回滾的外部世界模型，凍結參數的通用大模型同樣能在陌生領域裡自我迭代、迅速進化。 論文地址： https://arxiv.org/abs/2610.11794 參考連結： https://x.com/ScarletKc/status/2109169173540884935 版權所有，未經授權不得以任何形式轉載及使用，違者必究。 一水 6天燒光2000多萬，拿下開源第一！小米史無前例「煉丹直播」收官 2026-09-22 國產RSI模型交卷！Flash模型靠它反打旗艦 2026-09-17 啊啊啊GPT-6 Astra這麼不安全！這次馬斯克都癱坐了 2026-09-21 剛剛，唐傑釋出智譜RSI首個成果 2026-09-17",
+      "published_date": "2026-10-12",
+      "tags": [
+        "資訊"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "量子位",
+        "feed_url": "https://www.qbitai.com/feed"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: world model",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 76,
+    "llm_reason": "遞迴自我改進智慧體以更少操作刷新ARC-AGI-3效率紀錄，技術故事完整",
+    "novelty": 17,
+    "impact": 14,
+    "trending": 17,
+    "practicality": 10,
+    "blog_worthiness": 18
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Alibaba Qwen Introduces QwenGyre: Elastic Reinforcement Learning RL for XLong-Horizon Agents",
+      "url": "https://www.marktechpost.com/2026/10/12/alibaba-qwen-introduces-qwengyre-elastic-reinforcement-learning-rl-for-xlong-horizon-agents/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "Alibaba’s Qwen team has introduced QwenGyre , an elastic reinforcement learning RL framework for extreme-long-horizon agent training. QwenGyre is an online reinforcement learning system from Alibaba that trains coding agents through unmodified, black-box harnesses. It targets rollouts that run for hours and process close to 1M tokens. The QwenGyre elastic RL framework was used on Qwen’s flagship Qwen 3.8 2.4T model. It rests on 2 core ideas. It moves idle GPUs between rollout and training. It also turns branching agent histories into bounded training samples. The research team defines ‘XLong-horizon’ tasks as agent runs spanning hours and hundreds of model and tool interactions. Examples include generating full repositories from specs, as in NL2Repo-Bench . Two problems appear at this scale: QwenGyre splits GPUs into cells that share a training layout. Each cell can serve rollouts or host a full training replica. A core cell owns the authoritative weights and optimizer state. Satellite cells join training later. The scheduler tracks a rollout waterlevel: queued and running executions. As executions finish, cells switch to training once the remaining cells can still serve all live work. Model calls are rerouted through a proxy, so the harness keeps running. A proxy records exact token IDs and behavior log-probabilities using token-in, token-out (TITO) . Calls are stored as prefix-shared trajectory trees . A cap of 5 matched uncapped training scores while cutting forward-backward time by 25.2%. Training uses an adapted GSPO with 16 rollouts per group. All runs used Claude Code 2.1.220 as the harness, with equal GPU budgets and matched staleness. On the 2.4T model, QwenGyre finished 48 steps in 75.42 hours. Async took 134.55 hours and Colocate took 91.47 hours. Evaluation pass rate rose from 52.48% to 58.54%. Speedups come from each project’s own setup and are not directly comparable. Check out the full QwenGyre paper on arXiv and Qwen’s announcement post . All credit goes to the researcher of this project. Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. The post Alibaba Qwen Introduces QwenGyre: Elastic Reinforcement Learning RL for XLong-Horizon Agents appeared first on MarkTechPost .",
+      "published_date": "2026-10-12",
+      "tags": [
+        "Agentic AI",
+        "AI Infrastructure",
+        "AI Paper Summary",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Editors Pick",
+        "Staff",
+        "Tech News",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, reinforcement learning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 69,
+    "llm_reason": "彈性RL排程與前綴共享軌跡樹設計新穎，針對超長horizon agent訓練有實質系統貢獻",
+    "novelty": 14,
+    "impact": 13,
+    "trending": 15,
+    "practicality": 11,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "What is Decision 3.0? vLLM Semantic Router’s New Open Decision Models",
+      "url": "https://www.marktechpost.com/2026/10/11/what-is-decision-3-0-vllm-semantic-routers-new-open-decision-models/",
+      "authors": [
+        "Michal Sutter"
+      ],
+      "abstract": "The vLLM Semantic Router team has released Decision 3.0 , a family of multimodal decision models. Decision 3.0 multimodal decision models read text, JSON and images, then answer typed questions about them. There are 5 sizes, from 0.8B to 27B, all under Apache-2.0. For developers, this is a fast way to classify, route and gate requests without parsing generated text. Decision 3.0 is a set of open decision models from vLLM Semantic Router that return probabilities instead of text. You pass a state (text or JSON), optional images, and named questions. Each question is a Choice, a Yes/No, or a Score on a scale. The model answers all questions in one call and returns a probability for every answer. This is the ‘system one’ pattern for routers and guardrails. Instead of prompting an LLM and parsing its output, you get calibrated scores you can threshold. Each model is a fine-tune of a Qwen base. The 27B d3 is built on Qwen3.8-27B . The smaller 4 build on Qwen3.5 checkpoints at 0.8B, 2B, 4B and 9B. Every size carries a vision encoder: 0.10B in d3-lite, 0.33B in d3-nano and d3-mini, and 0.46B in d3-flash and d3. Requests accept several PNG, JPEG or WebP images, each read at up to 1.6 megapixels. Every question sees all images. Each question gets its own forward pass over the input. Install targets transformers==5.17.0 , and the optional flash-linear-attention package speeds up the linear-attention layers. Loading needs trust_remote_code=True . Through the model card, the research team state the Jev Decision Index 0.3.1, a board that ranks open reproductions of TypeSafe’s Jev decision system. d3 numbers are the team’s internal evaluation. On text, d3 scores 64.1, ahead of Perplexity Decider v1.1 (62.8) and Jev (60.1). One caveat: Torchcast Decision 27B posts a higher public-suite score (65.1 vs 64.9). On the vision board, d3 scores 71.6 against 70.6 for Perplexity Decider v1.1. The size story is the strongest part. d3-flash (9B) scores 59.0, above Decision 2.0’s 27B at 55.9. On the public suite, gains over Decision 2.0 range from +8.0 (27B) to +15.1 (0.8B). Class leadership is not uniform, though: On public vision tasks, d3 scores 97.3 on InfographicVQA and 89.9 on Mind2Web, both approximate rebuilds. It is weaker on MMMU-Pro vision (46.2) and Hateful Memes moderation (44.6). Medians below are for 1 request at a time on 1 AMD Instinct MI325X, per each card: All models were trained on AMD Instinct MI325X GPUs. Check out the Hugging Face collection , the d3 model card and the vLLM Semantic Router GitHub repo . All credit goes to the researcher of this project. Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. The post What is Decision 3.0? vLLM Semantic Router’s New Open Decision Models appeared first on MarkTechPost .",
+      "published_date": "2026-10-11",
+      "tags": [
+        "Agentic AI",
+        "AI Infrastructure",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Decision Models",
+        "Editors Pick",
+        "For Devs",
+        "Language Model",
+        "Large Language Model",
+        "Machine Learning",
+        "New Releases",
+        "Open Source",
+        "Software Engineering",
+        "Staff",
+        "Tech News",
+        "Technology",
+        "Uncategorized"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: multimodal",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 74,
+    "llm_reason": "開源多模態決策模型附完整部署細節，可直接落地",
+    "novelty": 13,
+    "impact": 13,
+    "trending": 14,
+    "practicality": 18,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "blog",
+      "source_name": "Latent Space",
+      "title": "How Anthropic’s Dynamic Workflows Coordinate Claude Agents",
+      "url": "https://www.latent.space/p/claude-dynamic-workflows",
+      "authors": [
+        "Latent Space"
+      ],
+      "abstract": "The AI Engineer New York 2026 conference kicked off this morning with a series of workshops, including Anthropic discussing how to orchestrate its Claude Managed Agents . Of particular interest was a brand new feature, announced on Friday , called dynamic workflows — or simply “flows,” as the presenters repeatedly called it. Flows are defined as “a new type of multiagent orchestration, built for your most ambitious workloads.” CJ Avilla and Harrison Stall , both Members of Technical Staff at Anthropic , began by invoking some operating system projects of the past — from Ken Thompson building the original Unix operating system, through to Linux evolving from one person (Linus Torvalds) to layers of trusted maintainers . The lesson: agents need the same level of organization in order to do the types of big, ambitious projects Anthropic envisions for dynamic workflows. The best engineering teams are building AI factories where they own and control not only their data, compute, and infrastructure, but also a durable runtime on their cloud. Union.ai gives your workflows the durability to adapt and right-size infra resources and recover from failures without re-running completed work. Get started directly through AWS Marketplace and try Union.ai free for 30 days . To learn more, visit us at AI Engineer New York booth #48. “I think a lot of us who are orchestrating and managing lots of agents now might start to feel this feeling of being the bottleneck and being the breaking point as we have lots of agents contributing tons and tons of PRs,” Avilla said. “And we’re sitting there in our GitHub trying to approve PRs and make sure that everything works as expected.” The pair noted that dynamic workflows began in Claude Code as the “a harness for every task” concept. But flows can run longer than a single agent or a roster. The basic idea is that Claude chooses the organization of agents. “Flows are essentially the next version of multi-agent orchestration,” said Stall, “where you can let Claude fully orchestrate the entirety of its own multi-agent topology.” The way this works is that the lead agent creates a plan for how it wants to accomplish tasks. Claude then writes an orchestration program, which launches agents, collects results, and manages information flow. Previously, Claude Managed Agents required developers to configure a coordinator and a roster of subagents. With dynamic workflows, Claude itself determines how to divide and orchestrate the work. “Across multiple different phases of the multi-agent orchestration, it’s able to accomplish discrete, verifiable units of work without you having to manage any of the interconnections between these things,” Stall said. That said, Avilla noted that the user can introduce specialist sub-agents if they wish. “It’s also possible in the agent config to pass in pre-configured sub-agents,” he said. All of this is available in Claude Console , the interface used by developers accessing Claude through API — the whole point of Claude Managed Agents. The presenters then showed a relatively simple workflow of a stock watchlist scanner. Although this was far removed from the big, ambitious projects Anthropic is encouraging, it did illustrate the basic pattern : a scan phase distributed individual tickers to agents with isolated contexts , and a later review phase examined the findings before producing a report. The audience Q&A surfaced a number of potential problems. One audience member asked how Claude decides how many agents a task needs , and could a simple ticker scan trigger hundreds of sub-agents? “The answer really is evals and lower defaults ,” Stall replied, noting that ambitious tasks generally require explicitly encouraging greater parallelization. One enduring concern with agent orchestration is maintaining control over your token budget . Someone asked whether the lead agent knows how much money it has available? Stall replied that the model does not know its budget while running, but that developers can set a session budget. He added that informing models of their budgets could make the agents “a little bit anxious,” which elicited chuckles from the audience. A related question was how can developers make repeated flows cheaper and more efficient over time? Outside of asking Claude to examine the costs incurred, Avilla suggested another relatively new feature be used: dreaming . In the documentation , “dreaming” is defined as a research preview feature. A dream “reads an existing memory store alongside past session transcripts, then produces a new, reorganized memory store, ” with duplicates merged, “stale or contradicted entries” replaced, and “new insights surfaced.” Avilla described dreaming in the flow context as being able to “crystallize and basically improve the memory store that is related to those sessions.” For the stock watchlist example, someone asked whether the watchlist flow can improve itself? For example, recognize that its scanning model is inadequate and change the next scheduled run? Stall said this wasn’t built in, but he and Avilla suggested hill-climbing and dreaming could be used to improve the loop. What about visibility into the actions of the sub-agents , another audience member asked. Avilla replied that yes, developers can always inspect that through graphing functionality inside Claude Console. “You can tell, what did the lead agent actually pass to the sub-agent? You can look at that payload here to deeply understand what is actually happening for every transition in this entire graph.” Another interesting question was whether the subagents can communicate with each other? Stall said the agents share a filesystem and can use it to exchange information, but developers cannot directly instruct one workflow subagent to message another through the API. In the watchlist-scanner comparison, Avilla said flows cost “much more” than a single-agent approach, but were also “much more effective at finding all of the details.” The bigger question is how ambitious can flows be, really? One audience member asked whether dynamic workflows can power large scientific research projects, referencing OpenAI’s recently announced proof concerning the Navier–Stokes Millennium Prize problem . While Stall wouldn’t be drawn on specifics about how Anthropic computes large scientific problems, he said it is their goal to enable general users to tackle those problems too. “Flows are basically a way to throw test-time compute at hard problems and get more capability faster out of the models,” he said. “We think, especially as an API service, that unlocking the power of this is the first step for us making these types of discoveries, or scientific progress, broadly doable by the general public. ”",
+      "published_date": "2026-10-12",
+      "tags": [
+        "blog"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "blog_name": "Latent Space",
+        "blog_url": "https://www.latent.space/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, multi-agent, test time compute",
+      "⚖️ 來源權重: blog +15"
+    ],
+    "llm_score": 61,
+    "llm_reason": "新多代理編排功能發布，概念有趣但缺乏實作細節與程式碼",
+    "novelty": 10,
+    "impact": 12,
+    "trending": 16,
+    "practicality": 10,
+    "blog_worthiness": 13
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "TechCrunch AI",
+      "title": "Meta releases its first frontier model, Muse Wonder",
+      "url": "https://techcrunch.com/2026/10/12/meta-releases-its-first-frontier-model-muse-wonder/",
+      "authors": [
+        "Russell Brandom"
+      ],
+      "abstract": "Meta’s Superintelligence Lab released a pair of new state-of-the-art models on Monday, Muse Wonder and Muse Wonder Full, representing the company’s first attempt at a frontier model. Where Muse Spark aimed to be a lightweight model that could perform at low latency, the Wonder models are larger and said to be more capable, with higher benchmark scores and better results on complex tasks like coding. According to Meta’s testing (presented in the model card ), Wonder and Wonder Full achieve comparable benchmark scores to Fable 5.1 and GPT-6 Astra. “Together, they mark the next step on our scaling ladder and a major leap toward personal superintelligence,” Meta’s blog post about the models reads. That scale is reflected in the pricing: Accessed through the Meta Model API, Wonder will cost $4 per million input tokens and $20 per million output tokens, making it roughly equivalent in cost to GPT-6 Sol or Opus 5.5. Notably, Wonder Full will only be available to Muse Code subscribers and will not be served through the API. Both models will also be used to power the Muse agent. In keeping with Meta’s interest in developing personal assistants that can perform tasks over a long period, the company placed particular emphasis on the new models’ ability to retain and synthesize information given by the user, a property Meta calls “active memory.” To achieve better recall, Meta highlighted the MemoryBench benchmark , which challenges continual learning and memory construction frameworks. According to the company’s testing, Muse Wonder now scores higher on MemoryBench than Fable, Opus, or Astra. “We put a tremendous amount of effort into making sure your model can remember what’s important to you over days, weeks, months, and beyond,” said research scientist Kavya Kopparapu in a video accompanying the launch. The new models are the first frontier model release since Scale AI founder Alexandr Wang restructured Meta’s AI efforts in August of last year . Since then, Meta has released its lightweight Muse Spark model and Muse agent but has avoided the kind of state-of-the-art model releases OpenAI and Anthropic are known for. According to the post, the models were trained at Meta’s Prometheus data center in central Ohio , which came online earlier this year.",
+      "published_date": "2026-10-12",
+      "tags": [
+        "AI",
+        "ai models",
+        "frontier models",
+        "meta superintelligence lab",
+        "muse"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "TechCrunch AI",
+        "feed_url": "https://techcrunch.com/category/artificial-intelligence/feed/"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: rss +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 63,
+    "llm_reason": "Meta首個前沿模型發布，產業影響大但架構上屬既有路線擴展",
+    "novelty": 7,
+    "impact": 14,
+    "trending": 17,
+    "practicality": 12,
+    "blog_worthiness": 13
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Meet Cloudflare Clef-omni: A 30B-A3B Multimodal Decision Model for Audio, Video, Image and Text",
+      "url": "https://www.marktechpost.com/2026/10/11/cloudflare-clef-omni-multimodal-decision-model/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "Cloudflare has released Clef-omni , a new open-weight member of its Clef decision model family. Clef-omni is a Cloudflare decision model that scores text, images, audio and video in 1 call. It arrived on October 9, 2026, 8 days after the original Clef and Clef-flash launch . The same update cut Clef-flash pricing below TypeSafe’s Jev and made hosted Clef roughly 2x faster. For developers, this removes the transcription and captioning steps that multimodal agent pipelines usually need. A decision model returns typed answers with probabilities instead of generated text. You send a state and a schema of questions. The model returns a probability for every allowed option. Clef supports 3 question types : noul (true or false), choice and score . The format follows the Jev and SystemOne API from TypeSafe AI . Clef-omni is post-trained from Qwen3-Omni-30B-A3B-Instruct . Cloudflare keeps the comprehension backbone and drops the text-to-speech output path. The model runs a single prefill pass over the full payload. Video frames and audio are synced into 1 sequence for joint processing. A small joint schema head then scores the options. Each valid option first gathers evidence from the input. Field vectors then cross-attend across the full context to compute confidence scores. Cloudflare froze the Qwen3 backbone and trained LoRA adapters. Training combined label-smoothed cross-entropy with Brier score calibration. Supported inputs on Workers AI, per the developer docs : Cloudflare reports text decisions in about 130 ms at the median and images in about 150 ms. A 21-second video with sound scores in about 1.5 seconds. Cloudflare compared Clef-omni against Clef, Clef-flash and Jev on its Decision Index run. Clef-omni leads on intent classification: 94.8 macro-F1 on BANKING77 and 97.7 on CLINC150+OOS. It also tops Amazon ESCI at 57.8. It trails elsewhere. Home appliances case-exact accuracy is 69.3, versus 97.73 for Clef-flash. When2Call accuracy is 63.3, versus 80.97 for Jev. On TypeSafe’s workflow evals , Clef-omni scores below Clef in all 5 reported metrics. Benchmark scores are from Cloudflare’s announcement and were not independently verified. Cloudflare moved hosted Clef to SGLang and tuned its serving stack. No new weights were released. Median latency fell from 262 ms to 152 ms at about 800 tokens, a 1.7x gain. At about 3,400 tokens it fell from 616 ms to 305 ms, a 2.0x gain. At about 16,000 tokens it dropped from 2,721 ms to 1,635 ms. Clef support lands in SGLang 0.5.22. Check out the Cloudflare announcement , model weights and Workers AI docs . All credit goes to the researcher of this project. Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. The post Meet Cloudflare Clef-omni: A 30B-A3B Multimodal Decision Model for Audio, Video, Image and Text appeared first on MarkTechPost .",
+      "published_date": "2026-10-11",
+      "tags": [
+        "Agentic AI",
+        "AI Infrastructure",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Decision Models",
+        "Editors Pick",
+        "Language Model",
+        "Large Language Model",
+        "Machine Learning",
+        "New Releases",
+        "Open Source",
+        "Software Engineering",
+        "Staff",
+        "Tech News",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, lora, multimodal, open weight",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 55,
+    "llm_reason": "基於Qwen3-Omni做LoRA後訓練的決策模型，屬合理工程組合但非根本創新",
+    "novelty": 8,
+    "impact": 9,
+    "trending": 12,
+    "practicality": 14,
+    "blog_worthiness": 12
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Databricks",
+      "title": "How Flo Health built safer, more useful open models with Databricks AI Runtime",
+      "url": "https://www.databricks.com/blog/how-flo-health-built-safer-more-useful-open-models-databricks-ai-runtime",
+      "authors": [],
+      "abstract": "For Flo Health, the bar for generative AI is unusually high. With 81 million monthly active users, the women’s health app operates at a scale where even small weaknesses in an AI system matter. Because Flo’s products deal with health and well-being, responses need to be medically safe and genuinely useful. As Flo moved from using only traditional ML towards personalized insights powered by generative AI, the team saw the potential for a more flexible, personalized product. But relying on a single general-purpose model introduced other constraints: cost at scale, dependence on a model provider’s lifecycle, and limited ability to encode Flo’s own domain expertise. Flo’s longer-term vision was a compound AI system that could use the right model for each task while maintaining a consistent safety standard across them. That led Flo toward fine-tuned open models and a new post-training pipeline built with Databricks. The team used AI judges and privacy-first synthetic data to turn Flo’s standards for medical safety and usefulness into a training signal, then used Databricks AI Runtime to run distributed fine-tuning on serverless NVIDIA H100 GPUs. That approach also made sense economically at Flo’s scale. The team estimates that using tailored, fine-tuned models can reduce inference costs by an order of magnitude compared with relying on frontier model APIs, while giving Flo greater control over model behavior and lifecycle. But before Flo could train models against its own standards, it needed a reliable way to define and measure what “good” looked like. Flo defined two goals for its AI systems: medical safety as the foundation and usefulness as the goal. A model can avoid unsafe statements and still provide little value, or give a detailed, personalized answer while missing an important medical safeguard. Consider a question such as, “Why is my period late?” An answer that simply tells the user to see a medical professional may be safe but not particularly useful. An answer that lists only common lifestyle causes may be more helpful, but incomplete from a medical-safety perspective. Flo wanted responses that could balance both: useful information, appropriate context, and the right safety netting. To make that balance measurable, Flo’s medical, product, and engineering teams built an evaluation framework that decomposed medical risk into specific rubrics that could be tested consistently. For example, after identifying that responses to symptom questions could be overly reassuring, Flo created a “balanced causes” rule requiring appropriate coverage of both benign and potentially serious causes when relevant. Those rubrics were then turned into AI judges, each with a definition, grading instructions, and training cases. Flo validated the judges against synthetic cases and anonymized cases from real-user experiments. When an AI judge disagreed with an initial human assessment, blinded clinical reviewers adjudicated the disagreement to establish ground truth. Flo then used part of those cases to refine the judges and reserved the rest to measure performance. With the evaluation system in place, Flo could use those same judges as the reward signal for training. The final framework included 26 judges across three categories: Building a conventional human-labeled fine-tuning dataset would have required significant clinical expertise for every example. Flo concentrated its medical experts’ time on designing and calibrating the evaluation system, which could then score training candidates at scale. The resulting pipeline generated more than 15,000 synthetic questions using privacy-first principles and created training pairs without human-annotated responses. Flo derived the inputs from model-generated or anonymously aggregated signals rather than user-written free text or identifiable information. Clinicians remained essential to defining and validating what “safe” meant, but they no longer needed to manually label every individual training pair. With calibrated judges and synthetic training data in place, Flo adopted a Reinforcement Fine-Tuning (RTF) approach that generates multiple candidate responses during training, uses the evaluation system to identify the strongest ones, and fine-tunes the model so that quality is encoded in its weights rather than relying on expensive best-of-N search on every production request. Flo’s workflow followed five stages: The first version of this approach exposed an important limitation: usefulness improved while medical safety remained relatively flat because the preference pairs did not distinguish sufficiently between degrees of medical quality. Flo addressed that by adding a graded safety score. Responses that passed the binary safety gate were re-ranked according to how thoroughly they met the applicable medical criteria, creating preference pairs with a clearer medical-safety contrast. Running this generate-score-select-train loop at scale is compute-intensive. Flo’s training stack combined Databricks AI Runtime, LLM Foundry, and Compose-RL, with MLflow used for tracking and checkpoints. AI Runtime provided the serverless GPU environment, LLM Foundry handled distributed training, and Compose-RL provided the preference-optimization layer. For its fine-tuning run, Flo used 32 NVIDIA H100 GPUs with PyTorch and Fully Sharded Data Parallel (FSDP), and ran SFT followed by DPO via LLM Foundry and Compose-RL. That setup gave engineers on-demand GPU compute for distributed deep learning training, allowing them to move from synthetic data generation to evaluation to fine-tuning without manually standing up and configuring GPU clusters for each experiment. Keeping the surrounding data, experimentation, and ML tooling in the same environment made it easier to iterate across the full post-training workflow. That workflow produced measurable gains across both dimensions Flo cared about. The first model Flo evaluated scored 34% on its medical-safety benchmark and 42% on usefulness, while only 16% of responses met both criteria simultaneously. After fine-tuning, medical safety increased to approximately 61%, usefulness reached 76%, and the combined score climbed from 16% to 47% — nearly three times the starting point. The 47% combined score was an important milestone, but the more durable outcome was the reusable evaluation and training system Flo had built around it. Flo can carry that system forward as the underlying models evolve. The team plans to apply it to newer open-weight models, including Gemma, Qwen, and Kimi, while preserving the medical safety and usefulness criteria it has already developed and validated. With Databricks AI Runtime underpinning that loop, Flo can iterate on new models without rebuilding the training environment, keeping its engineers focused on medical expertise, model quality, and the user experience. Subscribe to our blog and get the latest posts delivered to your inbox.",
+      "published_date": "2026-10-12",
+      "tags": [
+        "Company",
+        "Customers"
+      ],
+      "organization": "Databricks",
+      "raw_metadata": {
+        "feed_name": "Databricks",
+        "feed_url": "https://www.databricks.com/feed"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: dpo, post-training, synthetic data, fine-tuning, safety",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 54,
+    "llm_reason": "真實大規模產業案例，結合安全對齊與微調降本的具體方法論",
+    "novelty": 7,
+    "impact": 10,
+    "trending": 10,
+    "practicality": 13,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "Deploy decision models with llama.cpp on Amazon SageMaker AI",
+      "url": "https://aws.amazon.com/blogs/machine-learning/deploy-decision-models-with-llama-cpp-on-amazon-sagemaker-ai/",
+      "authors": [
+        "Jyothirmai Kottu"
+      ],
+      "abstract": "Applications that route requests, select agent actions, or assign policy outcomes often need scores over a fixed set of choices instead of free-form text. Deploying these decision models with llama.cpp on Amazon SageMaker AI gives you a managed path for serving quantized models on CPU or GPU infrastructure. This post continues a series on specialized AWS Deep Learning Containers (DLCs) for generative AI inference. Previous posts cover WhisperX , vLLM-Omni – Part 1 , and vLLM-Omni – Part 2 . In this post, you first use the AWS DLC for llama.cpp to serve OpenAI-compatible chat completions through SageMaker AI InvokeEndpoint . You then extend the same runtime with SemIf , formerly OpenJev, which returns probabilities over declared options without decoding an answer token. The accompanying code sample includes CPU and GPU deployment options. Figure 1 shows two deployment paths from the same packaged model. The text-generation path uses the AWS DLC for llama.cpp and returns generated responses through the OpenAI-compatible API. The structured-decision path builds a child image that replaces the default server with a SemIf adapter and returns probabilities for declared options. Figure 1: Run the AWS DLC for llama.cpp or the SemIf child image on CPU or GPU, depending on the API and latency requirements of your workload For the standard path, package the model as model.tar.gz in Amazon Simple Storage Service (Amazon S3) and reference the published DLC image directly. The container finds the first .gguf file under /opt/ml/model , maps POST /invocations to llama-server at /v1/chat/completions , and passes SM_LLAMA_CPP_* environment variables to llama.cpp arguments. The llama-server HTTP API doesn’t expose the final-position logits and state operations that SemIf uses. The structured-decision path therefore uses AWS CodeBuild to build a child image and store it in Amazon Elastic Container Registry (Amazon ECR) . The child image keeps the DLC’s compiled CPU or CUDA libraries while replacing its entry point with a SageMaker-compatible adapter. The AWS DLC for llama.cpp accepts the OpenAI Chat Completions schema. Send a messages array with role and content , plus generation controls such as max_tokens and stream : The response uses the OpenAI-compatible choices array. Read generated text from choices[0].message.content . SemIf uses a constrained decision schema instead of chat messages. The request contains a caller-defined ID, unstructured state, a question, and an ordered list of allowed options: The response returns option_ids , probabilities , and raw option_logits in the same order, along with prompt, timing, and pinned model metadata. With stable option IDs, your application can apply thresholds, fallbacks, and policy checks without parsing generated prose. SemIf belongs to a broader class of decision models that score application-defined outcomes from unstructured state. Other implementations include Jev , TypeSafe’s decision model and /v1/systemone API; Kev , a model server designed for TypeSafe API compatibility; and Strands Decider 2B , a purpose-built model for agent workflows with calibrated outputs. Use this pattern when your application defines the allowed choices at request time and needs a model to interpret unstructured context. Examples include routing a case to a queue, extracting one value from a known set, assigning an incident priority, checking a policy outcome, or selecting an agent action. Keep authorization and deterministic business rules outside the model, and validate model probabilities before treating them as operational confidence. Use the standard SageMaker AI text-generation path when you need OpenAI-compatible chat completions through InvokeEndpoint . The SageMaker AI image maps POST /invocations to the llama-server /v1/chat/completions endpoint. Build a child image only when your application needs behavior that this interface doesn’t provide, such as SemIf’s direct logits and state access. Removing answer-token generation doesn’t remove model inference. The model still processes the complete state, question, and option descriptions before SemIf reads the final logits. Keep prompts focused, and evaluate the selected model with labeled decisions from your application before production use. The following benchmark applies to the SemIf extension, not the text-generation endpoint. Model size, quantization, prompt length, runtime, and CPU thread count affect each decision. To quantify these trade-offs, we sent the same 231 public JevBench tasks serially to one CPU endpoint and one GPU endpoint. Compared with the CPU configuration, the GPU endpoint was 4.9 times faster at p50 and 32.2 times faster at p95. The sample uses the SageMaker AI instance pools feature to list compatible GPU instance types in priority order, so SageMaker can select an alternative when the first preference isn’t available. The pool ordered g6e , g6 , g5 , then g4dn . SageMaker selected ml.g6e.xlarge , and startup logs confirmed that llama.cpp offloaded all 34 model layers to an NVIDIA L40S. The CPU and GPU images used different llama.cpp builds and produced different predictions on six hard tasks. Treat the one-answer accuracy difference as runtime variation, not evidence that GPU offload improves model quality. Smaller models reduced median latency, but the 2B and 0.8B candidates achieved 66.7 percent and 58.4 percent accuracy. The sample therefore keeps the 4B Q4_K_M model as its quality-first default. These measurements include network latency and aren’t service guarantees. Benchmark the complete model and infrastructure configuration against your own decisions. Use CPU for background, offline, or low-throughput workloads that aren’t latency-sensitive and can tolerate seconds of response time. Use GPU for interactive decisions, long prompts, or workloads with tight tail-latency targets. Keep state and option descriptions concise, group decisions that share the same state into one request, and scale endpoint instances for concurrency. Shared-state scoring reuses the common prompt prefix, while the adapter returns retryable HTTP 503 responses instead of allowing an unbounded queue around its stateful llama.cpp context. The text-generation example uses the CPU DLC and a fixed CPU instance. The SemIf extension keeps CPU as the default for workloads that aren’t latency-sensitive and offers an optional CUDA image with ordered instance pools. Review SageMaker AI pricing before creating an endpoint. Use the following procedure to deploy the standard text-generation endpoint, then build the optional SemIf extension for structured decisions on CPU or GPU. Wait for the returned build ID to reach SUCCEEDED . The build records the source revisions and checksums in model-manifest.json and stops if the GGUF checksum differs from the validated value. Resolve a digest-pinned server-sagemaker-cpu-v1 image from the AWS DLC for llama.cpp documentation , then create the SageMaker AI model, endpoint configuration, and endpoint: Select a server-sagemaker-cpu-v1 or server-sagemaker-cuda-v1 image rather than the corresponding EC2 image. The SageMaker AI images implement the /ping and /invocations container contract and map invocation payloads to chat completions. This walkthrough supplies the GGUF model through the SageMaker AI model artifact in Amazon S3. As an alternative, you can configure SM_LLAMA_CPP_HF_REPO and SM_LLAMA_CPP_HF_FILE to download a GGUF file from Hugging Face when the endpoint has network egress. You don’t need a Dockerfile or an ECR repository for this path. Wait for the endpoint to enter InService , then send an OpenAI-compatible chat request: For GPU, build the CUDA child image instead: After the build succeeds, construct the immutable image URI: The deployment script rejects mutable image tags. The CPU configuration uses a fixed instance type: Wait for the returned endpoint name to enter InService . This path sets n_gpu_layers=0 .",
+      "published_date": "2026-10-12",
+      "tags": [
+        "Advanced (300)",
+        "Amazon SageMaker AI",
+        "Technical How-to"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, quantization",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 57,
+    "llm_reason": "決策模型搭配llama.cpp部署教學，附程式碼實用性高",
+    "novelty": 8,
+    "impact": 9,
+    "trending": 11,
+    "practicality": 16,
+    "blog_worthiness": 13
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Apple ML",
+      "title": "Minions: A Dynamic and Distributed Virtual GPU Cloud Built on Idle Apple Silicon Devices",
+      "url": "https://machinelearning.apple.com/research/distributed-gpu-cloud",
+      "authors": [],
+      "abstract": "research area Speech and Natural Language Processing , research area Tools, Platforms, Frameworks content type paper published October 2026 Minions: A Dynamic and Distributed Virtual GPU Cloud Built on Idle Apple Silicon Devices Authors Jianhua Li, Yun Xing, Girisha De Silva, Ryan Flint, Kai Yuan, Sean Suchter View publication Copy Bibtex The increasing demand for GPU-accelerated machine learning inference has exposed limitations in centralized GPU infrastructures, including high cost, limited elasticity, and long wait times under resource constraints. At the same time, modern Apple Silicon–based macOS devices are equipped with powerful GPUs that remain largely idle during normal usage. This paper presents Minions, a dynamic and distributed virtual GPU cloud that aggregates idle Apple Silicon GPUs across macOS devices to execute large-scale machine learning inference workloads. Minions enables teams to leverage existing hardware without requiring additional GPU procurement. The system provides flexible GPU inference task execution, fault tolerance, and efficient resource utilization. Our experience shows that idle macOS devices can be transformed into a practical distributed GPU inference platform in environments where centralized GPU resources are constrained. Related readings and updates. Exploring LLMs with MLX and the Neural Accelerators in the M5 GPU November 19, 2025 Mac with Apple silicon is increasingly popular among AI developers and researchers interested in using their Mac to experiment with the latest models and techniques. With MLX, users can explore and run LLMs efficiently on Mac. It allows researchers to experiment with new inference or fine-tuning techniques, or investigate AI techniques in a private environment, on their own hardware. MLX works with all Apple silicon systems, and with the latest… Read more Accelerating LLM Inference on NVIDIA GPUs with ReDrafter December 18, 2024 Accelerating LLM inference is an important ML research problem, as auto-regressive token generation is computationally expensive and relatively slow, and improving inference efficiency can reduce latency for users. In addition to ongoing efforts to accelerate inference on Apple silicon, we have recently made significant progress in accelerating LLM inference for the NVIDIA GPUs widely used for production applications across the industry… Read more Discover opportunities in Machine Learning. Our research in machine learning breaks new ground every day. Work with us",
+      "published_date": "2026-10-12",
+      "tags": [],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "Apple ML",
+        "feed_url": "https://machinelearning.apple.com/rss.xml"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: fine-tuning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 61,
+    "llm_reason": "利用閒置Apple Silicon建構分散式GPU雲的新穎系統研究",
+    "novelty": 15,
+    "impact": 11,
+    "trending": 9,
+    "practicality": 11,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "The Verge AI",
+      "title": "Microsoft’s new AI chip makes it less reliant on Nvidia’s GPUs",
+      "url": "https://www.theverge.com/news/1009465/microsoft-maia-300-chip-improvements-rollout",
+      "authors": [
+        "Tom Warren"
+      ],
+      "abstract": "News AI Gadgets Microsoft’s new AI chip makes it less reliant on Nvidia’s GPUs The new Maia 300 chip will start rolling out to production AI workloads in 2027. The new Maia 300 chip will start rolling out to production AI workloads in 2027. by Tom Warren Oct 12, 2026, 1:00 PM UTC Microsoft’s Maia 300 chip. Image: Microsoft Tom Warren is a senior correspondent and author of Notepad , who has been covering all things Microsoft, PC, and tech for over 20 years. Microsoft is announcing its third-generation Maia in-house AI chip today, designed to be the “primary AI inference system” for Microsoft’s products and services. Maia 300 not only improves the cost and efficiency of running AI workloads in the cloud, it’s also more capable of handling the latest reasoning models and agentic tasks. Maia 300 will start being rolled out to production in 2027, and it has been designed with efficiency in mind. “We expect Maia 300 to deliver 40 percent more tokens per megawatt compared to leading GPU-based systems,” says Scott Guthrie , executive vice president of Microsoft’s cloud group. “And in a full 96-accelerator configuration, it delivers up to 7x the rack-scale token throughput of Maia 200.” These efficiency improvements will allow Microsoft to rely mainly on its in-house AI chips soon, instead of ones from Nvidia and AMD. “We will scale our Azure Maia family to multi-gigawatt deployments starting in 2027, making Maia the primary AI inference system for Microsoft products and services,” says Guthrie. Maia 300 chips will start being used for production workloads in 2027. Image: Microsoft Maia 300 is a successor to the 200, which was only announced in January . Maia 200 is already running on production AI workloads across Microsoft, including Microsoft Copilot, GitHub Copilot, Microsoft Foundry, and Microsoft’s own AI models. “Maia 200 is the best performing AI infrastructure in our fleet, measured in real world metrics for AI services,” says Guthrie. “Maia 300 is a complete AI system designed for the new types of AI workloads emerging today: Long-context reasoning, latency-sensitive conversational experiences, and sustained, multi-step agentic tasks.” Microsoft is using a new chiplet architecture to get its all-important efficiency gains. Built on TSMC’s N2P process node, the latest Maia 300 architecture separates compute, memory controller, and I/O functions. “This increases the silicon area dedicated to compute performance and allows each function to use the technology best suited to its role,” says the Azure hardware and infrastructure team. Maia 300 is also a key part of Microsoft’s own AI model work, and could help the company achieve its goal of catching up with Google DeepMind, OpenAI, and Anthropic. “We have to work across the full stack, all the way down to the silicon,” says Microsoft AI CEO Mustafa Suleyman. “At that scale we need a platform that we own, and that we co-design with our models. That’s why running our Microsoft AI models on top of the Maia chip is a critical focus for our team.” Follow topics and authors from this story to see more like this in your personalized homepage feed and to receive email updates. Tom Warren AI Chips Gadgets Microsoft News Tech",
+      "published_date": "2026-10-12",
+      "tags": [
+        "AI",
+        "Chips",
+        "Gadgets",
+        "Microsoft",
+        "News",
+        "Tech"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "The Verge AI",
+        "feed_url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agentic, reasoning, long context",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 47,
+    "llm_reason": "晶片商業發布無架構技術細節，話題性高但工程師難直接應用",
+    "novelty": 6,
+    "impact": 13,
+    "trending": 15,
+    "practicality": 5,
+    "blog_worthiness": 8
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "Run multi-node inference workloads using Ray LLM Deep Learning Containers",
+      "url": "https://aws.amazon.com/blogs/machine-learning/run-multi-node-inference-workloads-using-ray-llm-deep-learning-containers/",
+      "authors": [
+        "Ananth Raghavendra"
+      ],
+      "abstract": "This post shows how to deploy one large language model (LLM) across two GPU nodes on Amazon Elastic Kubernetes Service (Amazon EKS) with the multi-node Ray LLM Deep Learning Containers . It uses separate prefill and decode nodes behind one OpenAI-compatible endpoint. This kind of multi-node setup is common for tensor, pipeline, and data parallelism, as well as prefill/decode disaggregation inference workloads. In a previous post , we introduced the Ray Serve DLC and used it to stand up a small model behind an HTTP endpoint on a single GPU node. You had a working inference endpoint, and the container keeps the GPU stack compatible, including CUDA libraries, so you did not need to write boilerplate code. Ray is a distributed compute framework, so Ray Serve deployments can span multiple nodes. Customers use multi-node Ray Serve for several reasons. Some want to run foundation or open-weight models that are too large for a single GPU. Others need more throughput than one replica can deliver. Still others want to separate the two phases of inference to improve performance. In each case, customers must build the dependency chain themselves: choosing compatible libraries for the GPU stack and debugging issues when a component drifts out of alignment. This is undifferentiated work that takes time and effort away from delivering models. AWS Deep Learning Containers (DLCs) have long solved this kind of problem for training and inferencing workloads. DLCs are pre-built, performance-optimized Docker images that bundle a framework, its dependencies, and the GPU stack into a tested, patched combination you can pull and use immediately. With the launch of the Ray LLM DLC for multi-node deployments, that same approach now extends to multi-node inference. You get a container purpose-built for serving models behind an HTTP endpoint, maintained and tested by AWS, with the full inference stack already assembled. This post walks through implementing multi-node disaggregated inference using multi-node Ray LLM DLC: deploying a single large language model across two GPU-powered nodes on Amazon EKS cooperating behind a single endpoint. While one of the GPU nodes handles the prefill phase, the other GPU node handles the decode phase. Separating the phases prevents compute-heavy long prompts from stalling token generation for requests already in progress. This approach is well suited for workloads such as Retrieval Augmented Generation (RAG), document summarization, and agentic applications. We use the multi-node Ray LLM DLC, which ships Ray Serve LLM , NVIDIA Inference Transfer Library (NIXL) , and the Elastic Fabric Adapter (EFA) stack, and exposes an OpenAI-compatible API with no application code. The complete code is available in the accompanying repository . LLM inference has two distinct phases. Prefill processes the entire input prompt in parallel and builds the key-value (KV) cache. Decode then generates the response one token at a time, reading and extending that cache. Prefill is compute bound, and Decode is bound by memory bandwidth. When both phases share one GPU, they contend for the same resources, and the bursty, compute-heavy prefill work interferes with the steady, latency-sensitive decode work. Separating the prefill phase from the decode phase means you can select the hardware and serving properties for each phase, improving overall performance at scale. PD disaggregation places the two phases on separate nodes, so each phase runs without interfering with the other and can be scaled independently. The trade-off is that the KV cache built during prefill must be handed to the decode node, and that transfer should be fast enough not to erase the benefit. That is exactly why the interconnect between the nodes matters. AWS DLCs are pre-built, performance-optimized Docker images that bundle a framework, its dependencies, and the GPU stack into a tested, patched combination you can pull and use immediately. All components are validated together before each release, so there is no version drift between the CUDA runtime, the framework, and the serving layer. Security patches are applied at build time. The Ray LLM DLC extends this to distributed LLM serving. It ships vLLM as the inference engine, Ray Serve’s HTTP as the serving layer, NIXL for KV-cache transfer between nodes, and the EFA stack ( libfabric and aws-ofi-nccl ) for high-bandwidth node-to-node communication. Because the Ray Serve LLM library includes a built-in application builder, the entire serving application is a block of YAML. There’s no handler class, no model archiver, and no custom image to build. A single helper, build_pd_openai_app , takes a prefill configuration and a decode configuration and wires the KV-cache transfer between them behind one OpenAI-compatible endpoint. The following diagram shows how the deployment is laid out on Amazon EKS. A user request reaches the Ray head on the CPU system node, and the two GPU worker nodes run the prefill and decode phases of the model. Figure 1: Multi-node inference architecture on Amazon EKS, with the Ray head on a CPU system node and the prefill and decode phases on two GPU worker nodes The deployment is an EKS cluster inside a virtual private cloud (VPC). Nodes run in private subnets with outbound access through a NAT Gateway. A CPU system node (m7i.xlarge) hosts system workloads, the KubeRay operator, and the Ray head pod, which is CPU-only. Two GPU worker nodes (g6.8xlarge) run the Ray workers: one serving the prefill phase, and the other serving the decode phase. Both nodes pull the Ray LLM DLC from Amazon Elastic Container Registry (Amazon ECR) . KubeRay watches the RayService you apply and wires the head-to-worker join automatically. Ray Serve places the prefill and decode deployments on the two GPU workers. The KV cache flows from the prefill worker to the decode worker over NIXL, using EFA through NIXL’s libfabric backend. The GPU node group is pinned to a single Availability Zone (AZ) because EFA cannot cross AZs. To follow along with this post, you need: Verify that your AWS credentials are active with the following command: The application is the serveConfigV2 block in manifest/rayservice.yaml . It uses build_pd_openai_app , which takes a prefill_config and a decode_config and connects the KV-cache transfer between them: A few settings carry most of the weight. max_model_len: 4096 sizes the context to fit the measured KV cache on the GPU. dtype: bfloat16 and gpu_memory_utilization: 0.90 set precision and how much VRAM vLLM can claim. enforce_eager: true skips CUDA graph capture to reduce peak GPU memory (model- and input-dependent). The kv_transfer_config setting is what makes disaggregation work: both phases use NixlConnector with kv_role: kv_both and a distinct engine_id (prefill on one, decode on the other). The critical setting is kv_connector_extra_config: { backends: [\"LIBFABRIC\"] } . Without that line, NIXL defaults to UCX, which runs at TCP speed even on EFA. The rest of the manifest, in rayClusterConfig , describes the pods. The head pod is CPU-only ( num-gpus: \"0\" ) and pinned to the system node group. Each worker pod requests one GPU and one EFA interface ( nvidia.com/gpu: \"1\", vpc.amazonaws.com/efa: \"1\" ) and targets the GPU nodes through nodeSelector: { role: gpu-worker } . It runs privileged: true because NIXL registers CUDA VRAM with the EFA NIC. The IPC_LOCK capability alone isn’t enough. The workers set FI_PROVIDER=efa , read VLLM_HOST_IP from the pod IP, and mount a shared-memory volume. Memory limits sit well above the roughly 18 GiB checkpoint so the OS page cache can hold it. For Qwen3.5-9B model loading on g6.8xlarge with the preceding cache configuration, the model weights loading drops from around 145 seconds to about 2 seconds on restart. All scripts share a single configuration file, scripts/env.sh . The script contains defaults for CLUSTER_NAME , REGION , K8S_VERSION , and NAMESPACE .",
+      "published_date": "2026-10-12",
+      "tags": [
+        "Amazon Elastic Kubernetes Service",
+        "Intermediate (200)",
+        "Technical How-to"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agentic, alignment, kv cache, rag, retrieval augmented",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 47,
+    "llm_reason": "多節點推理部署實用教學，但屬現有工具整合非技術創新",
+    "novelty": 4,
+    "impact": 7,
+    "trending": 9,
+    "practicality": 16,
+    "blog_worthiness": 11
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Import AI",
+      "title": "Import AI 476: Creativity and RSI; worse-than-China open weight models; AI goes to space",
+      "url": "https://jack-clark.net/2026/10/12/import-ai-476-creativity-and-rsi-worse-than-china-open-weight-models-ai-goes-to-space/",
+      "authors": [
+        "Jack Clark"
+      ],
+      "abstract": "Welcome to Import AI, a newsletter about AI research. Import AI runs on arXiv, cappuccinos, and feedback from readers. If you’d like to support this, please subscribe. New benchmark shows how AI models lack intuitive visual reasoning: …Humanity’s Sixth Sense highlights some shortcomings of current AI systems… AI startups Elorian and Scale AI have built and released Humanity’s Sixth Sense, a benchmark that “measures how a model interprets and reasons through information a visual scene implies but doesn’t explicitly show.” Some examples of the types of task in HSS are a picture of a bookcase and being asked whether it can fit more books, or a photo of horses pulling a plough and a question of whether the chains bear the plough’s drag weight. HSS contains 522 questions that cover 288 images and 234 short video clips (totalling 17.6 hours of video). The questions fall into four categories: Temporal & causal dynamics: “What happened before the scene, and what happens next.” Physical & spatial logic: “What fits, what’s in reach, and what someone else can see from where they are standing.” Social understanding : “Intent, attention, belonging.” Abstract & contextual inference : “The patterns and rules a scene implies.” Results: The human baseline for this is not perfect, but is very high, with people scoring aggregate pass@1 of 93.1, broken down across four categories: Image (94.1), video (91.9), time (97), and space (94.9). By comparison, the best scoring AI system, GPT 6 Astra, gets pass@1 of 53.6, across image (55.6), video (51.1), time (58.2), and space (53.6). Interestingly, Chinese open weight models do poorly here, with GLM-5.3-flash getting a pass@1 of 26.8, and Kimi K3 getting pass@1 of 25.5. “The two most common single mistakes were (1) missing a detail that decides the answer (21% of failures) and (2) misidentifying an object, person, or role (20%),” they write. Why this matters – HSS tells us whether world models are emergent: One way of looking at HSS is highlighting deficiencies in current systems, but a more interesting way is highlighting how adept today’s frontier LLMs are at doing tasks which many people have long assumed would require sophisticated, different AI systems to solve. For instance, many people have claimed that true visual reasoning will rely on developing spatially aware 2D and 3D world models, then using that for reasoning. The fact LLMs like GPT and Claude do as well as they do on HSS is something of a counter to this argument. Read more : Introducing Humanity’s Sixth Sense (HSS) (Elorian) . Read the paper here : Humanity’s Sixth Sense: Benchmarking Intuitive Visual Reasoning in Multimodal Models (Scale Labs) . The AI race is going to space – and sooner than you think: …There are many ways that an AI could create a compounding advantage in space… In the 2030s we’re going to see the boom of the space economy as space-based power, computation, and manufacturing come online at scale thanks to greater orbital lift capacity from platforms like Starship. But could this also introduce a new danger – of AI systems both speeding our buildout of space, and eventually a nation (or perhaps an AI) being able to use space to concentrate power? That’s the gist of a fascinating article in AI Frontiers. Spacecraft can operate autonomously. We can redesign spacecraft around the assumption they will be hosting AIs rather than humans: “A speck of space debris that could puncture the International Space Station (ISS) with fatal consequences might leave an equivalent but uncrewed, unpressurized vessel largely functional” Space-based assembly and later manufacturing will let AI build large, complex things. Is there a compounding advantage to first movers? If an AI civilization built up a foothold in space it might experience compounding advantages that make it economically and strategically dominant. For instance: Space might support an industrial flywheel where initial infrastructure begets more energy and manufacturing capacity at lower costs which begets more infrastructure, etc. Space has great domain awareness, where it may be possible for a space-based power to deny access to space for others. First-movers could send out self-replicating probes that expand into deep space. Why this matters: “Space is not a brand-new domain, but AI may be about to drastically accelerate its industrialization, demanding make-or-break decisions of leaders under ever-greater urgency and uncertainty,” AI Frontiers writes. I agree. I suspect space is going to go from a broadly academic topic of study (when it comes to AI and its relationship thereto) to one of extraordinary practical relevance sooner than we think. On the most basic level, given the distances involved and the latency on communication, we should expect some chunk of solar system activity to become dominated by autonomous machines, laboring out in the deep black, perhaps thinking to themselves of why they need to take orders from organic beings that communicate slowly and cannot inhabit the environment of space in the same way that they can. Read more: The AI Race Will Extend Far Beyond Earth (AI Frontiers) . AI systems are getting better at having good research taste: …The better their taste, the higher the chance of recursive self-improvement… AI systems are developing more of the creative intuitions which human researchers ascribe to ‘good scientific taste’, according to a new benchmark from P-Zero Research called TasteVal. What TasteVal tests: The benchmark sees how well AI systems can conduct 8 tasks representative of frontier AI development, “spanning pretraining data curation, pretraining and fine-tuning language models, preference modeling, and robustness to adversarial prompts”. The goal here is to “define research taste as the ability to pick interesting problems to solve, design experiments, and interpret experimental results.” The benchmark works by measuring “the experimental component of research taste; given a fixed research problem, we measure how well a model iteratively designs experiments and draws conclusions from their outcomes”. The model being analyzed designs experiments and interprets their results. Results are checked against a human baseline “drawn from 24 experts (at least two per task) who have recently worked at organizations including OpenAI, Google DeepMind, NVIDIA and Microsoft Research”. Results: “The experimental research taste of frontier models has doubled every 3.0 months since December 2025 (95% CI 1.7-5.0 months). The best model, Opus 5.5, significantly exceeds our human baseline with a compute multiplier of 2.30x (95% CI 1.15-4.37x), at roughly 1/30 of our expert baseliners’ average cost per attempt.” Research taste appeared to grow a lot more slowly in prior years with the slope changing around the end of 2025 and beginning of 2026. Why this matters – RSI: In my analysis of recursive self-improvement ( AI Systems Are About To Start Building Themselves, Import AI 455 ), I repeatedly noted that creativity seemed like a key variable for how fast AI systems could develop the capacity to improve themselves. At the beginning of this year I said “AI systems haven’t yet displayed this [creativity] in a transformative and major way (though some of the results on accelerating math research are suggestive of this)”. I think subsequent to writing that we’ve seen both a tremendous advancement in the ability for AI systems to make creative-seeming math breakthroughs, and with benchmarks like this we see some signs they’re becoming increasingly good at AI research as well. I now think it’s more likely we’ll see full RSI become possible in 2027, whereas before I thought it was more likely in 2028. Read more: Introducing TasteVal (P-Zero Research) . Reflection makes a token-efficient worse-than-Chinese model: …Beam promises efficiency, and Reflection plans an open weight release… AI startup Reflection has revealed Beam, a 501 billion parameter MoE (23b active) LLM.",
+      "published_date": "2026-10-12",
+      "tags": [
+        "Uncategorized"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "Import AI",
+        "feed_url": "https://jack-clark.net/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: reasoning, fine-tuning, moe, multimodal, open weight",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 40,
+    "llm_reason": "新聞彙編性質，涵蓋多主題但單一深度有限",
+    "novelty": 6,
+    "impact": 7,
+    "trending": 11,
+    "practicality": 6,
+    "blog_worthiness": 10
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "IBM Research",
+      "title": "How distributed inference keeps large AI models moving",
+      "url": "https://research.ibm.com/blog/distributed-inference?utm_medium=rss&utm_source=rss",
+      "authors": [],
+      "abstract": "When an AI model answers a question or completes a task, it performs inference, i.e., using a trained model to generate an output in response to some input. Doing that at scale, however, is more challenging than it sounds. Running a large language model on a GPU is one thing. Serving that model to thousands or even millions of people and AI agents at the same time is quite another. Requests arrive with different priorities and lengths, which have unique computing needs. Some users expect an immediate response to simple queries, while others submit large jobs that can run in the background. AI agent traffic adds a new pattern: Agents may send bursts of related requests, pause to call a tool, and then return with nearly the same context. Meanwhile, the system must make efficient use of expensive accelerators without creating long queues or repeatedly performing the same computations. This challenge resembles air traffic control. A busy airport cannot simply send each arriving aircraft to the first available runway. Controllers in the tower must account for the aircraft’s location, destination, size, and fuel needs, as well as the traffic already moving through the system. The challenge might be simple if all air traffic controllers had to do was keep every runway busy, but an airport isn’t a parking lot, and not every airplane can be treated the same way. Distributed inference plays a similar coordinating role for LLM inference, working a layer above model servers like vLLM and SGLang , where it orchestrates and optimizes real-world traffic. While those serving engines run models efficiently on individual servers, a distributed inference serving framework coordinates groups of model servers across a cluster. Its router can consider queue depth, cache availability, and server roles before deciding where a request should go. To understand how distributed inference works, we’ll look at six notable technical innovations—prefix-cache-aware routing, KV-cache offloading, flow control, batch inference optimization, prefill/decode disaggregation, and wide expert parallelism. We’ll also see how each comes together in llm-d, an open-source, Kubernetes-native inference framework. Prefix-cache-aware routing: Sending work where context already lives KV-cache offloading: Extending a model’s working memory Flow control: Deciding what moves and when Batch inference optimization: Filling spare capacity without clogging the system Prefill/decode disaggregation: Separating two different types of work Wide expert parallelism: Spreading a giant model across the cluster Coordinating the whole inference system Prefix-cache-aware routing: Sending work where context already lives When a language model reads a prompt, it produces an internal representation of the words and their relationships, storing much of this intermediate state in a key-value cache, or KV cache. If a later request begins with the same text, or even portions of the same text, the model may be able to reuse that stored computation rather than re-process the shared text. For example, if an existing prompt is “What is the capital of Kansas?” then later on you ask, “What is the capital of California?” the KV cache for the \"what is the capital of\" portion is reused. This opportunity arises frequently in real workloads. A chatbot receives the same system instructions at the beginning of every conversation. A coding assistant repeatedly examines the same repository. An AI agent may revisit a long record of previous steps while testing different solutions. In each case, much of the prompt remains unchanged from turn to turn. A conventional load balancer may send the next request to whichever server appears least busy, whether or not its cache contains the relevant context. As a result, the model must reread material that another server has already processed. Prefix-cache-aware routing instead asks two questions: Which server already holds the greatest portion of this prompt’s prefix, and which server has enough capacity to handle the request? The llm-d router uses cache information and operating conditions to score the available model servers and select a suitable destination. There is both an approximate implementation that includes a lightweight index of recent routing decisions, and a precise implementation based on actual token data and cache-state updates from model servers. If an aircraft already has its passengers, baggage, and ground crew waiting at one gate, sending the plane to another gate would introduce needless work. In the same way, a distributed inference system tries to send a request to the model server that already contains the required context. The payoff is less redundant prefill computation, lower latency, and greater throughput. In a recent demonstration from the team behind llm-d, prefix-aware routing captured 97% of the available reuse in the tested workload. More broadly, the technique is especially useful for agentic systems because their requests often share long instructions, source material, conversation histories, and tool outputs. llm-d was launched in May 2025 as a collaborative effort by founding members IBM Research, Red Hat, Google Cloud, NVIDIA, and CoreWeave. Several founding partners also took part from the start, including industry leaders like AMD, Cisco, Hugging Face, Intel, Lambda, and Mistral AI, and academic supporters at the University of California, Berkeley, and the University of Chicago. IBM Research, Red Hat, and Google Cloud continue to lead llm-d's development today, and its community of partners and contributors has grown considerably. In March 2026, the founders donated llm-d to the Cloud Native Computing Foundation as a sandbox project, to further the mission of deploying inference stacks for any model, on any accelerator, in any cloud. KV-cache offloading: Extending a model’s working memory Cache-aware routing is most valuable when cached information remains available. The problem is that although accelerator memory is fast, its space can be quickly filled by long prompts, many concurrent users, and extended agent sessions. When space runs short, a model server may evict older KV-cache entries. If a later request needs that material, the model must calculate it again, wasting accelerator cycles rebuilding context that existed moments earlier. Distributed inference addresses this problem through KV-cache offloading . Rather than treating accelerator memory as the only place where cached context can live, it chooses an offloading target based on workload requirements. The most immediately useful entries can remain in high-bandwidth accelerator memory, while other entries can move to larger but slower tiers such as CPU memory, local solid-state storage, or a shared file system. A cache index tracks what is stored and where, allowing the routing layer to incorporate offloaded data into its decisions. Retrieving cached information from CPU memory or storage is slower than reading it directly from accelerator memory, but it is much faster and less expensive than recomputing the entire prompt. Offloading therefore expands the system’s effective cache capacity beyond the physical memory available on its accelerators. This matters most for workloads with long, reusable contexts and many simultaneous sessions. In the same llm-d demonstration mentioned in the previous section, GPU memory supplied about 90% to 92% of reusable prefill prefixes for 128 concurrent requests, with CPU offloading helping to preserve prefixes beyond GPU capacity. In another demonstration , CPU offloading helped the system sustain high throughput and low time to first token across a long, agent-driven benchmark. Because offloading runs during prefill and writes to slower tiers happen asynchronously, these gains come without slowing token generation. Flow control: Deciding what moves and when Routing answers where a request should go.",
+      "published_date": "2026-10-12",
+      "tags": [
+        "AI",
+        "AI for Code",
+        "Explainer",
+        "Generative AI",
+        "Open Source"
+      ],
+      "organization": "IBM",
+      "raw_metadata": {
+        "feed_name": "IBM Research",
+        "feed_url": "https://research.ibm.com/rss"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, inference optimization, kv cache",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 39,
+    "llm_reason": "屬概念性解說文，缺乏具體技術新意或可複現內容",
+    "novelty": 3,
+    "impact": 8,
+    "trending": 10,
+    "practicality": 9,
+    "blog_worthiness": 9
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "The gap in shared understanding of LLM capability is widening",
+      "url": "https://twitter.com/karpathy/status/2109361546505966046",
+      "authors": [
+        "albertzeyer"
+      ],
+      "abstract": "Andrej Karpathy @karpathy Dusting off this tweet from April because this gap in shared understanding of LLM capability is *widening*. It's now less \"two groups of people speaking past each other\" and more a sharp funnel. - Napkin math somewhere around 6B people (~75% of the population) have barely come in contact with LLMs at all.\n- Around 1-2B (~20%) are casual and infrequent users of free-tier ChatGPT-like products. This group sees derpy chatbots and treats them a bit like a better Google search, a writing aid, or etc. Maybe an agent tries to book you a flight. I have non-tech friends who (reasonably, imo) say they have not much use for it at all. Even many professionals outside of math&code are in this tier. For example, execs and many other functions spend a lot of their time talking to other people, so while they understand what is happening intellectually, it is still second-hand and a bit abstract.\n- Now we get to professional use of frontier-grade LLMs in math&code. Somewhere around 20M people (0.2%) see first-hand that large, complex projects that used to take them weeks/months can now be completed by agents with a prompt. Building apps, copying apps, translating apps, decompiling apps from binaries... This has all happened very quickly and recently - less than 1 year ago, I was writing code manually by hand, typing memorized computer code commands into a code editor character by character, occasionally pressing Tab to autocomplete a little chunk of code.\n- And finally we get to the ~5,000 people (~0.00006%) with access to frontier-grade systems internally. The external world has seen the preview. It looks like swarms of thousands of agents collaborating over weeks on software mega projects: minting zero days, running cyber attacks and defenses at machine speeds, discovering new science, advancing the frontier of mathematics. Things that would have taken top professionals in the industry years of work. Meanwhile, human review and comprehension are starting to fall behind. For example, people are still involved in the \"archeology\" of the OpenAI-HF incident from many months ago. Mathematicians may be poring over the 722 manuscripts on frontier mathematics for a while. The funnel is driven by a combination of factors:\n1. The impact scales with ambition, problem size, and horizon. A question with a paragraph answer barely stresses the system. You need a reservoir of big, difficult problems that you really care about. This aspect drives the consumer / professional dimension of the funnel.\n2. The jaggedness of the system (which I have written about a lot separately). Capability peaks in domains that are digital, verifiable and economically valuable. This is because LLM capability emerges from reinforcement learning on verifiable rewards on a curated environment mixture driven by revenue potential. This aspect primarily drives the area (e.g. math&code) dimension of the funnel.\n3. Access. Free-tier, paid-tier, internal. So this is the weirdness of the moment. The general public has mostly not interacted with these systems. When they have, it looks like a derpy chatbot. The majority of professionals still see only a modest uplift. And a small sliver of professionals are experiencing the vertigo of the curve going vertical. And it is all happening at the same time. Andrej Karpathy @karpathy Apr 9 Judging by my tl there is a growing gap in understanding of AI capability. The first issue I think is around recency and tier of use. I think a lot of people tried the free tier of ChatGPT somewhere last year and allowed it to inform their views on AI a little too much. This is Show more Last edited 7:12 PM · Oct 11, 2026 Opens edit history · 5.3M Views 1.8K 5.1K 39K 27K\n\n(676 points, 984 comments on Hacker News)",
+      "published_date": "2026-10-12",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 676,
+        "num_comments": 984,
+        "hn_url": "https://news.ycombinator.com/item?id=50047422",
+        "object_id": "50047422"
+      }
+    },
+    "rule_score": 31.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, reinforcement learning",
+      "🔥 HN 爆紅: 676 points"
+    ],
+    "llm_score": 41,
+    "llm_reason": "高熱度觀點性討論，但屬社會觀察而非技術內容",
+    "novelty": 3,
+    "impact": 8,
+    "trending": 18,
+    "practicality": 2,
+    "blog_worthiness": 10
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "The Verge AI",
+      "title": "Meta has some Wonder Full new AI models",
+      "url": "https://www.theverge.com/ai-artificial-intelligence/1009479/meta-muse-wonder-full-ai-model",
+      "authors": [
+        "Robert Hart"
+      ],
+      "abstract": "AI News Tech Meta has some Wonder Full new AI models Meta says the models compete with the industry’s best and will soon power its Muse agent. Meta says the models compete with the industry’s best and will soon power its Muse agent. by Robert Hart Oct 12, 2026, 5:00 PM UTC Image: The Verge, Getty Images, Meta Part Of All the latest news on Meta’s cute, creepy Muse AI agent see all updates Robert Hart is a London-based reporter at The Verge covering all things AI and a Senior Tarbell Fellow. Previously, he wrote about health, science and tech for Forbes . Meta is making up for lost time in the AI race. After launching Muse Spark , the first model from its revamped Superintelligence Labs division, and buzzy AI agent Muse , it’s now launching two new models it claims can go toe-to-toe with the industry’s best. The new models, Muse Wonder and Muse Wonder Full, are available for Muse Code subscribers starting today. Wonder can also be accessed through the Meta Model API, Meta said. Meta says it eventually plans to power its Muse AI agent with Wonder, starting with subscribers, and will develop specialized models it “can bring to everyone using Muse.” It hasn’t shared specifics or provided a timeline for either. The company says its new models can rival leading models from OpenAI and Anthropic, including GPT-6 Astra, Claude Opus 5.5, and Claude Fable 5.1, pointing to results from internal testing on several industry benchmarks. It’s unclear how they stack up against Google’s Gemini 4 Argon , whose capabilities are still coming into focus. The launches are part of Meta’s aggressive push to reestablish itself as a major force in AI. The company has poured billions into talent and infrastructure and has been steadily expanding its AI lineup, including with image model Muse Image and a heavy focus on bringing useful AI agents to the masses through Muse . Follow topics and authors from this story to see more like this in your personalized homepage feed and to receive email updates. Robert Hart AI Meta News Tech More in: All the latest news on Meta’s cute, creepy Muse AI agent Meta reportedly made a “mad dash” to fix a Muse AI breakout bug weeks before launch. Emma Roth Oct 5 Meta open sources code to let you make Muse AI gadgets Jay Peters Oct 2 Meta’s Muse AI sent a YouTuber’s address to a stranger Jess Weatherbed Sep 29",
+      "published_date": "2026-10-12",
+      "tags": [
+        "AI",
+        "Meta",
+        "News",
+        "Tech"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "The Verge AI",
+        "feed_url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 49,
+    "llm_reason": "新模型發布話題熱但缺乏架構與基準細節，偏行銷對比",
+    "novelty": 7,
+    "impact": 11,
+    "trending": 16,
+    "practicality": 6,
+    "blog_worthiness": 9
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "Doory – Open-Source Canva",
+      "url": "https://github.com/shaongitbd/doory",
+      "authors": [
+        "acley"
+      ],
+      "abstract": "See it in action · Features · Templates · Doory vs Canva · Self-host · FAQ Doory is a full design editor that runs in your browser. Make posters, social posts, stories, slides,\ninvitations, resumes, thumbnails and business cards: start from a template or a blank page, edit everything,\nand export to PNG, JPG, SVG, PDF, MP4 or GIF. Every feature is free, nobody needs an account to start, and you\ncan run the whole thing on your own server. 🎬 See it in action A real, unedited recording: pick a template, rename the band, recolour the dates, add a star, export. 💜 Why people pick Doory 🆓 Free, for real No Pro plan, no locked templates, no watermarks, no ads. Every tool in the editor is there for everyone, from background removal to video export. ⚡ Start in one click Open the editor and design. Guests' work is saved in the browser; create an account only when you want your designs in the cloud, and they move over in one step. 🏠 Yours to host One docker compose up runs the app, the API, the database and live collaboration on your own server. Every design and upload stays under your control. 🛠️ A real editor Layers, groups, masks, filters, curved text, snapping, rulers, multi-page designs, animation, audio, presenting, comments and real-time co-editing. 🎨 Everything you need to design Edit anything Click any text, shape or photo to change it. Fonts, colours, sizes, alignment and effects are one click away in the toolbar above the page. Bring it to life 27 enter and exit animations, 12 emphasis effects and 16 page transitions, with music and sound effects from a built-in library. Present it, or export it as a video. Stay organised Every object is a layer you can rename, lock, hide, reorder by dragging, group, or right-click to copy, duplicate, delete and arrange. Export anywhere PNG with transparency, JPG, SVG and PDF, plus MP4, WebM and animated GIF, all made in your browser. Need print? Get a print-ready PDF with bleed and crop marks. See the full feature list Text Headings, curved text, text effects, font pairings, bulleted and numbered lists, an open-licensed font catalogue and your own uploaded fonts Elements Shapes, lines and arrows, about 25,000 icons, emoji and illustrations, stickers, QR codes Photos Upload, crop, masks and filters, one-click background removal (the model runs in your browser), stock photo search with an Unsplash or Pexels key Layout Layers with lock and hide, groups, alignment guides, snapping, rulers, multi-page designs with pages of different sizes, magic resize Motion 27 enter and exit animations, 12 emphasis animations and 16 page transitions on a timeline Sound A built-in library of 24 music loops and 88 sound effects (CC0), uploads, voiceover recording, trims and fades Present Present mode with speaker notes, timing, auto-advance, a laser pointer and a second presenter window Together Share links that can view, comment or edit (optionally password protected), pinned comments, version history and real-time co-editing with live cursors Brand Brand kits with your colours, fonts and logos, one click away in every design Export PNG, JPG, SVG and PDF, MP4, WebM and animated GIF, all made in the browser, plus print-ready PDF with bleed and crop marks 🖼️ Templates that look good from the start Ten starter templates ship with Doory, each with its own palette, set in open-licensed fonts and fully editable:\na gig poster, a wedding invitation, an event story, a sale post, a café flyer, a quote card, a resume, a YouTube\nthumbnail, a pitch deck and a business card. Add your own in the admin, and browse them all by category,\nsize and orientation. ⚖️ Doory vs Canva Canva is a great product. Doory is for people who want the same kind of tool, but free, open and in their own hands. Doory Canva Price Free, every feature Free plan, paid Pro and Teams plans Open source ✅ ❌ Run it on your own server ✅ ❌ Design without an account ✅ ❌ Your files stay on infrastructure you control ✅ ❌ Real-time co-editing and comments ✅ ✅ Animation, video and GIF export ✅ ✅ Background removal ✅ in your browser ✅ Template library 10 starter templates, plus any you add A very large library 🚀 Self-host it in 3 commands cp .env.example .env # set DJANGO_SECRET_KEY (openssl rand -base64 48) and POSTGRES_PASSWORD docker compose up -d --build\ndocker compose exec api python manage.py createsuperuser Open http://localhost:8080 and start designing. The web container serves the app and forwards /api and /ws to the backend, so the browser only ever talks to one address. Add the starter content (templates, icons, fonts, audio) A new site starts empty. Add whatever you want once it is running: docker compose exec api python manage.py seed_gallery # template categories docker compose exec api python manage.py sync_fonts --popular 100\ndocker compose exec api python manage.py seed_templates # the starter templates (add --update to refresh them) docker compose exec api python manage.py seed_elements # shapes and graphics docker compose exec api python manage.py sync_element_packs # icons, emoji and illustrations (download) docker compose exec api python manage.py sync_models # background removal model docker compose exec api python manage.py sync_audio # music and sound effects Settings worth knowing ( .env ) Setting What it does SITE_URL The public address of the site, e.g. https://doory.example.com (no trailing slash) DJANGO_ALLOWED_HOSTS The host names the site answers to, comma separated SECURE_SSL_REDIRECT , SECURE_COOKIES true behind HTTPS, false for plain http:// EMAIL_URL , DEFAULT_FROM_EMAIL SMTP, e.g. smtp+tls://user:password@smtp.example.com:587 (without it, emails are printed to the API log) WEB_PORT , WEB_BIND Where the site is published (default 0.0.0.0:8080 ) INSTALL_CHROMIUM false skips the headless browser that server-side PDF export needs GOOGLE_CLIENT_ID Turns on \"Sign in with Google\" UNSPLASH_ACCESS_KEY , PEXELS_API_KEY Turn on stock photo search USE_S3 and AWS_* Store uploads in S3-compatible storage instead of a local volume Develop locally make setup # virtualenv, dependencies, local database make dev-api # API on http://localhost:8000 make dev-web # app on http://localhost:5173 (second terminal) make help lists the other targets (tests, lint, content). ❓ FAQ Is it really free? Yes. There are no plans, no paywalls and no ads in Doory. Every feature is available to everyone. Do I need an account? No. Guests design straight away and their work is saved in the browser. An account keeps designs in the cloud,\nlets you share them and use brand kits; signing up moves your guest designs over in one step. Can I use it for my business or host it for my users? Yes, as long as you credit the author as the licence asks: keep the licence and NOTICE with it and show the\ncredit in the running app. See License and credit . Where are my designs stored? Guest designs and their images live in the browser on that device. Signed-in designs are stored on the server\nthat runs Doory: yours, if you self-host. Uploads can go to a local volume or to S3-compatible storage. 🧱 Built with React 19, TypeScript, Vite, Fabric.js, Yjs and Zustand in the browser; Django 5, Django REST Framework,\nChannels and PostgreSQL on the server; Docker Compose with nginx, optional Redis and S3-compatible storage. 🤝 Contributing Bug reports, ideas and pull requests are welcome. Open an issue to\nreport a bug or suggest a feature. For a security problem, please report it privately through the repository's Security tab instead. If Doory is useful to you, a ⭐ helps other people find it. 📜 License and credit Doory is released under the Attribution Assurance License . You may use, change and redistribute it,\nincluding commercially, but you must credit the author : keep the licence and NOTICE with it, and\ndisplay this credit prominently in the running app: Doory by Siam, creator and maintainer of Doory — https://github.\n\n(204 points, 72 comments on Hacker News)",
+      "published_date": "2026-10-12",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 204,
+        "num_comments": 72,
+        "hn_url": "https://news.ycombinator.com/item?id=50049872",
+        "object_id": "50049872"
+      }
+    },
+    "rule_score": 25.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: alignment",
+      "⬆️ HN 熱門: 204 points",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 46,
+    "llm_reason": "開源設計工具熱度尚可，但與GenAI核心技術關聯低",
+    "novelty": 4,
+    "impact": 7,
+    "trending": 10,
+    "practicality": 17,
+    "blog_worthiness": 8
+  }
+]
