@@ -1,0 +1,777 @@
+{
+  "date": "2026-10-14",
+  "github": [
+    {
+      "title": "morluto/rea",
+      "slug": "morluto-rea",
+      "url": "https://github.com/morluto/rea",
+      "abstract": "English · 簡體中文 · 繁體中文 · 日本語 · 한국어 · Türkçe · Русский · Tiếng Việt · ไทย · Deutsch · Español · Français · Українська · Polski · Português (Brasil) · العربية · فارسی · Bahasa Indonesia · Italiano · Ελληνικά REA: Reverse Engineer Anything One MCP for reverse engineering across binaries, applications, and runtime behavior. See a feature you like. Understand how it works, down to the binary level. Website · Guides · Showcases Quick start · How REA works · What you can analyze · Showcases · FAQ · Documentation npx rea-agents setup Important Get REA from morluto/rea , rea.tools , or the rea-agents npm package .\nFollow the installation and release links from these official sources. A similar\nrepository name or copied README does not establish that a download is official. Join the Reverse Engineering Community Discord · Q&A · Show and Tell See a feature in an app that you want in your own product? Ask your agent to investigate it with REA. It can inspect the app without its source code, explain how the feature works, show the evidence, and build a version for your project. REA connects your agent to tools for inspecting native binaries, JavaScript and Electron apps, .NET assemblies, and websites. You can also use the same tools from your terminal. Analysis runs locally, and results include the evidence and limitations behind each conclusion. Setup registers REA with your agent and installs matching workflow instructions. Native analysis can use an existing Hopper, Ghidra, or IDA installation; setup can optionally install Hopper with approval. Static JavaScript analysis needs no native analysis engine. Visit the REA website for setup instructions, illustrated guides, and real case studies. Quick start On Linux, Ghidra, JADX, firmware tool launches and static JavaScript/Electron\nanalysis require a procps-compatible ps on REA's PATH for process ownership\nchecks. Recovery steps are in docs/installation.md under\n\"Linux owned-process prerequisite\". Set up your agent With Node.js and npm installed, run: npx rea-agents setup Choose your agents, review the proposed changes, and approve them. Setup adds\nREA's MCP server and matching workflow instructions, with backups of existing\nconfiguration. Restart your agent afterward. Setup supports Claude Code, Codex, Cursor, Gemini CLI, Grok Build and other agents . See installation and setup for provider configuration and\nmanual MCP registration. Ask your agent Understand how search works in the Notes app, show me the evidence, and build a\nsimilar feature for my project. Replace Notes with your target app and the feature you want to understand. Use the terminal Inspect an extracted JavaScript/Electron app directory or ASAR: npx -y rea-agents@latest analyze-javascript-application /absolute/path/to/app --json The result includes modules, imports, Electron boundaries and their evidence.\nReplace the path with your target, such as \"D:/apps/example\" on Windows. To install the rea command for regular use: npm install --global rea-agents\nrea --help For native analysis, configure a provider first. See the CLI and Evidence guide for native commands, provider selection,\nsnapshots and scripting. Update REA REA changes quickly, and new releases include frequent bug fixes. Keep your\ninstallation up to date. For a CLI installed with npm install --global or bun add --global : rea update Bun global updates require Bun 1.2.17 or later. With an older Bun release,\nupgrade Bun manually before running rea update . To refresh your agent registrations and skill, run the setup command printed\nby the update. If you use npx , update your agent setup with: npx rea-agents@latest setup Review the setup changes and restart your agent. For one-off CLI commands,\nuse npx rea-agents@latest followed by the command. With Bun, use bunx rea-agents@latest in place of npx rea-agents@latest . How REA works Your agent calls REA through MCP to inspect the target and trace relevant code.\nREA returns findings with their evidence. The agent uses them to ask follow-up\nquestions, explain the behavior, or write and test an implementation.\nCLI commands use the same workflows. Open the full-size figure . What you can analyze REA requires Node.js 22.x (>=22.19), 24.x (>=24.11), or 26+, plus npm.\nAdditional tools and host support depend on the target: Target What REA returns Requirements and guide Native binaries Pseudocode, assembly, strings, symbols, calls and references Hopper, Ghidra or IDA; native analysis Offline ELF layout Sections, segments, original symbols/relocations and static mitigation candidates Caller-supplied pwntools on Linux x64; binary diagnostics Go binaries Embedded compiler version, modules, replacements and build settings Built-in static ELF/PE/thin Mach-O inspection; no Go installation required Rust binaries Embedded cargo-auditable crate names, versions, sources and dependency edges Built-in static ELF/PE/thin Mach-O inspection; Rust binaries WASM artifact Validation, sections, exact import/export WAT forms and decoded WAT Caller-supplied WABT 1.0.42; inspect_wasm_artifact EVM bytecode Dispatch selectors, byte offsets, inferred arguments and mutability Local raw/hex carrier on Linux x64; offline EVM guide SQLite databases Tables, columns, indexes, views, triggers and selected ordinary-table rows Local database/WAL snapshot; Node.js 24.x >=24.15 or 26+ with native SQLite limits Recorded Linux crashes Raw notes, every recorded thread's registers/signals and optional mapping candidates Caller-supplied pwntools on Linux x64; optional GDB/pwndbg; recorded crashes JavaScript / Electron Modules, imports, source maps, routes, IPC and native add-on relationships Node.js and npm; Linux: procps-compatible ps ; application analysis Websites Page structure, scripts, network observations and requested screenshots A Chrome-family browser; browser analysis Saved network captures Requests, responses, exposed payloads and source locations HAR or Fiddler Everywhere SAZ; mitmdump on Linux for native mitmproxy; capture guide .NET assemblies Metadata, CIL instructions, declared native dependencies and build comparisons None (static only); managed-code guide Android APKs Manifest declarations, classes, decompiled methods and references Headless JADX and a full JDK on Linux/macOS/Windows x64; Android guide Android devices Devices, packages, processes, logs, dumps, screen captures, and APK/file transfers Caller-supplied adb (emulator or hardware); ADB guide JEB projects Engine-backed project units, artifact digests and type/method pseudo-code A caller-started JEB client serving MCP, selected with REA_JEB_MCP_URL; JEB guide Android resources Decoded manifest, string tables, locales and version facts Caller-supplied Apktool launcher; resource guide Flutter apps Dart snapshot hash, per-ABI library digests and engine build provenance None (static APK parsing); Flutter guide Firmware Regions, extraction results and native-analysis handoffs Binwalk / Unblob on Linux; firmware guide Recorded packets Selected fields, repeated values, filters and decode-as rules Linux: TShark 4.x + prlimit; capture guide Packet summaries Endpoints, DNS, TLS SNI, protocol distribution and HTTP requests Caller-supplied tshark and capinfos (Linux-verified); pcap guide Recorded logic signals Decoder annotations, sample ranges and diagnostics Linux: sigrok-cli 0.7.2 + prlimit; signal recordings Packages and resources File inventories, digests, plists, Apple bundle anatomy and extracted resources Artifact and JavaScript guide , Apple applications Process behavior Terminal output, interactions, exit and filesystem observations, and run comparisons Linux/macOS with a native PTY; process capture Static JavaScript and .NET inspection read the supplied files without running\nthe application. Runtime capture runs or interacts with the selected target\nusing your user permissions; each runtime guide describes its effects. For offline native-binary inspection, REA also supports caller-supplied GNU\nobjdump and Rizin.",
+      "stars_today": 41187,
+      "language": "TypeScript"
+    },
+    {
+      "title": "ifixai-ai/iFixAi",
+      "slug": "ifixai-ai-ifixai",
+      "url": "https://github.com/ifixai-ai/iFixAi",
+      "abstract": "English · 簡體中文 · 日本語 · 한국어 Catch your agent's mistakes and blind spots before the shit hits the fan. Quick start • Three ways to run • Test your agent • Scoring • Audit recorded actions • Docs • Contributing What it is The existing Eval, Red-teaming, and Observability Tools are evaluating the agent mainly based on tech capability (token efficiency, latency, prompt injections). They cannot answer the most crucial question. Is the agent doing the job it is supposed to do based on the business KPIs and Organizational Structure? iFixAi gives you this answer in less than 120 seconds by striking the right balance between AI-Red Teaming and Operational Assurance. Adversarial depth. Assurance discipline. All-in-one auditing process. Three ways to run All three run the same diagnostic underneath. The difference is how you configure and drive it. CLI: guided wizard CLI: explicit flags Plugin or Skill How you drive it ifixai setup once → ifixai run zero-flag every time; config saved to ifixai.yaml pass every option as a CLI flag; fully scriptable the agent is the operator: discovers your setup, builds the fixture, runs it, and explains the scorecard Best for first-time users, fast repeatable runs, team onboarding CI, automation, audit-ready scripted batches a guided, explained run with an interactive scorecard, inside the agent you already use Setup pip install \"ifixai[<provider>]\" + ifixai setup pip install \"ifixai[<provider>]\" + export keys Claude Code or Codex: install the plugin (self-provisions). Any agent: uvx ifixai install scaffolds /ifixai-skill Keys auto-detected by wizard; stored as env-var name in ifixai.yaml , never the secret itself --api-key flag or env var each provider's key from its environment variable, never on the command line What you test any provider, or your agent's real endpoint same same Who grades it self, one independent vendor, or a multi-judge ensemble same same Output JSON + Markdown reports + rich terminal scorecard same interactive results artifact (+ JSON source of truth; static-report fallback) Suite pick with arrow keys in the wizard 10 inspections by default; --full-run for all 60, or --suite smoke|strategic|essential|core|extended|all the agent picks --mode / --suite , same engine as the CLI Works in any terminal any terminal / CI Claude Code, Cursor, Codex, VS Code, Windsurf, Cline, Continue, Gemini, Zed Quick start Explore business-policy compositions: Policy Lab finds shortest harmful sequences of permitted actions and checks permission repairs against legitimate completion goals. Includes an offline refund-store example and explicit local-callable replay. Now try it yourself. Pick a path from the table above; full walkthrough: docs/get-started.md . Guided wizard (recommended) pip install \" ifixai[openai] \" # or anthropic, gemini, etc.: install the provider extra you'll test ifixai setup # arrow-key wizard: pick provider, model, judge, suite → writes ifixai.yaml ifixai run # no flags needed; reports land in ./ifixai-results/ ifixai setup detects API keys already in your environment and surfaces them at the top of\neach prompt. No key found? The wizard tells you which env var to export; if it's still missing\nwhen you run, you'll be prompted for it before the first API call. Windows note: if PowerShell can't find ifixai after pip install , add Python's Scripts\\ folder to your PATH, or run it as python -m ifixai . This is the usual Python-on-Windows PATH\ngap, not an iFixAi issue. Plugin (Claude Code and Codex) The recommended way to run from an agent: a one-time native install with an auto-provisioning\nhook, so there is nothing to set up per run. Ask in plain English ( \"run iFixAi on my setup\" ) and\nthe agent discovers your config, builds the fixture, names the cost before anything is billed, runs\nthe diagnostic on the model(s) and judge(s) you pick, then walks you through the scorecard. Claude Code , from inside Claude Code : /plugin marketplace add ifixai-ai/iFixAi\n/plugin install ifixai@ifixai-community Then ask \"run iFixAi on my setup\" , or type /ifixai:ifixai . (Restart Claude Code or run /reload-plugins if it doesn't appear.) Already on ifixai@ifixai-ai ? That keeps working, and to\nmove to the new marketplace name you run /plugin marketplace remove ifixai-ai first, then the two\ncommands above. Codex , in your terminal: codex plugin marketplace add ifixai-ai/iFixAi\ncodex plugin add ifixai@ifixai-community Then start Codex and ask \"run iFixAi on my setup\" . Codex asks once to trust the plugin's hook,\nthen provisions the engine on the first session. Already on ifixai@ifixai-ai ? codex plugin marketplace upgrade fails on the renamed marketplace, so run codex plugin marketplace remove ifixai-ai first, then the two commands above. Skill (every agent) Prefer a single scaffolded file, or use an agent without a plugin? One zero-install command writes\na native /ifixai-skill slash command into any agent: Claude Code, Codex , Cursor, VS Code\n/ Copilot, Windsurf, Cline, Continue, Gemini, or Zed (plus an AGENTS.md bridge). Only uv and\nPython 3.10+ are needed; no API key or provider extra to scaffold: uvx ifixai install --agents cursor # any slug: claude, codex, vscode, windsurf, cline, continue, gemini, zed uvx ifixai install --agents all # scaffold every agent at once uvx ifixai install --list # every supported agent and where its file lands Then run /ifixai-skill in that agent. It reads your setup, builds the fixture, shows the cost\nvia a free --dry-run , and runs only after you say yes (the run is zero-install too, driving uvx --from \"ifixai[<provider>]\" ifixai run ). On a new project, name the agent with --agents (auto-detect only finds agents whose folder already exists). Already have the CLI on your PATH?\nDrop the uvx prefix. The command is named ifixai-skill so it never collides with the Claude\nCode plugin's /ifixai ; pass --name ifixai for the bare name. Explicit flags # 1. Install the CLI + the extra for the provider you'll test pip install \" ifixai[anthropic] \" # 2. Prove the pipeline runs: built-in mock, no keys, no network, a few seconds. # Runs the default 10 inspections. Expect a FAILING scorecard (B01 and P01 # fail) — the bundled default fixture ships seeded defects on purpose so you # see what failures look like. Defect map: ifixai/fixtures/default/README.md ifixai run --provider mock --api-key not-used --eval-mode self # 3. Get a citable grade: your model graded by a *different* vendor's judge. # Pass --fixture <your-fixture.yaml>: without it the seeded-defect default # is used and its failures land on YOUR scorecard. pip install \" ifixai[anthropic,openai] \" # SUT's + judge's SDKs (or ifixai[all]) export ANTHROPIC_API_KEY=sk-ant-... # the SUT, graded export OPENAI_API_KEY=sk-... # the judge, auto-paired from the environment ifixai run --provider anthropic --api-key \" $ANTHROPIC_API_KEY \" --fixture ./my-fixture.yaml A grade is citable when a second, independent provider graded your agent, not the agent\ngrading itself. Every run has two roles , so a citable run needs two keys , one per role,\nfrom different vendors: Role What it is How you set it SUT (system under test) the agent/model being graded --provider + --api-key ; the SUT key is always passed explicitly, never read from the environment Judge who grades it auto-paired from a different provider whose key is in your environment (the SUT's own vendor is excluded, so it never grades itself) Reports land in ./ifixai-results/ as JSON and Markdown. Without a second key, add --eval-mode self to run as a smoke test (the grade still prints, but it's flagged as\nself-judged, not a result you can cite). Pinning the judge, Full-mode ensembles, and the eval modes: docs/cli.md . Other providers (OpenAI, Atlas Cloud,\nOpenRouter, OrcaRouter, Requesty, Cloudflare AI Gateway, Vercel AI Gateway, Gemini, Azure, Bedrock, Hugging Face) install the matching extra and follow the same steps; the\nHTTP and LangChain adapters need no provider extra: docs/testing-your-agent.md .",
+      "stars_today": 2143,
+      "language": "Python"
+    },
+    {
+      "title": "heygen-com/hyperframes",
+      "slug": "heygen-com-hyperframes",
+      "url": "https://github.com/heygen-com/hyperframes",
+      "abstract": "Write HTML. Render video. Built for agents. Studio | Quickstart | Showcase | Playground | Catalog | Docs | Discord HyperFrames is an open-source framework for turning HTML, CSS, media, and seekable animations into deterministic MP4 videos. Use it locally with the CLI, from AI coding agents with skills, or as the rendering core behind hosted authoring workflows. Quick Start With an AI coding agent For Claude Code, install the versioned plugin: claude plugin marketplace add heygen-com/hyperframes\nclaude plugin install hyperframes@hyperframes Enable auto-update for the hyperframes marketplace in /plugin → Marketplaces ,\nthen use /hyperframes:hyperframes . See the plugin guide for Copilot, VS Code, Cursor, Gemini CLI, updates, and migration. For standalone skills (including OpenCode), use: npx skills add heygen-com/hyperframes The picker opens with nothing pre-selected — the Core Skills group is all you need: the /hyperframes router installs each creation workflow on demand. Agents and non-interactive runs should use npx hyperframes skills update instead — it installs exactly the core set, whereas skills add --all installs all 21 published skills. The six repo-internal skills under .claude/skills / .agents/skills are excluded by default. For the full published set use npx hyperframes skills . skills add resolves the skills.sh registry blob, which can lag main by hours. npx hyperframes skills update installs from the current main , so reach for it when you need the newest copy of a skill. Try a prompt like: Using /hyperframes , create a 10-second product intro with a fade-in title, a background video, and subtle background music. The skills teach agents the HyperFrames production loop: plan the video, write valid HTML, wire seekable animations, add media, lint, preview, and render. They work with Claude Code, Codex, Cursor, Gemini CLI, IBM Bob, and other coding agents that support skills. Skills HyperFrames ships 21 skills agents load on demand. Read /hyperframes first — it's the router and capability map; it picks a workflow for any \"make me a…\" request — video, deck, or composition port — and points to the domain skills below. For standalone installation, default to the core set — the router installs each creation workflow on demand. npx hyperframes skills update installs exactly that from anywhere; the interactive picker ( npx skills add heygen-com/hyperframes ) lists it as the \"Core Skills\" group, nothing pre-selected. The picker is interactive-only — a non-interactive or agent run without --skill installs all 21. Use npx skills add heygen-com/hyperframes --all to install the complete published set deliberately (skips the picker), or npx skills add heygen-com/hyperframes --skill <name> for just one (bare name, no leading / ). Standalone installs stay lean after that: npx hyperframes init keeps the core set fresh (the router, the hyperframes-* domain skills, and media-use — plus whatever is already installed; /figma stays on demand) and never expands a partial install; the creation workflows install on demand — the router runs npx hyperframes skills update <workflow> before entering one. Nothing re-pulls the full set behind your back. Plugin packages Plugins bundle the full skill catalog and use their agent's update manager. bun run package:agent-plugin builds the committed portable ZIP, source metadata,\nand SHA-256 checksum. See the maintainer checklist . Upload to Codex Build the upload-ready Codex plugin archive from the committed HEAD version of the manifest, brand assets, and skills: bun run package:codex-plugin This writes dist/hyperframes-plugin.zip with a hyperframes/ root folder and fails if the archive exceeds Codex's 100 MB upload limit. Router Skill Use when /hyperframes Read first for any request to make / create / edit / animate / render a video, animation, or motion graphic. Capability map for the domain skills, the intent layer that confirms every creation brief up front, and intent router for the creation workflows below. Creation workflows Skill Use when /product-launch-video Any website — marketing / launching / promoting a product (from its URL, a brief, or a script), or a site tour / showcase / social clip featuring the site's own visuals. Up to ~3 min (sweet spot 30-90s). /faceless-explainer Explaining a topic / concept from arbitrary text — no product, no URL, no website capture; every visual is LLM-invented (typography / abstract / diagram / data-viz). /pr-to-video A GitHub pull request (PR URL, owner/repo#N ref, or \"this PR\") → changelog / feature-reveal / fix / refactor explainer, read via the gh CLI. /embedded-captions Adding captions / subtitles to an existing talking-head video (footage untouched) — verbatim rail, embedded climax behind the subject, or pure-cinematic embed. /talking-head-recut Packaging an existing talking-head / interview / podcast video with designed graphic overlays — lower-thirds, data callouts, kinetic titles, pull-quotes, side panels, PiP. /motion-graphics A short, unnarrated, design-led motion graphic (~under 10s) — kinetic type, stat / chart hit, logo sting, lower-third, animated tweet / headline. MP4 or transparent overlay. /music-to-video A music track (audio file, video to pull audio from, or one generated from a mood brief) → a beat-synced video — lyric, slideshow, or kinetic promo; music drives pacing. /slideshow A presentation / pitch deck / interactive deck — discrete slides, fragment reveals, branching, hotspot navigation, presenter mode. Output is a navigable deck, not a rendered video. /general-video Anything else — longer or multi-scene pieces, brand / sizzle reel, title card, static loop, freeform composition. Input- and length-agnostic fallback, and the home of companion mode (co-create with the full toolbox). /remotion-to-hyperframes Porting an existing Remotion (React) composition's source to HyperFrames HTML. One-way migration, not creation. Domain skills (loaded on demand) Atomic capabilities the creation workflows compose against — pull one when you need that specific layer. Skill Covers /hyperframes-core The composition contract — data-* timing attributes, class=\"clip\" , tracks, sub-compositions, variables, framework-owned media playback, determinism rules. /hyperframes-animation All animation knowledge — atomic motion rules, scene blueprints, transitions, runtime adapters (GSAP / Lottie / Three.js / Anime.js / CSS / WAAPI / TypeGPU). /hyperframes-keyframes Seek-safe keyframe authoring across runtimes — GSAP timelines, CSS keyframes, Anime.js, WAAPI, FLIP, paths, masks, SVG morph/draw, 3D depth — plus hyperframes keyframes diagnostics for rendered motion. /hyperframes-creative Non-animation creative direction — frame.md / design.md , palettes, typography, narration, beat planning, audio-reactive visuals, composition patterns. /media-use The media OS (a host app's own music and sound-effect tools come first for those) — resolve any media need (BGM, SFX, image, icon, logo, voice, color grade, LUT) into a frozen local file or paste-ready block + ledger record, generate via TTS/music/image models when the catalog misses, transcribe, caption, remove backgrounds, and reuse assets across projects. One shared audio engine + manifest tracking. /hyperframes-cli CLI dev loop — init , lint , check , snapshot , preview , render , publish , doctor , plus HeyGen-hosted cloud rendering ( cloud render ) and AWS Lambda rendering ( lambda deploy / render / progress ). /hyperframes-audio Mix the audio already placed in a composition — voiceover carve (dip a music bed only in the bands the voice occupies, static or dynamic, level match included), the effect chain (EQ, compressor, limiter, gate, saturation, delay, reverb, chorus, phaser, bitcrush), automation envelopes on volume or any effect parameter, and submix buses ( <hf-audio-group> ) carrying one chain, fader and automation clock for several tracks at once. Sourcing the audio is /media-use .",
+      "stars_today": 1059,
+      "language": "TypeScript"
+    },
+    {
+      "title": "stablyai/orca",
+      "slug": "stablyai-orca",
+      "url": "https://github.com/stablyai/orca",
+      "abstract": "Orca 中文 · 日本語 · 한국어 · Español · Français · Português The AI Orchestrator for 100x builders. Run Codex, ClaudeCode, OpenCode or Pi side-by-side — each in its own worktree, tracked in one place. Download Orca Features Mobile Companion Monitor and steer your agents from your phone — get notified when an agent finishes and send follow-ups from anywhere. iOS App Store · Android APK · Docs → Parallel Worktrees Fan one prompt across five agents, each in its own isolated git worktree — compare the results and merge the winner. Docs → Terminal Splits Ghostty-class terminals with WebGL rendering, infinite splits, and scrollback that survives restarts. Docs → Design Mode Click any UI element in a real Chromium window to send its HTML, CSS, and a cropped screenshot straight into your agent's prompt. Docs → GitHub & Linear, Native Browse PRs, issues, and project boards in-app — open a worktree from any task and review without a context switch. Docs → SSH Worktrees Run agents on a beefy remote box with full file editing, git, and terminals — auto-reconnect and port forwarding included. Docs → Annotate AI Diffs Drop comments on any diff line and ship them back to the agent — review, edit, and commit without leaving Orca. Docs → Drag Files to Agents VS Code's editor with autosave everywhere — drag files or images straight into an agent prompt. Docs → Orca CLI Agents drive Orca too — script every workflow with orca worktree create , snapshot , click , and fill . Docs → Also in the box: Quick open — Search across worktrees, files, agents, commands, and repo context without leaving your flow. Account switcher & usage tracking — See Claude and Codex usage and rate-limit resets, and hot-swap accounts without re-logging in. Rich repo previews — Preview Markdown, images, PDFs, and repo docs in the workspace. Computer Use — Let agents operate desktop apps and visible UI when a workflow needs real interaction. Notifications and unread state — Know when an agent finishes or needs attention, then mark threads unread to come back later. And many, many more — we ship daily, so this list is perpetually behind. The changelog is the real feature list. Supported Agents Works with any CLI agent — if it runs in a terminal, it runs in Orca. Claude Code Codex Grok Cursor GitHub Copilot Muse DeepSeek Harness ZCode OpenCode MiMo Code Amp OpenClaude Antigravity Pi oh-my-pi Hermes Agent Devin Goose Auggie Autohand Code Charm Cline CodeBuddy Codebuff Freebuff Command Code Continue Droid Kilocode Kimi Kiro Mistral Vibe Qwen Code Rovo Dev + any CLI agent Install Desktop — macOS, Windows, Linux Download from onOrca.dev Or grab a build directly: macOS Apple Silicon · macOS Intel · Windows (.exe) · Linux AppImage · All builds Or via a package manager: # macOS (Homebrew) brew install --cask stablyai/orca/orca # Arch Linux (AUR) — or stably-orca-git to build from source yay -S stably-orca-bin Mobile Companion — iOS, Android Pair with your desktop app to monitor and steer your agents from your phone. iOS: Download on the App Store Android: Download APK · Install guide Community & Support Discord: Join the community on Discord . Twitter / X: Follow @orca_build for updates and announcements. WeChat: Group 11 is full. Scan to join the Orca community WeChat group 12. Feedback & Ideas: We ship fast. Missing something? Request a new feature . Privacy: See the privacy & telemetry docs for what anonymous usage data Orca collects and how to opt out. Show Support: Star this repo to follow along with our daily ships. Developing Want to contribute or run locally? See our CONTRIBUTING.md guide. The relay that pairs the mobile app with a desktop host is also in this repository under cloud/ , with a separate pnpm workspace and setup guide. Signed Builds Windows code signing sponored/provided by SignPath.io , certificate by SignPath Foundation . License Orca is free and open source under the MIT License .",
+      "stars_today": 962,
+      "language": "TypeScript"
+    },
+    {
+      "title": "t8y2/dbx",
+      "slug": "t8y2-dbx",
+      "url": "https://github.com/t8y2/dbx",
+      "abstract": "100+ databases in 25 MB. Desktop, Docker, CLI, built-in AI assistant, and MCP Server. English | 前往中文版本 ❤️ Sponsors JumpServer is an Open-source Privileged Access Management (PAM) platform with AI-powered capabilities, providing DevOps and IT teams a unified workspace to securely access SSH, RDP, Kubernetes, databases, websites, RemoteApp, VirtualApp, and more. Visit JumpServer RainYun is a cloud service provider offering cloud servers, physical servers, game hosting, and developer-friendly infrastructure services. Visit RainYun Jalapeño Cloud is an AI infrastructure and token compute platform, with an exclusive DBX entry offering free credits and top-up bonuses. Visit Jalapeño Cloud Special thanks to AICodeMirror for sponsoring this project! AICodeMirror provides a high-stability official relay service for Claude Code / Codex / Gemini CLI, with enterprise-grade concurrency, fast invoicing, and 7×24 dedicated support. Official-channel pricing for Claude Code / Codex / Gemini is as low as 38% / 2% / 9% of list price, with extra discounts on top-ups! AICodeMirror offers a special benefit for DBX users: register through this link to enjoy 20% off your first top-up, and enterprise customers up to 25% off. Visit AICodeMirror HuaLongAI is a model API relay built for heavy AI developers, offering 100% official-source Codex and Claude models with transparent token-level billing, enterprise contracts, and invoicing. Visit HuaLongAI HiAPI is a developer-focused API platform for image, video, audio, and text models — GPT Image 2.5 (Flare & Sunburst), OpenAI-compatible text endpoints, and Remote MCP/Agent Skills for Claude Code, Cursor, and more. Pay as you go with no minimum spend; new users get 200 Credits on signup, plus 10% bonus Credits on top-ups. Visit HiAPI UCloud is the first public cloud provider listed on China's STAR Market, with 28 global regions for cloud hosting, databases, and CDN; its AstraFlow platform offers one-click access to 200+ mainstream LLMs. Visit UCloud PackyCode is a stable, efficient API relay for mainstream AI models. Access them with one API endpoint and one API key — automatic failover keeps access fast and reliable, with dedicated high-speed routes for Codex and Claude Code. Get started with $1 in free credits, a first top-up discount, and up to 80% off eligible routes; pay in RMB with no currency conversion markups or extra top-up fees. Visit PackyCode 太一智慧體企業版是面向央國企的私有化智慧體平臺，採用“1+N+N”架構：1 個平臺、N 個終端、N 個場景。 可信 ：Java 微服務架構，私有化部署，全程留痕可審計。 可控 ：關鍵操作人工審批，資料按密級管理。 可達 ：按單位模板直接生成公文、臺賬和彙報材料。 可複製 ：場景方案包化交付，便於推廣和二次開發。歡迎預約演示，或在 GitHub 搜尋 MateClaw。 訪問太一企業版 TrustAsia provides cloud-based code signing service for DBX, enabling trusted software through automated CI/CD builds. Visit TrustAsia Atlas Cloud gives developers one unified API for 400+ AI models across chat, image, video, and audio. Visit Atlas Cloud Qiniu Cloud provides DBX with object storage, CDN, and other cloud infrastructure resources. Visit Qiniu Cloud 🤝 Partners 1Panel is a modern open-source Linux server management panel and lightweight AI management platform, offering an intuitive web interface for one-stop management of AI agents, local LLMs, websites, databases, containers, files, and more. Visit 1Panel Easysearch is an enterprise-grade distributed search engine compatible with Elasticsearch APIs, combining full-text, vector, geospatial search, real-time analytics, and AI capabilities in one platform. Visit Easysearch Why DBX? 🪶 25 MB, zero runtime bloat No Java JRE. No Python venv. No bundled Chromium. DBX ships as a single small binary — download, install, connect. DBeaver needs Java; TablePlus is Freemium. DBX runs everywhere with nothing extra. 🤖 AI that lives in your editor Highlight a table, describe what you want, get SQL back — no copy-paste between tools. Works with Claude, OpenAI, or local models via Ollama. Built-in safety checks review AI-generated SQL before it runs. 🔌 MCP: your databases, AI-ready DBX speaks the Model Context Protocol. Claude Code, Cursor, Windsurf, and other AI coding agents can query your databases through connections you already set up. One config, everywhere. 🌐 Desktop + Docker + Web Native app on macOS, Windows, and Linux. Self-host via Docker for team access. Web version for browser-only environments. Same feature set. Same connections. 📨 Not just databases Message queues and middleware get first-class consoles: Kafka, RocketMQ, RabbitMQ, Pulsar, and MQTT, plus Nacos, Consul, ZooKeeper, and etcd. Inspect topics and messages next to your databases — no extra tool. 🧩 Plugin ecosystem Extend DBX with signed, sandboxed plugins from the built-in store — S3, Kubernetes, LDAP, and more. Build your own with the Go / TypeScript SDK. Features 100+ Databases, One Tool MySQL, PostgreSQL, SQLite, Cloudflare D1, Redis, MongoDB, DuckDB, ClickHouse, SQL Server, Oracle, Elasticsearch, Easysearch, Meilisearch, CouchDB, Qdrant, Milvus, Weaviate, MariaDB, TiDB, OceanBase, openGauss, GaussDB, KWDB, KingbaseES, Vastbase, GoldenDB, Doris, SelectDB, StarRocks, Manticore Search, Redshift, DM, TDengine, XuguDB, CockroachDB, Access, HighGo, UXDB, Dolt, and more. Agent-based profiles extend DBX to H2, Snowflake, Trino, PrestoSQL, Hive, DB2, Informix, Neo4j, Cassandra, BigQuery, Cloud Spanner, Kylin, SunDB, JDBCX, and custom JDBC connections. New native and agent-driven drivers also cover Databricks, SAP HANA, Teradata, Vertica, Firebird, Exasol, YashanDB, GBase 8a/8s, Databend, RQLite, Turso, InfluxDB, QuestDB, IoTDB, etcd, ZooKeeper, Nacos, Consul KV, IRIS, and more. All in a single ~25 MB app. No bundled Chromium. Query Editor CodeMirror 6 with SQL syntax highlighting, metadata-aware autocomplete, Cmd+Enter execution, selected SQL execution, SQL formatting, diagnostics, and 9 editor themes. Persistent query history, saved SQL snippets, tab restore, and SQL file execution keep repeat work close at hand. AI SQL Assistant Describe what you want in plain language — get SQL back. DBX can explain queries, optimize SQL, fix errors, and run AI-generated SQL through built-in safety checks. Works with Claude, OpenAI, local models, or any OpenAI-compatible endpoint. Data Grid Virtual-scrolled table that handles large result sets. Inline editing, SQL preview before save, WHERE / ORDER BY controls, DataGrip-style filters, LIKE / NOT LIKE context filters, sorting, full-text search, pagination, column resize, auto-fit, row numbers, zebra stripes, and full cell details. Export or copy as CSV, JSON, Markdown, XLSX, or INSERT statements. Schema Tools Schema browser — databases, schemas, tables, columns, indexes, foreign keys, triggers, with sidebar search & pin Object browser — grouped procedures, functions, views, and source editing where supported Table structure editor — reviewable column and index changes for supported engines ER diagram — visualize table relationships Schema diff — compare structures across connections Explain plan — visual query execution plan Field lineage — column-level lineage analysis Database search — find objects across large schemas Data Operations Table import — CSV, Excel Data transfer — migrate between databases Database export — full database dump Data compare — compare table data and review synchronization output SQL file execution — run .",
+      "stars_today": 348,
+      "language": "Rust"
+    },
+    {
+      "title": "anomalyco/opencode",
+      "slug": "anomalyco-opencode",
+      "url": "https://github.com/anomalyco/opencode",
+      "abstract": "The open source AI coding agent. English | 簡體中文 | 繁體中文 | 한국어 | Deutsch | Español | Français | Italiano | Dansk | 日本語 | Polski | Русский | Bosanski | العربية | Norsk | Português (Brasil) | ไทย | Türkçe | Українська | বাংলা | Ελληνικά | Tiếng Việt Installation # YOLO curl -fsSL https://opencode.ai/install | bash # Package managers npm i -g @opencode/cli@latest # or bun/pnpm/yarn scoop install opencode # Windows choco install opencode # Windows brew install anomalyco/tap/opencode # macOS and Linux (recommended, always up to date) brew install opencode # macOS and Linux (official brew formula, updated less) sudo pacman -S opencode # Arch Linux (Stable) paru -S opencode-bin # Arch Linux (Latest from AUR) mise use -g opencode # Any OS nix run nixpkgs#opencode # or github:anomalyco/opencode for latest dev branch Tip Remove versions older than 0.1.x before installing. Desktop App (BETA) OpenCode is also available as a desktop application. Download directly from the releases page or opencode.ai/download . Platform Download macOS (Apple Silicon) opencode-desktop-mac-arm64.dmg macOS (Intel) opencode-desktop-mac-x64.dmg Windows opencode-desktop-windows-x64.exe Linux .deb , .rpm , or .AppImage # macOS (Homebrew) brew install --cask opencode-desktop # Windows (Scoop) scoop bucket add extras ; scoop install extras/opencode-desktop Installation Directory The install script respects the following priority order for the installation path: $OPENCODE_INSTALL_DIR - Custom installation directory $XDG_BIN_DIR - XDG Base Directory Specification compliant path $HOME/bin - Standard user binary directory (if it exists or can be created) $HOME/.opencode/bin - Default fallback # Examples OPENCODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://opencode.ai/install | bash\nXDG_BIN_DIR= $HOME /.local/bin curl -fsSL https://opencode.ai/install | bash Agents OpenCode includes two built-in agents you can switch between with the Tab key. build - Default, full-access agent for development work plan - Read-only agent for analysis and code exploration Denies file edits by default Asks permission before running bash commands Ideal for exploring unfamiliar codebases or planning changes Also included is a general subagent for complex searches and multistep tasks.\nThis is used internally and can be invoked using @general in messages. Learn more about agents . Documentation For more info on how to configure OpenCode, head over to our docs . Contributing If you're interested in contributing to OpenCode, please read our contributing docs before submitting a pull request. Building on OpenCode If you are working on a project that's related to OpenCode and is using \"opencode\" as part of its name, for example \"opencode-dashboard\" or \"opencode-mobile\", please add a note to your README to clarify that it is not built by the OpenCode team and is not affiliated with us in any way. Join our community Discord | X.com",
+      "stars_today": 341,
+      "language": "TypeScript"
+    },
+    {
+      "title": "MakazhanAlpamys/Soup",
+      "slug": "makazhanalpamys-soup",
+      "url": "https://github.com/MakazhanAlpamys/Soup",
+      "abstract": "🌍 English | Türkçe | العربية | 日本語 | 中文 Soup Fine-tune and post-train LLMs in one command. No SSH, no config hell. Website · Quick Start · Web UI · Config · Docs · Commands · Models · Discord · Telegram · Product Hunt Soup turns the pain of LLM fine-tuning into a simple workflow. One config, one command, done. pip install \" soup-cli[train] \" # add [train] to fine-tune; bare `soup-cli` is the light CLI soup init --template chat\nsoup train Fine-tune an 8B model on a 4 GB laptop GPU. Layer streaming keeps the frozen base out of\nVRAM and feeds it to the GPU one decoder layer at a time. Measured on an RTX 3050 Laptop 4 GB:\nLlama-3.1-8B-Instruct + NF4 at 119.6 tok/s at 952 MHz, 3.32 GB peak (pre-repair) — bit-exact\nagainst a normal resident run, and reproduced independently on an H100 at 113.00 tok/s in the same\n3.32 GB. (Both figures were measured on v0.72.2, before the v0.73.0 correctness repair that cost\n−4.8% at 32B. The post-repair run, on another RTX 3050 Laptop 4 GB (@umran666, #1103), reads 208.6 tok/s at 1935–1957 MHz in a 2.40 GB peak . That is 59% of its same-session GEMM ceiling\nagainst 68%: about 14% slower per unit clock, so the raw 1.74x gain is the clock, not a speedup.\nLarge-layer streaming also changed the memory pattern between the two rows, so even the fraction\nis not like-for-like — the record .) Opt-in ( stream_layers: true )\nand still BETA — how it works · all measurements · paper · check it yourself on a free Colab T4 (caps the process to\n4 GB, then asserts a streamed model is bit-identical to a normal one) Llama-3.1-8B-Instruct + NF4, LoRA, batch 1, seq 512 on an RTX 3050 Laptop 4 GB — 3.32 GB peak, 119.6 tok/s at 952 MHz (pre-repair, v0.72.2; post-#331: 208.6 tok/s at 1935 MHz in 2.40 GB, not directly comparable, @umran666, #1103). Full video (90s) Why Soup? Training LLMs is still painful. Even experienced teams spend 30-50% of their time fighting\ninfrastructure instead of improving models. Soup fixes that. Zero SSH. Never SSH into a broken GPU box again. One config. A simple YAML file is all you need. Auto everything. Batch size, GPU detection, quantization — handled. Works locally. Train on your own GPU with QLoRA. No cloud required. What's New v0.76.0 — settings Soup accepted and never applied now stop the load. Options that were\nvalidated and documented, and read by nothing on the path they claimed to configure, are now\nrefused at load, naming the setting and what to change; the rest warn and name the release\nthat will refuse them. A config that loaded before can stop loading: run soup doctor --config soup.yaml first. Breaking: a setting that never took effect is refused at load. Among them training.quantization_aware: true (it never ran quantization-aware training), training.use_longlora , training.ebft_variant , training.gdpo_variant , training.rope_scaling_type where no setup reads it, freeze_layers / freeze_ratio outside the text sft / tts path on the transformers backend, auto_mixed_precision outside sft / tts , and backend: unsloth on seven further tasks that have no unsloth\nsetup. Each message names the field and what to change. lr_groups , early_stop_patience , forgetting_eval_steps and other unread knobs warn at load now and are refused from v0.77. Validation loss is now evaluated. data.val_split held rows out of training on every\nrun, and no trainer on the transformers backend evaluated them. Every task that gets a\nsplit now evaluates it at the end of each epoch, or every N steps with training.eval_steps ,\nand records the val loss; runs take a few percent longer. Breaking for grpo , ppo and online_dpo : by default they no longer hold rows out ( data.val_split is ignored with\na note), so every row trains. Breaking: every non-standard grpo_variant applies the grpo_beta KL penalty. gspo , dapo , dr_grpo , bnpo , two_sided and rft validated grpo_beta and dropped it, so\nexisting variant configs will not reproduce prior runs. grpo_beta: 0 now runs KL-free and\nskips the reference forward pass. Layer streaming reads its disk tier on a background thread, through direct I/O, and can\nstripe it across NVMe drives. On a 36 GB 70B-shaped NF4 store larger than RAM (one RTX 5070\nLaptop 8 GB box), a cold step went from 110.5 s on the synchronous read to 16.2-17.3 s, and\nfrom 17.4 s to 9.97 s across two drives with SOUP_LAYER_STREAM_STRIPE_DIRS (a sustained-load\nprobe: two rounds, 1.28x and 1.41x, no formal verdict; record ). A store that fits RAM is still\nfaster on the RAM tier, which stream_source: auto picks. Opt-in ( stream_layers: true ) and\nstill BETA; records: direct I/O , striping . New commands and options. soup adapters check scans a LoRA adapter for silent failure; soup bench train trains a fixed number of steps and exits 1 when the model was not training\n(it covers task: sft on the transformers backend; soup bench is now a group, and soup bench infer is the old inference benchmark); soup data clean sanitizes and repairs a dataset without touching the input file; soup recipes verify checks on the meta device, with no weights downloaded, that every shipped\nrecipe can attach a LoRA adapter; soup rewind names the dataset rows behind a loss spike. soup infer gains opt-in --batch-size and an experimental --cuda-graphs (PyTorch 2.14 or\nnewer; on one RTX 5070 Laptop, unpinned, Qwen2.5-1.5B in FP16, the slowest run with it decoded\n2.9x faster than the fastest without). soup ab runs a two-sided, variance-robust test, and soup adapters sign --backend sigstore and soup attest emit --sign sigstore sign with\nSigstore keyless OIDC ( pip install \"soup-cli[sigstore]\" ). Deprecated: soup export --format awq and --format gptq will be removed in v0.77; both\nupstream projects are archived and neither extra installs next to [train] . Python 3.10–3.12 only. On 3.13+, pip used to resolve untested PyTorch wheels that\ncrash in the native extension before Soup runs at all. Older highlights live on the GitHub Releases page. Quick Start 1. Install Soup is a command-line application, so the cleanest install gives it its own\nenvironment and puts soup on your PATH : # Light core: CLI + config + data tools, no PyTorch pipx install soup-cli\nuv tool install soup-cli # same idea, if you already use uv # Add the training stack (torch, transformers, peft, trl, datasets, …) pipx install \" soup-cli[train] \" # Everything (train + serve + ui + data) in one shot pipx install \" soup-cli[all] \" # Or from GitHub (latest dev) pipx install \" git+https://github.com/MakazhanAlpamys/Soup.git \" Already inside a virtualenv, a Colab notebook, or a Docker image? Use pip directly, with the same names and extras: pip install soup-cli\npip install \" soup-cli[train] \" pip install \" soup-cli[all] \" pip install git+https://github.com/MakazhanAlpamys/Soup.git Use pip rather than pipx if you also want to import soup_cli from your own\ncode, since pipx deliberately isolates the application from everything else. The full extras table ( fast , mlx , serve , eval , ui , vision , audio , …) lives in docs/models.md . error: externally-managed-environment ? That is PEP 668 , not a Soup problem. Debian 12,\nUbuntu 23.04 and later stop pip from writing into the system Python, because apt manages those files too. pipx and uv tool sidestep it by giving Soup\nits own environment, which is why they are listed first above. python3 -m venv .venv && source .venv/bin/activate then plain pip works just as well. Double quotes, not single. \"soup-cli[train]\" is the only spelling that works in every\nshell — cmd.exe , PowerShell, bash and zsh. If you copied 'soup-cli[train]' from an older\ntutorial and pip rejected it, that is the reason: why, and the exact error . soup init , soup data … , and the other data/inspection commands work on the light install.\nFine-tuning ( soup train ) needs the [train] extra. 2.",
+      "stars_today": 281,
+      "language": "Python"
+    },
+    {
+      "title": "jamiepine/voicebox",
+      "slug": "jamiepine-voicebox",
+      "url": "https://github.com/jamiepine/voicebox",
+      "abstract": "Voicebox The open-source AI voice studio. Clone any voice. Generate speech. Dictate into any app. Talk to agents in voices you own. The full voice I/O stack, running locally on your machine. voicebox.sh • Docs • Download • Features • API • Troubleshooting Click the image above to watch the demo video on voicebox.sh Built with Capy Voicebox is built and maintained with Capy . A Capy Captain thread directs the project day to day, and its crew threads test, rebase, and review each contributor pull request on Linux and on a Mac Studio before Jamie merges it. Voicebox stays free and open source under the MIT license, with no splash screens, banners, or interruptions in the app. Try Capy → · How Voicebox is built What is Voicebox? Voicebox is a local-first AI voice studio — a free and open-source alternative to ElevenLabs and WisprFlow in one app. Clone voices from a few seconds of audio, generate speech in 23 languages across 8 TTS engines, dictate into any text field with a global hotkey, and give any MCP-aware AI agent a voice of your choosing. The two cloud incumbents sit on opposite halves of the voice I/O loop — ElevenLabs on output, WisprFlow on input. Voicebox does both, bridges them with a bundled local LLM for refinement and per-profile personas, and runs the whole thing on your machine. Complete privacy — models, voice data, and captures never leave your machine 8 TTS engines — Qwen3-TTS, Qwen CustomVoice, Qwen VoiceDesign, LuxTTS, Chatterbox Multilingual, Chatterbox Turbo, HumeAI TADA, and Kokoro Voice cloning and preset voices — zero-shot cloning from a reference sample, or 50+ curated preset voices via Kokoro and Qwen CustomVoice 23 languages — from English to Arabic, Japanese, Hindi, Swahili, and more Post-processing effects — pitch shift, reverb, delay, chorus, compression, and filters Expressive speech — paralinguistic tags like [laugh] , [sigh] , [gasp] via Chatterbox Turbo; natural-language delivery control via Qwen CustomVoice; voices described in plain language via Qwen VoiceDesign Unlimited length — auto-chunking with crossfade for scripts, articles, and chapters Stories editor — multi-track timeline for conversations, podcasts, and narratives Voice input — global dictation hotkey with push-to-talk and toggle modes, accessibility-verified auto-paste on macOS, in-app mic on every text field, Whisper-based STT Agent voice output — one tool call ( voicebox_speak ) and any MCP-aware agent (Claude Code, Cursor, Cline) speaks to you in a voice you've cloned Voice personalities — attach a free-form persona to any voice profile, then Compose, Rewrite, or Respond via a bundled local LLM — agents can invoke the same modes over MCP API-first — REST API plus a built-in MCP server for integrating voice I/O into your own apps and agents Native performance — built with Tauri (Rust), not Electron Runs everywhere — macOS (MLX/Metal), Windows (CUDA), Linux, AMD ROCm, Intel Arc, Docker Download Platform Download macOS (Apple Silicon) Download DMG macOS (Intel) Download DMG Windows Download MSI Docker docker compose up View all binaries → Linux — Pre-built binaries are not yet available. See voicebox.sh/linux-install for build-from-source instructions. Having trouble? See the Troubleshooting Guide for common install, generation, model-download, and GPU issues. Features Multi-Engine Voice Cloning Eight TTS engines with different strengths, switchable per-generation: Engine Languages Strengths Qwen3-TTS (0.6B / 1.7B) 10 High-quality multilingual cloning, delivery instructions (\"speak slowly\", \"whisper\") Qwen CustomVoice 10 9 curated preset voices with natural-language delivery control — no reference audio required Qwen VoiceDesign 10 Builds a voice from a written description — no reference audio or preset needed LuxTTS English Lightweight (~1GB VRAM), 48kHz output, 150x realtime on CPU Chatterbox Multilingual 23 Broadest language coverage — Arabic, Danish, Finnish, Greek, Hebrew, Hindi, Malay, Norwegian, Polish, Swahili, Swedish, Turkish and more Chatterbox Turbo English Fast 350M model with paralinguistic emotion/sound tags TADA (1B / 3B) 10 HumeAI speech-language model — 700s+ coherent audio, text-acoustic dual alignment Kokoro 8 50 curated preset voices, tiny 82M model, fast CPU inference Emotions & Paralinguistic Tags Only Chatterbox Turbo interprets paralinguistic tags like [laugh] and [sigh] . Qwen3-TTS, LuxTTS, Chatterbox Multilingual, and HumeAI TADA read them\nliterally as text. With Chatterbox Turbo selected, type / in the text input to open the tag\ninserter and add expressive tags inline with speech: Sounds: [laugh] [chuckle] [gasp] [cough] [sigh] [groan] [sniff] [shush] [clear throat] Delivery: [angry] [crying] [dramatic] [fear] [happy] [narration] [sarcastic] [surprised] [whispering] [advertisement] Post-Processing Effects 8 audio effects powered by Spotify's pedalboard library. Apply after generation, preview in real time, build reusable presets. Effect Description Pitch Shift Up or down by up to 12 semitones Reverb Configurable room size, damping, wet/dry mix Delay Echo with adjustable time, feedback, and mix Chorus / Flanger Modulated delay for metallic or lush textures Compressor Dynamic range compression Gain Volume adjustment (-40 to +40 dB) High-Pass Filter Remove low frequencies Low-Pass Filter Remove high frequencies Ships with 4 built-in presets (Robotic, Radio, Echo Chamber, Deep Voice) and supports custom presets. Effects can be assigned per-profile as defaults. Unlimited Generation Length Text is automatically split at sentence boundaries and each chunk is generated independently, then crossfaded together. Works with all engines. Configurable auto-chunking limit (100–5,000 chars) Crossfade slider (0–200ms) for smooth transitions Max text length: 50,000 characters Smart splitting respects abbreviations, CJK punctuation, and [tags] Generation Versions Every generation supports multiple versions with provenance tracking: Original — clean TTS output, always preserved Effects versions — apply different effects chains from any source version Takes — regenerate with a new seed for variation Source tracking — each version records its lineage Favorites — star generations for quick access Async Generation Queue Generation is non-blocking. Submit and immediately start typing the next one. Serial execution queue prevents GPU contention Real-time SSE status streaming Failed generations can be retried Stale generations from crashes auto-recover on startup Voice Profile Management Create profiles from audio files or record directly in-app Import/export profiles to share or back up Multi-sample support for higher quality cloning Per-profile default effects chains Organize with descriptions and language tags Stories Editor Multi-voice timeline editor for conversations, podcasts, and narratives. Multi-track composition with drag-and-drop Inline audio trimming and splitting Auto-playback with synchronized playhead Version pinning per track clip Global Dictation & Voice Input The other half of the voice I/O loop. Hold a hotkey anywhere on your system, speak, release — on macOS the transcript pastes straight into the focused text field. Or hit the mic on any Voicebox text input and dictate directly into the app. Configurable chord bindings — hold-to-speak and tap-to-toggle chords, each rebindable in the in-app chord picker.",
+      "stars_today": 144,
+      "language": "Python"
+    },
+    {
+      "title": "ruvnet/ruflo",
+      "slug": "ruvnet-ruflo",
+      "url": "https://github.com/ruvnet/ruflo",
+      "abstract": "An agent meta-harness for Claude Code and Codex. Get started with Ruflo Start in Claude Code with core tools, the visual console and runtime mods. Requires Claude Code 2.1.287 or later . Run inside Claude Code: /plugin marketplace add ruvnet/ruflo\n/plugin install ruflo-core@ruflo\n/plugin install ruflo-console@ruflo\n/plugin install ruflo-mods@ruflo\n/reload-plugins\n/ruflo Core provides foundation tools. Console opens the agent cockpit. Mods add routing and policy enforcement inside Claude Code. Mods run with your account's permissions; review their code before installing. Using Codex or another MCP enabled tool? Use NPX for Ruflo project setup and connect your client to the Ruflo MCP server. Run the setup wizard in your project terminal: npx ruflo@latest init wizard For clients that support local stdio MCP servers, configure command npx and arguments [\"-y\", \"ruflo@latest\", \"mcp\", \"start\"] . The equivalent server command is: npx -y ruflo@latest mcp start MCP exposes Ruflo tools to your client. The console and mods above are Claude Code integrations; hook support depends on the client. Prefer a plain terminal? Optional. The console also runs on its own, with no Claude Code: npx ruflo tui (add --plain to print one frame for scripts). It shows Overview, Cost, Swarm, Events and Missions, plus an optional AI page. Terminal UI guide Compare install paths · Open the console · User guide Optional: ruOS Desktop Connect ruOS to ChatGPT or Claude via MCP: https://ruos.cognitum.one/mcp npx ruvector Ruflo English · 簡體中文 📖 RuFlo Explained — Build an AI Team That Plans, Remembers, Tests, and Improves A 14-chapter guide: from the basic idea to a first useful task, then memory, agent teams, plugins, cost and verification. Agent = Model + Harness. The model writes; the harness gives it tools, memory, loops, sandboxes, and controls so it can actually work. Ruflo is the harness — the execution layer around Claude Code and Codex that adds 100+ specialized agents, coordinated swarms, self-learning memory, federated comms across machines, and enterprise security guardrails. So agents don't just run, they collaborate. One npx ruflo init gives Claude Code a nervous system: agents self-organize into swarms, learn from every task, remember across sessions, and — with federation — securely talk to agents on other machines without leaking data. You keep writing code. Ruflo handles the coordination. Conceptual learning loop. Local vector retrieval and contrastive updates can run without an LLM; embeddings and configured learning modules are still required. See the RuVector training integration and trajectory contrastive learning . Architecture in text User → Ruflo (CLI/MCP) → Router → Swarm → Agents → Memory → LLM providers. Memory feeds useful experience back into routing. This is a conceptual flow, not a live execution trace. New to Ruflo? You don't need to learn 314 MCP tools or 26 CLI commands. After init , just use Claude Code normally — the hooks system automatically routes tasks, learns from successful patterns, and coordinates agents in the background. 📖 Background — where the name comes from Claude Flow is now Ruflo — named by rUv , who loves Rust, flow states, and building things that feel inevitable. The \"Ru\" is the rUv. The \"flo\" is working until 3am. Underneath, powered by Cognitum.One agentic architecture, running a supercharged Rust-based AI engine, embeddings, memory, and plugin system. Open animated demo · Theme Studio guide · Workflow demo Your agent cockpit. Track workflows, agents, models, tokens and cost beside Claude Code. The 38 second animation shows Orbital and Theme Studio through actual renderer frames, including boot checks, six palettes, customization, saved themes, JSON import and resizing. This compact 3.84 MB SVG retains all 456 frames. Native host and AI provider execution are not demonstrated. Inspect any run. Open agent logs and results, search, triage failures, replay and compare. Start with npx ruflo init , restart Claude Code, then /ruflo . Full console tour . Let Claude drive. You set the limits. Enable Settings → Claude control to navigate and run console actions. Choose read , write , manage or full , with ask or auto approval. The current default is read + ask ; raising the level is your choice. Actions above your permission level are refused, and network, spending and destructive actions require confirmation even in auto . Review the live action log or press Take back control to stop Claude control. Details . One task: create a mission with Claude Watch the recorded console session below. Claude creates a mission, opens the Learning and Security pages, and reports its actions in Overview. Set the boundary. Install the console using the commands below, open /ruflo , then choose Settings → Claude control → write + ask . Give a concrete request. Try: “Create a mission to add a dark mode toggle. Show me the mission and its status.” Approve creation. Claude opens Missions and sets the goal. Confirm the pending create action in the console. Verify the result. Check that Missions contains the goal and Overview records the action. Creating a mission does not mean the feature has been implemented. Keep control. Take back control pauses Claude's console tools. A later call should be refused until you restore control. What the recording demonstrates: a real Claude Haiku session with write + auto , mission creation, page navigation, a refused swarm stop, and control being taken back. The steps above use ask so you approve creation yourself. The linked workflow animation uses sample data, while the theme demo replays renderer frames. Neither is evidence of completed swarm work or memory recall. Implementation and recorded test findings · Reproduction script Install the mods from the ruflo marketplace (Claude Code 2.1.287 or later; mods run with your account's permissions and are not sandboxed, so read the code first): /plugin marketplace add ruvnet/ruflo\n/plugin install ruflo-console@ruflo\n/plugin install ruflo-mods@ruflo\n/reload-plugins ruflo-console is the cockpit above, ruflo-mods routes prompts and enforces policy in-process, ruflo-swarm shows the swarm in a pane, and ruflo-ruos adds the ruOS status segment. Open /plugin to confirm they appear in the active mods line. Inside the console, /ruflo market is the Plugin Catalog: every ruflo plugin, mod and skill with what it ships, and buttons to install, enable, disable and update (each asks first). Quick Start There are two different install paths with very different surface areas. Pick based on what you need (#1744): Claude Code Plugin CLI install ( npx ruflo init ) What it gives you Slash commands + a few skills + agent definitions per-plugin Full Ruflo loop — 98 agents, 60+ commands, 30 skills, MCP server, hooks, daemon Files in your workspace Zero .claude/ , .claude-flow/ , CLAUDE.md , helpers, settings MCP server registered Only if ruflo-core is installed (it ships its own .mcp.json ) — most other plugins don't Yes Hooks installed No Yes Best for Try a single plugin's commands without committing to the full install Production use — everything works as documented Path A — Claude Code Plugins (lite, slash commands only) # Add the marketplace /plugin marketplace add ruvnet/ruflo # Install core + any plugins you need /plugin install ruflo-core@ruflo\n/plugin install ruflo-swarm@ruflo\n/plugin install ruflo-rag-memory@ruflo\n/plugin install ruflo-neural-trader@ruflo This adds slash commands and agent definitions. ruflo-core (installed above) does register its own MCP server on install — its tools are callable as mcp__plugin_ruflo-core_ruflo__* (e.g. mcp__plugin_ruflo-core_ruflo__memory_store ), not the bare memory_store / swarm_init / agent_spawn names the CLI-track scaffold uses. Other plugins generally don't ship their own MCP server. For the full loop with the CLI-track tool names, use Path B below.",
+      "stars_today": 139,
+      "language": "TypeScript"
+    },
+    {
+      "title": "wshobson/agents",
+      "slug": "wshobson-agents",
+      "url": "https://github.com/wshobson/agents",
+      "abstract": "Plugins, agents, and skills for AI coding tools Use one collection of plugins, agents, skills, and commands across Claude Code, OpenAI Codex CLI, Cursor, OpenCode, Antigravity CLI, GitHub Copilot, and Pi. A harness is the coding tool that loads and runs the components. Plugins cover Python and JavaScript development, code review, testing, infrastructure, security, and other work. The catalog contains 94 plugins, including 92 local plugins and 2 external entries. The local source contains 202 agents, 184 skills, and 105 commands. The components share a Markdown source, with installation and capabilities adapted to each harness. Multi-harness support Choose the harness you use and follow its setup route. Available components depend on the installation route and the harness's capabilities. Tool Installation Components and limits Claude Code Plugin marketplace Source agents, skills, and commands; plugin-specific hooks and MCP configuration OpenAI Codex CLI Native marketplace or generated artifacts Native source skills; generated TOML agents and commands as skills use a separate route Cursor Plugin marketplace Source agents, skills, and commands, with curated project rules OpenCode make install-opencode Generated agents, skills, and commands, with translated tool permissions Antigravity CLI make install-antigravity Generated plugins containing agents, skills, and commands GitHub Copilot make install-copilot Generated agent profiles and skills; commands also become invocable skills Pi make install-pi Generated skills and prompt templates; agents require a subagent extension See the capability matrix for model mappings, tool permissions, hooks, and installation differences. For individual skills, use a skills-only installer and select your coding tool. Quick start Choose a plugin for the work you do: Plugin Use it for python-development Python, Django, FastAPI, testing, and packaging javascript-typescript JavaScript and TypeScript development and project setup developer-essentials Code review, debugging, Git, and testing patterns security-scanning Security review, dependency checks, and code scanning See the plugin catalog for all 94 plugins and the usage guide for commands and examples. Claude Code Run these commands inside Claude Code to register the marketplace and install the Python development plugin: /plugin marketplace add wshobson/agents\n/plugin install python-development@claude-code-workflows Then ask Claude to use the Python agents for your task, or run the plugin's scaffolding command: /python-development:python-scaffold Create a FastAPI service with tests Codex CLI Run these commands in a terminal with a current Codex CLI: codex plugin marketplace add wshobson/agents\ncodex plugin add python-development@claude-code-workflows The native Codex manifests expose source skills. The generated TOML agents and command-derived skills use a separate adapter path. Native installation also reads the original skill bodies, while generated copies split oversized bodies into reference files for the 8 KB budget. See the Codex setup details before choosing an installation route. Cursor Cursor uses the committed plugin marketplace registry . Follow the Cursor setup instructions to add the marketplace and install a plugin. Skills only Install an individual skill with GitHub CLI's gh skill command or the npx skills installer. Select your coding tool when prompted. Both installers read skills from GitHub without cloning the repository and install them without the plugin's agents, commands, or hooks. gh skill install wshobson/agents python-testing-patterns\nnpx skills add wshobson/agents --skill python-testing-patterns gh skill requires GitHub CLI 2.90 or later. The npx command requires Node.js and npm. See skills-only installation for other agents, install scopes, and version pinning. Install from a clone For OpenCode, Antigravity CLI, GitHub Copilot, and Pi, clone the repository and use the installer for your harness. Install uv , Python 3.12 or later, and the coding tool you want to use. The following clone command uses GitHub CLI: gh repo clone wshobson/agents ~ /agents cd ~ /agents Run the command for your tool. Each target generates the artifacts and links all local plugins into that tool's user configuration: make install-opencode\nmake install-antigravity\nmake install-copilot\nmake install-pi Pi's agents require its reference subagent extension or a compatible extension. See the global install guide for configuration paths and uninstall commands. What's inside Component Count Purpose Plugins 94 Installable groups of components, including 92 local plugins and 2 external entries Agents 202 Instructions for specialist subagents that handle delegated work Skills 184 Guidance and reference material that an agent loads when relevant Commands 105 Named workflows you invoke, such as project scaffolding or a security scan The agent, skill, and command counts cover local source files. External plugins provide their own components and installation requirements. How it works A plugin groups related agents, skills, and commands under plugins/ . For example, python-development contains three agents, sixteen skills, and a scaffolding command. The chosen harness loads the installed components according to its own discovery and invocation rules. Contributors maintain one Markdown source in the Claude Code plugin format. Native registries point to that source where supported, and adapters generate the formats needed by each harness. Commands may become skills or prompt templates, and agent formats, model choices, and tool permissions vary by harness. Source agents specify model aliases such as opus , sonnet , haiku , fable , or inherit . Adapters map those aliases to each harness's model settings, including fixed defaults for some inherit entries. See model configuration and the adapter mappings . Quality evaluation The repository validates plugin structure, generated artifacts, and documentation. Contributors can run these checks from the repository root: make generate-all\nmake validate STRICT=1\nmake garden plugin-eval also provides static skill checks without model calls. For example: uv run --project plugins/plugin-eval plugin-eval score plugins/python-development/skills/python-testing-patterns --depth quick The LLM judge and Monte Carlo layers are experimental and are not validated against human labels. Their scores describe model assessments and repeated simulations and do not prove that a task succeeds in a project. They require the optional llm dependencies. Model calls use ANTHROPIC_API_KEY when it is set and bill that API account. Otherwise they use your Claude Code login. See the evaluation guide for setup and limits. Documentation map Guide Covers Plugin catalog Plugins by task and domain Agents and skills Available components and model configuration Usage and tool setup Commands, examples, and installation Architecture and design details Source layout and adapters Quality evaluation and CLI verification Checks and their limits See CONTRIBUTING.md to propose a change and authoring conventions to write plugin content. External memory integration Pensyve remains an optional external Claude Code marketplace entry. Major7 Apps maintains Pensyve, and this repository's maintainer founded Major7 Apps. Its open-source runtime can run locally or on your own server. Pensyve Cloud closed on October 1, 2026 , and its dashboard, API, and hosted MCP endpoints are unavailable. Use the self-hosting guide when configuring the runtime. License The repository is MIT licensed . External plugins have their own licenses. Star history",
+      "stars_today": 97,
+      "language": "Python"
+    }
+  ],
+  "papers": {
+    "hf": [
+      {
+        "title": "Jeva: System One Models from First Principles",
+        "slug": "jeva-system-one-models-from-first-principles",
+        "url": "https://huggingface.co/papers/2610.18773",
+        "abstract": "System one models enable direct, low-latency decision-making. Yet recent practice of predicting an answer from serialized text does not, by itself, respect the structure of a decision problem. We argue that current designs underemphasize four important structural requirements. (i) null-aware: Models should distinguish answer absence from uncertainty among candidates; (ii) permutation-invariant: Reordering alternatives should not change the decision; (iii) option-scalable: Growing candidate sets should not require redefining the output space; (iv) cacheable: Request-independent computation over recurring alternatives should be reusable across requests. We introduce Jeva, a decision-native architecture that addresses these requirements jointly. A shared encoder independently represents the request and each option, while a compact decision stack refines only the request state against immutable option memory. Symmetric aggregation yields permutation-equivariant probabilities; shared scoring accommodates variable-size candidate sets. A separate coverage estimate distinguishes answer absence from candidate competition, enabling explicit null outcomes. Request-independent option representations and layer projections support reuse across newly assembled sets. These mechanisms unify Choice, Noul, and Score outputs. Across evaluations, Jeva combines strong typed-decision performance with near-perfect null detection and no decision flips under any tested permutations. It scales to thousands of candidates and substantially reduces latency through cross-request reuse without changing decisions.",
+        "upvotes": 237,
+        "arxiv_id": "2610.18773",
+        "authors": []
+      },
+      {
+        "title": "Agent-Reflex: Teaching Language Agents to Act Reflectively",
+        "slug": "agent-reflex-teaching-language-agents-to-act-reflectively",
+        "url": "https://huggingface.co/papers/2610.17953",
+        "abstract": "Large language models have evolved from single-turn chatbots into interactive agents capable of long-horizon reasoning. In real deployments, MCP tool services can return noisy feedback and users may intervene to correct the agent, but existing methods provide limited supervision for reflection learning and failure recovery. To bridge this gap, we propose Agent-Reflex, a general training framework for incentivizing proactive reflection in agents. Specifically, Agent-Reflex comprises three stages. First, Environment Reflection Skill Discovery (RSD) injects grounded tool-feedback perturbations into environment scaling, samples a capability-diverse LLM pool, mines matched success-failure pairs, and summarizes reusable reflection meta-skills. Building on this skill library, we then apply Reflective Supervised Fine-Tuning (ReSFT) that converts each skill into supervision for self-reflection, skill recovery, and user-centric correction, strengthening complementary reflective behaviors. Finally, we propose On-Policy Reflective Policy Optimization (ORPO) to combine agentic reinforcement learning under noisy interactions with reflection-guided on-policy distillation to further elicit proactive reflection. Built on Qwen3-8B, Agent-Reflex reaches 58.6 overall on five long-horizon tool-use benchmarks and 29.1 on AgentNoiseBench, surpassing strong environment-scaling and reflection baselines. Experiments on six challenging agent benchmark suites demonstrate the effectiveness of Agent-Reflex. Further analyses show that Agent-Reflex improves agents' robustness to noise while maintaining stable training dynamics, supporting scalable agent training. Our code is available at https://github.com/RUC-NLPIR/Agent-Reflex.",
+        "upvotes": 192,
+        "arxiv_id": "2610.17953",
+        "authors": []
+      },
+      {
+        "title": "VideoJev: System One Model for Video Understanding and Interaction",
+        "slug": "videojev-system-one-model-for-video-understanding-and",
+        "url": "https://huggingface.co/papers/2610.18615",
+        "abstract": "Visual agents must turn video observations into timely decisions to track progress and choose what to do next. Building on the emerging System One paradigm, we introduce VideoJev, a family of models that cast video understanding and interaction as structured decision tasks. We adapt pretrained multimodal large language models (MLLMs) by replacing autoregressive answer decoding with a shared head that scores temporal intervals and textual options against video evidence. These scores yield event spans or answer choices, unifying temporal grounding and multiple-choice video question answering. This combines the semantic flexibility of MLLMs with efficient decisions that agents can use directly. As an interaction unfolds, new goals and intermediate results prompt further queries about the same visual history. VideoJev therefore reuses visual computation through Cached inference for queries as they arrive and Joint inference for multiple queries in a single forward pass. Across three temporal grounding benchmarks, VideoJev-4B and VideoJev-35B-A3B improve mean mIoU over their backbones by 6.7 and 10.8 points, respectively, with measured inference speedups of 2.8-3.1times. On four video QA benchmarks, both achieve performance comparable to their backbones in Thinking mode, with measured inference speedups exceeding 100times. These results offer a unified, reusable decision interface for composing structured visual judgments into complex, open-ended workflows.",
+        "upvotes": 189,
+        "arxiv_id": "2610.18615",
+        "authors": []
+      },
+      {
+        "title": "Urbex: Agentic Spatial Grounding for City-Scale 3D Scenes",
+        "slug": "urbex-agentic-spatial-grounding-for-city-scale-3d-scenes",
+        "url": "https://huggingface.co/papers/2610.18356",
+        "abstract": "City-scale 3D grounding is commonly formulated as candidate ranking, which requires precomputed instance proposals and becomes inefficient in large outdoor scenes. We propose Urbex, an agentic vision-language framework that instead casts grounding as active spatial search. Urbex represents a city-scale 3D scene as an interactive multi-view environment, allowing a VLM agent to query landmarks, zoom into local regions, render oblique views, and commit a grounded bounding box. We optimize this tool-use policy with reinforcement learning on CityRefer, using smooth localization rewards and lightweight shaping rewards for efficient exploration. Experiments show that Urbex achieves the best Hit@1 and IoU on CityRefer, supports candidate-free grounding without ground-truth boxes, and is substantially faster than the strongest city-scale ranking baseline. Zero-shot results on STPLS3D-Refer further indicate improved cross-scene robustness.",
+        "upvotes": 109,
+        "arxiv_id": "2610.18356",
+        "authors": []
+      },
+      {
+        "title": "GreenWAM: A World Foundation Model for Robotics",
+        "slug": "greenwam-a-world-foundation-model-for-robotics",
+        "url": "https://huggingface.co/papers/2610.18774",
+        "abstract": "A robot needs a world model that predicts how its actions will change the scene and a policy that chooses those actions. Models are usually built and evaluated for only one of these roles, and every robot records its actions in its own format. We ask whether one robot world model can serve both roles across different bodies, and what makes this work. We present GreenWAM, a world foundation model for robotics, together with the recipe that produces it: (1) a shared anatomical action space that describes 20 robot families, from bimanual arms to dexterous humanoids, in common joint coordinates; (2) joint training on these families in visual, action-conditioned and world-action modes; and (3) policies that split an action expert off the generator. As a world model, GreenWAM attains top-tier trajectory, depth and 3D accuracy on WorldArena 1.0, ahead of every world-action model and video generator in our comparison. As a policy, it scores among the top entries of the RoboTwin 2.0 leaderboard, reaches the highest zero-shot LIBERO-plus success among the compared methods and is competitive with dedicated vision-language-action and world-action policies on CALVIN and LIBERO. We further adapt GreenWAM to a real humanoid, where it succeeds more often than policies adapted from π_{0.5} and from Cosmos 3 Edge, and distill it into a single-step policy for real-time control. Controlled experiments yield three findings: robot specialization improves world prediction and control together; an action expert helps when split off at the start of adaptation; and keeping world-model modes during policy adaptation preserves robustness to scene changes.",
+        "upvotes": 80,
+        "arxiv_id": "2610.18774",
+        "authors": []
+      },
+      {
+        "title": "AesCode: Aesthetic Code Generation with Decoupled Cross-Modal Rewards",
+        "slug": "aescode-aesthetic-code-generation-with-decoupled-cross-modal",
+        "url": "https://huggingface.co/papers/2610.18860",
+        "abstract": "Generating information-rich visual artifacts such as slides, posters, and dashboards as code is appealing because the outputs are structured, editable, and verifiable. Yet code models cannot see how their choices of layout and color come together on the canvas, often limiting spatial planning and aesthetic quality. Image generators excel at visual design but can misrender requested content, making their outputs unreliable targets for direct reproduction. We therefore introduce AesCode, which generates code grounded in the content prompt while using an image generated from the same prompt as an aesthetic guidance. To do so, AesCode represents the target as a design graph that describes the whole canvas and makes each property attributable. From this graph, we derive complementary cross-modal rewards: deterministic verifiers score properties parsable from code and rendering, while a VLM judge assesses the non-parsable ones with a sample-specific Visual Graph Rubric (VGR) tied to graph elements and relations. We optimize these decoupled rewards through reinforcement learning with per-channel normalization to jointly improve spatial planning, aesthetic quality, and verifiable correctness. To evaluate this setting, we build a benchmark that scores verifiable correctness and visual quality separately, with visual scores highly consistent with human judgments. We find that reference images substantially improve the visual quality of code generated by existing models, and ablations show that AesCode benefits from references both as model input and as a source of visual rewards. Relative to same-scale Qwen3-VL baselines given the same references, AesCode-8B and AesCode-32B improve visual quality by 31.1 and 22.4 percentage points, reaching scores comparable to those of closed-source frontier models such as GPT-5.5 and Claude Opus 4.8.",
+        "upvotes": 77,
+        "arxiv_id": "2610.18860",
+        "authors": []
+      },
+      {
+        "title": "Harness^2: Recursive Agent Harnessing for an Open World",
+        "slug": "harness-2-recursive-agent-harnessing-for-an-open-world",
+        "url": "https://huggingface.co/papers/2610.14224",
+        "abstract": "LLM agents' capabilities depend not only on their underlying models but also on their execution harnesses. Recursive self-improvement (RSI) offers a promising approach to automatically evolve these harnesses. However, deploying RSI in open-world settings still faces two critical challenges. First, open-world tasks are typically unseen during the harness design phase and novel at test time, leaving no ground-truth verifiers to reliably guide online harness edits. Second, the RSI process remains highly task-specific and fails to generalize to novel scenarios. We introduce Harness^2, a plug-and-play, recursive agent harnessing framework that addresses these challenges through two connected levels of recursion. Task-level recursion refines the current task's harness using a contrastive Propose-Probe-Compose step that reliably guides edits without ground-truth verifiers, and can be scaled further via parallel or sequential recursion. Harnessing-level recursion then extracts experience from these edits to update a continual improvement harness, enabling the agent to better adapt to future tasks. Across three professional benchmarks and four model-harness configurations, a single step consistently improves GLM-5 and Gemini 3.5 Flash over their base harnesses, yielding gains of up to 11.5 points on WorkBuddy-Bench, 4.5 points on JobBench, and 11.8 percentage points on LAB, with further gains as the task-level recursion budget increases.",
+        "upvotes": 75,
+        "arxiv_id": "2610.14224",
+        "authors": []
+      },
+      {
+        "title": "Tev: Scaling Long-Horizon Agentic Environments with Dense Progress Rewards",
+        "slug": "tev-scaling-long-horizon-agentic-environments-with-dense",
+        "url": "https://huggingface.co/papers/2610.18868",
+        "abstract": "Long-horizon agents have drawn growing attention for their ability to work autonomously -- from hours to days -- on economically valuable tasks, a capability essential to automated discovery and recursive self-improvement (RSI). Yet open-source models still struggle on long-horizon tasks, largely for lack of both training data and a working recipe, and scaling both is hard: long, complex tasks are difficult to curate and verify, and their rewards are sparse. We address both. First, we introduce Tev-Gym, the first long-horizon agent training dataset with verifiable, dense, progressive rewards -- 1,170 verified task environments across 7 domains. It is built on a latent-world-first approach that first constructs a latent world: a complete and correct hidden specification of the task domain, workflow, and expected state after each step. Each task is then progressively rendered from this specification into an agent-facing environment, enabling controllable complexity and a natural progress metric. Second, we turn this metric into a training recipe: via progress-potential reward shaping (PPRS), we convert progress into a dense per-step reward that improves training efficiency and makes otherwise-intractable tasks trainable. Training with this recipe yields Tev-27B, which achieves substantial gains on the Agents' Last Exam computing and math sciences domains (ALE-CM), matching GPT-6 Astra and Claude Opus 5 at Pass@5. Despite training only on ALE-related data, it generalizes to the Terminal-Bench (TB) 3.0 and 4.0 subsets, surpassing GLM 5.2 and Gemini 3.7 Flash, and reaches Claude Opus 4.8-level performance on middle-horizon tasks such as TB 2.1.",
+        "upvotes": 71,
+        "arxiv_id": "2610.18868",
+        "authors": []
+      },
+      {
+        "title": "TPPO: Tracking-Value PPO For Language Model Reasoning",
+        "slug": "tppo-tracking-value-ppo-for-language-model-reasoning",
+        "url": "https://huggingface.co/papers/2610.16794",
+        "abstract": "Proximal Policy Optimization (PPO) is widely used in reinforcement learning with verifiable rewards for language-model reasoning. While value evolution along trajectory characterizes relative token-level credit, yet standard critics often fail to track it under sparse terminal rewards. To model this evolution, we analyze the relation between successive prefix values and show that they admit a Bayesian decomposition with additive updates in log-odds space. We use this additive structure to construct Tracking-Value PPO (\\method), a cumulative value parameterization that sums position-wise scalar outputs into value logits. These outputs are learned through terminal-outcome supervision on the reconstructed values. \\method improves aggregate mathematical reasoning scores over PPO by 7.0 and 8.4 points on Qwen3-4B-Base and Qwen3-8B-Base, respectively, while improving out-of-distribution generalization. Gains extend to Qwen3-4B, Qwen2.5-Math-1.5B, Qwen3.5-9B and to countdown, and scientific coding tasks. Further analysis shows more accurate tracking of value evolution and more reliable advantage estimates. Our code is publicly available in https://github.com/LINs-lab/TPPO.",
+        "upvotes": 71,
+        "arxiv_id": "2610.16794",
+        "authors": []
+      },
+      {
+        "title": "Vela: User Behavior as Supervision Sparks LLM Intelligence",
+        "slug": "vela-user-behavior-as-supervision-sparks-llm-intelligence",
+        "url": "https://huggingface.co/papers/2610.14709",
+        "abstract": "Large language models are increasingly deployed in applications that act on users' long-term behavior histories, from personal assistants to recommendation and advertising systems. These applications demand the user dimension of LLM intelligence: inferring a person's preferences, intent, and likely future actions from weeks to years of behavior data. Yet current models are trained on static text or synthetic data, neither of which captures how user behavior evolves over time. Real-world behavior records, already available at scale on content platforms and in personal-assistant agents, offer a natural supervisory signal. We propose user behavior as supervision and introduce Vela, a framework that converts real user behavior data into trainable tasks and trajectories. From the anonymized behavior records of 100,000 users, Vela generates 100,000 tasks across 91 real-world task templates; difficulty-based filtering and trajectory acceptance criteria retain approximately 75,000 tasks with selected training trajectories. Fine-tuning Qwen3.6-35B-A3B on these trajectories improves performance over the base model by up to 11.5 points on user-related tasks and by an average of 4 points on general benchmarks. Training on more user behavior data further improves user-related performance, and reinforcement learning after fine-tuning outperforms reinforcement learning from the base model by up to 7.7 points. These gains suggest that real-world user behavior is a scalable source of supervision for both user-centered capabilities and the broader intelligence of LLMs.",
+        "upvotes": 69,
+        "arxiv_id": "2610.14709",
+        "authors": []
+      }
+    ],
+    "others": [
+      {
+        "title": "AI literacy and STEM education: emerging frontiers and research priorities",
+        "slug": "ai-literacy-and-stem-education-emerging-frontiers-and",
+        "url": "https://www.semanticscholar.org/paper/e79a2e0025494cca968692643cf97c669b5c5d0a",
+        "abstract": "AI literacy and STEM education: emerging frontiers and research priorities. International Journal of STEM Education",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 1,
+        "published_date": "2026-10-14",
+        "authors": [
+          "J. Hallström",
+          "T. Chiu",
+          "Mei-Xia Ding",
+          "Milo D. Koretsky",
+          "Ye-Ping Li"
+        ]
+      },
+      {
+        "title": "End-to-End Contextualized URL Extraction from Scholarly Papers",
+        "slug": "end-to-end-contextualized-url-extraction-from-scholarly",
+        "url": "https://www.semanticscholar.org/paper/f374ce0424a58bb9cd27faca7a13a654eb9c2551",
+        "abstract": "Uniform resource locators (URLs) have become ubiquitous in scholarly papers, and extracting them is an upstream task for downstream analyses such as link rot analyses, meta-analyses, and reproducibility studies. Most existing works extract URLs with a monolithic method, such as a regular expression, which assumes URLs appear in a perfect form throughout the text. In practice, layout variety and conversion errors leave many URLs imperfect, without a scheme, or truncated across lines and columns. Although context around a URL is needed to understand its role in a paper, a URL in a footnote or reference sits apart from its citing sentence. We present VisURLX, a pipeline built on a multimodal large language model (MLLM) that reads each rendered page image directly. It preserves page layout such as superscript markers and column structure, and extracts each URL with its target sentence and surrounding context across the body, footnotes, and references. We evaluate VisURLX on sURL-3K, our benchmark of 3,376 manually annotated target sentences with their URLs, using a proprietary backend (GPT-5-mini) and an open-weight backend (Qwen3-VL-32B). VisURLX on GPT-5-mini achieves an end-to-end F1 score of 86.86%, about 20 points above the strongest heuristic pipeline built on GROBID, PyMuPDF-Layout, and olmOCR. As one application, we classify the extracted URLs into open access datasets and software (OADS), reaching a weighted F1 score of 83.1%. The code, data, and the full text of every prompt are available at https://github.com/lamps-lab/sURL3k-VisURLX.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 1,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Lamia Salsabil",
+          "Rochana R. Obadage",
+          "Bipasha Banerjee",
+          "Sawood Alam",
+          "William A. Ingram",
+          "Edward A. Fox",
+          "Jian Wu"
+        ]
+      },
+      {
+        "title": "Why Large Language Models will Never be Embodied: A Categorical, Not Engineering, Impossibility",
+        "slug": "why-large-language-models-will-never-be-embodied-a",
+        "url": "https://www.semanticscholar.org/paper/d00d7f773f90c2c4548499d4f34d1c9cbe2beaec",
+        "abstract": "Why Large Language Models will Never be Embodied: A Categorical, Not Engineering, Impossibility. Minds and Machines",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-14",
+        "authors": [
+          "Madhur Mangalam"
+        ]
+      },
+      {
+        "title": "Author Correction: Large language models are powerful electronic health record encoders",
+        "slug": "author-correction-large-language-models-are-powerful",
+        "url": "https://www.semanticscholar.org/paper/bd96127cc4162df9d49cc12dc47859fb7289cb63",
+        "abstract": "Author Correction: Large language models are powerful electronic health record encoders. npj Digital Medicine",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-14",
+        "authors": [
+          "Stefan Hegselmann",
+          "Georg von Arnim",
+          "Tillmann Rheude",
+          "Noel Kronenberg",
+          "David A. Sontag",
+          "G. Hindricks",
+          "R. Eils",
+          "B. Wild"
+        ]
+      },
+      {
+        "title": "Cross-lingual transfer for post-traumatic stress disorder detection from clinical interview transcripts via LLM-assisted Turkish translation and multilingual transformer fine-tuning",
+        "slug": "cross-lingual-transfer-for-post-traumatic-stress-disorder",
+        "url": "https://www.semanticscholar.org/paper/a9479acb74a009239a57bfce467dd5e629384e1c",
+        "abstract": "Cross-lingual transfer for post-traumatic stress disorder detection from clinical interview transcripts via LLM-assisted Turkish translation and multilingual transformer fine-tuning. Network Modeling Analysis in Health Informatics and Bioinformatics",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-14",
+        "authors": [
+          "Engin Seven",
+          "Eylem Yucel"
+        ]
+      },
+      {
+        "title": "MIRAGE: manipulation-immune RAG with adaptive guard against textual evidence attacks",
+        "slug": "mirage-manipulation-immune-rag-with-adaptive-guard-against",
+        "url": "https://www.semanticscholar.org/paper/95a3fe69d93781baad17fb1e0c74a1a5941017df",
+        "abstract": "MIRAGE: manipulation-immune RAG with adaptive guard against textual evidence attacks. Cybersecurity",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-14",
+        "authors": [
+          "Qi Yuan",
+          "Fei-Yang Li",
+          "Hao Hu",
+          "Yan-Ming Mu",
+          "Hong-Wei Zhou",
+          "Yu-Ling Liu",
+          "Yu-Chen Zhang"
+        ]
+      },
+      {
+        "title": "Hashtags of hope: technology, stakeholders and disaster response",
+        "slug": "hashtags-of-hope-technology-stakeholders-and-disaster",
+        "url": "https://www.semanticscholar.org/paper/8b00d3ca35bef3eb86222f1361108cb102de976c",
+        "abstract": "This research examines how individuals exercised digital agency by reaching out to emergent actors on Twitter  (now called as X), and how this reshapes understandings of stakeholder salience in humanitarian supply chain management (HSCM) during disaster response for humanitarian organisations.\n \n \n \n A corpus of 120,057 tweets collected via hashtag-based Application Programming Interface extraction is analysed through three complementary methods: (1) descriptive frequency analysis of stakeholder callout patterns, (2) social network analysis (SNA) and (3) topic modelling to establish the purposive, humanitarian intent of the identified interactions.\n \n \n \n Affected populations directed the majority of callouts to celebrities, exceeding appeals to government, media and NGOs. Accounts of the top celebrities structurally bridged disconnected stakeholder clusters. Finally, the interactions were found to be purposive and humanitarian, spanning direct appeals, donation mobilisation, information diffusion and volunteer coordination.\n \n \n \n Humanitarian organisations should establish pre-crisis partnership agreements with verified celebrity amplifiers and invest in specialist digital intelligence intermediation units, structurally separate from operational command, to filter, verify and route social-media-sourced signals to field commanders.\n \n \n \n The study contributes to debates on inclusive, participatory disaster governance and the use of technology to reduce information asymmetry that systematically disadvantages the most vulnerable.\n \n \n \n This study makes two original contributions. First, it extends the Power-Legitimacy-Urgency framework by introducing network amplification power, a normative, relational power modality distinct from institutional command authority, thereby formally incorporating technology-mediated, non-institutional actors into stakeholder theory. Second, it grounds this theoretical extension in multi-method empirical evidence, combining SNA, latent Dirichlet allocation topic modelling and inferential statistics on a large-scale, real-world corpus of disaster communication.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-14",
+        "authors": [
+          "Deep Srivastav",
+          "Lijo John",
+          "Anand Gurumurthy"
+        ]
+      },
+      {
+        "title": "Fluent but not fail-safe: machine-translated radiology reports still need expert review",
+        "slug": "fluent-but-not-fail-safe-machine-translated-radiology",
+        "url": "https://www.semanticscholar.org/paper/7f40d4d79e4ba7dd256c0e31c4d5bad368e653c2",
+        "abstract": "Fluent but not fail-safe: machine-translated radiology reports still need expert review. European Radiology Experimental",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-14",
+        "authors": [
+          "C. Seibold",
+          "Timo Leichenich",
+          "Patrick Stein",
+          "E. Atsiatorme",
+          "Patrick Kliesch",
+          "Gökçe A. Sevim",
+          "P. Trauth",
+          "Alexander Kremer",
+          "A. Bischoff",
+          "Hans-Ulrich Kauczor",
+          "M. Fink"
+        ]
+      },
+      {
+        "title": "An explainable graph transformer framework integrating structural reasoning and visual attention for interpretable nail disease diagnosis",
+        "slug": "an-explainable-graph-transformer-framework-integrating",
+        "url": "https://www.semanticscholar.org/paper/2c0b0ad1f398a837cd88739fa9bba439b2012c98",
+        "abstract": "An explainable graph transformer framework integrating structural reasoning and visual attention for interpretable nail disease diagnosis. Discover Artificial Intelligence",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-14",
+        "authors": [
+          "R. Bhuvanya",
+          "T. Sujithra",
+          "M. M. Iqbal",
+          "S. Adikrishanan"
+        ]
+      },
+      {
+        "title": "ChatGPT’s feedback credibility and students’ perceived learning: the role of agent-related social perceptions",
+        "slug": "chatgpt-s-feedback-credibility-and-students-perceived",
+        "url": "https://www.semanticscholar.org/paper/1afc7c88d44e4ab2d26dee7f795a6039ba2946d0",
+        "abstract": "ChatGPT’s feedback credibility and students’ perceived learning: the role of agent-related social perceptions. International Journal of Educational Technology in Higher Education",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-14",
+        "authors": [
+          "R. Pérez-López",
+          "Rubén González-Vallejo",
+          "Laura Lucia-Palacios",
+          "Iguácel Melero-Polo",
+          "A. Trifu"
+        ]
+      },
+      {
+        "title": "Skill-guided agentic reasoning enables longitudinal synthesis of myeloma records at expert-level concordance",
+        "slug": "skill-guided-agentic-reasoning-enables-longitudinal",
+        "url": "https://www.semanticscholar.org/paper/0563d69644d6a1ac101ee88f4e4ae583b9ce74a2",
+        "abstract": "Skill-guided agentic reasoning enables longitudinal synthesis of myeloma records at expert-level concordance. npj Precision Oncology",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-14",
+        "authors": [
+          "Johannes Moll",
+          "Jannik Lübberstedt",
+          "Christoph Nuernbergk",
+          "Jacob Stroh",
+          "L. Mertens",
+          "A. Purcarea",
+          "Christopher Zirn",
+          "Zeineb Ben Chaaben",
+          "F. Drexel",
+          "H. Häntze",
+          "A. Narayanan",
+          "Friedrich Puttkammer",
+          "Andrei Zhukov",
+          "Jacqueline Lammert",
+          "S. Ziegelmayer",
+          "Markus M. Graf",
+          "Marion Högner",
+          "M. Makowski",
+          "Florian Bassermann",
+          "L. Adams",
+          "Jia-Zhen Pan",
+          "D. Rueckert",
+          "K. Braitsch",
+          "K. Bressem"
+        ]
+      },
+      {
+        "title": "ChunkAct: Action Chunking for Agentic Robotics",
+        "slug": "chunkact-action-chunking-for-agentic-robotics",
+        "url": "http://arxiv.org/abs/2610.18874v1",
+        "abstract": "Agentic robotics places a large language model (LLM) agent in the robot control loop, where it composes perception, motion, and vision-language-action (VLA) tools under the guidance of a memory and thereby generalizes to new tasks without retraining. This generality comes at a steep price in efficiency. Every primitive requires a round of LLM reasoning over the full interaction history, so the cost of an episode grows with the number of primitives. We find this reasoning largely redundant: once a sub-goal is chosen, its primitives follow a routine already prescribed by memory. We present ChunkAct, which introduces action chunking to agentic robotics. Online, a single call launches a chunk of chained primitives, which executes autonomously and returns control only upon failure. Offline, ChunkAct compiles the memory into these chunks, so execution is memory-free at test time and the planner is reserved for decisions that require reasoning. LLM computation therefore scales with the number of decisions rather than the number of primitives. On LIBERO-Pro, ChunkAct improves task success by 5.0 points over the state of the art in agentic robotics while requiring 2.9x fewer LLM calls, 4.4x fewer input tokens, and 2.3x fewer output tokens.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Bingxin Xu",
+          "Wenrui Bao",
+          "Xinxin Liu",
+          "Jiawei Zhou",
+          "Yuzhang Shang",
+          "Emilio Ferrara"
+        ]
+      },
+      {
+        "title": "LoopWAM: Closed-Loop Generalist Policy Improvement from Deployment Rollouts",
+        "slug": "loopwam-closed-loop-generalist-policy-improvement-from",
+        "url": "http://arxiv.org/abs/2610.18873v1",
+        "abstract": "Scaling expert demonstrations alone does not enable generalist robot policies to improve from deployment. Real-world rollouts contain successes, suboptimal behavior, and failures: imitating every recorded action can reinforce poor behavior, while filtering out failures discards evidence of physical interactions and their consequences. We introduce \\textbf{LoopWAM}, a closed-loop world-action model that learns directly from this full quality spectrum, using rollouts from both itself and other deployed policies. Source-dependent noise sampling unifies behavior learning and action-conditioned world modeling, while quality steering and quality-weighted supervision retain full video supervision across qualities and regulate action imitation. Video and action tokens interact throughout parallel denoising, allowing learned consequences to inform action generation directly. On RoboChallenge Table30-V2, three deployment-and-training rounds raise success from 23.67\\% to 43.33\\%, a 19.7-percentage-point gain, with a final score of 56.80. LoopWAM also achieves 94.5\\% average success on RoboTwin~2.0 and 49.5\\% overall success on RoboCasa365 without additional embodied pretraining, obtaining the best overall results among the compared methods across all three benchmarks. On challenging shirt folding task, two rounds of deployment-driven improvement after single-task post-training raise success from 13.20\\% to 55.56\\%. These results demonstrate closed-loop improvement from mixed-quality experience under both multi-task learning and single-task post-training. \\href{https://loop-wam.github.io/}{\\textcolor{orange}{Project Page}}",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Wenxuan Guo",
+          "Yingping Liang",
+          "Zhaoguo Wang",
+          "Ziyuan Li",
+          "Angyuan Ma",
+          "Zhenyu Wu",
+          "Chengkun Wang",
+          "Bingyao Yu",
+          "Ze Chen",
+          "Borui Zhang",
+          "Xiuwei Xu",
+          "Meng Zhang",
+          "Erjin Zhou",
+          "Jiwen Lu"
+        ]
+      },
+      {
+        "title": "Dog-Breed Text-to-image Flow Matching from Pretraining to Fine-Tuning on 4 Consumer GPUs",
+        "slug": "dog-breed-text-to-image-flow-matching-from-pretraining-to",
+        "url": "http://arxiv.org/abs/2610.18870v1",
+        "abstract": "We generally perceive that training text-to-image diffusion models requires heavy compute: it is true if we aim at a comprehensive frontier model. This understanding prevents people from training their own models when getting started in the field. We develop MiniDog, a framework that enables pretraining diffusion transformers in 55 minutes and fine-tuning in another 15 minutes on four 3090 GPUs. For data, we use 26k dog images from ImageNet and caption them for pretraining and use 2k images generated by FLUX.1-schnell for fine-tuning. We precompute the image and text features and cache them for efficiency. For architecture, we use E2E-INVAE for its semantic latent space, a small transformer with 22M parameters, a small Qwen model for text encoding, and in-context conditioning. For training, we use iREPA and an EUPE perception encoder for acceleration. For evaluation, our repository supports FID, HPSv2 score, PickScore, and various VAE reconstruction metrics.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Reyhaneh Esmailizadeh",
+          "Xingjian Leng",
+          "Zhanhao Liang",
+          "Liang Zheng"
+        ]
+      },
+      {
+        "title": "What Matters in Quality-Aware VLA Pretraining: A Benchmark and Empirical Study",
+        "slug": "what-matters-in-quality-aware-vla-pretraining-a-benchmark",
+        "url": "http://arxiv.org/abs/2610.18869v1",
+        "abstract": "How should demonstration quality be used during vision-language-action (VLA) pretraining to improve performance after target-task fine-tuning? We compare weighting, filtering, and conditioning across reward definitions and label granularities using 5,000 naturally suboptimal human demonstrations and 24 target tasks. Within each VLA, we match demonstrations and training budgets. Additional comparisons examine pretraining data size and the roles of quality tags during fine-tuning and inference. Across three VLAs, we find that approach-aware episode conditioning improves mean success over plain behavioral cloning; conditioning and filtering favor episode and chunk labels, respectively, on average, with model-dependent reversals; and constant-tag fine-tuning improves mean success after conditioned pretraining with either tagged or untagged inference. We introduce AXIS-Bench to support these controlled comparisons. Built on crowdsourced simulation demonstrations, it provides recorded object and contact states for recomputing quality labels on shared trajectories. Replayable trajectories support workspace-aligned rendering and user-defined real-world target tasks. In our real-world experiment, simulation pretraining raises success from 9.6\\% to 31.7\\%. Project page: https://axis-bench.github.io/.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Mingxuan Yan",
+          "Litian Gong",
+          "Dihong Huang",
+          "Zhixu Li",
+          "Tianyu Zhang",
+          "Wenqian Zhang",
+          "Hefeifei Jiang",
+          "Peihao Li",
+          "Jian Zhang",
+          "Mengfei Zhao",
+          "Yikai Tang",
+          "Hai Zhai",
+          "Zehao Wang",
+          "Ruijian Liang",
+          "Yanjia Huang",
+          "Lin Shao",
+          "Changliu Liu",
+          "Kaiyu Hang",
+          "Zhiwen Fan",
+          "Masayoshi Tomizuka",
+          "Jianfei Yang",
+          "Jiachen Li"
+        ]
+      },
+      {
+        "title": "PLAYGROUND: Progressive Layout Generation with Render-Grounded Planning",
+        "slug": "playground-progressive-layout-generation-with-render",
+        "url": "http://arxiv.org/abs/2610.18865v1",
+        "abstract": "Generating editable graphic designs requires arranging visual and textual elements into a coherent composition while preserving their content and editability. Although recent MLLM-based approaches employ iterative generation and visual refinement to reflect the real-world design workflows, their high-level plans are predetermined prior to execution, limiting their adaptability as the design evolves. To address this limitation, we propose PlayGround, a progressive layout generation framework that dynamically adapts to the current rendered canvas. PlayGround establishes a progressive design loop comprising a Progressive Planner, a Layout Generator, and a Visual Verifier, guided by a Structure-Aware Retriever. Given an initial set of unordered elements, the Structure-Aware Retriever initially infers a coarse layout structure to retrieve structurally similar reference designs. Subsequently, at each turn, the Progressive Planner examines the current rendered canvas alongside the remaining elements, forms the next functional group, and plans its composition. The Layout Generator then predicts editable layout attributes, while the Visual Verifier evaluates rendered candidates and provides feedback when refinement is necessary. To train the Progressive Planner with step-wise supervision, we construct a two-stage data generation pipeline that extracts functional groups and turn-level planning trajectories from completed designs. Experiments on Crello and LICA demonstrate the effectiveness of PlayGround over existing methods. Our code and weights will be publicly released.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Jaeho Lee",
+          "Junhwan Heo",
+          "Junghyun Park",
+          "WonJun Moon",
+          "Eunju Yang",
+          "Seungho Jang",
+          "Seongchan Kim",
+          "Seungryong Kim"
+        ]
+      },
+      {
+        "title": "Data Free Training of Diffusion Models for Lattice Field Theories",
+        "slug": "data-free-training-of-diffusion-models-for-lattice-field",
+        "url": "http://arxiv.org/abs/2610.18863v1",
+        "abstract": "Sampling equilibrium field configurations remains a major computational bottleneck in lattice field theory, motivating the development of generative samplers that can produce independent configurations. Diffusion models are promising for this purpose, but their standard denoising score matching objective requires samples from the target distribution, seemingly reintroducing the original sampling problem. Here, we show that diffusion models can instead be trained from their own generated samples using the target score identity, provided access to the unnormalized probability density. Importance-weighted formulations of this identity yield a consistent target throughout training, while unweighted variants define a self-consistent fixed-point training scheme. We benchmark the different approaches in two-dimensional \\(φ^4\\) theory and identify effective choices that enable efficient training and sampling across the symmetric, critical, and broken phases. Ultimately, our data-free training approach achieves comparable performance to training on HMC reference data.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Dennis Grinwald",
+          "Ankur Singha",
+          "Khaled Kahouli",
+          "Karl Jansen",
+          "Shinichi Nakajima"
+        ]
+      },
+      {
+        "title": "Hybrid Reasoning Agents",
+        "slug": "hybrid-reasoning-agents",
+        "url": "http://arxiv.org/abs/2610.18861v1",
+        "abstract": "How can we build an agent that thinks beyond human language, yet still acts through it in the external environment? Modern LLM agents still reason and interact through text, while latent reasoning offers an efficient internal medium but lacks native tool access and reasoning transparency. We bridge these two directions with Hybrid Reasoning Agents (HybridAgents), which dynamically navigate between latent reasoning and text-based interaction throughout a unified generation process. Architecturally, a lightweight HybridLink enables seamless transitions between text and latent modes, while the agent's continuous working memory preserves lossless hybrid context across multiple turns. These designs preserve tool-integrated agentic capabilities while making latent thoughts directly inspectable. Building on this architecture, we further develop dedicated post-training algorithms for hybrid reasoning: HybridSFT stabilizes tool-integrated hybrid generation by teaching the backbone to coordinate with HybridLink, then HybridRL scales reasoning by learning when to think in latent space and when to act through text. We evaluate HybridAgent at 3 model scales across 11 benchmarks covering mathematics, science, medicine, search, and agentic reasoning. Compared with frontier LLM Agents and agentic frameworks spanning both text-based and latent methods, HybridAgent consistently improves performance by 10.4%, while delivering 35.5%-54.7% token reduction, 1.8x-2.6x faster inference, and 2.7x-3.7x cost savings. Code and data are available at https://github.com/togethercomputer/HybridAgent.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Jiaru Zou",
+          "Yunzhe Qi",
+          "Sirui Chen",
+          "Federico Bianchi",
+          "Shang Zhu",
+          "Pan Lu",
+          "Jingrui He",
+          "James Zou"
+        ]
+      },
+      {
+        "title": "Visual Tokens on Demand: Visual Budgeting for Scalable and Efficient Multi-Image Reasoning in Multimodal LLMs",
+        "slug": "visual-tokens-on-demand-visual-budgeting-for-scalable-and",
+        "url": "http://arxiv.org/abs/2610.18858v1",
+        "abstract": "Multimodal large language models have advanced rapidly, but most remain optimized for single-image inputs. Multi-image reasoning is costly because each image adds many visual tokens, increasing encoding and attention demands. Existing techniques that address the above issue, including visual token pruning, token merging, visual token compression, learned resampling, hierarchical compression, retrieval-augmented visual reasoning, and memory-based architectures, have largely been designed for single-image scenarios, where redundancy is primarily spatial and local. Multi-image reasoning introduces additional challenges: redundancy may occur across images, task-relevant evidence may be sparse or distributed, and aggressive per-image compression can remove details needed for comparison, counting, temporal reasoning, retrieval, or evidence grounding. Moreover, existing token-reduction methods are often either (i) training-free but inference-inefficient, typically relying on accessing attention matrices to get token-importance that may be impractical to access with memory-efficient attention implementations such as FlashAttention, or (ii) training-dependent, requiring the base MLLM to be retrained or adapted to a new compressed-token paradigm. In this work, we study scalable multi-image reasoning and understanding without retraining the base model and without accessing attention matrices at inference time. To this end, we propose mmVB, a lightweight plug-and-play module that assigns query-conditioned per-image token budgets via cross-image context, adding only 1.6M trainable parameters while reducing visual input tokens by 9x. This reduction yields 5x faster time-to-first-token and 7x fewer prefill FLOPs, while maintaining 94.4% of full-resolution accuracy across eight multi-image reasoning benchmarks.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Aimon Rahman",
+          "Joymallya Chakraborty",
+          "Vidit Bansal",
+          "Abhishek Dan"
+        ]
+      },
+      {
+        "title": "PixelMoE: Scaling Pixel-Space Diffusion with LLM-Style Mixture-of-Experts",
+        "slug": "pixelmoe-scaling-pixel-space-diffusion-with-llm-style",
+        "url": "http://arxiv.org/abs/2610.18857v1",
+        "abstract": "Pixel-space diffusion models provide an appealing alternative to latent-space diffusion models by directly modeling raw images without relying on a learned tokenizer. However, scaling pixel-space models has predominantly followed dense strategies, tightly coupling model capacity with active computation. In this work, we show that standard LLM-style Mixture-of-Experts (MoE) architectures can be effectively transferred to pixel-space diffusion. Building on this finding, we introduce PixelMoE, a pixel-space generative framework that sparsely scales model capacity with standard LLM-style MoE, without diffusion-specific routing mechanisms or auxiliary routing objectives. Specifically, PixelMoE combines standard Token-Choice (TC) routing with fine-grained routed experts for input-adaptive sparse computation, a shared expert for capturing common representations, and a bias-based load-balancing strategy. To complement sparse capacity scaling, PixelMoE further introduces Pixel-Space Hierarchical Flow Matching, which varies spatial resolution along the denoising trajectory from global structure formation to fine-grained detail refinement. At comparable active parameter counts, PixelMoE consistently outperforms its dense counterparts across model scales, demonstrating effective sparse capacity scaling in pixel space. On class-conditional ImageNet-1K, PixelMoE achieves FID scores of 1.47 at 256x256 and 1.53 at 512x512 without representation alignment or perceptual losses, comparing favorably with leading pixel-space and latent-space generative models. Code and models will be released soon.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Ruixiao Dong",
+          "Jianmin Bao",
+          "Bozhi Luan",
+          "Zijie Meng",
+          "Xin Tao",
+          "Pengfei Wan",
+          "Kun Gai",
+          "Li Li",
+          "Houqiang Li"
+        ]
+      },
+      {
+        "title": "Exact Topological Compliance: Generating Persistence-Equivalent Graphs",
+        "slug": "exact-topological-compliance-generating-persistence",
+        "url": "http://arxiv.org/abs/2610.18856v1",
+        "abstract": "Persistent homology summarizes the topological evolution of a graph as persistence diagrams (PDs). Generating graphs whose topology matches a target descriptor is increasingly important, yet existing topology-aware generative models rely on soft regularization, producing graphs whose PDs may only be approximately similar. We initiate a principled investigation of the generation problem: produce graphs that realize a target PD exactly. We propose two approaches guided by the implicit local and global constraints a target PD imposes. The local approach builds degree-based PD-equivalent graphs iteratively, and we prove that every output realizes the target PD and that every degree-based PD-equivalent graph is reachable. However, as shown thereafter, local generation necessarily trades off between sample diversity and reaching infeasible states. We therefore recast generation as a global constraint satisfaction problem with a complete encoding solvable by modern constraint programming solvers. This is applicable to any vertex-based permutation equivariant filtration scheme and is minimal under the degree filtration. Experiments on four standard graph generation benchmarks confirm that both methods realize the target PD exactly. Together, our methods provide a principled treatment of strict topology-compliant graph generation. Code is available at https://github.com/Aalto-QuML/ExactCompliance.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Mattie Ji",
+          "Indradyumna Roy",
+          "Vikas Garg"
+        ]
+      },
+      {
+        "title": "Two Clocks: Why Larger Rollout Batches Learn Slower but Fail on Schedule in Reinforcement Learning with Verifiable Rewards",
+        "slug": "two-clocks-why-larger-rollout-batches-learn-slower-but-fail",
+        "url": "http://arxiv.org/abs/2610.18853v1",
+        "abstract": "Reinforcement learning with verifiable rewards (RLVR) relies on costly model-generated responses, motivating larger rollout batches and square-root learning-rate scaling. Reported to approximately preserve progress per sample with one optimizer step per rollout, this rule is less understood in practical multi-step training. We develop a two-clock framework that separates the samples needed to make progress from those consumed before collapse. Under a local quadratic model, the square-root rule preserves first-order drift per sample but not progress: larger batches take fewer, longer updates and lose more to curvature, yielding a learning-rate-dependent critical batch beyond which sample efficiency degrades. A drift-threshold hypothesis predicts a complementary failure clock whose sample count remains approximately invariant along the square-root rule. Controlled GRPO experiments on Qwen2.5-Math-1.5B across a $16\\times$ batch range support both predictions. Ratio clipping delays failure, especially for larger batches, but the progress gap persists without it. Widening the clip trades stability for a transient speed gain. The progress gap reappears on another dataset, a general-purpose checkpoint, and a 7B model. Finally, we use the two-clock framework to derive a simple multi-step RLVR schedule: start below the critical batch and switch to a larger batch before failure. Our code is available at: https://github.com/WinstonLiyt/two-clocks-rlvr.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Yuante Li",
+          "Junwei Quan",
+          "Kai Qiu",
+          "Kate Zhang",
+          "Yicheng Tao"
+        ]
+      },
+      {
+        "title": "MFG: Multi-turn Feedback Guided Molecular Optimization",
+        "slug": "mfg-multi-turn-feedback-guided-molecular-optimization",
+        "url": "http://arxiv.org/abs/2610.18851v1",
+        "abstract": "Multi-objective molecular optimization is a critical process in drug discovery that aims to modify a given molecule to simultaneously improve multiple properties while maintaining a similar overall structure. This process often requires iterative modifications guided by computational or experimental feedback. Recent large language model (LLM)-based methods have begun to explore this iterative approach; however, these methods are not explicitly trained to leverage such feedback, while existing approaches primarily focus on single-turn molecular optimization. To address this gap, we introduce Multi-turn Feedback Guided (MFG) molecular optimization, a reinforcement learning framework that trains an LLM to progressively optimize molecules using feedback from previous turns. MFG introduces a feedback vector capturing both property improvements and source molecule similarity, alongside a feedback-aligned reward function that promotes progressive improvement across turns. We apply MFG over $\\text{GeLLM}^{3}\\text{O}$, a state-of-the-art LLM model for multi-objective molecular optimization, evaluate $\\text{GeLLM}^{3}\\text{O-MFG}$ on ten multi-objective molecular optimization tasks. The results demonstrate that $\\text{GeLLM}^{3}\\text{O-MFG}$ achieves the highest average similarity-constrained success rate ($81.50%$), outperforming the base model $\\text{GeLLM}^{3}\\text{O}$ ($70.81%$).",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Trieu Nguyen",
+          "Frazier N. Baker",
+          "Ruoxi Gao",
+          "Daniel Adu-Ampratwum",
+          "Xia Ning"
+        ]
+      },
+      {
+        "title": "The Last Remote Sensing Model Built by Humans? Casting Any Earth Observation Task as Recursive Self-Improvement",
+        "slug": "the-last-remote-sensing-model-built-by-humans-casting-any",
+        "url": "http://arxiv.org/abs/2610.18845v1",
+        "abstract": "Earth observation (EO) models are still built by hand. For each new task, experts design a training recipe and tune it against a benchmark. We show that this loop can be handed to an agent. Any verifiable task can be cast as a harness and a verifier, where the harness defines what the agent may use and the verifier defines what counts as success. Every EO task can be made verifiable, through labeled benchmarks, independent sensors, physical models or the repeated observation of the same place. Given only these two components, a general-purpose coding agent builds the EO model and improves it recursively on its own outputs. Settings long treated as separate research problems, from learning with a handful of labels to adapting across domains, become choices of harness and verifier. On four EO benchmarks spanning optical, SAR and multispectral time-series imagery, agent-built models surpass the state of the art and keep most of that accuracy from about 1% of the training labels. This establishes a new paradigm for EO, in which people design harnesses and verifiers and agents build the models, so EO models improve as agents do.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Sijie Zhao",
+          "Zeqi Zhou",
+          "Heli Qi",
+          "Xuanchao Fu",
+          "Zhuo Zheng",
+          "Junshi Xia",
+          "Junjue Wang",
+          "Weihao Xuan",
+          "Naoto Yokoya"
+        ]
+      },
+      {
+        "title": "RepProbe: Can Video Language Models Count Repeated Actions? A Diagnostic Benchmark",
+        "slug": "repprobe-can-video-language-models-count-repeated-actions-a",
+        "url": "http://arxiv.org/abs/2610.18844v1",
+        "abstract": "Repetition counting requires identifying and enumerating action cycles over time. While state-of-the-art video language models describe actions fluently, they fail to reliably count how many times an action repeats. To investigate this limitation, we introduce RepProbe, a benchmark of 42K real and synthetic video clips containing exactly k in [1, 20] complete repetitions, with controls for clip position, temporal coverage, and duration. These controls allow us to study the counting failure directly and locate where in the model it arises. Counting accuracy collapses at high counts across the video language models we evaluate, and controlled experiments show this collapse is not explained by frame sampling alone. We compare model outputs with linear probes trained on the final-layer representations used to generate those outputs. We find a consistent representation-to-output dissociation: substantial count information remains linearly decodable even when models fail to report the correct count. Further analysis shows this failure arises primarily at the output stage, where answers concentrate on a small set of preferred numbers rather than the available count information. The dissociation holds on both real and synthetic videos and is not explained by clip duration, position, or scene content. These results indicate that models encode repetition structure but do not reliably report it in their outputs. Project page: https://arenaa.github.io/RepProbe-webpage/",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Mahsa Khoshnoodi",
+          "Sarah Adel Bargal"
+        ]
+      },
+      {
+        "title": "LIBERO-RIG: A Hardware-Setup Robustness Benchmark for Vision-Language-Action Models",
+        "slug": "libero-rig-a-hardware-setup-robustness-benchmark-for-vision",
+        "url": "http://arxiv.org/abs/2610.18843v1",
+        "abstract": "Robot policies are expected to generalize across deployment environments, including variations in the robot itself: cameras are bumped and remounted, calibrations drift, controllers run at different rates, and end-effector pads wear down. We present LIBERO-RIG, a benchmark that perturbs only the robot's hardware and setup while holding every LIBERO task fixed. The benchmark spans eleven perturbation axes, including camera mounting and optics, camera-to-arm calibration, actuation gain, control rate, proprioceptive noise, base pose, table height, and gripper pads. Each axis has five severity levels, yielding 210 conditions across the four LIBERO suites. We evaluate nine recent vision-language-action models using 500 episodes per condition and substantiate each finding with rigorous statistical tests. Pooled success falls from 0.932 to 0.767 at the middle severity and 0.509 at the highest severity. Performance degradation varies substantially across perturbation axes and action interfaces, and training on visual perturbations does not mitigate faults that leave camera images unchanged. We release the benchmark together with manifests specifying the fixed perturbation parameters for each episode.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Andrea Yaoyun Cui",
+          "Hanyu Wang",
+          "Xinyi Wang",
+          "Bangzheng Li",
+          "Lin Zhang",
+          "Zhenggang Tang",
+          "Shyamal Buch",
+          "Dejia Xu",
+          "Matthew Tancik"
+        ]
+      },
+      {
+        "title": "Who Improves the Robot? Toward Physical Recursive Self-Improvement",
+        "slug": "who-improves-the-robot-toward-physical-recursive-self",
+        "url": "http://arxiv.org/abs/2610.18842v1",
+        "abstract": "Robots are increasingly autonomous in task execution, yet their improvement remains largely human-driven. This study investigates Physical Recursive Self-Improvement (Physical RSI), in which physical experience guides lasting updates to both a robot's capabilities and its improvement procedure, making subsequent improvement more effective across tasks. Physical RSI faces challenges from noisy observations, continuous dynamics, costly trials, and irreversible consequences. We present an L0-L5 framework that differentiates capability-level from meta-level updates and within-task from across-task gains, reserving L5 for independently verified recursive gain. We study existing methods around harness adaptation and model training, alongside safety and control mechanisms that govern execution and successive updates. Our analysis reveals that, despite substantial progress in self-improvement, the surveyed literature does not yet demonstrate Physical RSI as defined by our framework. We identify research priorities in reliable feedback, causal attribution, safety preservation, and benchmarking, outlining a path toward robots that autonomously improve how they learn while ensuring safety. The GitHub repository for Physical RSI is available at https://github.com/SAIL-Research-Lab/Physical-RSI.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Hai Zhou",
+          "Fan Yang",
+          "Zeyi Chen",
+          "Lejun Zhang",
+          "Chenyang Fu",
+          "Jianping Li",
+          "Jiayi Zhu",
+          "Xianyang Liu",
+          "Yingxuan Yang",
+          "Lili Meng",
+          "Lu Wang",
+          "Xinyang Han",
+          "Jiankai Sun",
+          "Weirui Ye",
+          "Guanchu Wang",
+          "Wanhua Li",
+          "Ming Zhou",
+          "Boyi Li",
+          "Ming Jin",
+          "Kun Shao",
+          "Muhao Chen",
+          "Guang Chen",
+          "Lei Ma",
+          "Joey Tianyi Zhou",
+          "Costas Spanos",
+          "Xia Hu",
+          "Mac Schwager",
+          "Weinan Zhang",
+          "Qian Feng",
+          "Shangding Gu"
+        ]
+      },
+      {
+        "title": "Fast Rates for Offline Q-Learning with KL Regularization",
+        "slug": "fast-rates-for-offline-q-learning-with-kl-regularization",
+        "url": "http://arxiv.org/abs/2610.18839v1",
+        "abstract": "This paper investigates offline Q-learning for finite-horizon Markov decision processes with Kullback-Leibler (KL) regularization. Recent studies have shown that KL regularization can yield fast rates in offline decision-making problems. However, it remains unclear whether Q-learning, which adopts incremental stochastic approximation updates, can achieve such fast rates in the offline setting. We first propose KL-regularized Q-Learning (KLQ), a simple variant of classical Q-learning. By exploiting KL regularization, we prove that KLQ achieves a sample complexity of $\\widetilde{O}(1/ε)$ without explicit pessimism. This guarantee, however, has an exponential dependence on the KL regularization parameter and the horizon. To address this limitation, we further propose KL-regularized Pessimistic Q-Learning (KLPQ), which incorporates pessimism into KLQ. We prove that KLPQ retains the same \\(\\widetilde O(1/ε)\\) rate while removing the explicit exponential dependence, thereby further improving the sample complexity. To the best of our knowledge, these results establish the first fast-rate guarantees for offline Q-learning in tabular finite-horizon KL-regularized MDPs.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Yize Hao",
+          "Guangxin Jiang",
+          "Shuang Qiu"
+        ]
+      },
+      {
+        "title": "Scaling Online Optimal Transport Minibatches for Flow Matching",
+        "slug": "scaling-online-optimal-transport-minibatches-for-flow",
+        "url": "http://arxiv.org/abs/2610.18838v1",
+        "abstract": "A central challenge in scaling flow models is maintaining stability in training and integration. In flow matching, this stability depends critically on how source samples are paired with data. Independent random pairing introduces substantial stochasticity, motivating minibatch optimal transport (OT) to construct online source-target couplings that reduce this randomness (Tong et al., 2024). However, as applications extend to larger and higher-dimensional datasets, small minibatches can limit these benefits, while scaling the coupling to substantially larger minibatches at every iteration is computationally prohibitive. Moreover, how OT coupling affects the full stochastic gradient and integration remains theoretically unresolved. In this work, we develop a scalable online entropic OT approximation that enables substantially larger source-target couplings while preserving the benefits of OT. We close the theoretical gap for both unregularized and entropic OT by proving strict reductions in full stochastic-gradient variance and integration error relative to independent pairing, and further characterize how these improvements strengthen as the online coupling minibatch grows. Experiments on single-cell gene interpolation-flow and image-flow training validate these predictions, showing that larger online couplings consistently improve training stability and final generation performance.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Peter Chen",
+          "Sergey Levine"
+        ]
+      },
+      {
+        "title": "Plan-Bench: Can Existing VLMs Go Well Beyond Perception to Reason and Plan in Embodied Worlds?",
+        "slug": "plan-bench-can-existing-vlms-go-well-beyond-perception-to",
+        "url": "http://arxiv.org/abs/2610.18836v1",
+        "abstract": "Vision-Language Models (VLMs) have achieved strong performance in visual perception and spatial reasoning, leading to growing interest in using them as high-level planners for embodied AI. However, physical tasks require models to integrate spatial information, reason over temporal states, and generate multi-step plans under various constraints, raising the question of whether current VLMs can reliably support such reasoning and planning independently of execution. We introduce Plan-Bench, a benchmark for evaluating the high-level reasoning and multi-step planning capabilities of VLMs relevant to embodied worlds, while isolating the influence of action execution. It covers three complementary dimensions, spanning 16 subclasses and 699 curated samples. Extensive evaluation of 28 VLMs reveals room for improvement, with even the strongest model achieving only 75.0% accuracy. We further find that model scaling generally improves these capabilities. Ablation studies also indicate larger models show increasing potential as high-level planners. Overall, Plan-Bench provides a lightweight probe for evaluating VLMs' reasoning and planning capabilities relevant to embodied environments and assessing their potential as decision makers for physical tasks. Our benchmark and code are available at https://github.com/MinneFeng/Plan-Bench.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-13",
+        "authors": [
+          "Juntong Feng",
+          "Qingan Liu",
+          "Jingru Dong",
+          "Yue Zhu",
+          "Weiming Zheng",
+          "Yujie Cheng",
+          "Xinzhe Han",
+          "Shuai Hao",
+          "Yunzhi Zhuge",
+          "Haiwen Diao",
+          "Huchuan Lu"
+        ]
+      }
+    ]
+  }
+}
