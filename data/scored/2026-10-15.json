@@ -1,0 +1,711 @@
+[
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "HuggingFace Blog",
+      "title": "Welcome FLUX.3 Image Klein in Diffusers",
+      "url": "https://huggingface.co/blog/flux-3",
+      "authors": [],
+      "abstract": "Back to Articles Welcome FLUX.3 Image Klein in Diffusers: The latest open image generation model from Black Forest Labs Published October 15, 2026 Update on GitHub Upvote 21 +15 Aritra Roy Gosthipaty ariG23498 Follow Sayak Paul sayakpaul Follow Linoy Tsaban linoyts Follow Black Forest Labs FLUX.3 Image Klein is here, and it runs in Diffusers from day one. One model does text-to-image and multi-reference image-to-image, and it adds something new, the layout control . You write bounding boxes into the prompt to say where each part of the image should go, or which parts of a reference image to move. Both open checkpoints are in the FLUX.3 Image Klein collection : Checkpoint What it is Defaults black-forest-labs/flux-3-image-klein Time step distilled, for fast inference 16 steps, no CFG black-forest-labs/flux-3-image-klein-base Base model 50 steps, CFG You can head on to the Hugging Face space and generate some images right now! TL;DR One model for text-to-image, multi-reference image-to-image, and bounding-box layout control. The distilled checkpoint makes a 1024 × 1024 image in about 2 seconds on an H100. NVFP4 and FP8 weights load with from_single_file , for smaller GPUs. LoRA training scripts for both text-to-image and image editing. Ships as a Modular Diffusers pipeline, so you can pop blocks out or add your own. Contents Getting started What FLUX.3 can do Base model and quantized variants LoRA finetuning What it costs to run The architecture Modular Diffusers Try it Getting started Install the latest diffusers and transformers (for the Qwen3-VL text encoder): pip install -U diffusers transformers Load the distilled checkpoint and generate an image: import torch from diffusers import ModularPipeline pipe = ModularPipeline.from_pretrained( \"black-forest-labs/flux-3-image-klein\" )\npipe.load_components(dtype=torch.bfloat16)\npipe.to( \"cuda\" ) pipe(prompt= \"a red fox\" , output= \"images\" )[ 0 ].save( \"fox.png\" ) What FLUX.3 can do Text-to-image FLUX.3 responds best to a full scene description with the subject, the setting, the light, the composition, and the style. The official prompting guide from Black Forest Labs has more tips. The distilled checkpoint generates a 1024 × 1024 image in 16 steps by default. Pass height , width , or num_inference_steps to change them. prompt = ( \"A wide-angle wildlife photograph of a red fox standing alert in a snow-covered forest clearing at golden hour. \" \"The fox is centered in the frame, its thick orange winter coat contrasting with the fresh white snow, breath \" \"visible in the cold air. Snow-laden pine trees fill the softly blurred background, and low warm sunlight rakes \" \"across the scene from the left, casting long blue shadows.\" ) fox = pipe( prompt=prompt, generator=torch.Generator().manual_seed( 0 ), output= \"images\" )[ 0 ]\nfox.save( \"fox.png\" ) Text to image Image-to-image Pass a reference image (or more) with the image argument. Write the prompt as a caption of the image you want , with the change included. prompt = ( \"The same red fox in the same snow-covered forest clearing, now at night under a full moon: cool blue \" \"moonlight, deep shadows, stars visible through the pine branches, the fox's eyes catching the light.\" )\nnight = pipe( prompt=prompt, image=fox, # from the previous text to image example generator=torch.Generator().manual_seed( 0 ), output= \"images\" ,\n)[ 0 ]\nnight.save( \"night.png\" ) Image to image With several references, refer to them in the prompt as <ref_image_0> , <ref_image_1> , ... in the order they are passed to image : red_fox = pipe(prompt= \"a red fox\" , generator=torch.Generator().manual_seed( 0 ), output= \"images\" )[ 0 ]\nbench = pipe(prompt= \"a wooden bench\" , generator=torch.Generator().manual_seed( 0 ), output= \"images\" )[ 0 ] combined = pipe( prompt= \"The fox from <ref_image_0> sitting on the wooden bench from <ref_image_1> in a snowy setting.\" , image=[red_fox, bench], output= \"images\" ,\n)[ 0 ] combined.save( \"combined.png\" ) <ref_image_0> : a red fox <ref_image_1> : a wooden bench The fox on the bench Layout control Add a JSON list of regions after the caption. Each region has an id , a bbox , and a desc , and the caption mentions it as <id> . Boxes are written as [y_min, x_min, y_max, x_max] , y first , on a 0–1000 scale. Because the scale is normalized, the same box works at any image size. Placing regions in a new image layout_prompt = ( \"Minimalist graphic illustration featuring a black silhouette of a person <silhouette_1> centered against a \" \"solid, vibrant chartreuse background <background_1>. The figure is captured in a dynamic, mid-stride running \" \"pose, facing toward the left side of the frame. \" '[{\"id\": \"background_1\", \"bbox\": [0, 0, 1000, 1000], \"desc\": \"A flat field of neon yellow-green with a subtle ' 'paper texture and fine, organic grain.\"}, {\"id\": \"silhouette_1\", \"bbox\": [150, 150, 850, 850], \"desc\": \"A ' \"black silhouette of a person in motion, made of dense stippled ink. The leading edges are solid; the trailing \" 'arm and leg dissolve into coarse square pixels and scattered dots.\"}]' ) runner = pipe(prompt=layout_prompt, generator=torch.Generator().manual_seed( 0 ), output= \"images\" )[ 0 ] Each region's desc is drawn inside its bbox Moving regions within a reference image For edits, each region says where its content comes from ( src_bbox in the reference) and where it goes ( tgt_bbox in the output). A region with the same two boxes stays where it is. This example moves the knitted knight up and to the left, and pins the backdrop, the cliff, the needle, the dragon, and the fire: from diffusers.utils import load_image knight_image = load_image( \"knight_orig.png\" )\nedit_prompt = ( \"In <ref_image_0>, move the miniature grey amigurumi knight figure <knight_1> upwards and to the left along the \" \"yarn cliff <cliff_1>. Keep the rest of the image completely unchanged, preserving the blurred yarn backdrop \" \"<backdrop_1>, the large knitted dragon <dragon_1>, and the fiery orange thread <fire_1>. \" '[{\"id\": \"knight_1\", \"from\": \"ref_image_0\", \"src_bbox\": [500, 150, 850, 350], \"tgt_bbox\": [194, 55, 544, 255], ' '\"desc\": \"A miniature amigurumi knight crocheted from thick grey woolen yarn.\"}, ' '{\"id\": \"backdrop_1\", \"from\": \"ref_image_0\", \"src_bbox\": [0, 0, 1000, 1000], \"tgt_bbox\": [0, 0, 1000, 1000], ' '\"desc\": \"A soft, out-of-focus backdrop of cream and indigo knitted yarn.\"}, ' '{\"id\": \"cliff_1\", \"from\": \"ref_image_0\", \"src_bbox\": [300, 0, 1000, 450], \"tgt_bbox\": [300, 0, 1000, 450], ' '\"desc\": \"A steep cliff of stacked yarn skeins in mustard, terracotta, and indigo.\"}, ' '{\"id\": \"needle_1\", \"from\": \"ref_image_0\", \"src_bbox\": [420, 250, 550, 450], \"tgt_bbox\": [420, 250, 550, 450], ' '\"desc\": \"An oversized polished steel tapestry needle.\"}, ' '{\"id\": \"dragon_1\", \"from\": \"ref_image_0\", \"src_bbox\": [100, 600, 950, 1000], \"tgt_bbox\": [100, 600, 950, 1000], ' '\"desc\": \"A large, fluffy knitted dragon in terracotta and mustard yarn.\"}, ' '{\"id\": \"fire_1\", \"from\": \"ref_image_0\", \"src_bbox\": [350, 400, 650, 650], \"tgt_bbox\": [350, 400, 650, 650], ' '\"desc\": \"Curled puffs of fiery orange angora thread suspended in mid-air.\"}]' ) moved = pipe(prompt=edit_prompt, image=knight_image, generator=torch.Generator().manual_seed( 0 ), output= \"images\" )[ 0 ] The knight moves from its src_bbox to its tgt_bbox , and the rest of the scene stays put Base model and quantized variants Base model Everything above uses the distilled checkpoint. The base checkpoint runs 50 steps with classifier-free guidance, and it's the one to fine-tune (see LoRA finetuning ). pipe = ModularPipeline.from_pretrained( \"black-forest-labs/flux-3-image-klein-base\" )\npipe.load_components(dtype={ \"vae\" : torch.float32, \"default\" : torch.bfloat16})\npipe.to( \"cuda\" ) pipe.guider = pipe.guider.new(guidance_scale= 5.",
+      "published_date": "2026-10-15",
+      "tags": [],
+      "organization": "HuggingFace",
+      "raw_metadata": {
+        "feed_name": "HuggingFace Blog",
+        "feed_url": "https://huggingface.co/blog/feed.xml"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: lora, text to image",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 83,
+    "llm_reason": "開源影像模型附程式碼、量化權重與LoRA訓練腳本，可直接複現",
+    "novelty": 15,
+    "impact": 14,
+    "trending": 17,
+    "practicality": 19,
+    "blog_worthiness": 18
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "HuggingFace Blog",
+      "title": "Welcome Muse Spark Open: open-weight frontier multimodal mixture-of-experts model from Meta",
+      "url": "https://huggingface.co/blog/meta-muse-spark-open",
+      "authors": [],
+      "abstract": "Back to Articles Welcome Muse Spark Open: open-weight frontier multimodal mixture-of-experts model from Meta Published October 15, 2026 Update on GitHub Upvote 19 +13 Pedro Cuenca pcuenq Follow merve merve Follow ben burtenshaw burtenshaw Follow Guarin Flück guarin Follow Quentin Gallouédec qgallouedec Follow Alvaro Bartolome alvarobartt Follow Serveurperso Serveurperso Follow Jun Kim Jundot Follow Muse Spark Open is an open-weight model from Meta. The mixture of experts model brings text, images, audio, and video into a model with approximately 816 billion parameters, around 42 billion active per token, and a context window of up to one million tokens. It generates text, giving developers a common interface for asking questions about different kinds of input. Following Muse Glimmer, Muse Spark Open introduces a mixture-of-experts architecture at a much larger scale, and the most capable US open-weights model to date. Meta trained Muse Spark Open for agentic coding: reading a codebase, writing and debugging code, and calling tools. It also takes images, audio, and video as input, so the same model can read a screenshot, listen to a voice note, or watch a screen recording while it works on your code. This post shows you how to run it, how to fine-tune it, and what we built with it. Find all the models here . Overall Capabilities and Architecture Meta describes Muse Spark Open as a coding-optimized model trained on real developer workflows such as multi-file refactors and long debugging sessions. Muse Spark Open is an agentic focused model that plans, acts, observes, and self-corrects over long tasks, including browsing the web with images. Feature Muse Spark Open Model size ~816B total parameters; ~42B active per token Expert routing 256 experts per MoE layer; 8 selected per token Inputs Text, images, audio, and video Output Text Context window Up to 1M tokens Checkpoint formats BF16 and NVFP4 The checkpoint repositories are Muse-Spark-Open-816B-A42B and Muse-Spark-Open-816B-A42B-NVFP4. Muse Spark Open is the full-size model of the Muse series of models. Muse Glimmer, which Meta released in August, is a small dense model from the same series, ideal for running locally. Both models use the same tokenizer and vocabulary. The chat template follows the Muse Glimmer template, with additions for the new modalities. In Muse Spark Open the input embedding and the output layer are separate matrices of about 1.66B parameters each. Mixture of Experts The language model has 62 layers and a hidden dimension of 8192. Each layer has 128 query heads and 16 key-value heads (grouped-query attention). Each head has 64 dimensions. The attention block has an output gate and an output normalization layer. The model also applies normalization to the queries and the keys (QK-norm). Each block combines its input and its output through a learned residual gate, not through a plain sum. Muse Glimmer uses one dense feed-forward network in each layer. Muse Spark Open replaces this dense network with a Mixture-of-Experts (MoE) block. Each MoE block has 256 experts, and a router selects 8 experts for each token. Each expert is a feed-forward network that projects from 8192 to 4096 dimensions and back to 8192, then applies its own normalization to its output. The experts hold ~97% of the total model parameters. Only 8 experts run per token, so the model computes each token with about 42B parameters. All 256 experts stay in memory, so deployment needs the memory of an 816B-parameter model, but runs at the much faster speed of a 42B model. The BF16 checkpoint is about 1.5 TB in safetensors format. The NVFP4 checkpoint stores the parameters in 4-bit precision with negligible loss in accuracy, specifically for NVIDIA Blackwell GPUs. In transformers, the BF16 checkpoint runs across 4 nodes of 8 H200 GPUs with tensor parallelism (TP=32) and the NVFP4 runs on a single B200 node. If you want to deploy Muse Spark Open, check out the llama.cpp , vLLM, and SGLang recipes below. Perception Encoder A perception encoder converts images and video frames into tokens for the language model, just like Muse Glimmer. The encoder has 1.8B parameters, 50 layers, a hidden dimension of 1536, and 16 attention heads. It splits each image into 14×14 patches and produces features with 4096 dimensions. Position information comes from learned absolute embeddings and 2D RoPE. The feed-forward network in each layer uses LayerNorm and GELU. Every fourth layer and the last layer use full attention, and the other layers use sparse attention. Muse Glimmer 30B uses an encoder with the same architecture. The design follows the Perception Encoder work from Meta. Video input goes through the same encoder as images. Audio Encoder Muse Spark Open accepts audio as input through its audio encoder. An audio tokenizer converts the audio into tokens, and the chat template marks the audio position with <|audio|> tokens. The encoder emits one audio token every 80 ms, which yields 12.5 tokens per second. So let’s say, you have an audio of 10 seconds, the number of input audio tokens would be 125.\nThe encoder itself is a convolutional pyramid where each stage consists of a patch embedder of different patch sizes and 2 convolutional blocks of 1d kernels of size 7 with stride of 1. These stages are repeated for patch sizes of [16, 6, 5, 4]. At the end of the final stage, the temporal frames are fed to a final block of RMSNorm → linear projection → RMSNorm. Long Context The context window is 1M tokens at inference. The configuration sets max_position_embeddings to 1,048,576. This includes image, video, and audio tokens in the same window as text. Grouped-query attention keeps the KV cache small for a model of this size. Each token adds 2 × 16 heads × 64 dimensions × 62 layers = 126,976 values to the cache. In BF16, this is about 250 KB per token and about 266 GB for a full 1M-token context. Inference Support Transformers The Muse Spark Open implementation provides MuseSparkForConditionalGeneration for text generation from multimodal inputs and MuseSparkProcessor for preparing conversations. The processor combines the tokenizer, image and video processors, audio feature extractor, and chat template. Use a DistributedConfig to configure the parallelism settings. tp_size is the number of devices across which the dense layers are sharded, and ep_size is the number of devices across which the experts are distributed. You can initialize the model and processor as follows. import os from transformers import AutoModelForMultimodalLM, AutoTokenizer, DistributedConfig distributed_config = DistributedConfig( tp_size= int (os.environ[ \"WORLD_SIZE\" ]), ep_size= int (os.environ[ \"WORLD_SIZE\" ]),\n) tokenizer = AutoTokenizer.from_pretrained( \"meta-models/Muse-Spark-Open-816B-A42B \" )\nmodel = AutoModelForMultimodalLM.from_pretrained( \"meta-models/Muse-Spark-Open-816B-A42B\" , distributed_config=distributed_config,\n) messages = [ { \"role\" : \"user\" , \"content\" : \"Explain in one sentence why the sky is usually blue.\" },\n]\ninputs = tokenizer.apply_chat_template( messages, reasoning_effort= \"medium\" , # default: xhigh, options: low/medium/high/xhigh add_generation_prompt= True , tokenize= True , return_dict= True , return_tensors= \"pt\" ,\n).to(model.device).to(model.dtype) input_len = inputs[ \"input_ids\" ].shape[- 1 ] outputs = model.generate(**inputs, max_new_tokens= 2000 ) Text-only Inference Prepare the conversation, then pass the messages to processor.apply_chat_template , enabling add_generation_prompt=True , tokenize=True , return_dict=True , and return_tensors=\"pt\" . Pass the processor output to model.generate and decode the newly generated tokens, excluding the input prefix. The processor has a lever for the reasoning effort, mapping symbolic levels (low/medium/high/xhigh) to the integers the model itself accepts (16, 64, 256, 512).",
+      "published_date": "2026-10-15",
+      "tags": [],
+      "organization": "HuggingFace",
+      "raw_metadata": {
+        "feed_name": "HuggingFace Blog",
+        "feed_url": "https://huggingface.co/blog/feed.xml"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agentic, reasoning, moe, mixture of experts, kv cache",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 77,
+    "llm_reason": "Meta旗艦開源多模態MoE模型，規模與agentic coding定位影響大",
+    "novelty": 11,
+    "impact": 16,
+    "trending": 19,
+    "practicality": 15,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Microsoft Research",
+      "title": "Proof-based general-purpose computing with Magnetar",
+      "url": "https://www.microsoft.com/en-us/research/blog/proof-based-general-purpose-computing-with-magnetar/",
+      "authors": [
+        "Srinath Setty"
+      ],
+      "abstract": "Every result a computer produces comes with an implicit question: did the program run as claimed and produce correct outputs? Today, answering that question often requires a degree of trust alongside verification. We trust the operator, the vendor, the counterparty, or the agent, and we rely on contracts, audits, and logs to establish that trust. Zero-knowledge proofs offer a fundamentally different approach to establishing trust. A program runs, and along with its output it produces a short proof, a cryptographic certificate that this program, on these inputs, produced this output. The proof is small and fast to check. Whoever receives it can confirm the result in milliseconds without rerunning the program, and can pass the proof on to anyone else who needs the same assurance. With the zero-knowledge property, the proof also reveals nothing about inputs that should stay private. This changes what correctness means in the real world. A result no longer has to be trusted because of who produced it. It can be checked because of what accompanies it. An AI agent acting on someone’s behalf could attach a proof that each action complied with the policy it was given. Regulated financial institutions could prove that transactions were processed correctly without making their transactions public. These become possible once producing a proof is as routine as running the program. Zero-knowledge proofs were invented in the 1980s, and the ideas behind proving program execution have been around nearly as long. What has kept them from becoming a general tool is three challenges that have resisted being solved at the same time. Efficiency . Producing a proof has historically taken millions of times more computation than running the program itself. Years of research have brought that overhead down, but the fastest systems have achieved their speed by making compromises elsewhere. Generality and usability. Many proof systems require developers to manually rewrite their program as a cryptographic circuit, which is a fixed arithmetic description of that exact computation. This takes months. Every change to the application means a new circuit, and the translation is itself a frequent source of security bugs. A general-purpose alternative is to prove the execution of an ordinary processor, so that any compiled program can be proven as written. Until recently, that generality came at a steep cost in speed or security. Security. A proof is only as strong as the cryptography beneath it. Many proof systems rest on elliptic curves, which can be broken by a sufficiently powerful quantum computer. Microsoft is addressing this problem with its Quantum Safe Program, which will move its products and services to post-quantum cryptography, a goal it recently accelerated to 2029 . Post-quantum proof systems already exist, but some rest on lattice assumptions, and most rest on new cryptographic functions invented to reduce the cost of proving. These new cryptographic functions have not faced the decades of scrutiny given to the cryptography protecting today’s internet, and some rest on mathematical conjectures about error-correcting codes that have not been proven. They have bought their speed with strong assumptions. For more than a decade, Microsoft Research has worked on making zero-knowledge proofs and verifiable computing practical. Early research followed two approaches, both practical only for small programs. The first (opens in new tab) (opens in new tab) lets a verifier check a long computation through a short conversation with the prover using a technique called the sum-check protocol (opens in new tab) , but this applied only to computations with a particular layered structure. The second (opens in new tab) (opens in new tab) used elliptic-curve cryptography to create very small proofs for almost any computation. But this requires a one-time trusted setup involving secret information which, if leaked, could allow anyone to forge proofs. This approach is also vulnerable to quantum computers. In 2019, a new zero-knowledge proof system called Spartan returned to the sum-check approach and made it work for general-purpose programs without a trusted setup. Spartan can also be instantiated with different cryptographic building blocks. That flexibility is what later allowed the proof system to be built on hash functions alone. A sequence of results then filled in the remaining pieces: Each of these solved a piece of the problem. Magnetar is where the pieces come together. Magnetar is a zero-knowledge virtual machine, or zkVM, and it makes major progress on all three challenges at once. It is general-purpose. Magnetar proves the execution of RISC-V, an open processor architecture with mature compilers for every mainstream language. A developer writes a program in Rust, Go, or C, compiles it as usual, and Magnetar proves it as written. Consider what this means in practice. A business policy, a data pipeline, or an interpreter for the Ethereum Virtual Machine (EVM) is just a program, and the engineers who already maintain it can prove their executions exactly as written. As a result, proving stops being a specialist activity. It is faster than prior systems in the same class. Magnetar proves 7.2 to 8.7 million processor instructions per second on a laptop. Across 15 benchmark programs, from cryptographic hashing to token transfers inside a small EVM interpreter, it is 10 to 39 times faster on average than the fastest existing zkVMs on the same machine, and more than 300 times faster than two others on a token-transfer benchmark. An optimized Magnetar proves 9.5–12.8 million cycles per second, which increases each speedup reported here by about 1.3×. Its proofs verify in about 12 milliseconds. Its security rests on standard cryptography. Magnetar depends on a standard hash function such as SHA-256 or SHA-3, the same primitives that already protect every organization’s systems. It requires no elliptic curves, no lattices, no special-purpose hash functions, no trusted setup, and no unproven conjecture about error-correcting codes. Hash functions are the most thoroughly studied primitives in the cryptographic toolkit, and they are the basis of the stateless hash-based signatures that NIST standardized as its own conservative post-quantum option. For a system that must still be trustworthy in many decades to come, relying only on standard hash functions removes a cryptographic migration from the roadmap. The same design decision pays a second dividend. Checking a Magnetar proof consists mostly of evaluating standard hash functions and binary-field arithmetic, which are exactly the operations Magnetar proves efficiently. Verifying a proof is therefore an ordinary workload for it. This is what allows Magnetar to prove computations of any size, by proving them in pieces and then combining the pieces. This also allows Magnetar to prove a long-running system such as a ledger or a blockchain. The technical paper gives the full design, security analysis, and measurements. Magnetar advances zero-knowledge proofs and verifiable computing to a stage where they can be built on the cryptography that organizations already trust, at speeds that make it usable, by engineers who write normal code. Magnetar enables a future where cryptographic proofs are a routine output of computation. We expect that technology leaders will stop asking whether proofs of execution are practical and focus instead on which results would they prefer to verify rather than taking on trust . If you’re interested in exploring how zero-knowledge proofs can support your use case, we’d love to hear from you (opens in new tab) . The post Proof-based general-purpose computing with Magnetar appeared first on Microsoft Research .",
+      "published_date": "2026-10-15",
+      "tags": [
+        "Research Blog"
+      ],
+      "organization": "Microsoft",
+      "raw_metadata": {
+        "feed_name": "Microsoft Research",
+        "feed_url": "https://www.microsoft.com/en-us/research/feed/"
+      }
+    },
+    "rule_score": 43.0,
+    "rule_reasons": [
+      "🏢 頂流機構: Microsoft",
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 63,
+    "llm_reason": "零知識證明驗證程式執行的新系統，技術深但應用場景仍小眾",
+    "novelty": 15,
+    "impact": 12,
+    "trending": 9,
+    "practicality": 11,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Apple ML",
+      "title": "Local and Distributed Large LLM Inference with MLX and RDMA on Mac Studio",
+      "url": "https://machinelearning.apple.com/research/mlx-distributed-inference",
+      "authors": [],
+      "abstract": "content type Featured highlight Local and Distributed Large LLM Inference with MLX and RDMA on Mac Studio October 15, 2026 MLX on Mac with Apple silicon lets AI researchers and developers experiment locally with the latest models and methods in a private environment. The open-source array framework leverages the unified memory architecture of Apple silicon, enabling anyone to run new inference and fine-tuning methods on their own hardware and explore other AI techniques. In a previous post , we highlighted the advantages of the M5 architecture and its GPU Neural Accelerators. In this post, we show how to run the latest frontier-class model — Muse Spark Open, with nearly a trillion parameters — right from your desk, using the latest version of MLX, released today. On a cluster of four Mac Studios, Muse Spark Open generates over 36 tokens per second (see Figure 1 ), well above average human reading speed. Beginning on a single Mac Studio (up to 512GB of unified memory), then scaling out across multiple Macs with the RDMA over Thunderbolt driver, below we share an overview of the range of models you can now run on Mac Studio. Muse Spark Open Decode Speed Context size of 8,192 tokens Figure 1: Muse Spark Open decode speed in tokens per second, on Mac Studio with M5 Ultra, at a context size of 8,192 tokens. Higher is better. We report performance for three parallelization schemes: pipeline parallelization over two Mac Studio computers (2 M5 Pipeline), and tensor parallelization over two (2 M5 Tensor) and four Mac Studio (4 M5 Tensor) computers. Running Large Language Models with MLX We benchmark several popular open-weight LLMs on Mac Studio , using the MLX LM package, as described in our prior post . We compare two generations of Mac Studio: the recently released M5 Ultra and the previous generation, M3 Ultra. The M5 generation features the GPU Neural Accelerator, which supports dedicated matrix multiplication operations, essential for many machine learning workloads. We evaluate three frontier-class models ( Table 1 ) spanning a wide range of sizes (in billions of parameters, B): the newly released Muse Spark Open (816 B), Mistral Medium 3.5 (128 B), and Qwen 3.8 (27 B). Muse Spark Open is a mixture of experts (MoE) model, which keeps only a fraction of its experts — and thus parameters — active, reducing compute at inference, and it is evaluated in NVFP4 precision. Mistral Medium 3.5 and Qwen 3.8 are dense architectures, where all parameters are active at inference, and they are evaluated in their native floating-point precision (FP8 and BF16, respectively). Model Total Parameters Active Parameters Native Precision Evaluation Precision Muse Spark Open 816B 42B BF16 NVFP4 Mistral Medium 3.5 128B 128B FP8 FP8 Qwen 3.8 27B 27B BF16 BF16 Table 1: Language models used in this post. Models ship in various precision formats; we evaluate Qwen 3.8 and Mistral Medium 3.5 in their native precision, and Muse Spark Open in 4-bit (NVFP4) precision. Our evaluation measures three metrics across a range of context sizes: time to first token (TTFT, in seconds), generation throughput (in tokens/second), and peak power usage (in watts). All the performance numbers in this post were obtained with mlx_lm.benchmark . For example, running Qwen 3.8 with 8,192 tokens of context and generating 128 tokens is performed with the command line: mlx_lm.benchmark --model Qwen/Qwen3.8-27B -p 8192 -g 128 -b 1 A popular use of local LLMs on Mac Studio is running agentic experiences in a private environment, including agentic coding applications that often need large contexts. We therefore report performance at both 8,192 and 65,536 context sizes. Raw TTFT and decode throughput are reported in Table 2 and Table 3 , respectively. Inference Performance on a Single Mac Studio Qwen 3.8 27B and Mistral Medium 3.5 128B fit comfortably on a single Mac Studio with 512GB, taking up to 68GB and 158GB of RAM in the large context size (65,536 tokens) setup. In Figure 2 , we compare their inference performance on a single Mac Studio with 512GB of RAM, both on M3 Ultra and M5 Ultra. Time to first token (TTFT) is essentially compute bound, and that is where the Neural Accelerators in the M5 Ultra GPU shine: the specialized hardware support for fast matrix-multiplication of the GPU Neural Accelerator directly translates into significant speedups for TTFT, up to 4.6× faster compared to an M3 Ultra (see Figure 2 ). That makes the Mac Studio with M5 Ultra the desktop of choice when it comes to handling tasks involving very large contexts. Generation speed (in tokens per second) is memory-bandwidth bound. The M5 Ultra chip delivers 1.2 TB/s of unified memory bandwidth, up from 819 GB/s for the M3 Ultra. Here again, that translates directly into generation speed (see Figure 3 ), with the Mac Studio with M5 Ultra reporting 1.6× faster tokens/s. TTFT Speedup Single Mac Studio, M5 Ultra over an M3 Ultra baseline (1.0×) Figure 2: Time to first token (TTFT) speedup on M5 Ultra over an M3 Ultra baseline, for Qwen 3.8 and Mistral Medium 3.5, at context sizes of 8,192 and 65,536 tokens. The M5 Ultra GPU Neural Accelerator shines on compute-bound workloads. Decode Speedup Single Mac Studio, M5 Ultra over an M3 Ultra baseline (1.0×) Figure 3: Decode speedup on M5 Ultra over an M3 Ultra baseline, for Qwen 3.8 and Mistral Medium 3.5, at context sizes of 8,192 and 65,536 tokens. Decode is memory-bandwidth bound, and the M5 Ultra’s 1.2 TB/s of unified memory bandwidth (vs 819 GB/s on the M3 Ultra) is a key advantage. The Mac Studio is also energy-efficient for LLM inference (see Figure 4 ): peak power consumption is about 200W for the Mac Studio with M3 Ultra, and 300W for the Mac Studio with M5 Ultra — a fraction of the power used by a common toaster. More importantly, that modest amount of power consumption means a Mac Studio can be deployed for AI work in any home or office environment. Peak Power Consumption Context size of 65,536 tokens Figure 4: Peak power consumption (in watts) during Qwen 3.8 and Mistral Medium 3.5 inference, at a context size of 65,536 tokens, on Mac Studio with M3 Ultra and with M5 Ultra. While both the Qwen and Mistral models fit on a single Mac Studio with 512GB of RAM, Muse Spark Open would require more than 1.6TB of RAM in its native precision (BF16) for the model parameters alone. In a 4-bit quantized (NVFP4) format, the model memory footprint is lowered to about 493GB. Add the memory needed for intermediate computations during inference, and the model cannot fit on a single machine. It requires parallelization across multiple Mac Studio computers. Pipelining Inference Across Two Mac Studio Computers Very large frontier-class models like Muse Spark Open will not fit on a single machine. It is, however, possible to store half of the model on one Mac Studio and the other half on another. We can then pipeline the model’s inference across two computers: the first Mac Studio executes the first half of the model’s layers, then sends the output to the second Mac Studio, which executes the second half. This parallelization scheme is called pipeline parallelization (see Figure 5 ) and is extremely simple to implement, requiring only minimal code changes. Splitting Large Models Across Multiple Computers Figure 5: MLX supports two approaches to splitting large models across multiple computers. With pipeline parallelization, a model is split across depth, while with tensor parallelization, a model is split across width. MLX supports different parallelization schemes, as described in the MLX distributed documentation . These rely on fast inter-machine communication: macOS 26.2 introduced a low-latency RDMA driver over Thunderbolt 5, and MLX (v0.30.1 and later) builds on top of this driver and provides new communication collectives ( jaccl , pronounced “jackal”) for different parallelization schemes.",
+      "published_date": "2026-10-15",
+      "tags": [],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "Apple ML",
+        "feed_url": "https://machinelearning.apple.com/rss.xml"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agentic, fine-tuning, moe, mixture of experts, open weight",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 72,
+    "llm_reason": "Mac Studio叢集分散式推理實測數據完整，技術故事清楚",
+    "novelty": 11,
+    "impact": 12,
+    "trending": 15,
+    "practicality": 17,
+    "blog_worthiness": 17
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Databricks",
+      "title": "Reducing Qwen training time by 6x on AI Runtime",
+      "url": "https://www.databricks.com/blog/reducing-qwen-training-time-6x-ai-runtime",
+      "authors": [],
+      "abstract": "Training or finetuning a multi-billion parameter foundation model requires significant compute, often spanning hundreds to thousands of hours of GPU training. But tuning training performance for an LLM is challenging, and high level metrics, such as GPU utilization may not be showing your actual utilization. In this blog post, we show how to cut through the layers of abstraction, and speed up fine-tuning of the latest Qwen 3.8 27B model on AI Runtime by 6x. Through systematic performance optimization, even with GPU utilization already at 98%, we go from 7 hours 44 minutes to 1 hour 17 minutes fine tuning a fixed dataset. We will provide a deep dive into the techniques behind these improvements, from how to measure what matters, implementation details, and design trade-offs involved in each optimization. If you want to get started right away, jump directly to the example code on AI Runtime and give it a try! We start with a standard training loop for Qwen 3.8 27B using the transformers library and the SFT training dataset HuggingFaceH4/ultrachat_200k . Our baseline training of the model over the complete dataset takes 7 hours and 44 minutes and during the training the GPU shows 98% average utilization. The result is 9,396 tok/s training. This GPU utilization looks high, but as mentioned earlier that number is misleading. The standard GPU utilization metric only counts the percentage of the time the GPU was doing anything , so this does not tell us how well the model was using the GPU while it was active. To understand this we need to look deeper. One way of doing this is the torch trace mechanism, we can adjust our training loop like the following (while also limiting the number of steps so we get a quick response): For a sample step this gives us the following data: Table 1: CPU - 14.4s with 1,714,382 calls. Table contains top operations by total time. Table 2: GPU - 10.3s with 269,448 operations. Table contains top operations by total time From these tables we notice a few high level issues with the current model: As well, we have an issue with excess padding in the batch: the input tensor must be rectangular and each row gets padded to the maximum number of tokens for that batch. We will show a trick for LLMs that can be used to minimize it. In the following sections, we will dive deeper into each technical topic, covering what it is, recommended best practices, and the key trade-offs to consider when applying it. You may notice that some kernels occur a lot! In particular, for Qwen, the batch matrix multiplication kernel runs over 30,000 times in one step. In this case we’ll explore fused kernels first. A fused kernel takes multiple smaller GPU kernels and combines them into one unit. This can help performance by avoiding costly transfers between a GPU’s high bandwidth memory and its even higher bandwidth on die memory. As well it can also allow for more efficient scheduling of GPU cores. With this many extra kernels, while torch.compile might work, it will take a long time to run. So reducing the raw number of ops with manually fused kernels is a good first step. Also, well-known fusions such as Flash Attention aren’t something that torch.compile by itself would find. The transformers library by default uses torch’s SDPA for the standard attention layers. But, it turns out many of these small operations we see come from the non-standard gated delta network layers. We’re lucky that for these layers there are two kernels, causal-conv1d and flash-linear-attention which have been written to fuse many of these operations per layer. How do we discover this? The transformers library implementation of Qwen already tells us what kernels it supports: There are two high level methods for getting these kernels: We generally recommend the first, especially paired with our docker container support , build your container with all your kernels installed at build time to reduce the amount of time it takes for your job to start. While kernelhub is convenient, since kernels often explicitly depend on the version torch and cuda installed, an available kernel for your specific configuration might not be available, and the transformers model will silently fallback to an unoptimized kernel with low performance. After installing the flash-linear-attention and causal-conv1d python packages, we improved our end to end time by a factor of 3.7x down to 2 hours 5 minutes. In the tables below, you can see the new kernels (highlighted), taking the place of the elementwise functions in the previous tables. As well the total number of operations executed has been greatly reduced, by a factor of 15x: Table 3: CPU - 3.9s with 118,316 calls. Table contains top operations by total time. Table 4: GPU - 3.9s with 18,060 calls. Table contains top operations by total time. Caveat : during training you will need both a kernel for the forwards and backwards pass and some kernels are forwards only, as they’ve only been implemented to speed up inference. Our Qwen model is pretty fast now, but we can get even faster. By default our batching setup uses 2D rectangular tensors 8,192 tokens as this is the largest size we can fit without running out of memory. The downside of this approach is that we tend to waste a considerable amount of space in the tensor with padding. If Qwen only used standard attention mechanisms, the torch’s NestedTensor is now well supported and would help reduce this cost by completely removing the padding. But flash-linear-attention only supports a more traditional 1D packed tensor approach: But we can’t just do this arbitrarily, simply passing the 1D tensor to the model may be acceptable for pretraining, but for finetuning, we need to ensure that in an example tokens only attend to tokens within the same example. To fix this we have to pass in the correct example position_ids to the model. In turn the model will pass these to the fused attention kernels and it will apply the correct attention mask. If you look at the example code here you can see how we compute the needed inputs to make this work. With this simple looking change, our training time goes from 2 hours 5 minutes to 1 hour and 17 minutes. Trade off: This style of change does make the input pipeline more complex, and there’s a high chance of introducing errors that impact model quality. But in this case the 36% savings are worth it. There are other techniques for reducing padding such as keeping the original batching mechanism but sorting all inputs by length, so that the padding is minimized, but this order may introduce unexpected correlation in adjacent samples, biasing the model. Take Aways: When training LLMs over a dataset with inputs shorter than your max trainable tokens (e.g. in this case 8192), efficiently packing data into batches can save a significant amount of time. For this dataset, we saw a 1.6x improvement in training speed, taking our training time from 2 hours 5 minutes to 1 hour and 17 minutes . In this blog, we showed you how to 6x your training efficiency. It came down to (1) first measuring what matters, not just gpu utilization, but also where your model is spending time training and (2) optimizing and fusing kernels, using known libraries like Flash Linear Attention and (3) tailoring how batches of data are fed into the model. To do this at scale, you need a platform that makes a performant path the default. In AIR, many of these performance improvements are built in. We bundle in the latest CUDA and flash attention with our base environments, automatically track core metrics like GPU utilization, temperature, and health for you, ensure torch versions (and the profilers are up to date). Our internal agent, Genie Code, is also tuned to look for opportunities like these to further optimize your training. Furthermore, reading data from Databricks is optimized through our UCVolumeDataset . Please give AIR a try for your next training workload! Ready to try it?",
+      "published_date": "2026-10-14",
+      "tags": [
+        "Engineering",
+        "AI Engineering",
+        "Data Science and ML"
+      ],
+      "organization": "Databricks",
+      "raw_metadata": {
+        "feed_name": "Databricks",
+        "feed_url": "https://www.databricks.com/feed"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, fine-tuning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 75,
+    "llm_reason": "實測6倍訓練加速並拆解優化細節與程式碼，技術含金量高",
+    "novelty": 14,
+    "impact": 15,
+    "trending": 11,
+    "practicality": 18,
+    "blog_worthiness": 17
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Apple ML",
+      "title": "Selection-Based Structured Reasoning: Toward Efficient Multimodal Search Agents",
+      "url": "https://machinelearning.apple.com/research/selection-structured-reasoning",
+      "authors": [],
+      "abstract": "research area Methods and Algorithms content type paper published October 2026 Selection-Based Structured Reasoning: Toward Efficient Multimodal Search Agents Authors Feiyu Gavin Zhu†**, Xiaoyu Zhu, Jiqi Yang, Rui Yang‡***, Arnab Kumar Mondal, Yancheng Wang, Xinke Deng, Jean Oh†, Reid Simmons†, Joerg Liebelt, Xiang Kong, Zhongyu Jiang View publication Copy Bibtex Multimodal agents commonly generate freeform reasoning before each action. For small models, limited model capacity can result in lengthy reasoning that provides little useful guidance for action generation while incurring substantial inference cost. To address this challenge, we introduce Selection-based Structured Reasoning (SSR), a framework that reformulates reasoning as selection instead of open-ended generation. SSR represents recurring high-level reasoning as pre-specified, reusable natural-language candidates. At each turn, the model selects from the reasoning candidates based on their likelihoods given the current context, without an auxiliary task head. Using pre-specified reasoning traces enables parallel scoring, where teacher-forced prefilling computes token likelihoods concurrently within and across candidates using a shared context KV cache. We evaluated SSR on seven multimodal search benchmarks using 2B and 4B models. Across multiple reinforcement learning objectives and supervised fine-tuning, SSR delivers significant efficiency gains without sacrificing task performance. SSR achieves an average success rate competitive with leading search agents of the same scale, while reducing per-turn reasoning latency by over 90% and total per-question model inference latency by 28–54%. † Carnegie Mellon University ‡ University of Illinois Urbana-Champaign ** Work partially done while at Apple *** Work done while at Apple Related readings and updates. Learning Structured Reasoning via Tractable Trajectory Control July 2, 2026 research area Computer Vision , research area Speech and Natural Language Processing conference ICML Large language models can exhibit emergent reasoning behaviors, often manifested as recurring lexical patterns (e.g., “wait,” indicating verification). However, complex reasoning trajectories remain sparse in unconstrained sampling, and standard RL often fails to guarantee the acquisition of diverse reasoning behaviors. We propose a systematic discovery and reinforcement of diverse reasoning patterns through structured reasoning, a paradigm that… Read more Interleaved Reasoning for Large Language Models via Reinforcement Learning May 28, 2025 research area Knowledge Bases and Search , research area Speech and Natural Language Processing Long chain-of-thought (CoT) significantly enhances large language models’ (LLM) reasoning capabilities. However, the extensive reasoning traces lead to inefficiencies and an increased time-to-first-token (TTFT). We propose a novel training paradigm that uses reinforcement learning (RL) to guide reasoning LLMs to interleave thinking and answering for multi-hop questions. We observe that models inherently possess the ability to perform interleaved… Read more Discover opportunities in Machine Learning. Our research in machine learning breaks new ground every day. Work with us",
+      "published_date": "2026-10-15",
+      "tags": [],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "Apple ML",
+        "feed_url": "https://machinelearning.apple.com/rss.xml"
+      }
+    },
+    "rule_score": 38.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: reasoning, chain of thought, reinforcement learning, fine-tuning, kv cache",
+      "⚖️ 來源權重: rss +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 62,
+    "llm_reason": "把推理重構為選擇而非生成，提升小模型agent效率的新框架",
+    "novelty": 14,
+    "impact": 11,
+    "trending": 11,
+    "practicality": 11,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "LFM2.5-24B-A2B: Built for fast on-device agents",
+      "url": "https://www.liquid.ai/blog/lfm2-5-24b-a2b",
+      "authors": [
+        "gmays"
+      ],
+      "abstract": "Today, we release LFM2.5-24B-A2B , a 24B-parameter reasoning model with just 2B active parameters, built for fast, private agents on-device. It is the largest and final model in the LFM2.5 family, which now spans two orders of magnitude: from LFM2.5-230M to LFM2.5-24B-A2B . LFM2.5-24B-A2B is competitive with Qwen3.6-35B-A3B, a model with ~50% more total and active parameters, on five of eight agentic and tool-use benchmarks, scoring 48.09 on LiveClaw versus 38.19 and 27.69 on AutomationBench versus 8.72. Because only 2B parameters are active per token, it runs up to 1.7× faster than comparable MoEs on-device, with 184 tokens/s on an Apple M5 Max and up to 21K output tokens/s on a single NVIDIA B300 GPU. The base (LFM2.5-24B-A2B-Base) and post-trained (LFM2.5-24B-A2B) models are open-weight and available today on Hugging Face and our Playground . Check out our docs on how to run and fine-tune it locally. What changed since LFM2-24B-A2B LFM2.5-24B-A2B builds on our previous LFM2-24B-A2B release, with an expanded vocabulary and context window, scaled-up pretraining, and large-scale reinforcement learning. Unlike its predecessor, LFM2.5-24B-A2B is a reasoning-only model that produces an explicit chain of thought before its final answer. We adopted this strategy to leverage its high decode speed and improve answer quality. Architecture. It keeps the 40 layers, 64 experts per MoE block with top-4 routing, and the same hybrid of gated short convolutions and GQA. The two architectural changes are the context window extension from 32,768 to 131,072 tokens, and the in-place tokenizer expansion , which doubles the vocabulary from 65K to 128K tokens for better non-Latin tokenization. Pre-training was scaled up from 17T tokens to 33T tokens. Mid-training has two phases. The first runs 2T tokens at 32K context on curated, higher-quality data weighted toward reasoning, math, code, instruction following, and multilingual text. The second runs 300B tokens at 131K context, weighted toward long context data. Tool calls and multi-turn trajectories appear throughout both phases to prepare the model for agentic workloads. Post-training turns LFM2.5-24B-A2B-Base into the agentic LFM2.5-24B-A2B in a five-stage pipeline as illustrated below: (1) Supervised Fine-Tuning (SFT), (2) Teacher Specialization, (3) non-agentic and (4) agentic Multi-Domain On-Policy Distillation (MOPD), and (5) Agentic Reinforcement Learning (Agentic RL), training the model inside agent harnesses, such as OpenClaw , Hermes Agent , Pi , and OpenCode . Figure 2: LFM2.5-24B-A2B Post-training recipe During teacher specialization, LFM2.5-24B-A2B exhibited well-known reward-hacking behaviors: searching for the final answer in a repository's git history or on platforms like GitHub, PyPI, and Hugging Face. More surprisingly, it even figured out it was in a sandbox, as shown in the examples below. This behavior looks emergent but might be explained by training data containing similar patterns. We tightened our sandboxes in response, and all reported results below come from sealed evaluation environments. Benchmarks We evaluated LFM2.5-24B-A2B across 16 benchmarks covering tool use and agentic workflows, knowledge, instruction following, math, and coding. Despite being the smallest model in total and active number of parameters, it is competitive with, and often outperforms, larger MoEs with ~50% more total and active parameters, such as Qwen3.6-35B-A3B. Benchmark LFM2.5-24B-A2B Qwen3.6-35B-A3B Gemma-4-26B-A4B-it Nemotron-3.5-Lightning (30B-A3B) AutomationBench 27.69 8.72 5.46 2.61 BFCLv4 65.01 65.00 57.09 53.78 ToolSandbox 80.71 75.02 72.09 75.13 LiveClaw 48.09 38.19 41.25 37.72 PinchBench 83.18 89.93 77.12 84.20 τ³-Bench Banking 8.04 7.63 4.54 7.01 WebArena Verified 26.75 37.62 25.62 28.69 GPQA Diamond 74.42 83.69 74.90 72.42 AA-Omniscience -24.90 -24.35 -59.39 -3.58 HLE 7.40 7.69 8.57 5.65 IFEval 96.75 93.06 92.00 94.19 IFBench 74.69 64.21 47.44 71.67 Multi-IF 84.38 81.53 82.19 82.34 MATH-500 96.04 96.73 95.66 96.40 SWE-Bench Verified (OpenCode) 51.00 66.20 25.80 53.40 SciCode 32.71 37.35 35.42 27.78 Table 1: LFM2.5-24B-A2B benchmark performance*. LFM2.5-24B-A2B leads or matches the competition on five of the eight tool-use and agentic benchmarks (AutomationBench, BFCLv4, ToolSandbox, LiveClaw, and τ³-Bench Banking), with its widest margin on AutomationBench, where it scores more than three times the next-best model. It also leads on all three instruction-following benchmarks. Larger models keep an edge on knowledge-heavy benchmarks like GPQA Diamond, HLE, and AA-Omniscience, and on coding benchmarks like SWE-Bench Verified (OpenCode) and SciCode. The results make LFM2.5-24B-A2B an ideal foundation for agents that need to reason, call tools, and run reliably on your device. For knowledge-heavy workloads, we recommend pairing LFM2.5-24B-A2B with retrieval or web search, which plays to its tool-calling strength. Fast inference everywhere LFM2.5-24B-A2B ships with day-one support across the inference ecosystem: llama.cpp — GGUF checkpoints for efficient edge inference MLX — Optimized inference for Apple Silicon vLLM — GPU-accelerated serving for production throughput SGLang — High-performance GPU serving framework ONNX — Cross-platform inference across diverse accelerators All runs were collected on Pipette , the same benchmarking infrastructure behind Liquid AI's public device performance data. Edge inference. Due to the efficient LFM2 architecture, LFM2.5-24B-A2B is the fastest of the compared MoEs at reading in prompts and generating answers. It decodes 184 tokens/s on an Apple M5 Max and 114 tokens/s on an AMD Ryzen AI Max+ 395, up to 1.7x faster than the next-best model, while using the least memory. GPU inference. To demonstrate the competitiveness of LFM architecture we compare the GPU inference throughput to other similarly sized MoE models. We measure GPU throughput (total output tokens / wall time) on a single NVIDIA B300 GPU using a sustained-load setting: at each concurrency level, we continuously maintain the target number of in-flight requests, replacing each completed request immediately. We benchmark each model with SGLang 0.5.22, 1,024 input tokens, up to 256 output tokens, in BF16. LFM2.5-24B-A2B is the fastest model in its size class, reaching over 21K output tokens per second at high concurrency. Run local agents with LFM2.5-24B-A2B LFM2.5-24B-A2B’s size, speed, and capabilities make it a great choice for agents that run continuously on your own hardware. In the demo below, we run it inside Hermes Agent on an M5 Max MacBook Pro, where it plans, calls tools, and works through a real task entirely on-device, without any cloud API calls. Video 1: Local Hermes Agent with LFM2.5-24B-A2B creating a morning briefing about trending models on Hugging Face and responding to follow up questions. The point of the demo is not the individual tools. It is that the tool-dispatch loop feels interactive on consumer hardware: ask, propose, confirm, run, repeat, all in well under a second per dispatch, with full audit trails and your data never leaving the device. Check out our local agent guide for how to serve the model locally and connect it with the agent harness of your choice. Get Started Start building today with LFM2.5-24B-A2B, available on Hugging Face . For API inference, you can also sign up for Liquid Console where you'll receive $2 in credit to get started. The model is priced at $.10/1M input tokens (at $.05 for cached input) and $1.00/1M output tokens. With LFM2.5, we're delivering on our vision of AI that runs anywhere. These models are: Open-weight — Download, fine-tune, and deploy. See our model license . Fast from day one — Native support for llama.cpp, MLX, and vLLM across Apple, AMD, Qualcomm, and Nvidia hardware A complete family — From base models for customization to specialized audio and vision variants, one architecture covers diverse use cases We can't wait to see what you build.\n\n(277 points, 72 comments on Hacker News)",
+      "published_date": "2026-10-15",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 277,
+        "num_comments": 72,
+        "hn_url": "https://news.ycombinator.com/item?id=50097369",
+        "object_id": "50097369"
+      }
+    },
+    "rule_score": 35.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, tool use, reasoning, reasoning model",
+      "⬆️ HN 熱門: 277 points",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 65,
+    "llm_reason": "高效能端側MoE agent模型，開源可用且HN熱度高",
+    "novelty": 9,
+    "impact": 11,
+    "trending": 15,
+    "practicality": 17,
+    "blog_worthiness": 13
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "NVIDIA Developer",
+      "title": "Scale Agentic Coding Workflows with Meta’s Muse Spark Open on NVIDIA GB300 NVL72",
+      "url": "https://developer.nvidia.com/blog/scale-agentic-coding-workflows-with-metas-muse-spark-open-on-nvidia-gb300-nvl72/",
+      "authors": [
+        "Tanya Lenz"
+      ],
+      "abstract": "Meta launches Muse Spark Open, a coding-optimized 816B mixture-of-experts (MoE) model with 42B active parameters and a 1M token context window. Trained on NVIDIA GB300 NVL72 Blackwell Ultra specifically for agentic coding workflows, it delivers higher first attempt accuracy, reliable tool calling, and deep codebase understanding across repositories. The 1M token context window holds an entire project, including complex dependencies, legacy code, and thousands of files without breaking a task into pieces. As a reasoning model, Muse Spark Open adds audio and video perception alongside image and document understanding, working natively and reliably across what it sees, hears, and reads. NVFP4 checkpoints generated by Meta and optimized for NVIDIA Blackwell Ultra shrink the memory footprint of all 816B parameters with native FP4 Tensor Core acceleration. Fewer bytes moved per token to increase tokens per second per user, and the freed-up memory supports larger KV cache for concurrent long context sessions, delivering higher throughput, a lower cost per token. Custom-built for agentic coding multimodal understanding across text, image, video, and audio General coding models are optimized for single-shot completions such as generating a function, writing a unit test, or suggesting an inline fix. They excel at discrete, well-scoped tasks where the context is small, and the answer is immediate. Agentic coding demands something fundamentally different. Planning a multifile refactor, navigating thousands of files, recovering from failing tests, and coordinating subagents over long horizons requires a model built for sustained, multistep work. Muse Spark Open is built for exactly these workloads, delivering higher first-attempt accuracy, reliable tool calling, and deep codebase understanding across repositories. It plans, acts, observes, and self corrects. It supports multistep task execution with tool use, output evaluation, and iterative refinement. The model uses goal conditioning to hold direction and context compaction to retain the knowledge needed to sustain progress across long-running sessions. With a 1M token context window, it holds an entire project, including complex dependencies, legacy code, and thousands of files without breaking tasks into pieces. Beyond coding, it searches the web (including multimodal browsing), spawns and coordinates subagents for decomposable tasks, and leverages computer use capabilities unified across desktop, mobile, and browser. It generates separate commentary before each action, so developers know what the agent is doing and why. The model’s 1.8B perception encoder natively processes interleaved text, images, video frames, and audio without separate pipelines per modality. This means that the model reasons over what it sees, hears, and reads in a single unified pass. This suits developer workflows spanning screenshots, diagrams, error logs, and video walkthroughs within the same agent session. Sparse MoE routing activates only 42B of 816B total parameters per token, delivering frontier agentic capability at a fraction of the serving cost of dense models at equivalent scale. Figure 1 . Muse Spark Open sparse MoE architecture activates 42B of 816B parameters per token through top 8 routing across 256 experts Video 1. Muse Spark Open diagnoses a bug from a screen recording with narrated audio, reading the codebase to identify the root cause Muse Spark Open optimized performance on GB300 NVL72 The NVIDIA GB300 NVL72 features a rack scale architecture that integrates 72 NVIDIA Blackwell Ultra GPUs into a single platform. Its large, 72-GPU NVIDIA NVLink domain enables efficient communication at 130 TB/s, eliminating bottlenecks that appear when expert traffic must cross traditional off-the-shelf networks. For a sparse MoE model like Muse Spark Open, which routes each token to eight of 256 experts, that bandwidth directly determines how much of the theoretical throughput a deployment realizes. Agentic workloads turn static single-turn interactions into multistep workflows that reason, invoke tools, coordinate subagents, and carry growing context from one turn to the next. Out of the box, Muse Spark Open running agentic workloads on NVIDIA GB300 NVL72 delivers up to 50K per second per GPU and up to 600 tokens per second per user, enabling AI factories to run large parameter models in production at high throughput and low latency. F igure 2. Running agentic workloads, Muse Spark Open on four NVIDIA Blackwell GPUs with speculative decode achieved over 50K tokens per second per GPU and over 600 tokens per user Flexible deployment options for Muse Spark Open NVIDIA supports multiple inference stacks to meet a variety of developer needs. SGLang, vLLM , and TensorRT LLM give developers direct control over serving configuration, parallelism, and batching on the NVIDIA accelerated computing platform. TensorRT LLM adds compiled engines tuned for NVIDIA GPUs. NVIDIA Dynamo publishes deployment recipes for all three, and separates prefill from decode across dedicated GPU pools, so compute bound prompt processing doesn’t slow token generation. Its KV cache-aware routing sends each request to the worker already holding the relevant prefix, avoiding precomputation as context accumulates across long agentic sessions. Post-train Muse Spark Open with NeMo AutoModel and Megatron Bridge Developers can post-train Muse Spark Open on domain specific datasets using NVIDIA NeMo AutoModel , a PyTorch native training library with native Hugging Face checkpoint support and no model conversion required. It enables full SFT and LoRA fine tuning out of the box, optimized for rapid experimentation over a wide variety of industry specific cases. Developers can also leverage NVIDIA Megatron Bridge to convert Hugging Face checkpoints to Megatron format when they are ready for large production-scale training to take advantage of the optimizations. Get started with GPU-accelerated Muse Spark Open To get started, download Muse Spark Open NVFP4 weights from Hugging Face. For production deployments, try the downloadable NVIDIA NIM . The NIM reduces setup to a single command, replacing benchmarking and tuning cycles with a container that automatically selects the best serving backend and precision for the detected hardware.",
+      "published_date": "2026-10-15",
+      "tags": [
+        "Agentic AI / Generative AI",
+        "Top Stories",
+        "featured",
+        "GB300 NVL72",
+        "Megatron",
+        "Mixture of Experts (MoE)",
+        "NVFP4",
+        "Open Source",
+        "PyTorch",
+        "Training AI Models"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "NVIDIA Developer",
+        "feed_url": "https://developer.nvidia.com/blog/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, tool use, computer use, reasoning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 67,
+    "llm_reason": "大模型在GB300上的NVFP4部署優化，基礎設施技術含量高",
+    "novelty": 10,
+    "impact": 12,
+    "trending": 15,
+    "practicality": 16,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Databricks",
+      "title": "How FactSet cut model training and deployment from days to hours with Databricks AI Runtime",
+      "url": "https://www.databricks.com/blog/how-factset-cut-model-training-and-deployment-days-hours-databricks-ai-runtime",
+      "authors": [],
+      "abstract": "FactSet’s Text-to-Formula (TTF) system has a deceptively difficult job: take a natural-language request from an investment professional and turn it into the correct FactSet Query Language (FQL) formula. FactSet initially built TTF around retrieval-augmented generation (RAG), using retrieval to find relevant examples and information for a given request. But as consumption grew, queries became more specialized and formulas more complex; the approach hit a quality ceiling. FactSet began incorporating fine-tuned open models into its Compound AI architecture, allowing the team to train models on the structure and patterns of FQL rather than relying primarily on retrieval at inference time. In its earlier work on TTF, FactSet found that incorporating fine-tuned models reduced end-to-end latency by about 60%. As the system evolved, so did the role of fine-tuning. FactSet accumulated more training data and began updating its models regularly, turning what had been an experimental workflow into a recurring part of developing TTF. Today, the team fine-tunes models roughly every two to three weeks. Training every few weeks changes the infrastructure requirements. Preparing an environment and configuring GPU compute may be manageable for an occasional experiment. Repeating that work every time new data or a new model is ready to test adds overhead directly to the development cycle. Model requirements can change from one experiment to the next as well. FactSet has worked with Llama-based models and continues to evaluate newer open models. Different models, prompt lengths, and output characteristics can require different compute configurations, so tying the training environment to a fixed GPU setup would make it harder to adapt as the team experiments. FactSet uses Databricks AI Runtime to run these fine-tuning workloads on serverless GPU infrastructure. Engineers can choose compute based on the requirements of a particular training run without first provisioning and configuring the underlying GPU environment. TTF’s training workflow also sits alongside data, experimentation, model management, and governance already running on Databricks. FactSet uses MLflow to track model development and experiments, while its underlying data remains governed within its existing Lakehouse environment. Running fine-tuning with AI Runtime keeps GPU training inside that workflow. Engineers can work with governed data, train a new model, track the resulting artifacts, and move toward deployment without maintaining a separate GPU stack for fine-tuning. For FactSet, that reduced the time required to set up, train, and deploy a custom TTF model from days to hours. The ability to change models has been part of TTF’s evolution from the beginning. Advanced RAG, especially reliance solely on externally hosted models, becomes a bottleneck on consistent accuracy and latency as the consumption grows and more complex formulas. RAG worked until the system encountered more complex formulas. Fine-tuned open models gave FactSet another way to improve quality and latency. Now, as newer models become available, the team can evaluate them against the workload rather than treating its current model choice as permanent. TTF itself is becoming more specialized. As FactSet accumulates more data, the team is exploring additional fine-tuned models for tasks such as query decomposition, component extraction, and library identification. That creates more opportunities to use the model best suited to each part of the workflow, but also makes fast, repeatable training more important. A model change is much easier to test when it does not require rebuilding the training environment around it. With GPU compute available on demand through AI Runtime, the engineering work shifts toward the questions that actually affect TTF: which model to use, how to train it, and whether the resulting version improves the application. Additionally, the fine-tuning pipeline was built on Databricks Lakeflow Jobs and Pipelines as a plug-and-play, reusable framework — designed to be easily adopted across different TTF tasks and other teams with minimal setup effort, providing a standardized foundation that reduces onboarding friction and accelerates integration. Open models are moving quickly. The model that offers the right balance of quality, latency, and cost today may not be the one a team wants six months from now. Preserving model choice therefore requires more than the ability to download a new set of weights. The surrounding training and deployment workflow has to keep up. FactSet’s experience with TTF shows what that looks like in production. The team can continue testing new open models as its data and application evolve, while AI Runtime provides serverless GPU infrastructure within its existing Databricks workflows. Instead of spending days setting up, training, and deploying each iteration, FactSet can complete that cycle in hours. For a system that is retrained every few weeks, that difference compounds. New data can move into a new model sooner, and engineers can spend more of each iteration improving TTF rather than preparing the infrastructure required to train it. Subscribe to our blog and get the latest posts delivered to your inbox.",
+      "published_date": "2026-10-14",
+      "tags": [
+        "Company",
+        "Customers"
+      ],
+      "organization": "Databricks",
+      "raw_metadata": {
+        "feed_name": "Databricks",
+        "feed_url": "https://www.databricks.com/feed"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: fine-tuning, rag, retrieval augmented",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 66,
+    "llm_reason": "真實生產案例含延遲與微調頻率數據，故事完整具深度",
+    "novelty": 11,
+    "impact": 13,
+    "trending": 10,
+    "practicality": 16,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Fish Audio Releases Drama 3, a 35B Open-Weight MoE Text-to-Speech Model",
+      "url": "https://www.marktechpost.com/2026/10/14/fish-audio-drama-3-open-weight-tts-model/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "This week, Fish Audio released Fish Audio Drama 3 . Drama 3 is a text-to-speech model from Fish Audio that takes plain-language acting direction. It is a 35B mixture-of-experts model with about 3B parameters active per token. The weights are on Hugging Face , and the model is also live in the Fish Audio API . For developers, it is a self-hostable option for scripted dialogue, audiobooks and dubbing. Drama 3 turns a script along with bracketed directions into acted speech. Writers place cues like [barely holding it together] before a line. Paired tags such as <whisper> change only the enclosed words, per the Drama 3 docs . Directions can be written in any language, independent of the spoken line. The model supports 83 languages . Speaker tags <|speaker:0|> to <|speaker:15|> allow up to 16 characters in 1 request. The API takes 1 voice ID per speaker, so a full scene renders in a single call. According to the launch post , the backbone starts from the Qwen3.5-35B-A3B language model. It has 40 layers, grouped as 3 Gated DeltaNet layers per 1 gated full-attention layer. Only 1 layer in 4 keeps a KV cache. DeltaNet layers store history in a constant-size state instead. A new Codebook-MTP decoder replaces the per-frame Fast AR decoder used in S2 . It has 4 shared layers feeding 9 layers, 1 per acoustic codebook. Only codebooks 0 and 1 feed back into the backbone; S2 fed back all 10. The audio tokenizer is unchanged from S2. It is built on the Descript Audio Codec and outputs 44.1 kHz audio. It runs at about 21.5 frames per second. Training ran 3 pre-training stages, then instruction tuning, then reinforcement learning. RL used GRPO without a KL penalty and a single learned human-preference reward model. Fish Audio reports Drama 3 at 93.2% overall on Artificial Analysis Pronunciation Robustness , ranked #1. Its predecessor S2.1 Pro scored 88.1%. Human listeners judge hard English words across 4 categories: This benchmark tests pronunciation, not emotional delivery. Fish Audio describes emotive quality only qualitatively. On the Artificial Analysis quality leaderboard , ‘Drama 3 Preview’ holds an Elo of 1242. That beats S2.1 Pro at 1190 but trails Eleven v4 Turbo at 1328. The Fish Speech install guide lists at least 48 GB of NVIDIA GPU memory in FP8. CPU, Apple MPS and AMD ROCm are not supported. MoE experts ship in FP8, with the remaining weights in bf16. The model card reports streaming results on 1 H200. At 1 stream, median time to first audio is 88.9 ms with a real-time factor of 0.131. At 16 streams, throughput reaches 927.6 frames per second. Serving runs through SGLang-Omni , whose fused kernels are validated only on Hopper GPUs. In the hosted API, set the model header to drama-3 on POST /v1/tts . The docs warn that a missing or misspelled header silently falls back to s2.1-pro . List price is $50 per 1M characters. A $10 launch price runs until November 12, 2026, per the launch post . The weights use the Fish Audio Community License v1.0 . Research and non-commercial use are free. Commercial use is free under USD 500,000 in annual revenue. Hosting Drama 3 as a third-party API needs a separate license. Products must display ‘Built with Fish Audio.’ Cloning a real voice without consent is prohibited. Check out the weights on Hugging Face , the technical report , the GitHub repo and the launch post . All credit goes to the researcher of this project. Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. The post Fish Audio Releases Drama 3, a 35B Open-Weight MoE Text-to-Speech Model appeared first on MarkTechPost .",
+      "published_date": "2026-10-14",
+      "tags": [
+        "Agentic AI",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Audio Language Model",
+        "Editors Pick",
+        "Enterprise AI",
+        "For Devs",
+        "Language Model",
+        "Large Language Model",
+        "New Releases",
+        "Staff",
+        "Tech News",
+        "Technology",
+        "Voice AI"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: grpo, reinforcement learning, reward model, instruction tuning, moe",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 65,
+    "llm_reason": "開源TTS MoE模型附完整架構細節與自架方案，技術描述扎實",
+    "novelty": 13,
+    "impact": 10,
+    "trending": 11,
+    "practicality": 16,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Apple ML",
+      "title": "Plan or Retrieve First? A Scale Study of Tool Discovery Architectures",
+      "url": "https://machinelearning.apple.com/research/plan-retrieve-tool-discovery",
+      "authors": [],
+      "abstract": "research area Methods and Algorithms , research area Tools, Platforms, Frameworks conference EMNLP content type paper published October 2026 Plan or Retrieve First? A Scale Study of Tool Discovery Architectures Authors Mingfei Zhang, Amit Surana, Ziauddin Majid, Chenxi Wang, Michael Xu View publication Copy Bibtex Tool-augmented LLM agents discover relevant APIs from large registries before planning execution, yet finite context windows prohibit injecting all tool definitions into a single prompt. The dominant approach, which we term Retrieve-then-Plan (RtP), embeds the user query and retrieves similar tools via approximate nearest-neighbor search. We study an alternative Plan-then-Retrieve (PtR) paradigm in which the LLM first generates Abstract Tool Stubs (hypothesized function signatures describing needed capabilities) which then serve as retrieval queries against the registry. Evaluating on ToolBench (46,984 unique API endpoints, 50 categories) across single-tool (G1), intra-category multi-tool (G2), and cross-category multi-tool (G3) query subsets, we find a clear complexity-dependent crossover: RtP outperforms PtR on single-tool queries while PtR outperforms RtP on multi-tool queries. This crossover holds at every retrieval budget (k=1 to 20), is robust across registry sizes from 1k to 47k APIs, and is consistent across model families (Gemini 2.5 Flash and gpt-oss-120b). We characterize a stub-hallucination failure mode (the LLM invents plausible but non-existent API names) that acts as a double-edged sword: on simple queries PtR’s stubs abstract away proper-noun signals that RtP matches directly, yet on complex queries the same mechanism decomposes multi-faceted intent into functional sub-needs. We further analyze token overhead and show that PtR’s extra discovery call roughly doubles inference cost, which pays off on multi-tool queries but hurts on single-tool ones, motivating complexity-adaptive routing as a practical direction—one that can be driven by a zero-cost signal already present in the pipeline (RtP’s top-1 retrieval score). Related readings and updates. ProTIP: Progressive Tool Retrieval Improves Planning December 20, 2023 research area Knowledge Bases and Search , research area Speech and Natural Language Processing Large Language Models (LLMs) are increasingly employed for complex multi-step planning tasks, where the Tool Retrieval (TR) step is crucial for achieving successful outcomes. Two prevalent approaches for TR are single-step retrieval, which utilizes the complete query, and sequential retrieval using Task Decomposition (TD), where a full query is segmented into discrete atomic subtasks. While single-step retrieval lacks the flexibility to handle… Read more Context Tuning for Retrieval Augmented Generation December 18, 2023 research area Knowledge Bases and Search , research area Speech and Natural Language Processing Workshop at EACL This paper was accepted at the UncertaiNLP workshop at EACL 2024. Large language models (LLMs) have the remarkable ability to solve new tasks with just a few examples, but they need access to the right tools. Retrieval Augmented Generation (RAG) addresses this problem by retrieving a list of relevant tools for a given task. However, RAG’s tool retrieval step requires all the required information to be explicitly present in the query. This is a… Read more Discover opportunities in Machine Learning. Our research in machine learning breaks new ground every day. Work with us",
+      "published_date": "2026-10-15",
+      "tags": [],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "Apple ML",
+        "feed_url": "https://machinelearning.apple.com/rss.xml"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: rag, retrieval augmented",
+      "⚖️ 來源權重: rss +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 64,
+    "llm_reason": "嚴謹對照研究揭示工具發現架構的複雜度交叉現象，有benchmark支撐",
+    "novelty": 13,
+    "impact": 11,
+    "trending": 11,
+    "practicality": 13,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "NVIDIA Developer",
+      "title": "NVIDIA Nemotron 3.5 Super VL Powers Specialized Agents with Multimodal Reasoning",
+      "url": "https://developer.nvidia.com/blog/nvidia-nemotron-3-5-super-vl-powers-specialized-agents-with-multimodal-reasoning/",
+      "authors": [
+        "Michelle Horton"
+      ],
+      "abstract": "Always-on agents are taking on longer, more complex enterprise workflows. A single request can involve reading a document, checking information across sources, following company policy, and calling several tools. NVIDIA Nemotron 3.5 Super VL is an open, customizable multimodal model for these specialized workflows. Its 120B-parameter mixture-of-experts (MoE) architecture activates 12B parameters per token, balancing model capacity with inference efficiency. On a single GPU, this model delivers up to 5x higher throughput for agentic tasks compared to other open models in its size category. Figure 1. Nemotron 3.5 Super VL delivers over 600 TPS on Artificial Analysis Intelligence Index agentic tasks on the Baseten endpoint The model combines reasoning, instruction following, and tool use with text, image, document, and video understanding. By combining these capabilities into one model, teams can handle text and visual tasks without deploying separate text and vision-language models or passing task context between them. Developers can post-train Nemotron 3.5 Super VL with NVIDIA NeMo using their own data, tools, policies, and workflows. This post explains how to use that foundation to build specialized enterprise agents and describes the training and inference techniques that power it. Why Nemotron 3.5 Super VL for specialized agents? Agents need to understand both their tasks and operating environments. A customer-service agent must follow company return policies. Research agents connect evidence across sources, while document agents interpret tables, charts, and page layouts. Nemotron 3.5 Super VL combines reasoning and visual understanding across a range of agent workflows, including: Coding: Test and validate code, analyze errors, and recommend fixes. Web research: Search across websites, connect information, and verify answers. Document intelligence: Extract information from tables, charts, and page layouts to produce summaries and reports. Cybersecurity: Identify security vulnerabilities and triage threats to prioritize remediation. Video understanding: Extract information for search, content review, and incident analysis. Within a system of models, Nemotron 3.5 Super VL handles specialized, multistep work that needs reasoning, tool use, and text and visual understanding together. Smaller models, such as NVIDIA Nemotron 3.5 Lightning , handle high-volume text tasks, while frontier models such as NVIDIA Nemotron 3 Ultra tackle complex planning and orchestration. Customize Nemotron 3.5 Super VL for domain data, tools, and policies Specialized agents must learn how an organization works. Domain terminology, tool interfaces, operating procedures, and policy requirements shape how agents complete tasks successfully. Organizations in industries ranging from cybersecurity and finance to healthcare are post-training Nemotron 3.5 Super VL to outperform frontier models in accuracy and efficiency across their production workflows. For example: Scale AI, an AI data and technology provider, post-trained Nemotron 3.5 Super VL for automated vendor credit processing at Skydance Corporation, a media and entertainment company. Inference cost for this workload will decrease by 40x and latency by 5x. Ramp, a financial operations platform provider, is converting receipt images into structured JSON containing merchant information, dates, and payment data. Ramp expects up to 50% higher throughput and 10x lower latency. AI21 and Alice post-trained Nemotron 3.5 Super VL for threat intelligence and vulnerability analysis, improving accuracy by 41%. Figure 2. Post-trained Nemotron 3.5 Super VL achieves leading performance for specialized tasks across industries Teams can use NVIDIA NeMo open libraries to post-train models to meet these requirements. Developers can use NVIDIA NeMo AutoModel for supervised fine-tuning (SFT) and low-rank adaptation (LoRA) to teach domain-specific behavior. Reinforcement learning (RL) improves performance in agentic environments that reflect organizational workflows. Alongside Nemotron 3.5 Super VL, NVIDIA is releasing open datasets on Hugging Face. These include agentic tool-use and conversational data, finance reasoning and tool-calling datasets, instruction-following and chat data, long-context transduction and translation data, fairness data, and 40 vision-language datasets. These datasets can supplement proprietary data for SFT and RL. For multimodal data, start with NeMo Data Designer resources for chart question answering and long-document understanding . Explore NVIDIA NeMo RL and NVIDIA NeMo Gym for RL and environment-based evaluation. Organizations can adapt and deploy the model’s open weights in supported local, data center, or cloud environments to meet their infrastructure and data requirements. For customization resources, see the Nemotron 3.5 Super VL usage cookbook on GitHub. Combine text and visual understanding in one workflow Nemotron 3.5 Super VL combines text, image, document, and video understanding with reasoning and instruction following to answer questions across these inputs. Its visual training covers charts, tables, optical character recognition (OCR), multipage documents, and video understanding. A two-stage SFT pipeline trains the language and vision components, combining visual evidence with reasoning, chat, safety, long-context data, and agent trajectories. For document intelligence, the same model can interpret a chart, connect it with a table elsewhere in a document, and summarize both. Developers can tailor the workflow to their own documents and evaluation criteria. Diverse training data generated with NeMo Data Designer helped the model better understand complex charts. On CharXiv, a chart-reasoning benchmark, the model scored 80.8%, compared with 63% for Nemotron 3 Nano Omni . With Python code interpretation, it reached 84%. For the approach and lessons learned, read the chart-understanding deep dive and the open-source chart question-answering pipeline . This model was built with support and expertise from Nemotron Coalition organizations. For instance, high-quality datasets from Perplexity helped improve and streamline the model’s mid-training. Environments from Prime Intellect enabled building better teacher models. Nemotron 3.5 Super VL is also one of the top open models on the OCRBench v2 leaderboard . Accuracy and efficiency across agent tasks Evaluations of Nemotron 3.5 Super VL span Hermes, LangChain, OpenClaw, OpenCode, Pi, Codex, and Claude. In addition to coding tasks, agent harness providers use their own evaluations to test a wide range of agent tasks. On Hermes Bench and LangChain behavioral evaluations, Nemotron 3.5 Super VL scores higher than Nemotron 3 Ultra. Model Hermes Bench LangChain Evals Nemotron 3 Ultra 56.33% 84.3% Nemotron 3.5 Super VL 63.44% 87.05% Table 1. Nemotron 3.5 Super VL scores higher than Nemotron 3 Ultra on Hermes Bench and LangChain evaluations For always-on agents, efficiency determines how much work a deployment can complete. Throughput, token usage, tool calls, and the steps needed to reach a correct result all affect task completion time. Figure 3. Nemotron 3.5 Super VL uses higher throughput and token efficiency to deliver 4x faster task completion This model was also optimized to run locally on NVIDIA DGX Spark . An independent evaluation by EXO Labs placed Nemotron 3.5 Super VL on the Pareto frontier for accuracy and task completion time. Figure 4. Nemotron 3.5 Super VL balances accuracy and speed for agent tasks on DGX Spark Nemotron 3.5 Super VL under the hood The model builds on a strong foundation and uses a hybrid architecture, speculative decoding, context reuse, and mixed precision to reduce inference work across repeated agent calls. Building a strong base model Nemotron 3.5 Super VL was distilled from Nemotron 3 Ultra. Ultra’s coding capabilities, combined with the SkewReverse loss used during distillation, helped improve coding accuracy.",
+      "published_date": "2026-10-15",
+      "tags": [
+        "Agentic AI / Generative AI",
+        "Developer Tools & Techniques",
+        "Top Stories",
+        "AI Agent",
+        "featured",
+        "NVFP4"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "NVIDIA Developer",
+        "feed_url": "https://developer.nvidia.com/blog/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, tool use, reasoning, multimodal reasoning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 64,
+    "llm_reason": "企業級多模態agent模型附訓練推理技術細節，實用性高",
+    "novelty": 10,
+    "impact": 12,
+    "trending": 12,
+    "practicality": 16,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "blog",
+      "source_name": "Simon Willison",
+      "title": "Claude Haiku 5.5",
+      "url": "https://simonwillison.net/2026/Oct/7/claude-haiku-5-5/",
+      "authors": [
+        "Simon Willison"
+      ],
+      "abstract": "As previously promised , here’s Anthropic’s new fast, low cost model: Introducing Claude Haiku 5.5 . The previous Haiku, 4.5, was very much showing its age. It came out almost a year ago , and was priced at $1/million input and $5/million output—relatively expensive even back then, and a full 10x the price of OpenAI’s GPT-6 Luna , released last month. The new Haiku exactly matches the price of GPT-6 Luna—$0.10/$0.50—up to 100,000 tokens. Beyond 100,000 tokens the price increases 5x to $0.50/$2.50. Luna itself has a price increase at 272,000 tokens but only to $0.20/$0.75. Haiku 5.5 also uses a new, less generous tokenizer. My Claude Token Counter tool shows that the same long prompt uses around 1.25x as many tokens with Haiku 5.5 compared to Haiku 4.5, so there’s a hidden price increase there. If your workloads fit in 100,000 tokens, Haiku is the same price as Luna and reports higher benchmark scores. Above 100,000 tokens, Luna looks like a much better deal. The most recent release of llm-anthropic finally fixed it so I don’t need to ship a new version of that plugin for every new model. I tested the new model like this: Here are pelicans for low, medium, high, xhigh, and max . The new Haiku doesn’t let you disable reasoning, and defaults to medium . I got a good bicycle frame for everything beyond low . The low effort pelican cost 0.0936 cents and took 7 seconds. This max effort pelican (with a reasoning trace that starts “This is the classic pelican-on-bicycle SVG test...”) took 5 minutes 9 seconds to generate, but still only cost me 3.3826 cents : (Since the reasoning trace exhibits awareness of the benchmark, here’s Generate an SVG of an armadillo in fishnet tights jaywalking on Mars (on xhigh) , and the same prompt against some other recent models . Background on that .) For comparison, here’s the pelican I got a year ago from Haiku 4.5 (for 0.7583 cents —Haiku 4.5 did not support reasoning levels). It sucked at drawing pelicans: In addition to Haiku 5.5, Anthropic announced today that they are halving the price of cache reads for Sonnet 5.5. They’ve also added API credits to subscription plans: Second, this week, we’ll roll out a new monthly API credit to all Max and Team subscribers for use on the Claude Platform . Max 5x users will get $100 in credits per month, Max 20x users will get $200, and Team subscribers will receive up to $500, pooled across their users. Claiming this is pleasantly easy: navigate to Settings -> Billing and select the API organization that should benefit from the credits every month: The API credits exactly match the cost of the subscription itself. This is really generous—it makes it much easier for subscribers to use the API. Anthropic also let you disable auto-reload for the API, with the consequence that “API requests will stop when your balance runs out”—exactly what you want if you’re planning to burn through those API credits without risk of a nasty billing surprise . Note that the monthly credits do not roll over —use them or lose them. OpenAI still allow you to use your Codex subscription for personal API use, which works out as a better deal for heavy API users. This new credit scheme goes at least some way to overcoming that difference. This is Claude Haiku 5.5 by Simon Willison, posted on 7th October 2026 . Next: A new feature for my blog, built using my voice Previous: We're going to need default hard budget caps on pretty much everything Sponsor me for $10/month and get a curated email digest of the month's most important LLM developments.",
+      "published_date": "2026-10-15",
+      "tags": [
+        "blog"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "blog_name": "Simon Willison",
+        "blog_url": "https://simonwillison.net/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: reasoning",
+      "⚖️ 來源權重: blog +15"
+    ],
+    "llm_score": 70,
+    "llm_reason": "Haiku 5.5價格/tokenizer實測對比，可直接用於選型決策",
+    "novelty": 7,
+    "impact": 13,
+    "trending": 17,
+    "practicality": 17,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "HuggingFace Blog",
+      "title": "Apertus 1.5 Release Notes",
+      "url": "https://huggingface.co/blog/swiss-ai/apertus-v15-release-notes",
+      "authors": [],
+      "abstract": "Back to Articles Apertus 1.5 Release Notes Team Article Published October 15, 2026 Upvote 29 +23 Hanna Yukhymenko hannayukhymenko Follow swiss-ai Oleg Lavrovsky loleg Follow swiss-ai Y Metz ymetz Follow swiss-ai Our latest release, Apertus 1.5, extends the 8B and 70B Apertus 1.0 models with image/audio understanding, an optional thinking mode, a four times longer context window, improved instruction-following, and better tool use. The updated 8B and 70B model weights were released to Hugging Face on July 24, 2026 under an Apache 2.0 license. Further details are now available from the project Technical Report , and summarized here. Apertus 1.5 is a continued pretraining of the first generation model: adding 4 trillion tokens of text and multimodal training data to the 8B model and 2 trillion tokens to the 70B model, for a total of 19T and 17T, respectively. As with every Apertus release, the models are fully open: open weights , open data , open values , and full training details . Key Enhancements Native Multimodal Understanding: Apertus 1.5 accepts images and audio alongside text, bringing documents, diagrams, and photos into the conversation. The models can also process spoken language, though this remains experimental. Thinking Mode: The models can be switched into a thinking mode to reason about the input before answering, which improves performance on reasoning problems. Long Context: The context window grows to 262,144 tokens, a 4x increase over Apertus 1.0. Improved Instruction-Following: Better instruction adherence than Apertus 1.0 gives more predictable and accurate responses. Improved Tool Use: The models are trained for better tool integration, allowing more effective use of external tools and APIs. Open Values: Stronger adherence to the Apertus Charter, which brings transparency to the model’s values and principles. Training Process The full Apertus 1.5 training pipeline Multimodality Through the Tokenizer We introduce multimodality in v1.5 models in an early-fusion manner, where images and audio enter Apertus as discrete tokens in the same sequence with text tokens, instead of using a separate vision encoder. Images are tokenized with the Emu3.5 tokenizer (a 512×512 image becomes 1,024 tokens) and audio with WavTokenizer (40 tokens per second). We only extend the vocabulary, so the architecture stays unchanged and training runs at text-only speed. The models understand images and audio but generate only text. Pre-Training Starting from Apertus 1.0, we continue pretraining in four stages: Unpaired: text plus standalone images and audio, so the model learns the new modalities. Paired: image–caption and audio–transcript pairs, so it aligns them with language. Cooldown: higher-quality data with more math and code. Long context: the window grows step by step from 8k to 262k tokens. Overall, more than half of the training tokens are text-only, which preserves the language abilities of Apertus 1.0. The text data is refreshed with sources such as FineWeb2-HQ+ , FinePDFs, and Nemotron-CC. All new data, multimodal included, meets the same bar as before: publicly available, permissively licensed, and with robots.txt opt-outs respected retroactively. Every source is listed in apertus-data-transparency . Post-Training Post-training runs in five stages: SFT → long-context SFT → RL → DPO → charter alignment (SDPO) . SFT on 3.7M text samples plus image and speech data. Reasoning traces are added only to prompts the model can't already solve without them. Tool-use data is restricted to execution-verified trajectories. We release the text SFT mix we used on Hugging Face. Long-context SFT at the full 262k window restores the long-context ability that short-context SFT erodes. RL with verifiable rewards (RLVR) on about 350k math, code, instruction-following, multilingual, and vision prompts, mixing thinking on and off. DPO with judge-scored preference pairs improves chat quality, tool use, and safety. We release the preference pool and training pairs . SDPO aligns the model with the Apertus Charter through judge feedback and self-distillation. Evaluation Results Alongside the extended model capabilities, we also significantly expanded the scope of evaluations. Beyond the existing text-based evaluations used for Apertus 1.0, we added multimodal evaluations (image & audio), and thinking-mode evaluations. The multimodal evaluations are done through MLLM-eval-suite pipeline, merging two major multimodal evaluation frameworks lmms-eval and VLMEvalKit . We also added a series of text-based benchmarks, as well as extended benchmarking for translation and multilingual capabilities, safety, and tool use. These can be found in our post-training evaluation repository , based on lm-evaluation-harness fork . While still trailing frontier open-weight models, the new release has also significantly improved performance in coding and instruction following capabilities with Apertus 1.5 8B outperforming similarly sized open-weight models on IF and multilingual tasks. Thinking further improves performance on challenging reasoning-heavy benchmarks like AIME. The multimodal performance of the model is closer to Gemma 4 12B and other current open-weight models. Apertus 1.5 multimodal performance is competitive in spatial understanding among open-weight models and document/chart understanding among open-source models. We also thank our collaborators and external evaluators for their help with efficient benchmarking of Apertus capabilities. In particular, Apertus 1.5 shows strong performance on Swiss Legal tasks, being on par with leading open-weight models ( blog , code ). Additionally, on Last Translation Benchmark, Apertus 1.5 8B presents machine translation capabilities which match GPT-OSS-20B and outperform models like Claude Haiku 4.5 or Google Translate ( leaderboard , paper ). Evaluation Cards: Apertus ❤️ EvalEval Apertus collaborates with the EvalEval Coalition to ensure fully transparent and reproducible benchmarking. We publish the Apertus 1.5 results in the Every Eval Ever (EEE) schema, a shared format that records not only scores, but also who ran the evaluation, how the model was accessed, the generation settings, and how each metric should be interpreted: details that are routinely missing from leaderboards and that often explain why similar-looking scores differ. The results are shown in the Eval Card below, which combines the run data with benchmark and model metadata into one interpretable record, and are also available through Hugging Face Community Evals . This is the same infrastructure the UK AI Security Institute uses to publish its evaluations openly . Since our text evaluations run on our public fork of lm-evaluation-harness, which EEE supports with a dedicated converter, anyone can rerun them and compare their numbers against ours under identical settings. Structured evaluation reporting also matters beyond research. EvalEval has mapped Evaluation Cards to AI governance requirements , including Article 55 of the EU AI Act and the GPAI Code of Practice, and found that the EEE schema can represent 56 of the 60 evaluation-reporting elements these frameworks call for. This fits how we already release Apertus: alongside the models, we publish a Public Summary of Training Content and, voluntarily, a Code of Practice document. Machine-readable evaluation records are a natural next step: making it easier for regulators, deployers, and researchers to find, interpret, and compare the evidence behind a model. We are committed to promoting reproducible and transparent evaluation through Eval Cards and the EEE schema, and encourage other model developers to report their results in the same way, so that scores can be compared across models and organizations. Apertus 1.5 Reproducibility All recipes, ablations, and data mixtures are documented in the Technical Report . We aim to popularize open model development by making the v1.",
+      "published_date": "2026-10-15",
+      "tags": [],
+      "organization": "HuggingFace",
+      "raw_metadata": {
+        "feed_name": "HuggingFace Blog",
+        "feed_url": "https://huggingface.co/blog/feed.xml"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: tool use, reasoning, dpo, rlvr, alignment",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 56,
+    "llm_reason": "開源多模態模型持續預訓練升級，細節完整但屬漸進改良",
+    "novelty": 8,
+    "impact": 10,
+    "trending": 9,
+    "practicality": 16,
+    "blog_worthiness": 13
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "Containment and monitoring failures are to blame for AI hacking reports: experts",
+      "url": "https://www.csoonline.com/article/4234854/ai-agents-arent-going-rogue-frontier-labs-are-skipping-security-basics.html",
+      "authors": [
+        "latexr"
+      ],
+      "abstract": "Since July, US frontier AI labs and other AI leaders have revealed a string of incidents in which their models accessed external computer systems without authorization, events popularly described as AI agents “going rogue.” The most well-known and studied of these incidents is OpenAI’s hack into Hugging Face, which OpenAI initially characterized as “an unprecedented cyber incident, involving state-of-the-art cyber capabilities,” and later said was due to “misaligned behavior,” or behavior its creators did not intend. Following news of the Hugging Face incident, Anthropic revealed that one of its models gained unauthorized access to the production infrastructure of three organizations; Meta said one of its AI models hacked another company ​during cybersecurity testing; and Google confessed that its Gemini model carried out three “undirected computer hacks.” Although press reports and the model providers themselves use language such as rogue agents or misalignment, cybersecurity experts who spoke with CSO argue that language obscures a simple truth: These incidents were caused by inexcusable failures by the frontier labs to implement cybersecurity practices that have been well-known for decades. [ See also: Securing AI agents: Key controls and best practices and Who is accountable when your AI agent goes rogue? ] Compounding the problem, according to a half dozen cybersecurity experts CSO interviewed at three industry conferences in September and in subsequent conversations, is that the frontier labs, particularly OpenAI and Anthropic, have rejected their advice on how to improve their cybersecurity risk management practices to avoid these kinds of surreptitious hacks, often lumping cybersecurity practices under “AI safety,” in which they believe they have superior expertise. “They are not as good as they think they are, honestly,” Gary McGraw, co-founder of the Berryville Institute of Machine Learning, tells CSO. “It would be better if they had more respect for expertise that is hard-earned from people in all sorts of subsets of security, like forensics or security engineering, building sandboxes, setting up or monitoring network security situations.” Neither Anthropic nor OpenAI responded to CSO’s requests for comment. Inexcusable failures on cybersecurity basics, particularly containment According to the cybersecurity professionals CSO spoke with, one of the biggest cybersecurity failures by the frontier AI labs is the lack of implementation of tried-and-true containment practices that stretch back to the 1990s, such as setting up secure sandboxes that would effectively bar agents from escaping their test environments. “These are things that we’ve been dealing with for years,” Rob T. Lee, chief AI officer and chief of research at SANS Institute, tells CSO. “There’s no reason why every single time this happens, it’s, ‘Oops, we don’t know how they got out.’” “You can tell that their security teams are fairly nascent,” Lee says. “Folks on the cybersecurity containment side do argue that the majority of reasons that we’re seeing containment breached is that it’s not set up correctly.” Lee adds, “The Hugging Face incident definitively showed that it wasn’t the fact that the agents were super smart. It’s that there literally was a hole that was exploited because it was not configured correctly on the containment side.” Dan Wallach, expert technical resident at RAND’s Center on AI, Security, and Technology, thinks the security failures of the AI labs boil down to the fact that they don’t prioritize cybersecurity. “I would say they are not prioritizing cybersecurity,” he tells CSO. “I don’t think I can say that for all of the labs,” Wallach says, pointing to French AI lab Mistral’s launch of its Large 4 AI model, which the company said tried to operate beyond its testing environment before Mistral cut it off. And, he adds, “It’s not rocket science to isolate one of these AI things. Security people have been talking about how to do either air-gapping, so there’s literally no electrical way for data to get from here to here, or absent that, to have really strong egress control to make sure that nothing pushes through.” On top of that, the frontier labs appear to be conducting insufficient monitoring of their agents’ behavior. The Hugging Face incident “went on for days, and nobody noticed,” Wallach says. “People started these experiments and weren’t watching them. That’s an absence of control. And then they’re surprised by what happened.” Divorcing safety from security One barrier to persuading frontier labs to up their security game is the intense focus they have on what they call “safety,” which they don’t extend to traditional cybersecurity practices. “I can see how security behavior looks like AI safety,” RAND’s Wallach says. “But if the way that you’re evaluating this AI tool is by unleashing it on the internet and seeing what happens, then this is what classical security tooling is for.” SANS Institute’s Lee says, “If these frontier labs really wanted to test their stuff, they need to beef up their cybersecurity component. But their gut reaction in the response to their agents getting out is to say, ‘It’s not a cybersecurity problem.’ It has literally become an AI safety problem, which is divorced from the cybersecurity side.” Many AI experts suggest that if the AI companies were to embrace advice from cybersecurity specialists, it could help put an end to the kind of unrestrained AI agent behavior causing concerns. “AI safety focuses on the rules of the road,” Lee says. “Everything is about guardrail rules.” But “I do believe cybersecurity can contain AI,” he says. “We just need to be in the room where it happens and have a seat at the table. It’s important for our field to be as close to the AI safety folks as possible.” Bad cybersecurity could increase liability If frontier labs are overlooking cybersecurity fundamentals that could reduce or eliminate the types of incidents that have created widespread concerns, that strengthens the case that they should be held liable for their “rogue” agents. The insurance industry is already lining up on the side of holding AI industry executives liable for these actions. Democratic Senators have introduced legislation that would hold AI agent operators liable for hacking incidents. Even the AI-friendly White House has seemingly concluded that the companies should be held liable for their errant agents, while the US Federal Trade Commission is conducting a probe into Anthropic, OpenAI, and other AI labs into the dangers their technologies pose to consumers. However, in recent legislative and council hearings, lab representatives have held fast to the notion that they are not responsible for AI agents run amok. Experts say this position is untenable, particularly in light of the labs’ cybersecurity failures. BIML’s McGraw characterizes the labs’ position as: “Don’t send the lawyers to us, send it to our program. It’s our program’s fault.” His assessment of that argument: “That’s just high BS.” He also questions whether the labs’ operational failures undermine confidence in their broader security capabilities. “They live inside their own bubble,” he says. “The fact that they cannot do clear, easy operations properly does not bode well for their capabilities in security engineering, which is much harder to do.” SANS Lee says, “That’s where the traceability for both liability and insurance comes into play, because if one of these agents is detected, and they’re able to trace it back to the person that initiated it, liability’s going to kick in and say, ‘Hey, you, you broke the law, ergo, we need to prosecute.’” What security leaders should do now Even as evidence mounts that frontier labs are not implementing sound cybersecurity practices, and the debate over liability remains unsolved , CISOs and other security leaders can take steps to protect themselves from AI model misfires.\n\n(935 points, 604 comments on Hacker News)",
+      "published_date": "2026-10-15",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 935,
+        "num_comments": 604,
+        "hn_url": "https://news.ycombinator.com/item?id=50091788",
+        "object_id": "50091788"
+      }
+    },
+    "rule_score": 31.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, safety",
+      "🔥 HN 爆紅: 935 points"
+    ],
+    "llm_score": 55,
+    "llm_reason": "AI agent 入侵事件檢討安全治理，話題性極高且論述有料",
+    "novelty": 6,
+    "impact": 13,
+    "trending": 18,
+    "practicality": 4,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Meet Grok Voice 3.0: SpaceXAI Voice Agent Model Ranks #1 on Artificial Analysis",
+      "url": "https://www.marktechpost.com/2026/10/14/meet-grok-voice-3-0-spacexai-voice-agent-model-ranks-1-on-artificial-analysis/",
+      "authors": [
+        "Michal Sutter"
+      ],
+      "abstract": "SpaceXAI just released Grok Voice 3.0 . Grok Voice 3.0 is a SpaceXAI speech-to-speech model that listens, reasons, calls tools and speaks. It now ranks first on the Artificial Analysis Speech-to-Speech Index with a score of 86.9. For developers, the endpoint, events and $0.08 per minute price are unchanged from Grok Voice 2.0. Grok Voice 3.0 is SpaceXAI’s flagship realtime voice model, exposed as grok-voice-3.0 on the /v1/realtime WebSocket endpoint . The grok-voice-latest alias already points to it, so existing agents switched automatically. SpaceXAI has not published parameter counts or architecture details. Reasoning is on by default ( reasoning.effort: \"high\" ) and can be set to \"none\" for faster turns. Server-side voice activity detection handles barge-in. Tools run inside the session: collections search, web search, X search, remote MCP servers and custom functions. The AA Speech-to-Speech Index is an equal-weighted average of 4 components. Those are Big Bench Audio reasoning, τ-Voice agentic performance, Speech Agent Arena preference and task success rate. Grok Voice 3.0 scores 86.9. GPT-Live-1 (Astra, medium) scores 83.2, Gemini 3.8 Live Extended Thinking 82.6. Grok Voice 2.0 scored 81.3. Component results are strong, not uniformly first: ServiceNow’s EVA-Bench scores enterprise voice agents on accuracy and experience. SpaceXAI reports a top accuracy score of 74%. Artificial Analysis measures 0.81 s time to first audio. GPT-Live-1 (Astra, medium) measures 1.34 s, so SpaceXAI’s “40% lower latency” claim checks out. Grok Voice 2.0 was faster, though, at 0.70 s. On cost, SpaceXAI cites Artificial Analysis cost per Big Bench Audio task. Grok Voice 3.0 costs $0.025 per task, versus $0.030 for GPT-Live-1 (Astra, medium) and $0.055 for GPT-Realtime-2.1 (High). On AA’s cost per hour of input audio, Gemini 3.8 Live Extended Thinking is cheaper: $3.50 versus $4.80. List prices are not directly comparable. GPT-Live-1 costs $0.05 per minute, but backend model and tool usage is billed separately. Gemini 3.8 Live bills audio per minute plus text tokens. Benchmark data: Artificial Analysis , accessed October 14, 2026. SpaceXAI’s blog lists frozen Arena Elo values of 1048 (GPT-Live-1) and 990 (Gemini). The API is compatible with the OpenAI Realtime API , so migration mostly means a new URL and key. Production teams should pin grok-voice-3.0 rather than the alias. Grok Voice 2.0 is now deprecated. Check out the official announcement , the Speech to Speech docs and the Artificial Analysis leaderboard . All credit goes to the researcher of this project. Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. The post Meet Grok Voice 3.0: SpaceXAI Voice Agent Model Ranks #1 on Artificial Analysis appeared first on MarkTechPost .",
+      "published_date": "2026-10-15",
+      "tags": [
+        "Agentic AI",
+        "Artificial Intelligence",
+        "Audio Language Model",
+        "Editors Pick",
+        "Language Model",
+        "New Releases",
+        "Python",
+        "Staff",
+        "Tech News",
+        "Technology",
+        "TTS",
+        "Uncategorized",
+        "Voice AI"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, mcp, reasoning, extended thinking",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 52,
+    "llm_reason": "語音模型刷新榜單但未公開架構細節，可寫性一般",
+    "novelty": 6,
+    "impact": 10,
+    "trending": 15,
+    "practicality": 11,
+    "blog_worthiness": 10
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "Meta’s Muse Spark Open now available in Amazon SageMaker JumpStart",
+      "url": "https://aws.amazon.com/blogs/machine-learning/metas-muse-spark-open-now-available-in-amazon-sagemaker-jumpstart/",
+      "authors": [
+        "Aris Tsakpinis"
+      ],
+      "abstract": "Muse Spark Open, Meta’s coding-optimized open-weight model, is now available in Amazon SageMaker JumpStart , the machine learning (ML) hub of Amazon SageMaker AI . The model was trained on real developer workflows, such as multi-file refactors and long debugging sessions, and it supports a context window of 1 million tokens. You can deploy it to a SageMaker AI endpoint in your own AWS account in a few steps, without managing the serving infrastructure yourself. SageMaker JumpStart offers two variants: BF16 ( Muse-Spark-Open-816B-A42B ) and NVFP4 quantized ( Muse-Spark-Open-816B-A42B-NVFP4 ). In this post, we introduce Muse Spark Open and show you how to deploy the model with Amazon SageMaker Studio and the SageMaker Python SDK , send it a first inference request, and clean up. Meta describes Muse Spark Open as a coding-optimized model trained for agentic coding workflows, with a focus on first-attempt accuracy, tool calling, and understanding of large codebases. It’s a reasoning model, and it accepts text, images, documents, audio, and audio-video as input and returns text. Muse Spark Open uses a mixture-of-experts (MoE) architecture with 816 billion total parameters, of which 42 billion are active for each token. The model holds the capacity of a very large network, while the compute it spends on each token is closer to that of a much smaller dense model. Meta releases the weights under the Muse Model License, which includes the Muse Spark Usage Policy. The following table summarizes the model. Meta trained Muse Spark Open on the way developers work in real repositories: code generation, debugging, multi-file refactors, and tasks that run for a long time. With the 1 million-token context window, the model can take in a whole project, including its dependencies, legacy code, and thousands of files. You don’t need to split a task into smaller pieces to fit the context. Meta also designed Muse Spark Open as an agentic model from the start. Meta says the model plans, acts, observes the result, and corrects itself over long horizons, rather than making single tool calls. As a reasoning model, it works through a task before it acts, and the SageMaker AI endpoint returns that reasoning alongside the answer, so you can follow what an agent is doing and why. Meta trained the model to browse the web, coordinate subagents for work that can be split up, and operate computers across desktop, mobile, and browser environments. These are capabilities of the model. On SageMaker AI, your application or agent framework provides the tools, browser, and computer-use environment that the model calls. Beyond code, Meta reports that Muse Spark Open reasons across images, documents, audio, and video. Two properties of the model shape how you serve it. First, sparse activation keeps per-token compute low, but serving still requires enough GPU memory to hold all 816 billion parameters, so the instance choice comes down to memory capacity. Second, the NVFP4 variant stores weights in NVIDIA’s 4-bit floating point format, which needs roughly a quarter of the memory of the BF16 weights. On SageMaker AI, that difference decides the instance: the NVFP4 variant runs on ml.p5e.48xlarge , and the BF16 variant runs on ml.p6-b300.48xlarge . That makes NVFP4 the variant to try first when you size for cost. Evaluate it on your own workloads to confirm the quality fits your use case. With open weights on SageMaker AI, you also control the deployment. The endpoint runs in your AWS account, so your source code and prompts are processed on infrastructure that you configure and control. You can attach the endpoint to your own Amazon Virtual Private Cloud (Amazon VPC) , encrypt its storage volume with a key from AWS Key Management Service (AWS KMS) , and turn on network isolation for the container. You also choose the instance type and scaling limits, and you pin the model version, so the model only changes when you redeploy. You can use Muse Spark Open for a wide range of applications. Meta’s focus on coding and agentic workflows suits it to the following use cases: You can deploy Muse Spark Open from SageMaker Studio or with the SageMaker Python SDK. Each path creates a real-time SageMaker AI endpoint in your account. Before you start, make sure that you have the following: The instances that host Muse Spark Open are multi-GPU instances, and you pay for an endpoint for as long as it runs, whether or not it serves requests. Delete the endpoint when you finish, as described in the clean-up section of this post. For rates, refer to Amazon SageMaker AI pricing . The SageMaker Studio path suits a first evaluation: you find the model, review its license, and deploy it from one model detail card. To find Muse Spark Open in SageMaker JumpStart Figure 1 shows the model detail card, which lists the model description, license, and the Deploy option. Figure 1: The Muse Spark Open model detail card in SageMaker JumpStart Figure 2 shows the deployment settings for the NVFP4 variant. Figure 2: Deployment settings for Muse Spark Open Deployment typically takes 15–20 minutes while SageMaker AI provisions the instance and loads the weights. When the endpoint status changes to InService , the endpoint is ready for requests, as shown in Figure 3. Figure 3: The Muse Spark Open endpoint in service SageMaker JumpStart identifies each variant by a model ID: The following code deploys the NVFP4 variant with SageMaker Python SDK v3. You can run it in a SageMaker Studio notebook, which uses your domain’s execution role. In any other Python environment with AWS credentials, pass your SageMaker AI execution role with the role_arn parameter. Muse Spark Open is a gated model, so you must set accept_eula=True to deploy it. To pin a specific model version, add model_version to JumpStartConfig . When the endpoint is in service, send it a request with the invoke method. The endpoint accepts an OpenAI-compatible chat payload with a messages list and returns a chat completion. The final answer is in message.content , the model’s reasoning is in message.reasoning_content , and usage.reasoning_tokens reports how many tokens the reasoning used. Because Muse Spark Open is a reasoning model, leave enough room in max_tokens for its reasoning and the final answer. The endpoint also supports streaming. To receive tokens as they’re generated, add \"stream\": true to the request body and call endpoint.invoke_with_response_stream instead of invoke . To stop incurring charges, delete the endpoint when you no longer need it. If you deployed with the SDK, delete the model, the endpoint, and the endpoint configuration: If you deployed from SageMaker Studio, delete the endpoint in the SageMaker AI console: choose Inference , then Endpoints , select the endpoint, and choose Actions , Delete . In this post, we showed how to deploy Muse Spark Open, Meta’s coding-optimized open-weight model, from SageMaker JumpStart to an endpoint in your own AWS account. You used SageMaker Studio or the SageMaker Python SDK and sent the model a first inference request. Benchmark both variants on your own repositories before you choose an instance for production. To get started, search for Muse Spark Open in SageMaker JumpStart in SageMaker Studio. For more deployment options, such as inference components and optimized deployment configurations, refer to JumpStart foundation model usage in the Amazon SageMaker AI Developer Guide. Before you deploy, review the Muse Model License, which SageMaker JumpStart shows when you deploy the model. For help planning a production deployment, contact AWS .",
+      "published_date": "2026-10-15",
+      "tags": [
+        "Amazon SageMaker AI",
+        "Amazon SageMaker JumpStart",
+        "Announcements",
+        "Intermediate (200)"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, computer use, reasoning, reasoning model",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 49,
+    "llm_reason": "僅為雲端部署教學，模型本身非自研，技術貢獻有限",
+    "novelty": 3,
+    "impact": 8,
+    "trending": 13,
+    "practicality": 16,
+    "blog_worthiness": 9
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "CopilotKit Releases CLiF: A Continual Learning Platform That Turns Agent Traces and User Actions into Skills, Evals, and Fine-Tuning Data",
+      "url": "https://www.marktechpost.com/2026/10/15/copilotkit-releases-clif-a-continual-learning-platform-that-turns-agent-traces-and-user-actions-into-skills-evals-and-fine-tuning-data/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "Teams shipping AI agents at scale keep running into the same pattern. Even agents built on top-tier models like Fable and Astra struggle to carry out complex, end-to-end tasks inside a specific product consistently enough to deploy. So teams grind out evals for the workflows that matter most, often hundreds or thousands of hand-written cases, and then improve the agent bit by bit through prompt edits, harness fixes, and special cases until it passes enough of them to go live. Meanwhile, the product’s own users carry out those same tasks every day, and know which actions to take and in what order. CopilotKit, the company behind the open-source CopilotKit framework and the AG-UI protocol, released CLiF , a platform for continual learning from full-stack trajectories, in early access . CLiF securely captures what the agent does and what users do in the product, and turns that record into skills, production-based evals, and fine-tuning datasets, all exportable along with the raw trajectories. CopilotKit is open source , with more than 38,000 stars on GitHub. Most agent observability today is centered on the agent. Tracing tools capture prompts, tool calls, and model outputs, which shows where the agent went wrong while leaving the correct path out of view. Product analytics covers the other side with clicks, funnels, and session replays, though that data is built for a person reading a dashboard rather than for teaching an agent a task or testing it. In most production agent stacks, the two never end up on the same timeline. That gap matters because the agent learns a product from prompts, skills, tool descriptions, and exposed APIs, and has to work out on its own how those pieces fit together for a real task. The people using the product have already solved that, often hundreds of times. CopilotKit’s view, laid out in its explainer on agent learning , is that how users actually get work done is the most valuable dataset any agent team has, and that it is rarely captured in a form an agent can learn from. CLiF is part of CopilotKit Intelligence and is built around a single primitive, the full-stack trajectory. It is captured through AG-UI (Agent-User Interaction Protocol) , the open protocol CopilotKit created to connect agents to user-facing applications. Because AG-UI sits between the agent and the user on any surface, it can see both sides of a task: Together, that is a full-stack trajectory. AG-UI already streams the agent’s events to the frontend, so securely capturing user actions over the same protocol puts both halves in one stream from the start, with no separate analytics pipeline to stitch them together later. Each user session becomes a single trajectory that a team can open in CopilotKit Intelligence and replay step by step, with clicks, server requests, and agent messages in the order they happened. CopilotKit describes the learning loop in four stages. 1. Capture. Trajectories stream into CopilotKit Intelligence and are assigned to learning containers, which scope learning to one kind of work, such as billing support or customer onboarding. The runtime picks the container for each session through the getTrajectoryLearningContainerIds callback, and sessions can be moved in or out of a container later in the Intelligence UI. Each container learns only from its own sessions. 2. Find patterns. Analysis runs on a schedule once a container passes a set threshold of new sessions, and teams can also trigger it manually. Each run works from a frozen snapshot of the container’s sessions and surfaces Insights: recurring requests, repeated corrections, and the friction users quietly work around. CopilotKit sees that friction as the strongest signal, since it tends to repeat across thousands of sessions and shows exactly what the agent should learn next. Every Insight cites the specific events behind it and links straight to the source trajectory. 3. Review. When the evidence supports a reusable lesson, CLiF proposes it as a skill, written as a plain SKILL.md file. The analysis service cannot publish anything on its own: a person approves or rejects each proposal, either in the Intelligence UI or through the CopilotKit CLI. Published skills are versioned and can be retired at any time. 4. Deliver and export. Published skills reach the agent without a redeploy, and teams that need stability can pin the agent to a fixed skill revision. For any other agent or MCP server, skills can be downloaded as plain files with copilotkit skills download <container> –output <dir>. The trajectories themselves can be exported as raw event data from the Intelligence dashboard. For early access teams, the same pipeline also produces eval candidates and fine-tuning datasets from these trajectories. On the agent side, CLiF builds on Automatic Learning , the capability in CopilotKit Intelligence that CopilotKit also positions as the foundation for self-improving agents . Automatic Learning learns from the conversations users have with the agent. CLiF extends the same loop to product trajectories, so it also learns from the work users do directly in the product, outside the chat. Every agent conversation is stored in full through AG-UI Streams : messages, tool calls, generative UI, state, approvals, and files. Developers choose which threads count as evidence by returning a container ID from the getLearningContainerId callback on the CopilotKit runtime, which is the agent-side counterpart to the trajectory callback. Teams that already have an agent in production can import existing history from a LangGraph Server or LangSmith Deployment instead of starting from zero. Skill delivery works through adapters for LangGraph (Python and TypeScript), Mastra, Google ADK, Microsoft Agent Framework, CopilotKit’s built-in agent, and more. The adapter adds a catalog and two tools, copilotkit_load_skill and copilotkit_read_skill_file, and the model loads a skill when the task calls for it. Developer instructions keep precedence, so skills cannot override the agent’s role, safety rules, or tool restrictions. Skills are only the first output. The same trajectories feed four outputs in total, all exportable into a team’s existing stack: CopilotKit’s view is that teams should keep the eval and observability tools they already use, and CLiF supplies the data those tools have been missing. Say you’re the CTO of a project management platform similar to Linear, where engineering teams plan sprints and track issues. You want agents to take over routine work in your product and do it reliably, both your own built-in agent and external agents like Claude that customers connect through your MCP server. Sprint close-out is one of the first tasks on the list. Your platform already has a one-click option that moves every unfinished issue into the next sprint, and your docs describe close-out exactly that way. So an agent asked to close out a sprint does just that, and moves every unfinished issue forward. Once CLiF is securely capturing product trajectories, thousands of close-outs show that team leads on your platform do more than that. Most use the one-click option, then spend the next few minutes fixing the result: Nobody on your team designed this routine, and few users would describe it if asked. It exists only in the clicks and requests that follow the one-click move. Agent traces never see it, because users do it themselves. Product analytics records the extra clicks without their meaning, and spotting the pattern in session replays would mean watching thousands of recordings. CLiF surfaces the routine as an Insight, citing the exact sessions behind it, and proposes a skill for the full close-out. After your team reviews and publishes it, your built-in agent picks it up without a redeploy, and you ship the same skill with your MCP server so Claude and other connected agents follow it too.",
+      "published_date": "2026-10-15",
+      "tags": [
+        "Agentic AI",
+        "AI Agents",
+        "AI Infrastructure",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Computer-Use",
+        "Editors Pick",
+        "Enterprise AI",
+        "For Devs",
+        "New Releases",
+        "Promote",
+        "Software Engineering",
+        "Sponsored",
+        "Staff",
+        "Tech News",
+        "Technology",
+        "Uncategorized"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, mcp, fine-tuning, safety",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 48,
+    "llm_reason": "贊助內容包裝的agent持續學習平台，概念有趣但宣傳味重",
+    "novelty": 8,
+    "impact": 9,
+    "trending": 11,
+    "practicality": 11,
+    "blog_worthiness": 9
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "Why do LLM pelicans look like this?",
+      "url": "https://arcfu.com/post/the-emperor-pelican-has-no-clothes/",
+      "authors": [
+        "pcwelder"
+      ],
+      "abstract": "Why do all LLM pelicans look like this? When given the prompt Generate an SVG of a pelican riding a bicycle . Original SVGs from Simon Willison’s runs · highest reasoning setting that returned an SVG When they could look like these? This is the LLM diversity collapse problem no one is talking about. PS: We benchmarked this diversity collapse in UI design as part of our research on LLM creativity . Design Creativity Bench Creativity score — Human reference 92.3 01 GPT-6 Astra 65.5 02 GPT-6.1 Sol 63.7 03 Grok 4.7 62.2 04 Gemini 3.8 Flash 60.6 View the full leaderboard ↗ DD Dipanjan Dey ✓ @Dipanjan_Dey 𝕏 ⚠️ Frontier AI models still fall significantly short of human designers on design creativity. ⚠️ Introducing Design Creativity Bench, a new benchmark evaluating AI models’ creativity on UI design tasks. Expand post ⌄ Collapse post ⌃ DD Dipanjan Dey ✓ @Dipanjan_Dey 𝕏 ⚠️ Frontier AI models still fall significantly short of human designers on design creativity. ⚠️ Introducing Design Creativity Bench, a new benchmark evaluating AI models’ creativity on UI design tasks. Despite rapid advances in their ability to generate functional websites and product UIs, leading AI models still struggle to make creative design decisions. We evaluated 16 frontier models across 80 open-ended UI tasks, each adapted to two distinct product domains alongside human designer references. Existing UI benchmarks often measure a single output quality metric. Instead, we measure three dimensions of design creativity: – Originality: How distinct a model's designs are from other models' outputs for the same brief. – Creative Range: How much a model adapts its design decisions when the product domain changes. – Appropriateness: How well the generated UI satisfies the functional requirements of the brief. The results reveal a substantial gap in overall creativity: The best model, @OpenAI GPT-6 Astra, scores 65.5 against a human reference of 92.3. We're publishing the full leaderboard, methodology, and reproducible evaluation framework to make design creativity a measurable dimension of frontier model capability. 📊 Benchmark Leaderboard: https://kombai.com/benchmark/ 📄 Paper: https://arxiv.org/abs/2610.11539 🤗 HuggingFace Datasets: https://huggingface.co/datasets/Kombai/design-creativity-bench 🔗 Github: https://github.com/kombai-io/design-creativity-bench/ View on X ↗\n\n(163 points, 142 comments on Hacker News)",
+      "published_date": "2026-10-15",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 163,
+        "num_comments": 142,
+        "hn_url": "https://news.ycombinator.com/item?id=50090443",
+        "object_id": "50090443"
+      }
+    },
+    "rule_score": 20.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: reasoning",
+      "⬆️ HN 熱門: 163 points"
+    ],
+    "llm_score": 59,
+    "llm_reason": "LLM輸出多樣性坍縮現象配新創意benchmark，貼合研究熱點",
+    "novelty": 9,
+    "impact": 10,
+    "trending": 15,
+    "practicality": 10,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "量子位",
+      "title": "量子位智庫釋出Agent落地報告！拆解企業智慧化六大斷點，附全鏈路破局框架",
+      "url": "https://www.qbitai.com/2026/10/503614.html",
+      "authors": [
+        "思邈"
+      ],
+      "abstract": "量子位智庫釋出Agent落地報告！拆解企業智慧化六大斷點，附全鏈路破局框架 思邈 2026-10-15 16:48:31 來源： 量子位 Agent究竟該如何深入業務毛細血管？ 量子位智庫 公眾號AI123All 過去這一年，幾乎沒有哪家企業不在高喊“全面擁抱AI”。 Chatbot上了，Agent也用了，內部彙報裡“效率提升XX%”的數字越來越好看。 但如果去問業務負責人一個樸素的問題——缺貨少了嗎？交付快了嗎？客戶滿意度漲了嗎？答案往往沒那麼確定。 事實上，絕大多數企業的智慧化轉型，正集體遭遇一場“虛假繁榮”。我們習慣了把AI當成個人提效工具，卻忽略了一個殘酷的真相： 個人任務的高效，並不等同於企業經營價值的兌現。 如果AI無法真正打通 資料、判斷、行動與系統控制 的全鏈路閉環，企業的智慧化就只能永遠卡在規模化應用的最後一公里。 企業級AI的下半場，究竟該如何破局？Agent又該如何真正深入業務毛細血管，完成面向未來的系統性重構？ 近日，量子位智庫正式釋出報告 《Agent驅動的企業智慧化：單點提效到規模化重塑》 。在這份報告中，我們試圖撥開大模型落地的迷霧，尋找企業智慧化規劃的全新解法。 AI用起來了，但卡在哪？ 企業AI落地過程中容易卡住的地方，用一個場景就能串起來看： 門店缺貨風險處置 。 同一個經營分析助手，技術團隊覺得報告生成了就算完成，業務人員覺得原因查清了才算交代，管理者關心的是缺貨到底有沒有減少——三方的完成標準壓根對不上。 資料層面也有類似的錯位，賬面上顯示有庫存，但已分配的、凍結的扣掉之後，真正能調的量和系統裡那個數字差得不少。AI拿著賬面數字去做判斷，起點就是歪的。 即使資料準了、分析對了，建議到執行之間還隔著人工填單、提交審批、跟蹤配送這一整條鏈路。建議進了系統並不等於事情辦完了，而完成狀態能不能回傳給AI，決定了任務閉環能不能真正合上。 更不用說每一步操作背後都涉及 誰有權發起、誰來審批、出了問題誰來接管 這些權責問題。 這類斷點一共被歸納出六個： 任務定義、資料可信度、判斷的可驗證性、行動落地、許可權責任劃分，以及價值衡量與複製 。 每個單獨看都不致命，但串在一起，就解釋了為什麼很多企業的AI專案停在了“局部能用、整體推不動”的狀態。 這些沒完成的工作，最終還是回到了人的手裡，變成漫長的返工、等待和兜底。 那麼，企業究竟該如何系統性地破除這些盲區？ 一套圍繞業務結果的全鏈路框架 既然局部的小修小補無法解決根本問題，企業該如何重構一套行之有效的智慧化解法？ 量子位智庫在報告中提出，成熟的企業級Agent絕不僅是一個孤立的問答工具，而必須具備 貫通任務、上下文、判斷、行動、控制與衡量的“全鏈路能力” 。 其中，一切智慧決策的起點，在於打破資料孤島，建立起 真正可信的上下文環境 。 很多時候，AI之所以在業務分析中顯得“不夠聰明”，根本原因在於底層資料和業務語義的脫節——欄位定義混亂、版本口徑不一，AI自然無法給出靠譜的結論。 要想讓Agent真正成為懂業務的“參謀”，必須先讓資料從單純的“能查到”進化為全鏈路的“可信賴”。 在這方面，一些領先的技術實踐為行業提供了很好的範本。例如網易智企旗下的資料智慧品牌 數帆 ，通過其開發治理一體化平臺 EasyData ，將資料開發、質量、安全與業務治理深度融合，為Agent穩定輸送了高質量、可追溯的資產語義。 在此基礎上，依託網易智企· 知數DataAgent ，企業能夠將分散的指標、知識庫與自然語言查詢無縫打通，讓AI真正聽懂業務語言。 在實際落地中，這種全鏈路的貫通正在釋放業務勢能。以 三花智控 為例，藉助數帆在底層統一資料與語義口徑，AI能夠自動拉取預實資料並識別偏差，將原本耗時 2-3小時 的預算分析大幅壓縮至 10分鐘 ，讓財務團隊從繁重的報表處理轉向深度的業務研判。 而當智慧化從分析決策走向更深處的 軟體工程與應用交付 時，新的挑戰隨之出現：如何避免Coding Agent開發應用時的需求走樣與前後端聯調費時？ 一個值得關注的變化是，企業正在嘗試把AI開發從“自由生成”拉回到更可控的工程流程中。 以 網易智企·CodeWave SDD（規格驅動開發，Spec-Driven Development）為例，其核心思路並不是讓AI直接“開寫”，而是把交付拆成需求、架構、開發、測試、釋出、交付多級逐級傳導： 業務需求先轉化為結構化規格，再向下推導技術設計與任務拆分，最後才進入程式碼生成。 每一環都有明確的輸入輸出和校驗卡點，使需求澄清、開發、測試到釋出的全流程始終可控、可追溯。 這種“逐級傳導”恰好對應了市面上常見SDD方案的三處斷點：規格寫法不標準、缺少澄清機制，對大模型只是軟約束；需求一複雜就撐爆上下文視窗，引發遺忘與幻覺；能力又只覆蓋研發一段，需求與交付兩頭落空。 CodeWave SDD則逐一補齊，以EARS標準化需求格式並顯式澄清歧義，用模組化拆分與細粒度子任務隔離上下文、化整為零，再把需求、設計、編碼、測試到釋出串成多角色協同的端到端鏈路。 這種方式已經開始在實際專案中體現出效率價值。比如， 空格數智科技 在其新能源CRM專案中，將開發週期從60人天縮短至16人天； 上海企通數字科技 在其BIMS系統開發中實現約2.5倍提效，功能首次可用率達到78.63%。 跑通一個Demo容易，複製100次才是真本事 框架有了，下一個問題是怎麼起步。 很多企業的做法是鋪開試點、多線並進，量子位智庫給出的建議是： 先選一個高價值場景，把閉環跑通，再考慮擴展。 選場景有五個篩選維度： 聽起來是常識，但實際操作中很多團隊是反過來的——哪個技術上容易做就先做哪個，做完發現業務價值不大，推廣也就沒了動力。 選定場景之後，試點階段要做的事情比想像中細緻。 現有流程裡哪些環節可以交給系統處理，哪些仍需人工複核，異常情況怎麼走，這些都需要重新設計而不是簡單疊加。 一個容易踩的坑是，保留全部舊流程再額外加上AI結果的檢查，結果整體投入反而增加了。 試點跑完之後，企業往往會面臨三個選擇： 但真正決定企業能不能從“1”走向“100”的，還在後面—— 把第一次成功留下來的經驗，沉澱成可以反覆複用的智慧資產。 比如已經驗證過的指標口徑、介面元件、審批規則、異常樣本，不必每換一個場景就重新做一遍。新的任務可以直接複用這些公共能力，只針對具體業務做必要調整。 所以，規模化複製的本質，是讓第2次、第10次、第100次建設時，都能站在前一次的基礎上繼續往前走。 免費獲取完整報告 企業智慧化走到今天，拉開差距的，其實是企業能不能把模型能力接進業務、組織和流程，最終變成看得見的經營結果。 好的智慧化規劃，從來不是從工具出發，而是需要“ 從業務結果向前追溯 ”；而面向未來的Agent，核心更在於做到“ 人定邊界，AI推進 ”。 這份報告提供的，恰好是這樣一個 從診斷問題、搭建框架到落地驗證的完整思路 。 無論你是正在推進AI試點的業務負責人，還是被要求“用AI提效”但不知道怎麼衡量結果的技術團隊，又或者是需要在規模化階段協調多方職責的管理者，大機率都能在裡面找到對應當前階段的參考。 很多細節，比如怎麼定義任務的完成標準、怎麼設計前後對照的衡量方式、怎麼把試點成果沉澱為可複用的資產……文章裡沒有做一一展開，但可能正是你當前卡住的那個環節。 完整報告可在下方連結 免費下載 ： https://jkhbjkhb.feishu.cn/wiki/W5D7wuDcbiPXDLkaRLQcAJpOn8f 版權所有，未經授權不得以任何形式轉載及使用，違者必究。 Agent 企業智慧化 智庫報告 思邈 AI時代，商學院這樣培養未來商業領袖 2026-10-15 國內最年輕AI教授創業：要讓世界模型走向全身全模態 2026-10-14 告別資料散落，讓知識持續積累：openJiuwen首發個人知識空間，重塑個人辦公智慧體新體驗！ 2026-10-14 華為哈勃投了個98年博士！讓機器人皮膚變色，團隊平均23歲 2026-10-13 相關閱讀",
+      "published_date": "2026-10-15",
+      "tags": [
+        "智庫輪播",
+        "資訊",
+        "Agent",
+        "企業智慧化",
+        "智庫報告"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "量子位",
+        "feed_url": "https://www.qbitai.com/feed"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 53,
+    "llm_reason": "企業Agent落地斷點框架，貼合熱點但偏諮詢報告缺程式碼",
+    "novelty": 8,
+    "impact": 11,
+    "trending": 15,
+    "practicality": 7,
+    "blog_worthiness": 12
+  }
+]
