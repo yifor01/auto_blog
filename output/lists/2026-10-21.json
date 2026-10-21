@@ -1,0 +1,666 @@
+{
+  "date": "2026-10-21",
+  "github": [
+    {
+      "title": "tashfeenahmed/freellmapi",
+      "slug": "tashfeenahmed-freellmapi",
+      "url": "https://github.com/tashfeenahmed/freellmapi",
+      "abstract": "FreeLLMAPI 7.4 billion tokens per month.  34 free LLM providers. 635 free model endpoints. One OpenAI-compatible endpoint. Aggregate free tiers from dozens of providers, plus custom OpenAI-compatible chat, embedding, image, and audio endpoints, behind a single /v1 API. Keys are stored encrypted. A router picks the best available model for each request, falls over to the next provider when one is rate-limited, and tracks per-key usage so you stay under every free-tier cap. freellmapi.co · browse the full catalog: 474 model families, 635 free endpoints English · 簡體中文 · Русский Your router updates its own model catalog from a signed feed: new free models, quota changes, and compatibility fixes land without a git pull . Free installs get the monthly snapshot, so a model reaches them 30 days after it joins the live feed; premium routers get it the same day. Go live at freellmapi.co ($19/yr, cancel anytime). Contents Why this exists Supported providers Compatible CLIs & coding agents How it compares Features Quick start Desktop app Works with OpenAI-compatible clients Languages Premium (live catalog) Using the API Screenshots How it works FAQ Limitations Contributing Disclaimer Guides: Install & deploy · API reference · Clients & coding agents · Prompt compression · Architecture & internals · Documentation index · Contributor guide Why this exists Every serious AI lab now offers a free tier, a few million tokens a month, a few thousand requests a day. On its own each tier is a toy. Stacked together, they add up to roughly 7.4 billion tokens per month of working inference capacity, across 474 model families / 635 provider endpoints from small-and-fast to reasonably capable. The problem is that stacking them by hand is painful: thirty-four different SDKs, thirty-four different rate limits, thirty-four places a request can fail. FreeLLMAPI collapses that into one OpenAI-compatible endpoint. Point any OpenAI client library at your local server, and it routes transparently across whichever providers you've added keys for. And the free-tier landscape shifts weekly: providers launch models, retire them, and change quotas without notice. FreeLLMAPI tracks all of that for you. The router pulls a signed model catalog from freellmapi.co on its own, so your install keeps up without a git pull . See Premium (live catalog) for how fast it keeps up. Supported providers Google Groq Cerebras OpenCode Zen Mistral OpenRouter Cloudflare Cohere Z.ai (Zhipu) NVIDIA HuggingFace ModelScope Qwen3 · DeepSeek V4 · GLM-5 (needs Aliyun cn binding) … and 22 more free providers Plus a custom provider — point chat, embedding, image, or audio models at any OpenAI-compatible endpoint (llama.cpp, LM Studio, vLLM, a local Ollama, or a remote gateway) from the Keys page. The full, always-current list lives at freellmapi.co/models with per-model rate limits, context windows, and free-token budgets. Compatible CLIs & coding agents Claude Code Codex CLI Gemini CLI Cursor Cline Roo Code OpenCode Aider … plus Continue, Goose, Qwen Code, Kilo Code, Crush, Zed, JetBrains AI, DeepSeek Harness, MiMo Code, AtomCode, OpenClaw, Hermes Agent, Pi, Reasonix, ZCode and any OpenAI-compatible, Anthropic, Gemini or Ollama client Most agents configure themselves with one command that reads your live catalog, backs up the existing config and merges into it: npx freellmapi setup-claude --url http://localhost:3001 --api-key < unified-key > All supported agents and their setup commands → · Per-tool recipes, MCP server and URL tokens → How it compares Based on public documentation, July 2026 — corrections welcome. Features Every OpenAI-style surface — /v1/chat/completions , /v1/responses (what Codex CLI needs), /v1/completions (editor ghost-text autocomplete), /v1/images/generations , /v1/videos/generations , /v1/audio/speech , /v1/audio/transcriptions , /v1/embeddings , and /v1/models — streaming and non-streaming, from the official SDKs or any OpenAI-compatible client. API reference → Anthropic Messages API — /v1/messages speaks Anthropic's wire format over the same router, so Claude Code and the official Anthropic SDKs run against your free pool. Details → Native Gemini + Ollama surfaces — Gemini CLI can use /v1beta ( generateContent , streaming, token counting, models), while opt-in Ollama emulation serves NDJSON chat/generate, tags, metadata, and embeddings for Zed, JetBrains, and other local-model clients. Fusion (multi-model synthesis) — request the virtual fusion model and the router fans your prompt out to a panel of diverse free models in parallel, then a judge model synthesizes one answer from the drafts. Details → Image, video & speech generation — /v1/images/generations , /v1/videos/generations , and /v1/audio/speech route across the providers that serve media models; images and speech also accept custom OpenAI-compatible media endpoints. Video jobs are normalized across synchronous and queued providers and return a completed MP4. Tool calling & structured outputs — OpenAI-style tools round-trip across providers (plain-text tool calls are rescued into real tool_calls ), plus response_format , seed , logprobs , penalties, and the rest of the sampling params passed through per provider. Smart routing, six strategies — live per-model speed/capability/reliability scores rank your chain; automatic fallover retries the next model on 429/5xx with cooldowns and key rotation. Routing in detail → Unified models & profiles — the same model on several providers collapses into one entry with strict in-group failover; named fallback-chain profiles (a coding chain, a vision chain) switch from the dashboard or per request via auto:<profile> , and custom chains can be renamed in place from the chain manager. Per-key rate tracking — RPM/RPD/TPM/TPD counters per (platform, model, key) that learn providers' reported ceilings, so routing always stays under every cap. Self-updating model catalog — the router syncs a signed catalog from freellmapi.co twice a day: new models, quota changes, and provider quirk fixes land automatically. Free installs track the monthly snapshot, which each model joins 30 days after it lands in the live feed; premium routers get it same-day. Premium → Sticky sessions & context handoff — conversations stay on one model for 30 minutes; an optional compact handoff note keeps the thread coherent when a mid-chat switch does happen. Details → Prompt compression (opt-in) — a shared, fail-open request pipeline can deduplicate prompts, filter tool output, compact repeated JSON, and trim stale context before cache lookup and routing. Details → Encrypted keys, one token out — provider keys are AES-256-GCM encrypted in SQLite and decrypted in-memory per request; your apps only ever see a single unified freellmapi-… bearer token. Admin dashboard & analytics — React UI to manage keys, reorder the chain, run a playground, and read p50/p95/TTFT analytics over 24h–90d windows; login-gated, dark/light themes, 60 languages . ChatGPT-ready MCP server & interactive docs — ChatGPT and other MCP clients can call FreeLLMAPI inference, list usable models, inspect provider health/usage/cache/routing metadata, and manage the routing strategy over /mcp ; a dependency-free OpenAPI viewer lives at /v1/docs . ChatGPT and coding agents → Ops niceties — opt-in response cache, encrypted DB backups, periodic key health checks, bulk key import/export, declarative startup config. Install & deploy → Runs anywhere Node 20+ runs — Windows, macOS, Linux servers, or a small ARM SBC (Raspberry Pi included). ~40 MB RSS at idle behind PM2 / systemd / whatever supervisor you prefer. The scope is deliberately narrow — see what's not supported yet . Quick start One-liner (Docker required — sets up ~/freellmapi , generates an encryption key, pulls the image, and starts the container): curl -fsSL https://freellmapi.co/install.sh | bash Prefer to read before you pipe to bash? The script is here . Re-running it is safe: your .",
+      "stars_today": 684,
+      "language": "TypeScript"
+    },
+    {
+      "title": "openai/codex",
+      "slug": "openai-codex",
+      "url": "https://github.com/openai/codex",
+      "abstract": "Codex CLI is a coding agent from OpenAI that runs locally on your computer. If you want Codex in your code editor (VS Code, Cursor, Windsurf), install in your IDE. If you want the desktop app experience, run codex app or visit the Codex App page . If you are looking for the cloud-based agent from OpenAI, Codex Web , go to chatgpt.com/codex . Quickstart Installing and running Codex CLI Run the following on Mac or Linux to install Codex CLI: curl -fsSL https://chatgpt.com/codex/install.sh | sh Run the following on Windows to install Codex CLI: powershell -ExecutionPolicy ByPass -c \" irm https://chatgpt.com/codex/install.ps1 | iex \" The standalone installers download from https://releases.openai.com/codex by default and fall back to GitHub Releases if a metadata or asset download is unavailable. To force GitHub Releases, set CODEX_INSTALLER_USE_RELEASES_OPENAI_COM to false ( 0 and no are also accepted): curl -fsSL https://chatgpt.com/codex/install.sh | CODEX_INSTALLER_USE_RELEASES_OPENAI_COM=false sh $ env: CODEX_INSTALLER_USE_RELEASES_OPENAI_COM = ' false ' ; irm https: // chatgpt.com / codex / install.ps1 | iex Codex CLI can also be installed via the following package managers: # Install using npm npm install -g @openai/codex # Install using Homebrew brew install --cask codex Then simply run codex to get started. You can also go to the latest GitHub Release and download the appropriate binary for your platform. Each GitHub Release contains many executables, but in practice, you likely want one of these: macOS Apple Silicon/arm64: codex-aarch64-apple-darwin.tar.gz x86_64 (older Mac hardware): codex-x86_64-apple-darwin.tar.gz Linux x86_64: codex-x86_64-unknown-linux-musl.tar.gz arm64: codex-aarch64-unknown-linux-musl.tar.gz Each archive contains a single entry with the platform baked into the name (e.g., codex-x86_64-unknown-linux-musl ), so you likely want to rename it to codex after extracting it. Using Codex with your ChatGPT plan Run codex and select Sign in with ChatGPT . We recommend signing into your ChatGPT account to use Codex as part of your Plus, Pro, Business, Edu, or Enterprise plan. Learn more about what's included in your ChatGPT plan . You can also use Codex with an API key, but this requires additional setup . Docs Codex Documentation Contributing Installing & building Open source fund This repository is licensed under the Apache-2.0 License .",
+      "stars_today": 538,
+      "language": "Rust"
+    },
+    {
+      "title": "Panniantong/Agent-Reach",
+      "slug": "panniantong-agent-reach",
+      "url": "https://github.com/Panniantong/Agent-Reach",
+      "abstract": "👁️ Agent Reach 給你的 AI Agent 一鍵裝上網際網路能力 當下最穩的接入方式，替你選好、裝好、體檢好——接入方式會換代，你不用操心 快速開始 · English · 日本語 · 한국어 · 支援平臺 · 設計理念 ❤️贊助商 想出現在這裡？ 點選摺疊 BrowserAct 支援從 Amazon、LinkedIn、X、Google Maps 等複雜網站提取你需要的任意資料。你只需用自然語言描述抓取需求，Agent 就會基於真實瀏覽器自動探索並測試頁面流程，生成可靠、可複用的資料採集 Bot，並返回結構化結果。無需手動構建爬蟲，無需編寫程式碼。BrowserAct 內建隱身瀏覽、驗證碼處理和高質量住宅代理，幫助你更穩定地完成複雜網頁資料採集。新使用者註冊即送 1000 積分， 立即免費試用 。 在騰訊雲 Lighthouse 秒級部署 OpenClaw 全能助手，可通過對話絲滑接入 Agent Reach，給你的 OpenClaw 一鍵裝上網際網路能力。 CoreClaw | 網頁抓取平臺與現成資料採集工具，CoreClaw 提供 100+ 現成資料採集工具，支援 Amazon、TikTok、Google Maps、Instagram、Facebook、YouTube 等平臺，無需程式碼，支援 JSON/CSV 匯出，僅對成功結果計費。 免費$3測試！ 優刻得星圖astraflow大模型 ，支援200+模型一鍵呼叫：內建 Kimi K3、DeepSeek V4/V3、Qwen 3、GLM5.2、happyhorse等全球領先開源大模型，無需自訓，開箱即用 為什麼需要 Agent Reach？ AI Agent 已經能幫你寫程式碼、改文件、管專案——但你讓它去網上找點東西，它就抓瞎了： 📺 \"幫我看看這個 YouTube 教程講了什麼\" → 看不了 ，拿不到字幕 🐦 \"幫我搜一下推特上大家怎麼評價這個產品\" → 搜不了 ，Twitter API 要付費 📖 \"去 Reddit 上看看有沒有人遇到過同樣的 bug\" → 403 被封 ，伺服器 IP 被拒 📕 \"幫我看看小紅書上這個品的口碑\" → 打不開 ，必須登入才能看 📺 \"B站上有個技術影片，幫我總結一下\" → 拿不到 ，通用下載工具被 B站風控全面攔截 🔍 \"幫我在網上搜一下最新的 LLM 框架對比\" → 沒有好用的搜尋 ，要麼付費要麼質量差 🌐 \"幫我看看這個網頁寫了啥\" → 抓回來一堆 HTML 標籤 ，根本沒法讀 📦 \"這個 GitHub 倉庫是幹嘛的？Issue 裡說了什麼？\" → 能用，但認證配置很麻煩 📡 \"幫我訂閱這幾個 RSS 源，有更新告訴我\" → 要自己裝庫寫程式碼 這些不難實現，但是需要自己折騰配置 每個平臺都有自己的門檻——要付費的 API、要繞過的封鎖、要登入的賬號、要清洗的資料。你要一個一個去踩坑、裝工具、調配置，光是讓 Agent 能讀個推特就得折騰半天。 Agent Reach 把這件事變成一句話： 幫我安裝 Agent Reach：https://raw.githubusercontent.com/Panniantong/agent-reach/main/docs/install.md 複製給你的 Agent，幾分鐘後它就能讀推特、搜 Reddit、看 YouTube、刷小紅書了。 已經裝過了？更新也是一句話： 幫我更新 Agent Reach：https://raw.githubusercontent.com/Panniantong/agent-reach/main/docs/update.md ⭐ Star 這個專案 ，我們會持續追蹤各平臺的變化、接入新的渠道。你不用自己盯——平臺封了我們修，有新渠道我們加。 ✅ 在你用之前，你可能想知道 💰 完全免費 所有工具開源、所有 API 免費。唯一可能花錢的是伺服器代理（$1/月），本地電腦不需要 🔒 隱私安全 Cookie 只存在你本地，不上傳不外傳。程式碼完全開源，隨時可審查 🔄 持續換代 每個平臺都是「首選 + 備選」多後端路由。某個接入方式失效了，我們換下一個，你無感（2026-06 例項：yt-dlp 被 B站風控封死 → 已切換 bili-cli，使用者零操作） 🤖 相容所有 Agent Claude Code、OpenClaw、Cursor、Windsurf……任何能跑命令列的 Agent 都能用 🩺 自帶診斷 agent-reach doctor 一條命令告訴你哪個通、哪個不通、怎麼修 支援的平臺 平臺 裝好即用 配置後解鎖 怎麼配 🌐 網頁 閱讀任意網頁 — 無需配置 📺 YouTube 字幕提取 + 影片搜尋 — 無需配置 📡 RSS 閱讀任意 RSS/Atom 源 — 無需配置 🔍 全網搜尋 — 全網語義搜尋 自動配置（MCP 接入，免費無需 Key） 📦 GitHub 讀公開倉庫 + 搜尋 私有倉庫、提 Issue/PR、Fork 告訴 Agent「幫我登入 GitHub」 🐦 Twitter/X 讀單條推文 搜尋推文、瀏覽時間線、讀長文 告訴 Agent「幫我配 Twitter」 📺 B站 搜尋 + 影片詳情（bili-cli，無需登入） 字幕（OpenCLI） 告訴 Agent「幫我配 B站」 📖 Reddit —（沒有零配置路徑：匿名介面已被封） 搜尋 + 讀帖子和評論 桌面裝 OpenCLI 用瀏覽器登入態；或 rdt-cli + Cookie 📘 Facebook — 搜尋、主頁、Feed、群組列表 桌面裝 OpenCLI（複用 Chrome 登入態） 📷 Instagram — 使用者搜尋、Profile、使用者最近帖子、Explore 桌面裝 OpenCLI（複用 Chrome 登入態） 📕 小紅書 — 搜尋、閱讀、評論 OpenCLI 只用使用者已有 Chrome 會話；MCP/存量工具用 Cookie-Editor 💼 LinkedIn Jina Reader 讀公開頁面 Profile 詳情、公司頁面、職位搜尋 告訴 Agent「幫我配 LinkedIn」 🎯 Boss直聘 CDP 鏈路體檢 搜尋崗位 + JD 全文（專用真 Chrome） 告訴 Agent「幫我配 Boss直聘」；Agent 開啟專用 Chrome，你手動登入 💻 V2EX 熱門帖子、節點帖子、帖子詳情+回覆、使用者資訊 — 無需配置 📈 雪球 股票行情、搜尋股票、熱門帖子、熱門股票排行 — 告訴 Agent「幫我配雪球」 🎙️ 小宇宙播客 — 播客音訊轉文字（Whisper 轉錄，免費 Key） 告訴 Agent「幫我配小宇宙播客」 不知道怎麼配？不用查文件。 直接告訴 Agent「幫我配 XXX」，它知道需要什麼、會一步一步引導你。 🍪 Twitter 只接受使用者通過 Cookie-Editor 手工匯出的內容。Agent Reach 不替使用者執行小紅書登入，也不讀取小紅書瀏覽器 Cookie；OpenCLI 只使用使用者已經存在且明確控制的 Chrome 會話。 agent-reach configure xhs-cookies 不會把 Cookie 注入 OpenCLI / Chrome；沒有現成會話時，改用 Cookie-Editor 匯出後配置 xiaohongshu-mcp / 存量工具。 Twitter Cookie 儲存後僅供 agent-reach doctor 檢查配置是否齊全；直接執行上游 twitter 命令前，仍需在當前程序環境中顯式設定 TWITTER_AUTH_TOKEN 和 TWITTER_CT0 。 🔒 Cookie 只存在你本地，不上傳不外傳。程式碼完全開源，隨時可審查。\n💻 本地電腦不需要代理。代理只有部署在伺服器上才需要（~$1/月）。 快速上手 ⚠️ OpenClaw 使用者請先確認 exec 許可權已開啟 Agent Reach 依賴 Agent 執行 shell 命令（ pip install 、 mcporter 、 twitter 等）。如果你的 OpenClaw 使用了預設的 messaging 工具配置，Agent 將無法執行命令。 安裝前請先開啟 exec 許可權 ： openclaw config set tools.profile \" coding \" 或在 ~/.openclaw/openclaw.json 中設定 \"tools\": { \"profile\": \"coding\" } 。\n設定後重啟 Gateway（ openclaw gateway restart ）並開啟新對話即可。其他平臺（Claude Code、Cursor、Windsurf 等）不受此限制。 複製這句話給你的 AI Agent（Claude Code、OpenClaw、Cursor 等）： 幫我安裝 Agent Reach：https://raw.githubusercontent.com/Panniantong/agent-reach/main/docs/install.md 就這一步。Agent 會自己完成剩下的所有事情。 🔄 已安裝過？ 更新也是一句話： 幫我更新 Agent Reach：https://raw.githubusercontent.com/Panniantong/agent-reach/main/docs/update.md 🛡️ 預設安全： agent-reach install 預設只檢查環境，不會自動裝系統包或寫入配置： 幫我安全檢查並安裝 Agent Reach：https://raw.githubusercontent.com/Panniantong/agent-reach/main/docs/install.md 只有在你明確允許修改系統後，才使用 agent-reach install --system 。 它會做什麼？（點選展開） 安裝 CLI 工具 — 從本倉庫安裝 agent-reach 命令列（自帶 yt-dlp、feedparser；不要從 PyPI 安裝同名包，它不是本專案） 檢查系統基建 — 檢查 Node.js、gh CLI、mcporter，並給出缺失項的安裝方式 按授權安裝與配置 — 僅在顯式傳入 --system 時安裝依賴並通過 MCP 接入 Exa 檢測環境 — 判斷是本地電腦還是伺服器，給出對應的配置建議 按授權註冊 SKILL.md — 僅在顯式 --system 時寫入 Agent 的 skills 目錄；預設檢查不改檔案 問你要不要更多 — 預設只啟用 6 個零配置渠道；小紅書、Twitter、Reddit、Facebook、Instagram 這些需要登入態的，Agent 會列選單問你要哪些，點名才裝 安裝完之後， agent-reach doctor 一條命令告訴你每個渠道的狀態、當前走哪條路。 裝好就能用 不需要任何配置，告訴 Agent 就行： \"幫我看看這個連結\" → curl https://r.jina.ai/URL 讀任意網頁 \"這個 GitHub 倉庫是做什麼的\" → gh repo view owner/repo \"這個 YouTube 影片講了什麼\" → yt-dlp 提取字幕 \"B站搜一下 AI 教程\" → bili search （無需登入） \"全網搜一下 LLM 框架對比\" → Exa 語義搜尋 \"訂閱這個 RSS\" → feedparser 解析 不需要記命令。 Agent 讀了 SKILL.md 之後自己知道該調什麼。需要登入的平臺（小紅書、Twitter、Reddit、Facebook、Instagram），告訴 Agent「幫我配 XXX」即可解鎖。 設計理念 Agent Reach 是一個能力層（capability layer），不是又一個工具。 它比任何具體實現高一層——負責 選型、安裝、體檢、路由 ，不負責底層讀取本身。讀取由 Agent 直接呼叫上游工具完成，沒有包裝層。 你給一個新 Agent 裝環境的時候，總要花時間去找工具、裝依賴、調配置——Twitter 用什麼讀？Reddit 怎麼登入？小紅書的 CLI 停更了換什麼？每次都要重新踩一遍。Agent Reach 做的事情很簡單： 當下最穩的接入方式，我們替你選好、裝好、體檢好。接入方式會換代（2026 年 3 月一批單平臺 CLI 集體停更，我們換了路由），你不用操心。 🔌 每個平臺 = 首選 + 備選的有序後端列表 換接入方式 = 調整列表順序，不是重寫程式碼。 agent-reach doctor 會告訴你每個平臺 當前在用哪個後端 。 channels/\n├── web.py          → Jina Reader\n├── twitter.py      → twitter-cli ▸ OpenCLI ▸ bird\n├── youtube.py      → yt-dlp\n├── github.py       → gh CLI\n├── bilibili.py     → bili-cli ▸ OpenCLI ▸ 搜尋 API（yt-dlp 已被 B站風控封死，退役）\n├── reddit.py       → OpenCLI ▸ rdt-cli（無零配置路徑，必須登入態）\n├── facebook.py     → OpenCLI（桌面瀏覽器登入態）\n├── instagram.py    → OpenCLI（桌面瀏覽器登入態）\n├── xiaohongshu.py  → OpenCLI ▸ xiaohongshu-mcp ▸ xhs-cli\n├── linkedin.py     → mcp-server-linkedin ▸ Jina Reader\n├── rss.py          → feedparser\n├── exa_search.py   → Exa via mcporter\n└── __init__.py     → 渠道註冊（doctor 檢測用） 每個渠道檔案按序 真實探測 各候選後端（不只是看命令存不存在），第一個完整可用的當選；壞掉的會給出修復處方。實際的讀取和搜尋由 Agent 直接呼叫上游工具完成。 當前選型 場景 首選 備選 為什麼這麼選 讀網頁 Jina Reader — 免費，不需要 API Key 讀推特 twitter-cli OpenCLI 實測搜尋穩定；OpenCLI 走瀏覽器登入態兜底 Reddit OpenCLI （桌面） rdt-cli 匿名介面已被封、官方 API 審批制——只剩登入態路線 Facebook OpenCLI （桌面） — Graph API/Groups API 許可權收緊；瀏覽器登入態是當前最實用路徑 Instagram OpenCLI （桌面） 官方 Graph API（Business/Creator + 審批） instaloader 類路徑不穩定；OpenCLI 複用真實瀏覽器會話 YouTube 字幕 + 搜尋 yt-dlp — 154K Star，YouTube 仍是最佳（注意：不再用於 B站） B站 bili-cli OpenCLI ▸ 搜尋 API yt-dlp 被 B站風控 412 封死（2026-06 實測），bili-cli 無登入可搜可讀 搜全網 Exa via mcporter — AI 語義搜尋，MCP 接入免 Key GitHub gh CLI — 官方工具，認證後完整 API 能力 讀 RSS feedparser — Python 生態標準選擇 小紅書 OpenCLI （桌面） xiaohongshu-mcp （伺服器）▸ xhs-cli OpenCLI 只用使用者已有會話；其餘後端用 Cookie-Editor 手工匯出 LinkedIn mcp-server-linkedin Jina Reader MCP 服務，瀏覽器自動化 📌 這些都是「當前選型」，基於真機實測定期複核。某條路失效了我們換下一條—— agent-reach doctor 永遠告訴你現在走的是哪條。 安全性 Agent Reach 在設計上重視安全： 措施 說明 🔒 憑據本地儲存 Cookie、Token 只存在你本機 ~/.agent-reach/config.yaml ，檔案許可權 600（僅所有者可讀寫），不上傳不外傳 🛡️ 預設安全 agent-reach install 預設不修改系統；只有顯式 --system 才安裝外部工具和寫入配置 👀 完全開源 程式碼透明，隨時可審查。所有依賴工具也是開源專案 🔍 Dry Run agent-reach install --dry-run 預覽所有操作，不做任何改動 🧩 可插拔架構 不信任某個元件？換掉對應的 channel 檔案即可，不影響其他 🍪 Cookie 安全建議 ⚠️ 封號風險提醒： 使用 Cookie 登入的平臺（Twitter、小紅書等），通過指令碼/API 呼叫 存在被平臺檢測並封號的風險 。請務必使用 專用小號 ，不要用你的主賬號。 需要 Cookie 或登入態的平臺（Twitter、小紅書、Reddit、Facebook、Instagram 等）建議使用 專用小號 ，不要用主賬號。原因有二： 封號風險 — 平臺可能檢測到非正常瀏覽器的 API 呼叫行為，導致賬號被限制或封禁 安全風險 — Cookie 等同於完整登入許可權，用小號可以在憑據洩露時限制影響範圍 📦 安裝方式 方式 命令 適合場景 預設安全檢查 agent-reach install --env=auto 所有環境；只讀檢查並列出缺失項 顯式安裝系統依賴 agent-reach install --env=auto --system 你明確允許修改當前機器時 相容安全參數 agent-reach install --env=auto --safe 與預設行為相同 僅預覽 agent-reach install --env=auto --dry-run 先看看會做什麼 🗑️ 卸載 agent-reach uninstall 會清除： ~/.agent-reach/ （含所有 token/cookie）、各 Agent 的 skill 檔案、mcporter 中的 MCP 配置。 # 只預覽，不實際刪除 agent-reach uninstall --dry-run # 只刪 skill 檔案，保留 token 配置（重灌時用） agent-reach uninstall --keep-config 卸載 Python 包本身： pip uninstall agent-reach ⭐ 為什麼值得 Star 這個專案我自己每天在用，所以我會一直維護它。 有新需求或者大家提了想要的渠道，我會陸續加上 每個渠道我會盡量保證 能用、好用、免費 平臺改了反爬或者 API 變了，我會想辦法解決 為 Web 4.0 基建貢獻一份自己的力量。 Star 一下，下次需要的時候能找到。",
+      "stars_today": 461,
+      "language": "Python"
+    },
+    {
+      "title": "luongnv89/claude-howto",
+      "slug": "luongnv89-claude-howto",
+      "url": "https://github.com/luongnv89/claude-howto",
+      "abstract": "🌐 Language / Ngôn ngữ / 語言 / Мова: English | Tiếng Việt | 中文 | Українська | 日本語 Master Claude Code in a Weekend Go from typing claude to orchestrating agents, hooks, skills, and MCP servers — with visual tutorials, copy-paste templates, and a guided learning path. Get Started in 15 Minutes | Find Your Level | Browse the Feature Catalog Table of Contents The Problem How Claude How To Fixes This How It Works Not Sure Where to Start? Get Started in 15 Minutes What Can You Build With This? FAQ Contributing License The Problem You installed Claude Code. You ran a few prompts. Now what? The official docs describe features — but don't show you how to combine them. You know slash commands exist, but not how to chain them with hooks, memory, and subagents into a workflow that actually saves hours. There's no clear learning path. Should you learn MCP before hooks? Skills before subagents? You end up skimming everything and mastering nothing. Examples are too basic. A \"hello world\" slash command doesn't help you build a production code review pipeline that uses memory, delegates to specialized agents, and runs security scans automatically. You're leaving 90% of Claude Code's power on the table — and you don't know what you don't know. How Claude How To Fixes This This isn't another feature reference. It's a structured, visual, example-driven guide that teaches you to use every Claude Code feature with real-world templates you can copy into your project today. Official Docs This Guide Format Reference documentation Visual tutorials with Mermaid diagrams Depth Feature descriptions How it works under the hood Examples Basic snippets Production-ready templates you use immediately Structure Feature-organized Progressive learning path (beginner to advanced) Onboarding Self-directed Guided roadmap with time estimates Self-Assessment None Interactive quizzes to find your gaps and build a personalized path What you get: 10 tutorial modules covering every Claude Code feature — from slash commands to custom agent teams Copy-paste configs — slash commands, CLAUDE.md templates, hook scripts, MCP configs, subagent definitions, and full plugin bundles Mermaid diagrams showing how each feature works internally, so you understand why , not just how A guided learning path that takes you from beginner to power user in 11-13 hours Built-in self-assessment — run /self-assessment or /lesson-quiz hooks directly in Claude Code to identify gaps Start the Learning Path  -> How It Works 1. Find your level Take the self-assessment quiz or run /self-assessment in Claude Code. Get a personalized roadmap based on what you already know. 2. Follow the guided path Work through 10 modules in order — each builds on the last. Copy templates directly into your project as you learn. 3. Combine features into workflows The real power is in combining features. Learn to wire slash commands + memory + subagents + hooks into automated pipelines that handle code reviews, deployments, and documentation generation. 4. Test your understanding Run /lesson-quiz [topic] after each module. The quiz pinpoints what you missed so you can fill gaps fast. Get Started in 15 Minutes Trusted by Developers GitHub stars from developers who use Claude Code daily Forks from teams adapting this guide for their own workflows Actively maintained — synced with every Claude Code release (latest: v2.1.302, October 2026) Community-driven — contributions from developers who share their real-world configurations Not Sure Where to Start? Take the self-assessment or pick your level: Level You can... Start here Time Beginner Start Claude Code and chat Slash Commands ~2.5 hours Intermediate Use CLAUDE.md and custom commands Skills ~3.5 hours Advanced Configure MCP servers and hooks Advanced Features ~5 hours Full learning path with all 10 modules: Order Module Level Time 1 Slash Commands Beginner 30 min 2 Memory Beginner+ 45 min 3 Checkpoints Intermediate 45 min 4 CLI Basics Beginner+ 30 min 5 Skills Intermediate 1 hour 6 Hooks Intermediate 1 hour 7 MCP Intermediate+ 1 hour 8 Subagents Intermediate+ 1.5 hours 9 Advanced Features Advanced 2-3 hours 10 Plugins Advanced 2 hours Complete Learning Roadmap -> Get Started in 15 Minutes Installation note : Starting in v2.1.113, Claude Code ships as a native per-platform binary (macOS/Linux/Windows). The recommended install is the native installer ( curl -fsSL https://claude.ai/install.sh | bash ); npm installation is deprecated in the official README; prefer the native installer, Homebrew ( brew install --cask claude-code ) or WinGet ( winget install Anthropic.ClaudeCode ). For reference, npm install -g @anthropic-ai/claude-code pulls the same native binary through a per-platform optional dependency at install time. As of v2.1.116, downloads come from https://downloads.claude.ai/claude-code-releases — corporate proxies must allowlist this host. # 1. Clone the guide git clone https://github.com/luongnv89/claude-howto.git cd claude-howto # 2. Copy your first slash command mkdir -p /path/to/your-project/.claude/commands\ncp 01-slash-commands/optimize.md /path/to/your-project/.claude/commands/ # 3. Try it — in Claude Code, type: # /optimize # 4. Ready for more? Set up project memory: cp 02-memory/project-CLAUDE.md /path/to/your-project/CLAUDE.md # 5. Install a skill: cp -r 03-skills/code-review-specialist ~ /.claude/skills/ Want the full setup? Here's the 1-hour essential setup : # Slash commands (15 min) cp 01-slash-commands/ * .md .claude/commands/ # Project memory (15 min) cp 02-memory/project-CLAUDE.md ./CLAUDE.md # Install a skill (15 min) cp -r 03-skills/code-review-specialist ~ /.claude/skills/ # Weekend goal: add hooks, subagents, MCP, and plugins # Follow the learning path for guided setup View the Full Installation Reference What Can You Build With This? Use Case Features You'll Combine Automated Code Review Slash Commands + Subagents + Memory + MCP Team Onboarding Memory + Slash Commands + Plugins CI/CD Automation CLI Reference + Hooks + Background Tasks Documentation Generation Skills + Subagents + Plugins Security Audits Subagents + Skills + Hooks (read-only mode) DevOps Pipelines Plugins + MCP + Hooks + Background Tasks Complex Refactoring Checkpoints + Planning Mode + Hooks FAQ Is this free? Yes. MIT licensed, free forever. Use it in personal projects, at work, in your team — no restrictions beyond including the license notice. Is this maintained? Actively. The guide is synced with every Claude Code release. Current version: v2.1.302 (October 2026), compatible with Claude Code 2.1+. How is this different from the official docs? The official docs are a feature reference. This guide is a tutorial with diagrams, production-ready templates, and a progressive learning path. They complement each other — start here to learn, reference the docs when you need specifics. How long does it take to go through everything? 11-13 hours for the full path. But you'll get immediate value in 15 minutes — just copy a slash command template and try it. Can I use this with Claude Sonnet / Haiku / Opus? Yes. All templates work with Claude Fable 5.1, Claude Fable 5, Claude Opus 5.5, Claude Opus 5, Claude Sonnet 5.5, Claude Sonnet 5, Claude Sonnet 4.6, Claude Opus 4.8, Claude Haiku 5.5, and Claude Haiku 4.5. Can I contribute? Absolutely. See CONTRIBUTING.md for guidelines. We welcome new examples, bug fixes, documentation improvements, and community templates. Can I read this offline? Yes. Run uv run scripts/build_epub.py to generate an EPUB ebook with all content and rendered diagrams. Start Mastering Claude Code Today You already have Claude Code installed. The only thing between you and 10x productivity is knowing how to use it. This guide gives you the structured path, the visual explanations, and the copy-paste templates to get there. MIT licensed. Free forever. Clone it, fork it, make it yours.",
+      "stars_today": 429,
+      "language": "Python"
+    },
+    {
+      "title": "trycua/cua",
+      "slug": "trycua-cua",
+      "url": "https://github.com/trycua/cua",
+      "abstract": "Give AI agents computers they can use. Cua Spaces gives your agents full desktops on your Mac and on machines you own. This repository also holds Cua Driver for desktop automation, Lume for local VMs, CUA-S1 decision models and Cua Bench for evaluating computer-use agents. Get Cua Spaces Choose your path Cua Spaces: Install the app and run your first Space . Cua Driver: Operate Calculator and verify its result . Lume: Create a Tahoe VM and connect over SSH . Cua SDK and CLI: Install cua and create a local sandbox . CUA-S1: Explore small, specialized models for computer-use decisions . Cua Bench: Create and verify a simulated task . Bring your own agent and model, or explore CUA-S1 for specialized decisions. Cua provides the computer and automation tools. Computer-Use 2.0 describes an agent moving between code, APIs, and graphical interfaces within the same task. Cua Spaces Cua Spaces is a desktop app that gives your agents full desktops. Each desktop is a Space: a macOS VM built locally on your Mac, or a Linux or Omarchy image. Spaces run on your Mac, on other machines you own, and in your own cloud account (AWS, Google Cloud or Modal), and the app keeps them in your menu bar and notch. Teleport. Move a signed-in app, such as Chrome or Slack, into a Space and it opens there still signed in. Your sessions stay in the Cua Keyvault, encrypted on your Mac, and reach a Space only after you approve. Multiplayer. You and your agents work on the same desktop, each with your own cursor. Step in to make a choice, then hand the desktop back. Agent-ready images. Spaces images ship with cua-spacesd , so agents get processes, files, screenshots and input as soon as a Space starts. cua-spaces-demo.mp4 Install on macOS 26 or later curl -fsSL https://cua.ai/install.sh | sh On macOS the installer selects the Cua Spaces app by default and adds the cua CLI. You can also download the signed .dmg , or get the .pkg from the Cua Spaces 0.9.4 release . Spaces is free for individuals. Pro is $18 a month and Teams is $30 per seat a month, available now from 1 seat. See pricing . The app is source-available under FSL-1.1-MIT . Quickstart | Teleport an app | Share a Space | Host Spaces on a spare Mac (relay, Tailscale or SSH) | Your own cloud | App source Cua Driver Give your agent tools to inspect and operate native desktop apps and browsers on macOS, Windows, and Linux. Connect through the CLI, MCP, or typed SDKs. Background delivery lets agents work without moving your pointer or taking focus when the app and platform support it; see platform support for the boundaries. macOS / Linux /bin/bash -c \" $( curl -fsSL https://cua.ai/driver/install.sh ) \" Windows (PowerShell) irm https: // cua.ai / driver / install.ps1 | iex Your first result: connect your agent, ask it to compute 6 × 7 in Calculator, and have it verify that the app displays 42. The tutorial covers platform setup, permissions, and agent connection. Drive your first app | Installation | CLI Reference Using Claude Code, Codex, Cursor, OpenClaw, or another agent? Find your integration . Source documentation and architecture notes live in libs/cua-driver/README.md . See Cua Driver in action Two Cua Driver sessions select cells in LibreOffice Calc and objects in Inkscape on an Omarchy desktop while a terminal stays in the foreground. Watch the 50-second demo. recording.mp4 Lume Create and manage local macOS and Linux VMs on Apple Silicon using Apple's Virtualization.Framework. /bin/bash -c \" $( curl -fsSL https://cua.ai/lume/install.sh ) \" Your first result: create a vanilla macOS Tahoe VM from an Apple restore image, start it, and connect over SSH. The tutorial uses the Lume CLI directly and explains the unattended setup defaults. Create your first Lume VM | Installation | CLI reference Cua SDK and CLI One SDK and one cua command for local VMs and containers, and for any machine that runs cua-spacesd . macOS / Linux curl -fsSL https://cua.ai/install.sh | sh Windows (PowerShell) irm https: // cua.ai / install.ps1 | iex In a terminal the script first says what Cua Spaces is. The command-line tools (the cua program) are always installed; you choose whether to add the Cua Spaces app (on by default) and Cua Driver, which lets AI agents use your apps while you keep working (off by default). It then runs cua auth login , which signs you in and offers to set up your AI coding agents (Claude Code, Codex, Cursor, and others). The app asks on its first run whether your other devices may use this computer. Add Cua Driver with sh -s -- --select cua-driver , or skip the choice with --only cua-driver . See the installer options . cua sb create ubuntu --name dev # a gVisor container, set up on first use cua sb exec dev uname -a\ncua sb screenshot dev\ncua sb rm dev The same sandbox from Python: from cua_sandbox import Image , Sandbox async with Sandbox . ephemeral ( Image . linux (), local = True ) as sb : print (( await sb . shell . run ( \"uname -a\" )). stdout ) SDK: the same API in Python ( pip install cua ), TypeScript ( @trycua/cua ) and Rust ( cua-sdk ), running embedded in your process or through a shared cua daemon . Swift and Kotlin bindings are not yet released. Sandboxes need no agent inside. Readiness comes from the runtime and optional port probes. Images that ship cua-spacesd (port 3211) add processes, files, screenshots, input through cua-driver, and low-latency video and audio streaming. There is no agent layer in the SDK either: drive sandboxes from your own harness ( guide ). Your own machines. cua host setup makes this machine reachable through the cua.ai relay with no port forwarding. SDK README | Quickstart | CLI reference | Sandbox SDK reference CUA-S1 CUA-S1 is our family of small, specialized System 1 models for computer use. We use \"System 1\" as an engineering analogy for fast, bounded decisions, such as choosing which value belongs in a field or whether to leave an element alone. It is not a strict classification of model architectures or a replacement for a general-purpose agent's planning and reasoning. The first research profile focuses on forms: scoring decisions from structured interface elements and document values rather than generating a response token by token. Application code orders the actions, and the optional Cua Driver integration handles execution with explicit action boundaries. The project includes Python model code, synthetic-data generation, training, and evaluation. The GitHub component is an early, source-only research release; model weights are hosted separately on Hugging Face. The source is MIT-licensed. Check each model and dataset card for its scope, limitations, and artifact-specific license. Explore CUA-S1 | Model card | Safety and deployment guidance CUA-S1-FORMS on Hugging Face: Model weights | Dataset Cua Bench Build computer-use tasks, evaluate agents, and export trajectories for training. Start with a simulated task that requires no VM, Docker, or model API key. With Python 3.12 or 3.13 and uv installed: uv tool install ' cua-bench[browser] ' uv tool run --from ' cua-bench[browser] ' playwright install chromium Your first result: create a small task, run its reference solution, and verify that its evaluator reports a reward of 1.0 . Then try the same task yourself. Build your first task | What is Cua-Bench?",
+      "stars_today": 208,
+      "language": "Rust"
+    },
+    {
+      "title": "ItzCrazyKns/Vane",
+      "slug": "itzcrazykns-vane",
+      "url": "https://github.com/ItzCrazyKns/Vane",
+      "abstract": "Vane 🔍 Vane is a privacy-focused AI answering engine that runs entirely on your own hardware. It combines knowledge from the vast internet with support for local LLMs (Ollama) and cloud providers (OpenAI, Claude, Groq), delivering accurate answers with cited sources while keeping your searches completely private. Want to know more about its architecture and how it works? You can read it here . ✨ Features 🤖 Support for all major AI providers - Use local LLMs through Ollama or connect to OpenAI, Anthropic Claude, Google Gemini, Groq, and more. Mix and match models based on your needs. ⚡ Smart search modes - Choose Speed Mode when you need quick answers, Balanced Mode for everyday searches, or Quality Mode for deep research. 🧭 Pick your sources - Search the web, discussions, or academic papers. More sources and integrations are in progress. 🧩 Widgets - Helpful UI cards that show up when relevant, like weather, calculations, stock prices, and other quick lookups. 🔍 Web search powered by SearxNG - Access multiple search engines while keeping your identity private. Support for Tavily and Exa coming soon for even better results. 📷 Image and video search - Find visual content alongside text results. Search isn't limited to just articles anymore. 📄 File uploads - Upload documents and ask questions about them. PDFs, text files, images - Vane understands them all. 🌐 Search specific domains - Limit your search to specific websites when you know where to look. Perfect for technical documentation or research papers. 💡 Smart suggestions - Get intelligent search suggestions as you type, helping you formulate better queries. 📚 Discover - Browse interesting articles and trending content throughout the day. Stay informed without even searching. 🕒 Search history - Every search is saved locally so you can revisit your discoveries anytime. Your research is never lost. ✨ More coming soon - We're actively developing new features based on community feedback. Join our Discord to help shape Vane's future! Sponsors Vane's development is powered by the generous support of our sponsors. Their contributions help keep this project free, open-source, and accessible to everyone. We'd like to thank the following partners for their generous support: Exa • The Perfect Web Search API for LLMs - web search, crawling, deep research, and answer APIs Installation There are mainly 2 ways of installing Vane - With Docker, Without Docker. Using Docker is highly recommended. Getting Started with Docker (Recommended) Vane can be easily run using Docker. Simply run the following command: docker run -d -p 3000:3000 -v vane-data:/home/vane/data --name vane itzcrazykns1337/vane:latest This will pull and start the Vane container with the bundled SearxNG search engine. Once running, open your browser and navigate to http://localhost:3000 . You can then configure your settings (API keys, models, etc.) directly in the setup screen. Note : The image includes both Vane and SearxNG, so no additional setup is required. The -v flags create persistent volumes for your data and uploaded files. Using Vane with Your Own SearxNG Instance If you already have SearxNG running, you can use the slim version of Vane: docker run -d -p 3000:3000 -e SEARXNG_API_URL=http://your-searxng-url:8080 -v vane-data:/home/vane/data --name vane itzcrazykns1337/vane:slim-latest Important : Make sure your SearxNG instance has: JSON format enabled in the settings Wolfram Alpha search engine enabled Replace http://your-searxng-url:8080 with your actual SearxNG URL. Then configure your AI provider settings in the setup screen at http://localhost:3000 . Advanced Setup (Building from Source) If you prefer to build from source or need more control: Ensure Docker is installed and running on your system. Clone the Vane repository: git clone https://github.com/ItzCrazyKns/Vane.git After cloning, navigate to the directory containing the project files. Build and run using Docker: docker build -t vane . docker run -d -p 3000:3000 -v vane-data:/home/vane/data --name vane vane Access Vane at http://localhost:3000 and configure your settings in the setup screen. Note : After the containers are built, you can start Vane directly from Docker without having to open a terminal. Non-Docker Installation Install SearXNG and allow JSON format in the SearXNG settings. Make sure Wolfram Alpha search engine is also enabled. Clone the repository: git clone https://github.com/ItzCrazyKns/Vane.git cd Vane Install dependencies: npm i Build the application: npm run build Start the application: npm run start Open your browser and navigate to http://localhost:3000 to complete the setup and configure your settings (API keys, models, SearxNG URL, etc.) in the setup screen. Note : Using Docker is recommended as it simplifies the setup process, especially for managing environment variables and dependencies. See the installation documentation for more information like updating, etc. Troubleshooting Local OpenAI-API-Compliant Servers If Vane tells you that you haven't configured any chat model providers, ensure that: Your server is running on 0.0.0.0 (not 127.0.0.1 ) and on the same port you put in the API URL. You have specified the correct model name loaded by your local LLM server. You have specified the correct API key, or if one is not defined, you have put something in the API key field and not left it empty. Ollama Connection Errors If you're encountering an Ollama connection error, it is likely due to the backend being unable to connect to Ollama's API. To fix this issue you can: Check your Ollama API URL: Ensure that the API URL is correctly set in the settings menu. Update API URL Based on OS: Windows: Use http://host.docker.internal:11434 Mac: Use http://host.docker.internal:11434 Linux: Use http://<private_ip_of_host>:11434 Adjust the port number if you're using a different one. Linux Users - Expose Ollama to Network: Inside /etc/systemd/system/ollama.service , you need to add Environment=\"OLLAMA_HOST=0.0.0.0:11434\" . (Change the port number if you are using a different one.) Then reload the systemd manager configuration with systemctl daemon-reload , and restart Ollama by systemctl restart ollama . For more information see Ollama docs Ensure that the port (default is 11434) is not blocked by your firewall. Lemonade Connection Errors If you're encountering a Lemonade connection error, it is likely due to the backend being unable to connect to Lemonade's API. To fix this issue you can: Check your Lemonade API URL: Ensure that the API URL is correctly set in the settings menu. Update API URL Based on OS: Windows: Use http://host.docker.internal:8000 Mac: Use http://host.docker.internal:8000 Linux: Use http://<private_ip_of_host>:8000 Adjust the port number if you're using a different one. Ensure Lemonade Server is Running: Make sure your Lemonade server is running and accessible on the configured port (default is 8000). Verify that Lemonade is configured to accept connections from all interfaces ( 0.0.0.0 ), not just localhost ( 127.0.0.1 ). Ensure that the port (default is 8000) is not blocked by your firewall. Using as a Search Engine If you wish to use Vane as an alternative to traditional search engines like Google or Bing, or if you want to add a shortcut for quick access from your browser's search bar, follow these steps: Open your browser's settings. Navigate to the 'Search Engines' section. Add a new site search with the following URL: http://localhost:3000/?q=%s . Replace localhost with your IP address or domain name, and 3000 with the port number if Vane is not hosted locally. Click the add button. Now, you can use Vane directly from your browser's search bar. Using Vane's API Vane also provides an API for developers looking to integrate its powerful search engine into their own applications. You can run searches, use multiple models and get answers to your queries. For more details, check out the full documentation here .",
+      "stars_today": 107,
+      "language": "TypeScript"
+    },
+    {
+      "title": "Emily2040/seedance-2.0",
+      "slug": "emily2040-seedance-2-0",
+      "url": "https://github.com/Emily2040/seedance-2.0",
+      "abstract": "Turn an idea into a directed video prompt. Seedance 2.0 Skill OS is an agent\nskill for planning shots, binding references and continuing from an accepted\nclip. Your video provider handles generation and its costs. Watch the clips · Try a first prompt · Install · Choose a workflow · Evidence status v6.7.0 · MIT · Changelog · Emily / Iamemily2050 Languages: English (this page) · 中文 · 日本語 · 한국어 · Español · Русский Five-minute quickstarts: English · 中文 · 日本語 · 한국어 · Español · Русский Seen, not told Seven scenes, seven prompts, five languages. Each is a complete fifteen-second story: the\nsituation legible by shot two, a reversal, and a hold on whoever lost, cut like short drama in\nfour or five shots. Each clip is generated on Seedance 2.0 from the exact prompt beneath it:\ntext to video, no reference assets, one take, no post work. Above each prompt sits the kind of\nbrief people usually type, so the difference is visible before it is explained. Every prompt\nwent through the moderation pre-screen before publication,\nbecause a classifier refuses words, not intent, and every prompt is directed for the\nmodel : one action per shot while everyone else keeps\nliving, reactions written as a feeling plus one physical anchor, prop work written as a hand,\nand a lock line closing every shot that restates the light, the people and where they stand,\nbecause the model keeps nothing across a cut that the prompt does not repeat. Each prompt was\nrendered from a shot table that is published beside it, so the\ngeometry can be checked on paper before a take is paid for. Where a clip has not been rendered\nyet, its slate stands in its place. Clip 01: By appointment only English · 15 s · 16:9 · storyboard · slate: not rendered yet · ladder: Stretch: 4.5 beats (one insert at half), load 3, S = 2.0 What people usually type: rich woman disguised as poor gets humiliated at luxury store, plot twist, satisfying, cinematic, 4k What you know by shot two: Shot one is a soaked woman in work clothes stopped inside a boutique door by a voice that says appointment only; shot three is a phone call that says the new owner is standing in the shop. The prompt the skill wrote Shot 1. Wide shot from the back of a hushed luxury boutique looking toward the glass front\ndoor, on a rainy afternoon: cream carpet, glass shelves of shoes along the left wall, the\ncounter on the right with two assistants in black behind it, one folding tissue paper, one\nglancing up at the door. A woman pushes the glass door open, steps inside dripping, and stops\non the mat, water running off her sleeves. From just off frame right, by the counter, the\nmanager's voice, polite and thin: \"We're by appointment only, ma'am.\" She turns her head\ntoward the voice, calm, almost amused, and says nothing. Light: soft grey daylight from the\nfront window, warm spotlights on the shelves. The woman: thirties, dark hair tied back, white\noveralls stained with paint, tan work boots, standing just inside the door, facing into the\nshop. Camera at the back of the shop, facing the door. Shot 2. Cut to a medium shot from the counter side: she walks across the carpet to the white\ndisplay chaise in the middle of the shop, sits down on it facing the counter, crosses one\nmuddy boot over the other, and looks slowly along the shelves, unhurried. Behind her the two\nassistants exchange a glance. Same light: soft grey daylight from the front window, warm\nspotlights on the shelves. The woman: thirties, dark hair tied back, white overalls stained\nwith paint, tan work boots, seated on the white chaise in the middle of the shop, facing the\ncounter. Camera on the counter side. Shot 3. Cut to a close shot of the manager from the chaise side, standing by the counter, a\nphone at his ear, listening. Embarrassed, the polite smile fades and he swallows; then he says\nquietly: \"Yes, sir. The new owner is... standing in the shop now.\" His eyes go past the camera\nto her, off frame, and stay there. Same light: soft grey daylight from the front window, warm\nspotlights on the shelves. The manager: fifties, grey suit, steel-rimmed glasses, standing by\nthe counter, facing the chaise. Camera on the chaise side. Shot 4. Cut to a two-shot from behind the chaise, her shoulder in the foreground, the manager\nby the counter and the wall of shoes beyond him: she lifts one arm and points at a single pair\nof shoes on the wall; he walks from the counter to the wall and lifts that pair down with both\nhands, careful now. Same light: soft grey daylight from the front window, warm spotlights on\nthe shelves. The woman: thirties, dark hair tied back, white overalls stained with paint, tan\nwork boots, seated on the chaise, facing the counter. The manager: fifties, grey suit,\nsteel-rimmed glasses, walking from the counter to the wall of shoes. Camera behind the chaise. Shot 5. Cut to a close insert of the cream carpet: a trail of wet bootprints from the door to\nthe chaise, rain running down the glass door behind. Hold on the bootprints. Same light: soft\ngrey daylight from the front window. Camera low over the carpet, facing the door. Sound: rain on the glass door, her boots on the carpet, the murmur of the phone line, his\nvoice dropping; no music, no subtitles. The shot table the prompt was rendered from Floor plan: A boutique: the glass front door at one end, the counter along the right wall, the wall of shoes opposite the door, the white chaise in the middle. The manager starts by the counter; the assistants behind it. Grey daylight from the front window, warm spots on the shelves. Shot Camera In frame Eye-line Action Others Light Last frame 1 Back of the shop toward the front door; wide Woman inside the door, facing in; two assistants behind the counter, right; manager off frame right She turns her head to the voice on the right She pushes the door open, steps in, stops on the mat; the manager's line from off frame; calm, almost amused, she says nothing Assistants fold tissue paper, glance up Grey daylight from the front window, warm spots on the shelves Her on the mat, the door behind her 2 Counter side; medium Woman crossing to the chaise, sitting on it facing the counter; assistants behind her Along the shelves Walks to the chaise, sits, crosses one muddy boot over the other, looks slowly along the shelves Assistants exchange a glance Same daylight and spots Her on the chaise, boots crossed 3 Chaise side; close Manager by the counter, facing the chaise Past the lens to her, off frame Embarrassed: the polite smile fades, he swallows; the phone line, quiet; his eyes go to her and stay None in frame Same His face, eyes on her 4 Behind the chaise; two-shot Her shoulder in the foreground facing the counter; manager walking from the counter to the wall of shoes Hers to the wall; his to the shoes She points at one pair; he walks to the wall and lifts it down with both hands, careful now Assistants stay at the counter Same Him at the wall with the shoes in his hands 5 Low over the carpet toward the door; insert Nobody None Hold on the wet bootprints from the door to the chaise, rain on the glass door None Same daylight The bootprints Clip 02: Hold the line English · 15 s · 16:9 · storyboard · slate: not rendered yet · ladder: Stretch: 4 beats, load 3, S = 2.1 What people usually type: epic storm at sea, fisherman fights giant wave, slow motion, dramatic music, 8k What you know by shot two: Shot two tells the audience what the rope is worth: an off-screen voice says it is only a boat, and his answer says whose boat. The prompt the skill wrote Shot 1. Wide shot from the landward end of a wooden pier at night in a storm, looking out\nalong it: a small fishing boat straining at a single mooring rope off the far end, its bow\nlifting and slamming with each swell, rain driven sideways through one sodium lamp, and behind\nthe boat a wave building higher than the mast.",
+      "stars_today": 33,
+      "language": "Python"
+    },
+    {
+      "title": "trymirai/uzu",
+      "slug": "trymirai-uzu",
+      "url": "https://github.com/trymirai/uzu",
+      "abstract": "uzu A high-performance inference engine for AI models. It allows you to deploy AI directly in your app with zero latency , full data privacy , and no inference costs . Key features: Simple, high-level API Unified model configurations, making it easy to add support for new models Traceable computations to ensure correctness against the source-of-truth implementation Utilizes unified memory on Apple devices Broad model support Quick Start Rust Add the dependency: [ dependencies ] uzu = { git = \" https://github.com/trymirai/uzu \" , branch = \" main \" , package = \" uzu \" } Run the code below: use std :: io :: { self , Write } ; use uzu :: { engine :: { Engine , EngineConfig } , types :: session :: chat :: { ChatConfig , ChatMessage , ChatReplyConfig } , } ; # [ tokio :: main ] async fn main ( ) -> Result < ( ) , Box < dyn std :: error :: Error > > { let engine_config = EngineConfig :: default ( ) ; let engine = Engine :: new ( engine_config ) . await ? ; let model = engine . model ( \"alibaba:qwen3.5:0.8b:mirai:mirai-m:4\" . to_string ( ) ) . await ? . ok_or ( \"Model not found\" ) ? ; let downloader = engine . download ( & model ) . await ? ; while let Some ( update ) = downloader . next ( ) . await { print ! ( \" \\r \\u{001B} [2KDownload progress: {:.2}%\" , update . progress ( ) * 100.0 ) ; io :: stdout ( ) . flush ( ) ? ; } println ! ( ) ; let session = engine . chat ( model , ChatConfig :: default ( ) ) . await ? ; let messages = vec ! [ ChatMessage :: system ( ) . with_text ( \"You are a helpful assistant\" . to_string ( ) ) , ChatMessage :: user ( ) . with_text ( \"Tell me a short, funny story about a robot\" . to_string ( ) ) , ] ; let replies = session . reply ( messages , ChatReplyConfig :: default ( ) ) . await ? ; if let Some ( reply ) = replies . last ( ) { println ! ( \"Reasoning: {}\" , reply . message . reasoning ( ) . unwrap_or_default ( ) ) ; println ! ( \"Text: {}\" , reply . message . text ( ) . unwrap_or_default ( ) ) ; } Ok ( ( ) ) } Python Add the dependency: uv add uzu==0.6.11 Run the code below: import asyncio from uzu import ChatConfig , ChatMessage , ChatReplyConfig , Engine , EngineConfig async def main () -> None : engine_config = EngineConfig . create () engine = await Engine . create ( engine_config ) model = await engine . model ( \"alibaba:qwen3.5:0.8b:mirai:mirai-m:4\" ) if model is None : return async for update in ( await engine . download ( model )). iterator (): print ( f\" \\r Download progress: { update . progress :.2% } \" , end = \"\" , flush = True ) print () session = await engine . chat ( model , ChatConfig . create ()) messages = [ ChatMessage . system (). with_text ( \"You are a helpful assistant\" ), ChatMessage . user (). with_text ( \"Tell me a short, funny story about a robot\" ),\n    ] replies = await session . reply ( messages , ChatReplyConfig . create ()) if not replies : return message = replies [ - 1 ]. message print ( f\"Reasoning: { message . reasoning } \" ) print ( f\"Text: { message . text } \" ) if __name__ == \"__main__\" : asyncio . run ( main ()) Swift Add the dependency: dependencies: [ . package ( url : \" https://github.com/trymirai/uzu.git \" , from : \" 0.6.11 \" ) ] Run the code below: import Foundation import Uzu public func runQuickStart ( ) async throws { let engineConfig = EngineConfig . create ( ) let engine = try await Engine . create ( config : engineConfig ) guard let model = try await engine . model ( identifier : \" alibaba:qwen3.5:0.8b:mirai:mirai-m:4 \" ) else { return } for try await update in try await engine . download ( model : model ) . iterator ( ) { print ( String ( format : \" \\r \\u{001B} [2KDownload progress: %.2f%% \" , update . progress ( ) * 100 ) , terminator : \" \" ) fflush ( stdout ) } print ( ) let session = try await engine . chat ( model : model , config : . create ( ) ) let messages = [ ChatMessage . system ( ) . withText ( text : \" You are a helpful assistant \" ) , ChatMessage . user ( ) . withText ( text : \" Tell me a short, funny story about a robot \" ) ] let reply = try await session . reply ( input : messages , config : . create ( ) ) guard let message = reply . last ? . message else { return } print ( \" Reasoning: \\( message . reasoning ( ) ?? \" empty \" ) \" ) print ( \" Text: \\( message . text ( ) ?? \" empty \" ) \" ) } TypeScript Add the dependency: pnpm add @trymirai/uzu@0.6.11 Run the code below: import { ChatConfig , ChatMessage , ChatReplyConfig , Engine , EngineConfig } from '@trymirai/uzu' ; async function main ( ) { let engineConfig = EngineConfig . create ( ) ; let engine = await Engine . create ( engineConfig ) ; let model = await engine . model ( 'alibaba:qwen3.5:0.8b:mirai:mirai-m:4' ) ; if ( ! model ) { throw new Error ( 'Model not found' ) ; } for await ( const update of await engine . download ( model ) ) { process . stdout . write ( `\\rDownload progress: ${ ( update . progress * 100 ) . toFixed ( 2 ) } %` ) ; } console . log ( ) ; let session = await engine . chat ( model , ChatConfig . create ( ) ) ; let messages = [ ChatMessage . system ( ) . withText ( 'You are a helpful assistant' ) , ChatMessage . user ( ) . withText ( 'Tell me a short, funny story about a robot' ) ] ; let reply = await session . reply ( messages , ChatReplyConfig . create ( ) ) ; let message = reply [ 0 ] ?. message ; if ( message ) { console . log ( 'Reasoning: ' , message . reasoning ) ; console . log ( 'Text: ' , message . text ) ; } } main ( ) . catch ( ( error ) => { console . error ( error ) ; } ) ; Everything from model downloading to inference configuration is handled automatically. Refer to the documentation for details on how to customize each step of the process. Examples You can run any example via cargo tools example < rust | python | swift | typescript > < chat | chat-cloud | chat-shared-instance | chat-structured-output | quick-start | tool-calls >: Chat In this example, we will download a model and get a reply to a specific list of messages: Rust use std :: io :: { self , Write } ; use uzu :: { engine :: { Engine , EngineConfig } , session :: chat :: ChatSessionStreamChunk , types :: session :: chat :: { ChatConfig , ChatMessage , ChatReplyConfig } , } ; # [ tokio :: main ] async fn main ( ) -> Result < ( ) , Box < dyn std :: error :: Error > > { let engine_config = EngineConfig :: default ( ) ; let engine = Engine :: new ( engine_config ) . await ? ; let model = engine . model ( \"alibaba:qwen3.5:0.8b:mirai:mirai-m:4\" . to_string ( ) ) . await ? . ok_or ( \"Model not found\" ) ? ; let downloader = engine . download ( & model ) . await ? ; while let Some ( update ) = downloader . next ( ) . await { print ! ( \" \\r \\u{001B} [2KDownload progress: {:.2}%\" , update . progress ( ) * 100.0 ) ; io :: stdout ( ) . flush ( ) ? ; } println ! ( ) ; let messages = vec ! [ ChatMessage :: system ( ) . with_text ( \"You are a helpful assistant\" . to_string ( ) ) , ChatMessage :: user ( ) . with_text ( \"Tell me a short, funny story about a robot\" . to_string ( ) ) , ] ; let session = engine . chat ( model , ChatConfig :: default ( ) ) . await ? ; let stream = session . reply_with_stream ( messages , ChatReplyConfig :: default ( ) ) . await ; let mut last_message : Option < ChatMessage > = None ; while let Some ( chunk ) = stream . next ( ) . await { match chunk { ChatSessionStreamChunk :: ToolResults { .. } => { } , ChatSessionStreamChunk :: Replies { replies , } => { if let Some ( reply ) = replies . first ( ) { last_message = Some ( reply . message . clone ( ) ) ; println ! ( \"Generated tokens: {}\" , reply . stats . tokens_count_output . unwrap_or_default ( ) ) ; } } , ChatSessionStreamChunk :: Error { error , } => { println ! ( \"Error: {error}\" ) ; } , } } if let Some ( message ) = last_message { println ! ( \"Reasoning: {}\" , message . reasoning ( ) . unwrap_or_default ( ) ) ; println ! ( \"Text: {}\" , message . text ( ) .",
+      "stars_today": 15,
+      "language": "Rust"
+    }
+  ],
+  "papers": {
+    "hf": [
+      {
+        "title": "Focused Omni-Modal GUI Agents",
+        "slug": "focused-omni-modal-gui-agents",
+        "url": "https://huggingface.co/papers/2610.26203",
+        "abstract": "FocusGUI is a lightweight adapter that dynamically selects relevant multimodal evidence for GUI agents to prevent compounding errors from irrelevant context, improving action accuracy without fine-tuning the backbone.",
+        "upvotes": 198,
+        "arxiv_id": "2610.26203",
+        "authors": []
+      },
+      {
+        "title": "Matrix-Game 4.0: Harnessing Video Models for Real-Time Playable Game Worlds",
+        "slug": "matrix-game-4-0-harnessing-video-models-for-real-time",
+        "url": "https://huggingface.co/papers/2610.27999",
+        "abstract": "Matrix-Game 4.0 separates game logic from visual synthesis via an executable engine and autoregressive video renderer, achieving real-time interactive gameplay with low latency.",
+        "upvotes": 176,
+        "arxiv_id": "2610.27999",
+        "authors": []
+      },
+      {
+        "title": "PAR: Progress-Aligned Recurrence for Length Generalization in State Tracking",
+        "slug": "par-progress-aligned-recurrence-for-length-generalization-in",
+        "url": "https://huggingface.co/papers/2610.27628",
+        "abstract": "Progress-Aligned Recurrence trains looped language models to match intermediate states and stabilize recurrent norms, enabling strong length extrapolation on sequential tracking tasks.",
+        "upvotes": 147,
+        "arxiv_id": "2610.27628",
+        "authors": []
+      },
+      {
+        "title": "S-Agent 2.0: Spatial Reasoning with a General Coding Agent",
+        "slug": "s-agent-2-0-spatial-reasoning-with-a-general-coding-agent",
+        "url": "https://huggingface.co/papers/2610.28354",
+        "abstract": "S-Agent 2.0 improves spatial reasoning by integrating a persistent scene memory and plain-language interpretation into a coding agent with 3D perception tools.",
+        "upvotes": 91,
+        "arxiv_id": "2610.28354",
+        "authors": []
+      },
+      {
+        "title": "Sage-A1.5: From Long-Horizon Execution to Scientific Exploration with Capability Composition",
+        "slug": "sage-a1-5-from-long-horizon-execution-to-scientific",
+        "url": "https://huggingface.co/papers/2610.28578",
+        "abstract": "Sage-A1.5 is a 35B mixture-of-experts agentic model that improves long-horizon problem solving via adaptive task delegation, verification, and open scientific exploration.",
+        "upvotes": 61,
+        "arxiv_id": "2610.28578",
+        "authors": []
+      },
+      {
+        "title": "CoEvo-RSI: When Harnesses Evolve, Which Models Should Follow?",
+        "slug": "coevo-rsi-when-harnesses-evolve-which-models-should-follow",
+        "url": "https://huggingface.co/papers/2610.25078",
+        "abstract": "CoEvo-RSI reduces brain-body mismatch in recursive self-improving agents by using bidirectional historical inheritance to align model capabilities with evolving harness requirements, achieving strong results via supervised fine-tuning.",
+        "upvotes": 59,
+        "arxiv_id": "2610.25078",
+        "authors": []
+      },
+      {
+        "title": "VLA-Rolling: Fewer Denoising Steps, Better Control via Adaptive Action Reuse",
+        "slug": "vla-rolling-fewer-denoising-steps-better-control-via",
+        "url": "https://huggingface.co/papers/2610.25043",
+        "abstract": "VLA-Rolling improves vision-language-action model efficiency by reusing discarded action tails with adaptive denoising budgets, reducing inference cost and boosting success rates.",
+        "upvotes": 59,
+        "arxiv_id": "2610.25043",
+        "authors": []
+      },
+      {
+        "title": "SolarRenderer: Few-Step Generative Reference Rendering",
+        "slug": "solarrenderer-few-step-generative-reference-rendering",
+        "url": "https://huggingface.co/papers/2610.28630",
+        "abstract": "SolarRenderer adapts a frozen video backbone with lightweight LoRAs to render realistic videos from diverse structural inputs in four steps or real-time streaming, using frame-aligned training data.",
+        "upvotes": 43,
+        "arxiv_id": "2610.28630",
+        "authors": []
+      },
+      {
+        "title": "Learning the 4D World through Point Trajectory Forecasting",
+        "slug": "learning-the-4d-world-through-point-trajectory-forecasting",
+        "url": "https://huggingface.co/papers/2610.28594",
+        "abstract": "Video-Point Model predicts future multi-view videos and 3D point trajectories from video histories and instructions, improving forecasting and robot control through shared 3D-aware representations.",
+        "upvotes": 41,
+        "arxiv_id": "2610.28594",
+        "authors": []
+      },
+      {
+        "title": "Correction Training for Diffusion Models",
+        "slug": "correction-training-for-diffusion-models",
+        "url": "https://huggingface.co/papers/2610.14136",
+        "abstract": "A correction module trained to refine diffusion predictions reduces exposure bias, improving unguided sample quality and enabling distillation to eliminate inference overhead.",
+        "upvotes": 34,
+        "arxiv_id": "2610.14136",
+        "authors": []
+      }
+    ],
+    "others": [
+      {
+        "title": "Before Reaching for an LLM: Matching Clinical NLP Complexity to the Task",
+        "slug": "before-reaching-for-an-llm-matching-clinical-nlp-complexity",
+        "url": "https://www.semanticscholar.org/paper/d51255df777b5d3fbb24e24cba278276c5674b80",
+        "abstract": "Before Reaching for an LLM: Matching Clinical NLP Complexity to the Task. Journal of medical systems",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-21",
+        "authors": [
+          "Shinji Kobayashi"
+        ]
+      },
+      {
+        "title": "Fractional-order nonlinear system identification: a comprehensive review",
+        "slug": "fractional-order-nonlinear-system-identification-a",
+        "url": "https://www.semanticscholar.org/paper/d188dd2b6b00cefd02a22b2c895869650d27ea79",
+        "abstract": "Fractional-order nonlinear system identification: a comprehensive review. International Journal of Dynamics and Control",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-21",
+        "authors": [
+          "Mohammad Jahani Moghaddam"
+        ]
+      },
+      {
+        "title": "Clinical pathogen adjudication in metagenomic sequencing using a large language model",
+        "slug": "clinical-pathogen-adjudication-in-metagenomic-sequencing",
+        "url": "https://www.semanticscholar.org/paper/a31fdaa110a4cc3b20ef29b62cca5fb5cf61b9bf",
+        "abstract": "Clinical pathogen adjudication in metagenomic sequencing using a large language model. medRxiv",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-21",
+        "authors": [
+          "M. Wei",
+          "Y. Zhao",
+          "C. Fang",
+          "S. Zhang",
+          "K. Xu",
+          "S. Li",
+          "L. Liu",
+          "Y. Pang",
+          "L. Liang",
+          "Z. Deng",
+          "M. Li"
+        ]
+      },
+      {
+        "title": "AI-driven war gaming as a tool for urban resilience: simulating conflict scenarios to enhance future city planning",
+        "slug": "ai-driven-war-gaming-as-a-tool-for-urban-resilience",
+        "url": "https://www.semanticscholar.org/paper/9367d6358499ed3a94ceaf551b147b11eb29ac96",
+        "abstract": "AI-driven war gaming as a tool for urban resilience: simulating conflict scenarios to enhance future city planning. Urban Transformations",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-21",
+        "authors": [
+          "Ehsan Dorostkar"
+        ]
+      },
+      {
+        "title": "Using generative artificial intelligence for outbreak communications: a case study of the 2026 Ebola outbreak",
+        "slug": "using-generative-artificial-intelligence-for-outbreak",
+        "url": "https://www.semanticscholar.org/paper/6566a923cb0aa34ff0822f77ce7a38a54bfd2569",
+        "abstract": "Using generative artificial intelligence for outbreak communications: a case study of the 2026 Ebola outbreak. Antimicrobial Stewardship and Healthcare Epidemiology",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-21",
+        "authors": [
+          "Trini A. Mathew",
+          "Kate M. Bowers",
+          "D. Weber"
+        ]
+      },
+      {
+        "title": "Generative Video-LiDAR world models for long-horizon multimodal scene simulation with temporal and geometric consistency",
+        "slug": "generative-video-lidar-world-models-for-long-horizon",
+        "url": "https://www.semanticscholar.org/paper/41f1aaf2e62fd40a13a5c9bd1dc3b987d7f6194e",
+        "abstract": "Generative Video-LiDAR world models for long-horizon multimodal scene simulation with temporal and geometric consistency. Discover Computing",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-21",
+        "authors": [
+          "Yue-Han Kou"
+        ]
+      },
+      {
+        "title": "An integrated probabilistic and machine learning framework for slope stability assessment under uncertainty",
+        "slug": "an-integrated-probabilistic-and-machine-learning-framework",
+        "url": "https://www.semanticscholar.org/paper/360076ebb589a4a7b1742eb1e886b3ce488d5cf2",
+        "abstract": "An integrated probabilistic and machine learning framework for slope stability assessment under uncertainty. Arabian Journal of Geosciences",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-21",
+        "authors": [
+          "S. Admane",
+          "Tejas Admane"
+        ]
+      },
+      {
+        "title": "The hidden learning cost of generative AI: the THINK framework for preserving critical thinking in AI-enabled workplaces",
+        "slug": "the-hidden-learning-cost-of-generative-ai-the-think",
+        "url": "https://www.semanticscholar.org/paper/312252cbe58308ef022cb16a028711b9f31bbf35",
+        "abstract": "This paper examines how regular use of generative AI enhances productivity, but somehow, in contrast, reduces the opportunities for employees to utilize critical thinking skills and translate their hands-on experience into organizational learning.\n \n \n \n The paper is a problem-based conceptual synthesis linking AI literacy, organizational learning, human-AI collaboration, evidence from knowledge workers, and knowledge collapse theory. On the other hand, human-AI augmentation and disengagement are considered opposing risks from which five workplace safeguards are derived.\n \n \n \n The paper shows that the issue is not the use of GenAI, but organizations that reward flawless automation output while ignoring verification, human reasoning, and visible employee learning. The paper introduces the THINK framework interlinking organizational practices: Transparency, Human judgment, Intellectual engagement, Navigation of evidence and Knowledge construction.\n \n \n \n The THINK framework conceptual synthesis is selective and not empirically tested. Future research should validate the application effect across different sectors, industries and levels of GenAI adoption.\n \n \n \n The THINK framework can be integrated into employee training, performance management discussions, decision-making and AI governance systems.\n \n \n \n The paper transposes the traditional argument about GenAI-mediated cognition into a simple, auditable framework that managers can apply on the job as coaches, learning professionals, and AI governance teams.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-21",
+        "authors": [
+          "Sam Bodunrin"
+        ]
+      },
+      {
+        "title": "Mapping research trends in artificial intelligence for K–12 teaching and learning: a scientometric analysis",
+        "slug": "mapping-research-trends-in-artificial-intelligence-for-k-12",
+        "url": "https://www.semanticscholar.org/paper/263db2e9a9d7769dcb35903f210d8b186f0e1c10",
+        "abstract": "Mapping research trends in artificial intelligence for K–12 teaching and learning: a scientometric analysis. Discover Education",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-21",
+        "authors": [
+          "D. T. Parra-Sánchez",
+          "José Joaquín Uribe-Arengas"
+        ]
+      },
+      {
+        "title": "Tacsa: evaluating the role of Tashkīl in Arabic sentiment analysis",
+        "slug": "tacsa-evaluating-the-role-of-tashkīl-in-arabic-sentiment",
+        "url": "https://www.semanticscholar.org/paper/1f5a7d2261765a9cccf5132ab8315aeee36235dc",
+        "abstract": "Tacsa: evaluating the role of Tashkīl in Arabic sentiment analysis. Language Resources and Evaluation",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-21",
+        "authors": [
+          "Faiza Belbachir",
+          "Noan Bosco-Vizzavona",
+          "M. Boughanem"
+        ]
+      },
+      {
+        "title": "From hypothetical scenarios to real-world service robots: The next wave of service and marketing research on physical AI",
+        "slug": "from-hypothetical-scenarios-to-real-world-service-robots-the",
+        "url": "https://www.semanticscholar.org/paper/0e1c9fc064f62d8a166d7747f83169234c11ba7a",
+        "abstract": "From hypothetical scenarios to real-world service robots: The next wave of service and marketing research on physical AI. Academy of Marketing Science Review",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-21",
+        "authors": [
+          "J. Wirtz"
+        ]
+      },
+      {
+        "title": "Artificial intelligence for symptom assessment and patient-reported outcomes in neuro-oncology",
+        "slug": "artificial-intelligence-for-symptom-assessment-and-patient",
+        "url": "https://www.semanticscholar.org/paper/0135b8b53811d0a90abb50269c75dffb4062c7d9",
+        "abstract": "Artificial intelligence for symptom assessment and patient-reported outcomes in neuro-oncology. Journal of Neuro-Oncology",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-21",
+        "authors": [
+          "L. Yogendran",
+          "C. Avery",
+          "Rita C. Crooms",
+          "A. Ozair",
+          "Cara L. Siegel",
+          "Irene Guterman",
+          "John Y. Rhee",
+          "Jason Binder",
+          "Maria Minor",
+          "L. Alder",
+          "Joshua Davis",
+          "Akanksha Sharma"
+        ]
+      },
+      {
+        "title": "AEON: Unifying Video and 3D World Models",
+        "slug": "aeon-unifying-video-and-3d-world-models",
+        "url": "http://arxiv.org/abs/2610.28631v1",
+        "abstract": "Current world models for explicit world simulation typically follow two distinct pathways: (1) video generative models (e.g., Sora), which simulate realistic appearances but fail to preserve 3D consistency; and (2) 3D generative models (e.g., Marble), which generate geometrically consistent scenes but often yield static, less realistic observations. We present AEON, a unified framework that bridges video-based and 3D-based world models and combines the benefits of both. The key insight of AEON lies in a generative model that operates within the text- or image-conditioned video latent space while producing renderable 4D graphics primitives---specifically, 4D Gaussian Splatting (4DGS)---as the explicit world representation. We train a 4D reconstruction model to predict both 4DGS and camera poses from monocular videos, serving as our initialized 4D decoder. Furthermore, we design a domain adapter that translates generative video latents into reconstructive 4D latents through a distillation process on the video VAE. AEON naturally supports video-based world modeling by rendering 4DGS at predicted camera trajectories, and constructs a persistent 4D environment with scene dynamics for realistic world simulation. Consequently, AEON empowers a diverse range of world modeling applications and achieves state-of-the-art performance on standard benchmarks. Project Page: https://weiqi-zhang.github.io/AEON",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-20",
+        "authors": [
+          "Weiqi Zhang",
+          "Wenyuan Zhang",
+          "Yu-Shen Liu",
+          "Junsheng Zhou"
+        ]
+      },
+      {
+        "title": "GBClaw: An agentic AI framework for atomistic grain boundary research and mechanistic discovery",
+        "slug": "gbclaw-an-agentic-ai-framework-for-atomistic-grain-boundary",
+        "url": "http://arxiv.org/abs/2610.28629v1",
+        "abstract": "Agentic artificial intelligence (AI) systems hold immense potential for automating complex workflows in materials discovery and design, but extending them to domain-intensive mechanistic investigations remains challenging. Here, we present GBClaw, an agentic AI framework for investigating the structure and deformation of general grain boundaries (GBs). Although general GBs constitute the vast majority of real-world interfaces in polycrystalline materials, they remain understudied because their structural complexity and interfacial mismatch complicate experimental and modeling research. GBClaw integrates large language models (LLMs) into a modular architecture comprising an orchestrator, specialized agents, domain-specific tools, simulation interfaces, and hierarchical memory. Through dynamic replanning and iterative workflow refinement, the framework effectively connects systematic simulations with targeted mechanistic analysis. Applied to 14 general asymmetric tilt GBs in nickel, GBClaw characterized interfacial defect structures and identified diverse deformation modes across these incommensurate boundaries. Comparing boundary sliding with and without secondary GB misfit dislocations revealed substantial differences in shear strength, underscoring the critical role of defect hierarchies in sliding resistance. Furthermore, researcher-guided follow-up calculations traced an anomalously high shear resistance to metastable boundary structures. This work demonstrates that combining agentic AI with domain expertise bridges high-throughput computational screening with deep physical understanding of complex material interfaces.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-20",
+        "authors": [
+          "Yazhuo Liu",
+          "Kunqing Ding",
+          "Xiaoguo Gong",
+          "Zifeng Wang",
+          "Yichen Yang",
+          "Yifeng Che",
+          "Wen Chen",
+          "Josh Kacher",
+          "Olivier Pierron",
+          "Shigenobu Ogata",
+          "Ting Zhu"
+        ]
+      },
+      {
+        "title": "Learning Adaptable Dexterous Skills via Hybrid Dexterous Mimicking",
+        "slug": "learning-adaptable-dexterous-skills-via-hybrid-dexterous",
+        "url": "http://arxiv.org/abs/2610.28628v1",
+        "abstract": "Dexterous multi-finger hands hold promise to unlock diverse skills like functional grasps, in-hand reorientation, and dynamic handover that the human-designed world assumes, yet existing learning recipes force a trade-off. Goal-reaching reinforcement learning generalizes to arbitrary object poses but, lacking any human prior, converges to unnatural and unreliable finger strategies; motion tracking reproduces human-like behavior from a single clip but cannot deviate from it. We present AdaDex, a goal-conditioned RL framework that turns a single hand-object trajectory of a few seconds---from mocap data or HOI reconstruction from in-the-wild RGB(D) video---into an adaptable dexterous skill. At the core of AdaDex is Hybrid Dexterous Mimicking: a shared policy is trained on two populations of massively parallel environments: motion tracking environments trained with dense motion tracking objective, which instill the human prior from human motion; and generalization environments with noised initial states and goals and a sparse object-success reward, which force the skill to work far off the reference. From seconds of human motion per skill, the resulting policies can learn diverse adaptable dexterous skills, such as functional grasping, object reposing, in-hand reorientation with finger gaiting, and dynamic behaviors like throw-and-catch. Our method outperforms baselines in terms of generalization and functionality, and we demonstrate transfer across simulators and to the real world. Project page: https://yuxuank.com/AdaDex/.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-20",
+        "authors": [
+          "Yuxuan Kuang",
+          "Jiashun Wang",
+          "Yixuan Sun",
+          "Yufei Ye",
+          "Sungjae Park",
+          "Umar Iqbal",
+          "Katerina Fragkiadaki",
+          "Shubham Tulsiani"
+        ]
+      },
+      {
+        "title": "UniWALM: Unified World Action Language Model for Embodied Robot Control",
+        "slug": "uniwalm-unified-world-action-language-model-for-embodied",
+        "url": "http://arxiv.org/abs/2610.28626v1",
+        "abstract": "Motivated by the human ability to integrate experience across language, perception, and action, we introduce UniWALM, a unified world-action-language model that learns video, action, and language in a single shared representation, where each modality is both a conditioning signal and a supervision target. We ask: can jointly generating language enrich this shared representation, improving manipulation and supporting memory-dependent behavior? Unlike prior approaches that attach a reasoning or vision-language model to a video-action backbone and run them as distinct stages, UniWALM unifies all three modalities inside a single mixture-of-transformers backbone whose per-modality diffusion heads co-denoise synchronously, decoding subtask and textual memory in the same pass as action with no separate planning stage; the generated language is re-consumed on the next step, closing a language-as-memory loop without an external planner or memory bank. To keep the action stream reliable under this richer objective, we further introduce Flow Matching with Correction (FMC), a training objective that teaches recovery from perturbed action trajectories at no inference-time cost. UniWALM consistently improves over same-backbone baselines (e.g., FastWAM) on compositional pick-and-place (MolmoSpaces) and across the memory-dependent subset of RMBench, where it reaches 34.5% without any pretrained language or reasoning model and exceeds Mem-0's keyframe-equipped setup (28.5%) using only a single anchor frame. On a real-world Find-the-Item task, generating textual memory lifts success from 11.1% to 61.1%, while state-of-the-art VLAs stay at or below chance (<=33.3%).",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-20",
+        "authors": [
+          "Rahul Sajnani",
+          "Diego Romeres",
+          "Mingyuan Zhang",
+          "Kai Gao",
+          "Carl Qi",
+          "Baichuan Huang",
+          "Srinath Sridhar",
+          "Dylan Randle",
+          "Lillian J. Ratliff",
+          "Jose Barreiros",
+          "Manikantan Nambi",
+          "Jeroen Vanbaar"
+        ]
+      },
+      {
+        "title": "PsycheMME: A Psychology-Informed Benchmark for Social Understanding and Interaction in Videos",
+        "slug": "psychemme-a-psychology-informed-benchmark-for-social",
+        "url": "http://arxiv.org/abs/2610.28625v1",
+        "abstract": "Understanding human needs and selecting responses require distinct judgments that aggregate accuracy can obscure. We introduce PsycheMME, a video benchmark informed by psychology, with eight capabilities spanning grounding, states, needs, interaction decisions, memory, and risk. Drawing on Social Information Processing and the Perception-Action Cycle, this organization separates human understanding from response selection. We construct 1,000 questions from 630 episodes through independent answering with proposed references withheld and expert review. Our Reasoning-Verified protocol weights answer credit by the support and logical consistency of explicit rationales against annotated cues. Across 17 models, Timing has the lowest Verified scores and credit retention, with weaker support judgments for correct Timing answers. Models with similar Need scores still differ in answer completeness on open questions. Input controls and SFT/GRPO examine context dependence and adaptation. Evaluating answers alongside rationales locates where models fail across understanding, response selection, and justification.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-20",
+        "authors": [
+          "Heran Hu",
+          "Yuhang Dong",
+          "Zhucun Xue",
+          "Kaiwei Chen",
+          "Yong Liu",
+          "Jiangning Zhang"
+        ]
+      },
+      {
+        "title": "Industrial ReMEmbR: Scaling Spatiotemporal Memory to Robot Fleets",
+        "slug": "industrial-remembr-scaling-spatiotemporal-memory-to-robot",
+        "url": "http://arxiv.org/abs/2610.28624v1",
+        "abstract": "Warehouse robot fleets continuously observe operational conditions, but preserving these observations as reusable semantic memory incurs substantial computation, communication, and storage costs. For example, explaining recurring aisle blockages can require reviewing video from multiple robots across several shifts. We present IndustrialRemembr, a shared spatiotemporal memory system that extends NVIDIA ReMEmbR to robot fleets and reduces server-side computation by generating scene descriptions only on demand. On each robot, an NVIDIA Jetson encodes video clips into retrieval embeddings with Cosmos-Embed1, vision tokens with Cosmos3-Edge, and reconstruction latents with the Wan2.2 VAE, without uploading raw camera frames. The encoding models are re-used to detect people in image patches, zeroing them out to support PII abstraction for GDPR-compliant deployments. We split Cosmos3-Edge at its vision-language boundary, placing the vision encoder on the robot and the language decoder on an on-premises server. A Nemotron agent retrieves memories by content, position, and time and queries the decoder using cached vision tokens. This design eliminates caption generation at write time, while cached-token decoding reproduces the unsplit model's output in all 450 tested decodes.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-20",
+        "authors": [
+          "Jad Yammine",
+          "Malek Wahidi",
+          "Abrar Anwar",
+          "Yan Chang",
+          "Mihir Acharya",
+          "Anthony Rizk"
+        ]
+      },
+      {
+        "title": "Planning under Noise with Neural Operators",
+        "slug": "planning-under-noise-with-neural-operators",
+        "url": "http://arxiv.org/abs/2610.28623v1",
+        "abstract": "Planning under uncertain control execution noise requires reliable feedback policies across diverse environments. We introduce Planning Under Noise (PUN), a neural operator that learns noise-aware value fields for planning in unseen geometries. Building on an established screened-Poisson formulation of stochastic optimal control, we address two challenges: specifying boundary conditions that support navigation across varying geometries and efficiently computing fields with reliable gradients. Zero-Dirichlet obstacle boundaries terminate sampled paths at walls, weakening the goal signal along long routes and making it harder to estimate reliably. We instead impose reflecting Neumann conditions on obstacles and a Dirichlet condition at the goal, allowing sampled paths to continue exploring free space until they reach the target. To solve the resulting PDE without a configuration-space mesh, we extend a Monte Carlo (MC) solver, Walk on Stars (WoSt), to higher dimensions. However, local MC fluctuations can reverse estimated gradient directions and cause planning failures, making direct planning require costly sampling. PUN amortizes this computation by learning geometry-to-field mappings from noisy, partially converged Monte Carlo labels, avoiding expensive convergence for every training example. At inference, test-time scaling uses bounded local search guided by the predicted global field. We evaluate PUN on planning tasks across dimensions. Across four noise levels, PUN matches or outperforms all compared planners, achieving 95-100% success on the 4D replanning benchmark while maintaining the lowest runtime. At the highest tested noise level in 4D, PUN achieves 10.7-60.6% relative gains in success rate over other methods while running 3.29-32.15 times faster.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-20",
+        "authors": [
+          "Michael Chen",
+          "Hong Chul Nam",
+          "Xi Deng",
+          "Anima Anandkumar"
+        ]
+      },
+      {
+        "title": "MindView: Benchmarking Generative Multi-View Spatial Intelligence",
+        "slug": "mindview-benchmarking-generative-multi-view-spatial",
+        "url": "http://arxiv.org/abs/2610.28622v1",
+        "abstract": "Spatial intelligence has recently been assessed through generative tasks such as spatially grounded image editing, yet language-guided generation of spatially consistent views from partial multi-view observations remains underexplored. We introduce MindView, a benchmark for generative multi-view spatial intelligence with 1,500 samples from 513 scenes across three indoor datasets. Its seven tasks form two families: geometry-dominant tasks specify changes in camera position and orientation, while semantics-dominant tasks require inferring target viewpoints by grounding referred objects and interpreting spatial relations and reference-frame cues. Evaluation of eleven generators reveals substantial room for improvement on MindView. A paired context analysis further shows that all eleven generators obtain lower overall scores under the expanded context setting. These findings motivate us to investigate whether task-specific supervision can improve target-view generation and whether models can use additional multi-view evidence effectively. We therefore fine-tune BAGEL on the MindView training dataset, improving its overall score by 24.3 points and yielding gains across all seven MindView tasks. Beyond these generation gains, the fine-tuned model also yields higher scores on three spatial-understanding benchmarks without training on their annotations, suggesting that learning to generate spatially grounded views may benefit spatial understanding. To improve evidence utilization under expanded context, we propose MindCue, a training-free spatial evidence selector guided by a target-view hypothesis. MindCue reverses the drop in overall score under expanded context and outperforms the standard-context baseline. Overall, MindView provides a concrete testbed for generative multi-view spatial intelligence.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-20",
+        "authors": [
+          "Yanbo Wang",
+          "Siqi Luo",
+          "Siyu Zhang",
+          "Chenming Zhu",
+          "Wenzhao Zheng",
+          "Qian Yu",
+          "Juncheng Yan",
+          "Bin Fu",
+          "Tai Wang",
+          "Yu Qiao",
+          "Yihao Liu",
+          "Jiwen Lu"
+        ]
+      },
+      {
+        "title": "Adaptive Multi-Token Prediction: How far should we go?",
+        "slug": "adaptive-multi-token-prediction-how-far-should-we-go",
+        "url": "http://arxiv.org/abs/2610.28619v1",
+        "abstract": "Multi-token prediction (MTP) can accelerate language-model decoding by drafting several tokens and verifying them in a single target-model pass. However, the best speculation horizon changes with context: longer drafts offer greater amortization when reliable, but can waste compute on suffixes discarded after a rejection. Unlike autoregressive drafting, where a stopping rule can decide token by token, MTP must fix the horizon before drafting, as all heads fire in the same forward pass. We therefore formulate horizon selection as an online control problem, using verification feedback to learn how far the draft can be trusted in each context, and introduce Adaptive Multi-Token Prediction (AMTP): a lightweight controller that requires no retraining and leaves the exact verifier unchanged. To guide horizon selection, we characterize the expected number of tokens committed at each horizon via acceptance survival, the probability that a draft prefix is fully accepted. Before each round, AMTP predicts how far the draft is likely to survive and picks the horizon with the highest expected tokens per second, learning freely from every verification pass. Theoretically, we show that any online learner's prediction error translates into throughput regret against the best horizon for each context, and in turn into a bound on wall-clock completion time. With online gradient descent, this regret is sublinear. Across five draft-target pairings built on Llama-3.1-8B-Instruct with Medusa heads, Meta's MTP models, and Qwen3-4B-Inst-2507-MTP, evaluated on AIME 2025 and GSM8K, AMTP decodes up to 4.1x faster than standard decoding and matches or outperforms the fixed window in 8 of 10 settings, with throughput gains of up to 10%.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-20",
+        "authors": [
+          "Emile Anand",
+          "Mohammed Rehan Parwani",
+          "Xinyuan Cao"
+        ]
+      },
+      {
+        "title": "Efficient Edge-aware Attention Network for Graph Generation",
+        "slug": "efficient-edge-aware-attention-network-for-graph-generation",
+        "url": "http://arxiv.org/abs/2610.28618v1",
+        "abstract": "Graph generative models commonly use graph-specific Transformer architectures to jointly update node and edge features. However, these architectures do not directly benefit from recent hardware-aware attention implementations, limiting their scalability. The adaptation is, however, non-trivial: edge and graph-level features must be injected into pairwise attention scores, graph masks must be respected, and dynamic edge updates remain a major source of quadratic memory usage. We propose an edge-aware attention layer for graph generation that incorporates structural information through head-wise score modulation, while updating edge representations with a lightweight residual mechanism that retains attention-score dependent edge updates. This layer can be effectively implemented using PyTorch's FlexAttention. We achieve similar generation quality to our baseline while reducing peak GPU memory by around 65% and substantially improving training and sampling throughput. These results suggest that the proposed architecture is a practical step toward scalable graph foundation models.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-20",
+        "authors": [
+          "Vincent Jung",
+          "Alba Carballo-Castro",
+          "Yiming Qin",
+          "Lonneke van der Plas",
+          "Pascal Frossard"
+        ]
+      },
+      {
+        "title": "NarraSpace: Multimodal Scene-Grounded Evidence for Picture-Description Dementia Classification",
+        "slug": "narraspace-multimodal-scene-grounded-evidence-for-picture",
+        "url": "http://arxiv.org/abs/2610.28616v1",
+        "abstract": "Picture-description dementia classification uses a shared visual scene, but a transcript-level prediction alone does not identify the scene evidence underlying its inputs. NarraSpace links words and speech times to named picture elements and retrieves utterances for predefined scene events. Narrative-spatial descriptors summarize coverage and temporal organization. A frozen language model contrasts each event's text under examples from Alzheimer's disease and healthy-control training participants, alongside transcript surprisal and coverage measurements. Retained source records link event scores to their source utterances, speech intervals, and lexical matches. On the official 48-participant test set of the Alzheimer's Dementia Recognition through Spontaneous Speech benchmark, a fixed support vector classifier achieves $80.88\\%\\pm2.56\\%$ mean accuracy over fifty seeds; averaged probabilities yield $81.25\\%$ accuracy and $91.32\\%$ area under the receiver operating characteristic curve. NarraSpace makes the construction of scene-linked classification inputs explicit and inspectable by connecting event-indexed language-model measurements to their source utterances, speech timing, and extraction records. Such source-linked measurements could support clinician review of picture descriptions by presenting quantitative summaries alongside the original speech evidence.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-20",
+        "authors": [
+          "Qingming Li",
+          "Ruiyan Sun",
+          "Satoshi Nakamura"
+        ]
+      },
+      {
+        "title": "KoalaGS: Complexity-Aware Continuous Level of Detail for Gaussian Splatting",
+        "slug": "koalags-complexity-aware-continuous-level-of-detail-for",
+        "url": "http://arxiv.org/abs/2610.28615v1",
+        "abstract": "Deploying a trained 3D Gaussian Splatting scene under shrinking compute budgets requires one primitive set to remain effective when rendered at smaller prefixes. In this continuous level of detail (LoD) setting, the challenge is to decide which Gaussians should retain capacity as the budget decreases. A pilot study on 3DGS-MCMC reconstructions shows that image complexity, computed from the input views before optimization, predicts where reconstruction error concentrates in image and 3D space. It also reveals that simple regions contain too many Gaussians and degrade as much as complex ones at lower budgets, despite being inherently cheaper to represent. Subsequently, in KoalaGS, during training we use this complexity prior to bias relocation toward poorly reconstructed areas while ensuring smooth degradation across LoDs. A primitive importance score then enables inference at low-capacity, while preserving the scene structure. Tested across three datasets, KoalaGS maintains competitive full-capacity quality while significantly improving quality across the budget spectrum, yielding smoother transitions across LoDs, and enabling faster progressive streaming.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-20",
+        "authors": [
+          "Radu Beche",
+          "Raoul de Charette"
+        ]
+      },
+      {
+        "title": "Semantic Observability for Autonomous Systems Diagnostics",
+        "slug": "semantic-observability-for-autonomous-systems-diagnostics",
+        "url": "http://arxiv.org/abs/2610.28611v1",
+        "abstract": "Modern distributed microservice deployments generate massive volumes of heterogeneous, multi-format observability logs across physically and logically partitioned infrastructure. Isolating root causes during cascading failures remains an arduous task for Site Reliability Engineers (SREs), bottlenecked by manual keyword filtering and disjointed temporal correlation across monitoring dashboards. We introduce Semantic Observability, an autonomous multi-agent framework that unifies disparate log streams into a dynamic, queryable Property Graph Database. By modeling physical infrastructure topologies, logical software dependencies, and chronological event sequences as attributed nodes and directed relations, it bridges the semantic gap inherent in flat, unstructured log repositories. Building on this unified substrate, we deploy a stateful multi-agent system orchestrated through Directed Cyclic Graphs (DCGs). The system autonomously navigates the topology, applying causal graph algorithms and temporal back-traversal to isolate the precise blast radius of anomalies. The pruned subgraph is then interpreted by a Large Language Model (LLM) reasoning engine to generate contextualized, code-level Root Cause Analyses (RCA) and actionable remediations. This paper establishes the foundational system architecture, formal relational ontology, and multi-agent control loops of Semantic Observability. We show conceptually how the framework eliminates ambient telemetry noise, reduces Mean Time to Resolution (MTTR), compresses LLM token consumption, and prevents structural hallucinations. We also specify an open-source validation framework on standard benchmarks (LogHub and Train-Ticket), laying the groundwork for a forthcoming companion paper on exhaustive quantitative evaluation and production benchmarking.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-20",
+        "authors": [
+          "Jitendra Solanki",
+          "Anand Todkar",
+          "Ziran Min"
+        ]
+      },
+      {
+        "title": "Benchmarking Arabic Dialects for Math Problems",
+        "slug": "benchmarking-arabic-dialects-for-math-problems",
+        "url": "http://arxiv.org/abs/2610.28607v1",
+        "abstract": "Mathematical reasoning remains underexplored for low-resource languages, including Dialectal Arabic. To bridge this gap, we introduce the DAR-MGSM (Dialectal Arabic Multilingual Grade School Math) Benchmark, the first manually curated benchmark for evaluating mathematical reasoning in Dialectal Arabic. DAR-MGSM consists of math word problems (MWPs) requiring multi-step reasoning and covers five major Arabic dialects alongside Modern Standard Arabic (MSA). The benchmark comprises two parallel versions: translated-only and translated & culturally localized. The latter version adapts entities and references to regional varieties. We evaluate eleven Arabic-centric and multilingual large language models on DAR-MGSM. The results show that the performance generally declines on the localized version, highlighting the challenges introduced by culturally grounded adaptations. However, the magnitude of this effect varies across models, with Arabic-centric models exhibiting different levels of sensitivity to localization. A mechanistic interpretability analysis shows that translated and localized variants of the same MWPs often induce distinct internal reasoning trajectories, even when aggregate accuracy remains similar. Overall, our results show that mathematical reasoning performance depends on both linguistic variety and cultural context.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-20",
+        "authors": [
+          "Noor Abo Mokh",
+          "Teresa Lynn",
+          "Nizar Habash",
+          "Ahmed Elshabrawy",
+          "Sara Alhajeri",
+          "Alaa Elsetohy",
+          "Preslav Nakov",
+          "Alham Fikri Aji"
+        ]
+      },
+      {
+        "title": "Value-Rich, Differently Organized: Measuring Value Expression and Organization in AI-Generated Debates",
+        "slug": "value-rich-differently-organized-measuring-value-expression",
+        "url": "http://arxiv.org/abs/2610.28604v1",
+        "abstract": "Current evaluation of LLM-generated debate largely focuses on argumentative quality, leaving the value structure of generated arguments underexamined. We introduce a diagnostic metric framework for comparing how values are expressed and organized in human-reference and AI-generated debates. The framework separates value expression, the range of recognizable values a debate invokes, from value organization, how those values are distributed and sustained across turns. Grounded in Schwartz's Basic-10 value theory, it represents debates as multi-level value distributions over argumentative units, utterances, stances, and full debates, enabling metrics for value coverage, alignment, diffusion, and cross-turn dynamics. Across multiple generation systems, AI-generated debates are broadly value-expressive, often activating as many or more value dimensions than matched human references, but they organize these values differently. Their utterances are more locally value-diffuse, and source-blind judges distinguish value clarity from value focus. These findings show that debate evaluation should consider not only value presence, but also value organization. Code and supplementary materials are available at https://github.com/Maoyuan-li/Value-Expression-and-Organization.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-20",
+        "authors": [
+          "Maoyuan Li",
+          "Haoyuan Li",
+          "Zhongsheng Wang",
+          "Jiamou Liu"
+        ]
+      },
+      {
+        "title": "Turning TS2Vec into a Foundation Model for Time Series Classification",
+        "slug": "turning-ts2vec-into-a-foundation-model-for-time-series",
+        "url": "http://arxiv.org/abs/2610.28602v1",
+        "abstract": "TS2Vec is one of the strongest self-supervised methods for time series classification, introduced in 2022. It is designed to be trained anew on every dataset: self-supervised pre-training followed by linear probing. Since then, the field has shifted towards foundation models that reuse one encoder across datasets. Yet TS2Vec offers a compact convolutional architecture that operates directly on temporal samples and accepts variable-length inputs without resampling. We ask whether these properties can be retained when the encoder is pre-trained only once, and show that they can: TS2Vec can essentially be turned into a foundation model. Three changes suffice: pre-train on a synthetic corpus, feed the encoder a raw amplitude view and an instance-normalized shape view of the input through two small stems, and distill one specialist encoder per view into a single encoder. The result, TS2Vec-FM, is a 1.6M-parameter dilated convolutional network that, kept frozen, reaches 83.3% on UCR-128 and 75.3% on UEA-27 under linear probing, within 0.3 pp of MantisV2, the current state of the art, and above TS2Vec trained separately on each target dataset. What we find most interesting is how different TS2Vec-FM is from other foundation models in design: near-parity is reached without attention, without a patch tokenizer, and without intermediate-layer extraction, using an \"old-school\" convolutional encoder and a two-layer MLP stem.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-20",
+        "authors": [
+          "Vasilii Feofanov",
+          "Zhenghan Tai",
+          "Andrei Ermakov",
+          "Irina Rish"
+        ]
+      },
+      {
+        "title": "Neural Implicit Energy Optimization for LiDAR Mapping",
+        "slug": "neural-implicit-energy-optimization-for-lidar-mapping",
+        "url": "http://arxiv.org/abs/2610.28598v1",
+        "abstract": "Neural implicit representations provide memory-efficient signed distance field (SDF) parameterizations for large-scale LiDAR scenes, but the geometry recovered from sparse and often noisy inputs carries jitter and artifacts. Classical geometric optimization techniques resolve such artifacts with surface energy functionals, whose minimizers correspond to smooth surfaces. Motivated by this principle, we formulate neural LiDAR mapping as the optimization of energy functionals over the parameter space of neural implicit representations. Specifically, we regularize the signed distance field with an energy functional defined on the shape operator of its level set, which represents the curvature of the surface, thus encouraging smoothness along the surface. This adapts classical geometric priors to the scale of million-point LiDAR maps. Experiments on large-scale datasets show reconstructions with improved smoothness at preserved geometric fidelity, and no additional inference-time cost. The code is publicly available at \\href{https://github.com/HrishikeshVish/nieo}{https://github.com/HrishikeshVish/nieo}",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-20",
+        "authors": [
+          "Hrishikesh Viswanath",
+          "Md Ashiqur Rahman",
+          "Chi Lin",
+          "Damon Conover",
+          "Aniket Bera"
+        ]
+      },
+      {
+        "title": "What Do RTL Repair Benchmarks Actually Measure?",
+        "slug": "what-do-rtl-repair-benchmarks-actually-measure",
+        "url": "http://arxiv.org/abs/2610.28595v1",
+        "abstract": "RTL repair benchmarks should measure whether a model can fix broken RTL given a specification. To this end, we construct and hash-bind RTLRepairDataset, 5,784 (broken, fixed) training pairs; RTLRepairBench, 459 held-out cases with 374 syntactic and 85 behavioral mutations; and an evaluation harness supporting simulation and formal equivalence. We then use this infrastructure to identify two measurement confounds. First, simulation and formal scoring give opposite signs for the apparent effect of providing a specification in one evaluated cohort; reset-aware rescoring attributes almost all of the simulation-formal disagreement to reset and first-cycle comparison semantics. Second, on 274 mined model failures, the specification-only minus specification-conditioned recovery point estimate ranges from -8.5 to +18.3 percentage points across six models. Thus, a conventional repair score need not isolate whether the model used the faulty RTL. We translate these findings into evaluation controls: report initialization, reset, first-cycle, and unknown-value semantics; disclose oracle coverage and undecided cases; and include a specification-only baseline. Together, the resources and audit provide both a benchmark for behavioral repair and a protocol for diagnosing what contributes to its measured score. We release the benchmark, the training set, construction code, sanitized aggregate evidence, and reproduction materials at https://github.com/Evaaaz/RTLRepairBench.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-10-20",
+        "authors": [
+          "Yeyin Eva Zhu",
+          "Rishabh Ranawat"
+        ]
+      }
+    ]
+  }
+}
