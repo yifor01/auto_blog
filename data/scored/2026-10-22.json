@@ -1,0 +1,772 @@
+[
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Amazon Science",
+      "title": "The science behind TorchNeuron, Amazon’s new PyTorch backend for AWS Trainium chips",
+      "url": "https://www.amazon.science/blog/the-science-behind-torchneuron-amazons-new-pytorch-backend-for-aws-trainium-chips",
+      "authors": [],
+      "abstract": "PyTorch is the one framework that most AI developers use to build their models. It’s a Python library of operations performed on tensors, higher-dimensional analogues of a matrix, or 2-D grid of numbers. Almost all of the crucial features of contemporary AI models, such as input data, model weights, and attention mechanisms, are represented by tensors, and PyTorch drastically simplifies writing code to manipulate them. This week, we announced the availability of TorchNeuron, an open-source backend that translates PyTorch code into operations executable on AWS Trainium systems. PyTorch code that already runs on other accelerators will run on Trainium with minimal or no code changes. TorchNeuron bridges PyTorch and Trainium, and both sides gain from it. PyTorch developers can now run their code on Trainium, which was built from the ground up for large-tensor workloads. They can also tap the AWS Neuron SDK, which includes a profiler that traces each instruction with cycle-level accuracy and the Neuron Kernel Interface (NKI, pronounced \"Nikki\"), which enables control almost at the assembly level. TorchNeuron includes several optimizations that enable PyTorch code to run efficiently on Trainium, including caching at multiple levels and an optional “adaptive eager” mode that doesn’t execute individual operations one by one, as is typical in plain eager mode, but instead groups and compiles operations for more efficient execution, approaching fully compiled performance. Much of the innovation behind TorchNeuron, however, is the way its performance was evaluated. AI agents searched through hundreds of thousands of open-source models and categorized them according to their architectural characteristics. This allowed the Annapurna team around Khaled ElGalaind and Sarang Ozarde to identify 841 representative models covering the full spectrum of model architectures. From those models, they also distilled tens of thousands of practically important tensor dimensions, or “shapes”, which were then used to tune and benchmark TorchNeuron’s performance. The result is that PyTorch programmers can trust TorchNeuron to execute their code accurately, efficiently, and most importantly, right out of the box. Runtime optimizations Adaptive eager mode Standard PyTorch has two native execution modes. One is called “eager”, meaning that PyTorch operations are executed immediately, in program order. The other mode is compiled mode, where the programmer selects blocks of code that should be compiled in the traditional sense, meaning that a compiler builds a control-flow graph of the tensor operations and optimizes it. There are many optimization techniques in place today, such as operator fusion to reduce memory traffic and increase locality. Developers often use eager mode when they’re debugging models and compiled mode once they’re confident their code is correct and want it to execute as efficiently as possible. TorchNeuron adds something in-between, an opt-in setting called adaptive eager mode, which offers some of the advantages of compilation but operates on smaller subgraphs. This mode approximates both eager mode’s responsiveness and compiled mode’s performance, but without the compile time overhead. At run time, a Python interpreter running on a CPU accumulates instructions it gets from PyTorch ’s operator dispatch and builds small graphs. The graphs are sent to TorchNeuron, which compiles them, caches them, and puts them in a queue for execution. Multiple such graph collections and compilations are happening in parallel, further minimizing the compile time overhead. A key innovation here is that the accumulated graphs, their individual operations, and their input tensor shapes correlate directly with compile time. Larger graphs on larger tensors take longer to compile. Hence, a smart, adaptive algorithm dynamically selects the right subgraphs to maximize the overlap of compile time with the execution of already compiled snippets, effectively hiding all compile time for a great variety of models. PyTorch developers running their code in eager mode are accustomed to being able to correlate the operations executing on hardware with individual lines of code; that’s why eager mode is so useful for debugging. We didn’t want to disrupt this experience, so TorchNeuron’s adaptive-eager mode maintains accurate source correlation. Caching When a compiled graph comes out of the queue, TorchNeuron converts it into an executable file called a NEFF, for Neuron executable file format. A single operation in eager mode can yield a single NEFF, and the same mechanism works for full or partial graphs. In this sense, the Neuron software stack uses ahead-of-time (AOT) compilation as the default. Converting operations to NEFFs is expensive, so TorchNeuron tries not to do it unnecessarily. Every NEFF it produces is cached at several levels. An in-memory cache keeps recently generated NEFFs, and a persistent cache on disk means NEFFs can be reused for fast restarts and future work. The AOT-by-default approach makes this straightforward. An Amazon EC2 UltraServer is a collection of up to four individual Graviton servers with, based on configuration, somewhere between 16 and 144 Trainium accelerator chips. For very large models, even an UltraServer is not big enough to hold the full model, and models are sharded across many servers with thousands of accelerator chips. Since they all run identical parts of the same model, they all need the same NEFFs. The TorchNeuron runtime coordinates those accelerators so that they don’t have to compile identical code; instead, one system compiles operations and graphs, and the others reuse the compiled code. A shared compilation service pools the compiler to work for all the accelerators on a server, keeping the host CPUs from being overwhelmed. In tests with a large language model spread across accelerators, these optimizations cut the time to the first training step by about a third.Evaluation We built AI agents that conducted a broad sweep of Hugging Face repositories, ruled out the models whose broken configurations won't run on any accelerator, and surfaced hundreds of thousands with working, executable code. Evaluating every revision of TorchNeuron’s code on all those models would have been immensely time consuming. However, and besides, many of them perform similar tasks or process similar types of data. So members of our team built another agent that classified models according to a defined set of architectural properties. For example, a large language model has three main components: the front end is typically an encoder, specialized for different data types, such as text, audio, images, video, or some combination thereof. The trunk houses the main Transformer blocks, the attention mechanisms and feed-forward layers, but the attention mechanisms might be self-attention, cross-attention, or both, and they come in flavors such as flash attention, ring attention, and delta attention. Finally, a backend converts the model’s inner representations into a usable output form, which might be any type of data, produced through any number of strategies. Across all models, LLMs and otherwise, we found that just 841 representative models covered all the design characteristics that TorchNeuron was likely to confront in the wild. But fully evaluating new code revisions on even 841 models can still take too long for rapid regression detection, so with every evaluation run, we kept a record of the different-sized tensor operations that Trainium was asked to process. By the end, we had a “shape registry” cataloguing tens of thousands of operations and their tensor dimensions that TorchNeuron is likely to encounter in practice. From the registry, we generated unit tests that could test and validate a new software version in dramatically faster fashion. Any revision that passed the fast unit tests would then be tested against the 841 representative models.",
+      "published_date": "2026-10-22",
+      "tags": [],
+      "organization": "Amazon",
+      "raw_metadata": {
+        "feed_name": "Amazon Science",
+        "feed_url": "https://www.amazon.science/index.rss"
+      }
+    },
+    "rule_score": 43.0,
+    "rule_reasons": [
+      "🏢 頂流機構: Amazon",
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 63,
+    "llm_reason": "PyTorch對接Trainium的紮實系統工程，立即可用且有編譯優化細節",
+    "novelty": 8,
+    "impact": 12,
+    "trending": 11,
+    "practicality": 17,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Microsoft Research",
+      "title": "Flint-interactive: A language for creating interactive data visualizations",
+      "url": "https://www.microsoft.com/en-us/research/blog/flint-interactive-a-language-for-creating-interactive-data-visualizations/",
+      "authors": [
+        "Chenglong Wang, Yuwei  Xiao, Alper Sarikaya, Michel Galley, Chris Quirk, Jianfeng Gao"
+      ],
+      "abstract": "AI agents make it easy to analyze data and generate reports with data visualizations. They help users examine patterns more efficiently than by reading verbose text. However, when we’re feeling exploratory, we want to go beyond static visualizations. : We want to interact with charts to zoom in on details, compare data across charts, or even highlight related text in the document from a chart selection, and vice versa. This requires agents to be able to create interactive data visualizations that communicate information while letting readers explore beyond the author’s chosen view, ideally with the quality of interactive stories in sophisticated data journalism. This leaves us wondering: Yes, it’s possible, but there is a significant practical gap. Even with capable frontier models, we still face: These challenges help explain why consistently generating high-quality interactive visualizations remain difficult in real-world use. Meanwhile, built-in interactions in some visualization libraries are not expressive enough on their own to create bespoke interactive charts. And these challenges are results of the lack of an expressive yet high-level language to specify visual interactions. Flint-interactive (opens in new tab) is a language for creating interactive data visualizations on top of Flint. It allows users to create dashboards, data stories, and interactive artifacts more easily. The power of Flint-interactive comes from Flint’s compiler, which translates user interactions into semantic events that capture the meaning behind what users select. It then uses high-level operators to update visualizations in response to those events, making sophisticated interactions far easier to create and maintain. This shifts the heavy burden of resolving complex dependencies between interaction and visual logic to the compiler, so the user (or the agent) can easily describe expressive interactions with high-level specifications. Use Flint Interactive directly in your chat or canvas environment through Flint-MCP and MCP Apps, following the MCP setup guide. With the latest release, tell your agent what to chart and which interactions you want; it can generate an interaction_spec alongside the Flint chart spec and render the interactive chart in your conversation. 2. Build an interactive app with Flint Build interactive charts in a dashboard, data story, or other application with Flint Interactive Canvas. Your app can use event handlers to process semantic events emitted by Flint Canvas, for example to filter a table, update another chart, or change application state. To let your app’s widgets control how the chart updates, send update operators to Flint Canvas. 3. Create bespoke interactions To create bespoke interactions beyond Flint’s presets, define a trigger and a custom handle function with the programming API that maps semantic events to custom chart update sequences. For example, a handler can highlight a clicked country and label it by name. It combines set-style and set-annotation without manipulating renderer-specific marks. Flint Canvas is a state machine that tracks user interactions on the canvas and manages visual rendering state. Flint makes interaction specification easy by separating visual logic, managed by the compiler, from interaction logic, specified by the user at the semantic level: This separation means users do not need to reverse-engineer rendering logic or manipulate renderer-specific marks, making interactions easier to specify and maintain. Furthermore, because event generation and visual updates are compositional, the same model also connects Flint with tables, text, other charts, and widgets to build interactive stories and dashboards. Chart users: Set up Flint in your chat (opens in new tab) and ask your agent to create an interactive chart. Find inspiration in the interaction gallery. App builders: Build interactive dashboards, data stories, and connected views with the programming API (opens in new tab) . Share the interaction-author skill with your coding agent to add presets to your app. Interaction designers: Explore the bespoke examples (opens in new tab) , design a new interaction, and turn it into a reusable preset. Propose a preset on GitHub and share your prototype or implementation to help expand Flint’s interaction vocabulary. The post Flint-interactive: A language for creating interactive data visualizations appeared first on Microsoft Research .",
+      "published_date": "2026-10-22",
+      "tags": [
+        "Research Blog"
+      ],
+      "organization": "Microsoft",
+      "raw_metadata": {
+        "feed_name": "Microsoft Research",
+        "feed_url": "https://www.microsoft.com/en-us/research/feed/"
+      }
+    },
+    "rule_score": 48.0,
+    "rule_reasons": [
+      "🏢 頂流機構: Microsoft",
+      "🔥 熱門關鍵字: agent, mcp",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 57,
+    "llm_reason": "新的互動視覺化專用語言與編譯器，技術深度足但應用面偏小眾",
+    "novelty": 13,
+    "impact": 9,
+    "trending": 9,
+    "practicality": 12,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Recursive Releases Flint, an Open-Weight 40B MoE Local Coding Model for Agents with 2.5B Active Params",
+      "url": "https://www.marktechpost.com/2026/10/21/recursive-flint-local-coding-model/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "Recursive Superintelligence has released Flint , its first model. The Recursive Flint local coding model is a mixture-of-experts (MoE) model with 40B total and 2.5B active parameters. Recursive team states that its Eureka Machine, an automated research system, helped build nearly every part of the stack. The weights are on Hugging Face under Apache 2.0. Flint is a decoder-only MoE Transformer for coding agents. The model investigates codebases, fixes bugs, implements features and writes tests. It is text-only and supports reasoning and OpenAI-compatible tool calls. Introducing Flint, @Recursive_SI ’s first model: a fast local coding model built with our automated research system, the Eureka Machine. • Best-in-class fast local coding • Up to 2x faster than comparable models: 125+ tokens/sec on a MacBook Pro, 150+ on RTX Spark • Built from… pic.twitter.com/ufg2xScSGw Flint has 49 layers: 2 dense layers, then 47 MoE layers. Each MoE layer has 256 routed experts. A router selects 6 per token, plus 1 always-active shared expert. Attention mixes 2 types. 35 layers use a 513-token sliding window. 14 layers use full attention with no positional encoding. There are 32 query heads and 4 key/value heads. The 2.5B active figure includes the output head. The active body alone is about 2.2B parameters. The Eureka Machine proposes ideas, implements them, tests them and picks what to try next. Recursive highlights 3 contributions: All scores below are self-reported by Recursive. Sampling used temperature 1.0, top-p 0.95 and top-k 20. Terminal-Bench used the Terminus 2 harness. Solutions found through web retrieval counted as failures. SWE-bench runs used mini-swe-agent with no internet access. Agentic scores average pass@1 over at least 5 attempts. In Recursive’s chart, Qwen3.6 scores 73.4% on SWE-bench Verified. Dense Qwen 3.8 scores 73.0% on Terminal-Bench 2.1, well above Flint. Recursive’s own comparison chart (scores in %, † measured by Recursive, others developer-reported): Competitor figures below come from each developer’s own model card, not Recursive’s chart. Recursive reports more than 125 tokens per second on an M4 Pro MacBook Pro. It reports more than 150 tokens per second on a 64 GB NVIDIA RTX Spark. Both are short-context figures, up to 2x faster than comparable models. It also claims Flint runs more than 5x faster than dense 25-40B models with similar coding scores. Flint also works with llama.cpp, Ollama, Unsloth, LM Studio, vLLM and SGLang. Check out the technical details , model weights and rec engine on GitHub . All credit goes to the researcher of this project. Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. The post Recursive Releases Flint, an Open-Weight 40B MoE Local Coding Model for Agents with 2.5B Active Params appeared first on MarkTechPost .",
+      "published_date": "2026-10-21",
+      "tags": [
+        "Agentic AI",
+        "AI Infrastructure",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Editors Pick",
+        "Enterprise AI",
+        "For Devs",
+        "Harness",
+        "Language Model",
+        "Large Language Model",
+        "Machine Learning",
+        "Open Source",
+        "Software Engineering",
+        "Staff",
+        "Tech News",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, reasoning, moe, mixture of experts",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 71,
+    "llm_reason": "開源MoE編碼模型搭配自動化研究系統，架構與效能細節豐富",
+    "novelty": 13,
+    "impact": 11,
+    "trending": 15,
+    "practicality": 16,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Perplexity and NVIDIA Researchers Introduce JOLT: a Joint Teacher-Student Reinforcement Learning Method",
+      "url": "https://www.marktechpost.com/2026/10/21/perplexity-jolt-joint-on-policy-learning-teaching/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "Perplexity , along with NVIDIA team, has introduced JOLT, a new post-training method for language models. JOLT stands for Joint On-policy Learning and Teaching . It trains a single model in 2 roles. The teacher sees privileged information; the student does not. The key change is that the teacher is trained too, so its feedback stays usable. On MATH, JOLT matched GRPO’s accuracy with 6.5x fewer processed training tokens. For teams running RL post-training, that is a direct compute question. JOLT is a self-distillation method from Perplexity and NVIDIA that trains one model as teacher and student. It builds on On-Policy Self-Distillation (OPSD) . Outcome-reward RL, such as GRPO , gives one reward per attempt. That signal is sparse. It does not say which tokens helped. On long agentic tasks, successes are rare, so learning is slow. On-Policy Distillation fixes sparsity by having a stronger teacher score each student token. OPSD removes the separate teacher. The same model becomes the teacher when given privileged context, such as a verified solution. The research team argues this is not enough. A teacher holding the answer can take shortcuts the student cannot follow. Its guidance may sit beyond the student’s reach. In the paper, OPSD’s teacher-student disagreement grows during MATH training. JOLT trains both roles of one shared model at the same time: The research stands in the center on a ‘reward-consistent’ teacher. Its distillation update should point the same way as the student’s reward gradient. The ideal teacher favors high-advantage actions while staying near the student’s policy. The research team tested 5 settings, each with a different base model and type of privileged information: JOLT+ had the highest mean score in every setting. Against GRPO, the strongest baseline, it gained 1.5 points on GSM8K. It also gained 4.2 on MATH, 3.0 on LCBv6 and 9.9 on AppWorld. On Terminal-Bench 2.1 , JOLT+ reached 10.96% pass@1 and 34.83% pass@32. GRPO scored 8.25% and 30.34%. Even plain JOLT, with no student reward, beat GRPO on MATH: 72.14% versus 68.36%. On MATH, the research team fit accuracy curves against training-token budgets. At 63.44% accuracy, GRPO’s checkpoint used 8.40M processed training tokens. JOLT’s fitted curve needed 1.30M, a 6.5x reduction. Counting completion tokens only, the gap widens to about 13x. Across 55% to 65% accuracy targets, savings range from 4.3x to 7.4x on processed tokens. JOLT also levels off higher. It plateaus near 72%, against about 70% for GRPO and 62% for OPSD. All scores below come from Perplexity’s own runs in the JOLT paper , with hyperparameters tuned per method. Method descriptions link to each method’s own paper. Terminal-Bench base model: 5.18% pass@1, 22.81% pass@32. Check out the paper on arXiv and the Perplexity research blog post . All credit goes to the researcher of this project. Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post Perplexity and NVIDIA Researchers Introduce JOLT: a Joint Teacher-Student Reinforcement Learning Method appeared first on MarkTechPost .",
+      "published_date": "2026-10-22",
+      "tags": [
+        "Agentic AI",
+        "AI Infrastructure",
+        "AI Paper Summary",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Editors Pick",
+        "Language Model",
+        "Large Language Model",
+        "Machine Learning",
+        "New Releases",
+        "Reinforcement Learning",
+        "Staff",
+        "Tech News",
+        "Technology",
+        "Uncategorized"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agentic, grpo, post-training, reinforcement learning, distillation",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 69,
+    "llm_reason": "教師學生聯合訓練解決RL稀疏獎勵問題，6.5倍token效率提升具說服力",
+    "novelty": 15,
+    "impact": 13,
+    "trending": 14,
+    "practicality": 11,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Gradium Open-Sources Phonon, a 31M-Parameter On-Device TTS Model Under Apache 2.0",
+      "url": "https://www.marktechpost.com/2026/10/22/gradium-phonon-31m-on-device-tts/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "Gradium has open-sourced Phonon , a family of small text-to-speech models built to run on the device. The Gradium Phonon on-device TTS model comes in 31M and 40M sizes. The English Phonon 31m ships under Apache 2.0 and fits in a 64.5 MB file. Developers get natural speech with no cloud call, no GPU and no per-character bill. Phonon is an open-weight TTS family from Gradium , a Paris voice AI company spun out of Kyutai. It generates speech locally on phones, laptops, boards and browsers. Phonon uses a causal transformer backbone. Its prefix combines text and speaker embeddings. A SentencePiece tokenizer with a 4,000-token vocabulary reads raw text, with no phoneme conversion. The backbone generates 1 latent vector per 80 ms frame. A flow-matching head turns that vector plus noise into an audio embedding in a single step. A smaller variant of Kyutai’s Mimi decoder then outputs 24 kHz PCM audio. A separate end-of-speech head decides when to stop. Phonon 31m uses 6 transformer layers, width 512 and 8 attention heads. Phonon 40m uses 9 layers at the same width. Both are distilled from a larger Phonon teacher. Training ran on an NVIDIA H100 cluster with NCCL and CUDA Graphs. The work builds on Kyutai’s Continuous Audio Language Models research and Pocket TTS. Gradium ran blind pairwise listening tests with 1,189 raters and 17,270 votes. In US English, Phonon 40m scored 2117 Elo and Phonon 31m scored 2098. Kokoro scored 2043, NeuTTS 2034 and Magpie 1939. Accuracy was tested on a public hard-sentence set . It holds 500 sentences per language, full of phone numbers, emails and postal codes. Phonon 31m scored 1.70% WER against 3.50% for Kokoro and 8.71% for NeuTTS Nano. Built-in text normalization drives much of that gap. On the easier Seed-TTS set, the gap closes. Phonon 31m scored 0.51% LLM WER, while Kokoro scored 0.45%. On a MacBook Air M5 CPU with 4 threads, Phonon 31m reaches first audio in 6.9 ms. It runs 29.9x faster than real time. Kokoro takes 517 ms, because it does not stream. With Arm KleidiAI and Apple Accelerate, Phonon 31m reaches 46.7x real time. On a Raspberry Pi 5, Phonon 31m starts in 38 ms and runs 3.7x faster than real time. Gradium says Kokoro needs 7 seconds to start there. On Snapdragon 8 Elite Gen 5, Phonon starts in 7.5 ms at 24x real time. On an NVIDIA L40S, CUDA reaches first speech in 5 ms. An AMD EPYC 7413 CPU takes 43 ms, per the press release . Benchmark rows come from Gradium’s blog and model card . Size, language and license rows come from each model’s own card. The runtime is MIT or Apache-2.0 licensed. It covers Rust, Python ( pip install ptts ), Swift, C, C++ and the browser via phonon-tts . It also ships an OpenAI-compatible server and a WebSocket server. Phonon loads in Transformers, MLX-Audio, Ollama and LM Studio. Voice cloning and voice design run in Gradium Studio, then the voice runs locally. Check out the technical blog , model card , GitHub runtime and hard-sentence dataset . All credit goes to the researcher of this project. Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post Gradium Open-Sources Phonon, a 31M-Parameter On-Device TTS Model Under Apache 2.0 appeared first on MarkTechPost .",
+      "published_date": "2026-10-22",
+      "tags": [
+        "Agentic AI",
+        "Artificial Intelligence",
+        "Audio Language Model",
+        "Editors Pick",
+        "Enterprise AI",
+        "For Devs",
+        "Language Model",
+        "New Releases",
+        "Open Source",
+        "Staff",
+        "Technology",
+        "TTS",
+        "Voice AI"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: flow matching, open weight",
+      "⚖️ 來源權重: rss +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 64,
+    "llm_reason": "開源小型端側TTS，架構細節與盲測評分完整可複現",
+    "novelty": 11,
+    "impact": 10,
+    "trending": 11,
+    "practicality": 17,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Cohere Releases Rerank 5 With Passage-Level Context Focus and Calibrated Scores",
+      "url": "https://www.marktechpost.com/2026/10/22/cohere-rerank-5-context-focus/",
+      "authors": [
+        "Michal Sutter"
+      ],
+      "abstract": "Cohere AI has released Rerank 5 , a new reranker family in Pro and Fast tiers. Cohere Rerank 5 is a retrieval model that reorders search results before they reach an LLM. It adds 2 developer features: Context Focus, which returns relevant passages inside each document, and calibrated relevance scores. For RAG and agent builders, the message is simple. Send fewer, better tokens to the LLM. Rerank 5 ships as two models. Pro targets ranking quality on reasoning-heavy queries and long, domain-specific documents. Fast targets low latency and high throughput for agents running many searches. Both models support over 100 languages and a 32K context window. They also rerank semi-structured data such as JSON, tables and YAML records. Upgrading needs no re-indexing. Developers change the model parameter and keep their existing keyword, vector or hybrid search. Context Focus is an optional feature, off by default. A single Rerank call returns document scores plus scored character spans. Each span carries start and end offsets into the original text. Developers set it through the relevant_spans field, with a threshold and max_spans value. Cohere tested it on 30 QA datasets . Removing half the retrieved text kept 96% of answer quality. Removing three quarters kept 87%. Cohere says teams can push to 10x less context at some quality cost. In a search-agent test across 17 datasets, BM25 alone scored 46% accuracy. Adding Rerank 5 Pro raised it to 49%. Context Focus at the default 0.1 threshold cut tokens per task by 19% and reached 57%. At 0.4, tokens fell 34% and accuracy hit 58%. Versus BM25 alone, the full stack used 35% fewer tokens. On 6 deep-search benchmarks, tokens fell 41% and accuracy rose from 39% to 52%. Rerank 5 scores read as probabilities. A score of 0.7 means a 70% chance the document is useful. Cohere team measured expected calibration error (ECE) against blind human graders and NIST TREC-DL assessors. Rerank 5 scores about 0.06 on both. Voyage AI Rerank 3 scores 0.234 and 0.307. Rerank 4 Pro scores 0.384 and 0.309. In practice, dev teams can filter by threshold instead of a fixed top-k. An agent can also detect when nothing relevant came back. All scores below are self-reported by Cohere using RCP-nDCG@10 , a Cohere-developed variant of nDCG. Cohere ran the competitor models itself. Pro leads all four main benchmarks. It scores 92.2 on ViDoRe V3 , 90.4 on BEIR , 82.2 on BRIGHT and 87.3 on nanoMTEB. BRIGHT shows the largest jump: 12.4 points over Rerank 4 Pro. Fast beats Voyage AI Rerank 3 Lite, Qwen3-Reranker-8B and Rerank 4 Pro on all 4. It ties Voyage AI Rerank 3 on ViDoRe V3 at 90.6. It trails it on BEIR, 88.1 versus 88.6. On parsed PDFs, averaged over 47 datasets, Pro scores 89.9 and Fast 88.5. Voyage AI Rerank 3 scores 88.4. Pro ranks first on 14 of 19 non-English languages in Cohere’s internal suite. *Scores are RCP-nDCG@10 or ECE from Cohere’s Rerank 5 post , measured by Cohere. Not independently verified. Rerank 5 is generally available on the Cohere API and Model Vault . It also runs on Microsoft Foundry ( Pro , Fast ) and Amazon SageMaker ( Pro , Fast ). It is also available to all North users. API pricing is $0.05 per 1M tokens for Pro and $0.02 for Fast. Model Vault lists $4.00 per instance-hour for both tiers on its Medium tier. Integrations include LangChain, Haystack, Elasticsearch and Weaviate, per Cohere’s integration docs . Check out the official announcement , the Rerank 5 changelog and the full results sheet . All credit goes to the researcher of this project. Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post Cohere Releases Rerank 5 With Passage-Level Context Focus and Calibrated Scores appeared first on MarkTechPost .",
+      "published_date": "2026-10-22",
+      "tags": [
+        "Agentic AI",
+        "AI Infrastructure",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Context Engineering",
+        "Editors Pick",
+        "Enterprise AI",
+        "For Devs",
+        "New Releases",
+        "Software Engineering",
+        "Staff",
+        "Tech News",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, reasoning, rag",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 64,
+    "llm_reason": "段落級Context Focus對RAG token效率有實測數據支撐",
+    "novelty": 10,
+    "impact": 11,
+    "trending": 13,
+    "practicality": 16,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "5 production challenges in multi-agent systems and how Deep Insight solved them",
+      "url": "https://aws.amazon.com/blogs/machine-learning/5-production-challenges-in-multi-agent-systems-and-how-deep-insight-solved-them/",
+      "authors": [
+        "Yoonseo Kim"
+      ],
+      "abstract": "Building a multi-agent system is now pretty straightforward. Taking it to production is where the real challenges begin. Thanks to open source frameworks and cloud services, you can set up an agent in a matter of days. A few tool calls, a few lines of prompt, and you have something that looks impressive. But the moment teams try to move beyond a pilot and into real business applications, they hit a familiar wall. If you’ve ever tried to put an agent into production, these frustrations will sound familiar: Why doesn’t the agent follow our business logic, skip validation steps, or catch edge cases? You tweak the prompt, add more examples, swap out the model. The same problems keep coming back. That’s because agents don’t follow a fixed sequence of instructions. They make their own judgments based on context. Instructions alone aren’t enough. You need to design how the agent thinks, when it verifies, and what it does when things go wrong. This is exactly why it’s become critical to go beyond prompt engineering alone and design the agent’s entire cognitive architecture and execution flow. To tackle these challenges head-on, the AWS Solutions Architecture team built Deep Insight , a production-grade multi-agent system. In this post series, we share what the team learned firsthand while building Deep Insight across three posts. We will walk through how we applied Context Engineering techniques proposed by Anthropic (multi-agent architecture, structured note-taking, human-in-the-loop, and more) in a real production environment. We also cover the trade-offs we encountered along the way (with code) and the operational insights we gained from deploying and running this agent on AWS. This is Part 1 of a three-part series. It defines the five core challenges any production multi-agent system must solve and shows how each layer of the stack addresses them, from Strands Agents SDK and Amazon Bedrock to Amazon Bedrock AgentCore , Application Load Balancer , and AWS Fargate . Parts 2 and 3 cover Context Engineering and production deployment. Deep Insight is a multi-agent system that turns complex data analysis into automated insights. Given a CSV file and a natural-language prompt, a hierarchy of specialized agents (Coordinator, Planner, Supervisor, Coder, Validator, Reporter, and Tracker) collaborates on the analysis. Together they load the data, run analyses, generate charts, validate calculations, and produce a professional report (.docx) with citations. We will explore the architecture in detail later. First, let’s see it in action. For the demo, we feed advertising data from a fictional food company, Yummy Food ( yummy-food-market.csv ) with a column definitions file ( column_definitions.json ), and provide the prompt: Analyze this from a sales and marketing perspective, generate charts and insights, and produce a .docx report. Deep Insight generates an analysis plan, presents it to the user for approval, and, once approved, executes the analysis. The Deep Insight web demo video that follows shows the full workflow, from uploading data and reviewing the analysis plan to real-time streaming and downloading the finished report. Deep Insight is open sourced on GitHub with a full setup guide, and offers three deployment options spanning development to production. The first is the Self-Hosted version , which runs locally through the CLI. It’s optimized for rapid iteration with full code-level access to every agent, prompt, and workflow. It sets up in about 10 minutes, which makes it well suited to development. (A Self-Hosted demo video is available on YouTube .) The second is the Web version , a browser-based UI for uploading data, reviewing analysis plans (Human-in-the-Loop, or HITL), and downloading reports, all without writing code, making it accessible for non-developers. (The preceding demo video shows the Web version in action.) The third is the Managed AgentCore version , a production deployment option powered by Amazon Bedrock AgentCore, a platform to build, connect, and optimize agents at scale, with any framework or model. This version deploys the agents on AgentCore runtime, a capability of Amazon Bedrock AgentCore. The system runs entirely within a private virtual private cloud (VPC), with a custom Code Interpreter hosted separately on AWS Fargate, and agents run concurrently in isolated per-user environments. It’s the right choice when you need session isolation and private VPC deployment. Part 3 covers its deployment and operations in detail. All three share the same multi-agent architecture, so an agent validated in development deploys to production as-is. Building a production multi-agent system takes more than good prompts. You need the right technology stack and infrastructure to address how agents collaborate, how they reason, how you deploy them, where they safely execute code, and how you monitor operational health. Deep Insight solves problems across these five key areas. Because the agents generate both code and report content, we also cover responsible AI controls for production in Solution detail 2. The following architecture diagram (Figure 1) illustrates this at a glance. The green boxes represent the Strands Agents multi-agent structure, which addresses challenges 1 and 2 from the preceding table. We will cover this in detail in the upcoming Solution detail 1: Multi-agent system design section. The remaining infrastructure components shown in the diagram address challenges 3, 4, and 5, which we will walk through in Solution detail 2: Production deployment and operations. Figure 1: Solution architecture Deep Insight uses a multi-agent architecture in which eight agents collaborate to produce one high-quality deliverable. Each agent works in its own independent context, performs only its specialized tasks, and passes only compressed results onward. Figure 2: Multi-agent structure The Coordinator routes user requests, the Planner breaks tasks into discrete steps, the Plan Reviewer collects user feedback, and the Supervisor invokes the appropriate specialized agents according to the plan. The Coder writes and executes data analysis code, the Validator verifies calculations, the Reporter generates the final report, and the Tracker tracks progress. We will explain this across three layers: Two key patterns from the Strands Agents SDK are combined to control execution flow across these agents. First, the Graph pattern defines the execution order and flow of agents as a directed graph. Requests flow Coordinator, Planner, Plan Reviewer, then Supervisor, with a conditional branch looping back to the Planner on revision requests. Determining the next step by condition makes complex workflows like HITL and error handling straightforward. Second, the Agents-as-Tools pattern lets the Supervisor invoke specialized agents (Coder, Validator, Reporter, Tracker) as tools only when needed. Each works in an independent context and returns only results, minimizing context usage while preserving domain expertise. This section shows how the architecture solves routing, planning, and orchestration. This layer turns a user request into an approved execution plan. The Coordinator is the entry point for user requests. It handles basic greetings directly and routes complex tasks like data analysis to the Planner with a handoff_to_planner marker. The key design decision is model selection: because the Coordinator only classifies, it uses the lightweight Claude Haiku, avoiding Opus-level costs on basic greetings and delivering fast responses. Routing conditions come from the Coordinator’s prompt: any request needing tools, reasoning, or multi-step thinking goes to the Planner. In Deep Insight’s multi-agent structure, the Planner agent plays the critical role of distributing tasks across agents. Before substantive work begins, it breaks large tasks into smaller steps, and each specialized agent executes them one at a time, keeping each agent’s context small.",
+      "published_date": "2026-10-21",
+      "tags": [
+        "Advanced (300)",
+        "Amazon Bedrock AgentCore",
+        "Technical How-to"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, multi-agent, reasoning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 64,
+    "llm_reason": "多代理系統生產化的具體痛點與Context Engineering實務解法，故事完整",
+    "novelty": 8,
+    "impact": 12,
+    "trending": 14,
+    "practicality": 14,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "HuggingFace Blog",
+      "title": "OlmoEarth v1.3: State-of-the-art embeddings for the whole planet",
+      "url": "https://huggingface.co/blog/allenai/olmoearth-v1-3",
+      "authors": [],
+      "abstract": "Back to Articles OlmoEarth v1.3: State-of-the-art embeddings for the whole planet Enterprise Article Published October 22, 2026 Upvote 5 Kyle Wiggers Ai2Comms Follow allenai 🤗 Models | 📄 Tech Report | 📊 Data | 💻 Code | 🌎 Embeddings Explorer | 🗺️ Interactive story Today, we’re releasing OlmoEarth v1.3 , a state-of-the-art satellite embedding model. Alongside OlmoEarth v1.3, we’re sharing precomputed, annual embeddings for the whole planet (10m, 64- and 128-dimensions), plus a new browser-based tool to explore and customize maps based on those embeddings — the OlmoEarth Embeddings Explorer . This means anyone can put OlmoEarth v1.3 to work right away, from tracking change over time to finding similar places—no sign-in, and no advanced technical knowledge required. Until now, the primary way to use OlmoEarth was fine-tuning in OlmoEarth Studio: training a model for each task and running it over satellite imagery to make a map. That requires GPU access and the ability to download and store the imagery . Embedding models compress satellite data into ready-to-use features that can be reused cheaply for many tasks. With OlmoEarth v1.3, we’re excited to give users more ways to explore and engage with planetary artifacts in whatever way suits them best. Compute once, reuse everywhere An embedding represents what the model learned from millions of images. OlmoEarth v1.3 reads a year of radar (Sentinel-1) and multispectral (Sentinel-2 and Landsat) satellite time series and produces one 128-dimensional vector for every 10-meter pixel on Earth; the first 64 dimensions also work on their own as a smaller embedding. Foundation models and global embeddings are expensive to produce, and to make sure everyone is able to access the benefits, we’ve computed these embeddings for the entire planet and shared them with the community on Source Cooperative . From there, a crop map, a land-cover map, or a change analysis becomes a lightweight modeling problem: train a small classifier on top and run it locally. How OlmoEarth v1.3 makes an embedding: a vision transformer reads the satellite data, an Attention Pooler pools it into one vector per patch of land, and a linear layer reduces it to 128 numbers. State-of-the-art embeddings We evaluated OlmoEarth v1.3's embeddings against AlphaEarth Foundations (AEF) and Tessera v2 across 27 evaluations, covering six continents and many different tasks. OlmoEarth’s 128-dimensional embeddings score highest on 20 of 27 evals and rank highest overall. The 64-dimensional version, at half the size, still leads on 18 of 27 evals. As part of this evaluation, we introduce PLANTEUR, a new crop-type benchmark for tropical farming , and the embeddings generalize best to places a classifier has never seen (PLANTEUR technical report is available here ). Everything behind them is fully open: the model weights, the pretraining data, and the pretraining code. In practice, this means a small classifier trained on the OlmoEarth embeddings is enough to map what’s on the ground: think classifying smallholder crops in Kenya, detecting brick kilns west of Dhaka, assessing fire damage in Indonesia, and tracking gold mining in the Peruvian Amazon. Compared to previous generations of OlmoEarth models, OlmoEarth v1.3 was also our cheapest model to train. It took 53% of the computing time of our last version (v1.2) and 18% of our first (v1), with 50% and 22% of the carbon emissions. And it also remains a strong fine-tuning model, matching v1.2's performance across research and partner labels. Our latest model builds on the same foundation as earlier OlmoEarth versions, tuned so the embeddings stay lightweight without giving up accuracy across tasks, and that efficiency work carries forward into the versions ahead. Full results and methodology are in our technical report . If you wanted to reproduce it, pre-training OlmoEarth v1.3 Base would cost roughly $2,720 of rented H100 time for the final run. The weights, data, and code are all open. One place, nine years How much each pixel’s embedding changed between 2017 and 2020 (left) and 2020 and 2025 (right). Magenta is the largest change. Left: mining spreading southeast, the big patch at lower right. Right: that corner has gone quiet; the change now sits in the older mining zone to the west, part regrowth, part renewed digging. Explore it yourself in the OlmoEarth Embeddings Explorer. In Peru's Madre de Dios region, illegal gold mining around La Pampa peaked in 2017 and 2018, clearing more than 1,200 hectares of forest in the buffer zone of the Tambopata National Reserve, according to Amazon Conservation's MAAP monitoring program . In February 2019, Peru's Operation Mercurio shut most of it down. The question ever since has been, did it stay down? The embeddings help answer that. Compare each pixel's vector across years, no model training required, and the 2017 to 2020 pair lights up where the mining was spreading to the southeast. Run the same comparison from 2020 to 2025, and the signal shifts. The crackdown is visible in the embeddings. The more interesting part is what the second map still shows. It is not dark. According to MAAP , pockets in the northwest kept operating, and the old mining zone keeps changing as the land recovers. The embeddings register that too. The reprieve was brief, and the pressure is building again. In August 2026, the Associated Press reported, Peru sent navy patrols back into the reserve after prosecutors found mining had crossed into Tambopata itself. Our interactive story opens on this stretch of Madre de Dios, and walks through several other examples from there. The OlmoEarth Embeddings Explorer The OlmoEarth Embeddings Explorer is an interactive analysis tool built from the embeddings themselves, rendered as a false-color map of the planet. Pan anywhere, flip between years to see how landscapes have changed, and pull up the underlying Sentinel-2 imagery to check the map against the real thing. Then start asking questions: click a place to find others that look similar, or drop a few labeled points and train a small classifier on the spot, then export the result as a GeoTIFF. No account, no setup required. For many teams, testing an idea against OlmoEarth has meant a fine-tuning run, on the order of hours. In the explorer, a first pass takes seconds. You can analyze entire regions from a handful of labels, no GPU needed. When a task calls for fine-tuning, the embeddings can help you decide whether it deserves the compute, and where the model falls short. The archive behind the Explorer holds embeddings at 10-meter resolution, roughly 150 TB per year, covering land and adjacent coastal waters. At launch, 2025, 2024, and 2023 are global, and 2017 to 2022 cover select countries, with more coverage on the way. You can retrieve the embeddings in the full 128-dimensional version or the lighter 64-dimensional version. Every embedding also comes with a record of where it came from. For each 20-kilometer tile and year, open provenance tables list the Sentinel-1, Sentinel-2, and Landsat scenes the model read, with links to the public catalogs that host them, so you can trace any pixel back to the imagery behind it. Get started This release includes the OlmoEarth v1.3 Base model, the precomputed global embeddings, the OlmoEarth Embeddings Explorer, and the technical report. If your work needs a specific time window, OlmoEarth Studio runs the same model over the dates, modalities, and resolution that you choose, and a tutorial shows how to generate embeddings on your own compute. These tools work together: explore in the Embeddings Explorer, fine-tune in Studio when a task calls for it, and take your map from there. Everything is published under the OlmoEarth Artifact License, the same open license as v1 and v1.2. Pull the embeddings for a place you care about, put your question to them, and show us what you find.",
+      "published_date": "2026-10-22",
+      "tags": [],
+      "organization": "HuggingFace",
+      "raw_metadata": {
+        "feed_name": "HuggingFace Blog",
+        "feed_url": "https://huggingface.co/blog/feed.xml"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: fine-tuning",
+      "⚖️ 來源權重: rss +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 69,
+    "llm_reason": "全球衛星嵌入模型，附程式碼、資料與互動工具，實用性極高",
+    "novelty": 14,
+    "impact": 13,
+    "trending": 9,
+    "practicality": 17,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Liquid AI Launches RIPL, a Real-Time Inference Engine for Sub-50 ms LFMs",
+      "url": "https://www.marktechpost.com/2026/10/22/liquid-ai-ripl-real-time-inference-engine/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "Liquid AI just announced Liquid RIPL , short for Real-time Inference Pipeline. RIPL is a low-latency engine that serves Liquid Foundation Models (LFMs) inside a live request path. It returns complete generated responses end-to-end in under 50 ms. It also claims that latency holds while traffic arrives continuously at peak load. For developers, the message is simple. Swap gradient-boosted trees for a generative model, and keep the latency budget. Most serving stacks target large batches and long agentic jobs. A few seconds per request is acceptable there. Search ranking, fraud checks and payment authorization need answers in milliseconds. Liquid AI argues teams default to classical models for these paths because LLM serving is too slow. RIPL is built to remove that trade-off. Liquid AI describes RIPL as optimizing the full path, from request arrival to completed response. In several workloads, Liquid AI plots the same model, LFM2.5-350M, on vLLM and on RIPL. RIPL’s p95 line sits well below the vLLM line in each case. That isolates part of the gain to the engine, not just the model architecture. The LFM2.5 models themselves are hybrids. LFM2.5-1.2B-Instruct has 16 layers: 10 double-gated convolution blocks and 6 GQA blocks. LFM2.5-2.6B has 30 layers: 22 convolution blocks and 8 GQA blocks. Liquid measured p95 end-to-end latency under open-loop Poisson arrivals on one B200. LFMs ran on RIPL. Baselines, including MiniCPM5 and Granite 4.2, ran on vLLM. Source: Liquid AI blog, Figure 2 . Sealf-reported. Liquid AI also mapped 6 real-time workloads against fixed budgets: Yes, according to Liquid AI. Shopify is deploying LFMs across latency-sensitive commerce workloads. In search enhancement, LFMs run with sub-20 ms inference on production traffic. According to Liquid AI’s blog, they use about 50% fewer parameters than alternatives and deliver 2 to 10x faster inference. Check out the RIPL announcement , try the latency calculator , and see the LFM2.5 model cards .. All credit goes to the researcher of this project. Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post Liquid AI Launches RIPL, a Real-Time Inference Engine for Sub-50 ms LFMs appeared first on MarkTechPost .",
+      "published_date": "2026-10-22",
+      "tags": [
+        "Agentic AI",
+        "AI Infrastructure",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Editors Pick",
+        "Enterprise AI",
+        "For Devs",
+        "Harness",
+        "Language Model",
+        "New Releases",
+        "Staff",
+        "Tech News",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agentic",
+      "⚖️ 來源權重: rss +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 68,
+    "llm_reason": "亞50ms低延遲推理引擎附vLLM對照基準，對代理即時應用具參考性",
+    "novelty": 13,
+    "impact": 13,
+    "trending": 12,
+    "practicality": 15,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "Write your own training loop — without managing GPUs — with Amazon SageMaker training session APIs",
+      "url": "https://aws.amazon.com/blogs/machine-learning/write-your-own-training-loop-without-managing-gpus-with-amazon-sagemaker-training-sessions/",
+      "authors": [
+        "Nicolas Jourdan"
+      ],
+      "abstract": "Fine-tuning a large language model (LLM) today usually forces a tradeoff between training loop control and operational simplicity. With fully managed services you select a base model, provide data and hyperparameters, and the service owns everything else, which works well when a standard, prepackaged recipe fits your problem. Less managed services give you more control, but you also manage more of the underlying infrastructure and training frameworks. Sometimes a standard recipe isn’t enough: you need a custom loss or data curriculum for supervised fine-tuning (SFT), your own preference optimization, a reinforcement learning (RL) reward function, or an alignment algorithm published last week. As soon as you need to shape the training procedure yourself, you take on that infrastructure work to gain algorithmic freedom. Today, serverless model customization in Amazon SageMaker AI expands with training session APIs, which remove that tradeoff by drawing the abstraction boundary one level lower. Instead of abstracting away the algorithm, they abstract away the compute. Operations like forward_backward() , optim_step() , and sample() become SageMaker API calls that you compose into whatever procedure your technique requires: SFT, preference optimization, RL, or something new. The calls target a live, stateful session, so the model stays loaded on the GPUs across steps, and you drive as many calls as you need against it. The service handles runtime setup, distributed execution, gradient synchronization, fault recovery, tenant isolation, and the operations of running GPUs at scale. You write the training loop, and SageMaker AI runs the infrastructure. Alongside the service, we’re releasing the SageMaker training sessions cookbook , a set of ready-to-run SFT and RL recipes that you can use as blueprints for your own training loops. In this post, we introduce the programming model and the three SDK clients, and show where training session APIs fit among the model training and customization options in SageMaker AI. We then take apart a minimal RL loop on grade-school math problems (GSM8K) to show how the operations fit together and finish with a real-world workload from the cookbook: reinforcement learning on competitive programming problems, where generated code is graded by running it against unit tests. With SageMaker AI training session APIs, you can drive a live, GPU-backed session from your own Python process on your local machine. You call the operations, and SageMaker AI runs them on managed accelerators loaded with your chosen base model plus your Low-Rank Adaptation (LoRA) adapter. There’s no config file describing the whole job up front and no cluster creation step. You control what happens at each step, interactively, from code, so you can iterate and debug quickly. The division of responsibilities looks like this: The API is organized around three clients in the SageMaker Python SDK , created in sequence. A ServiceClient holds the platform-level settings (execution role, model package group, Amazon Simple Storage Service (Amazon S3) output location, and optionally an AWS Key Management Service (AWS KMS) key and virtual private cloud (VPC) configuration, which you can also override per session) and starts a session. The ServiceClient instantiates a TrainingClient (training and checkpointing operations such as forward , forward_backward , optim_step , and save_weights_for_sampler ), which in turn instantiates a SamplingClient ( sample and compute_logprobs , for generation and scoring during rollouts and evaluation). Each API call maps to one operation in your loop. An active session also serves an OpenAI-compatible chat completions endpoint, so existing OpenAI client code can sample from it. Figure 1: The SageMaker Python SDK client hierarchy for training session APIs For reinforcement learning , the loop has a characteristic shape. The following figure shows one training step and where each part runs: the steps in green call APIs on service-managed GPUs, and the steps in purple, your loop control and reward logic, run on your machine. Figure 2: One training step, with sampling, gradient, and checkpoint operations on managed GPUs and loop control and reward logic on your machine Each step loads a batch of prompts and (1) samples from the current model on the GPU. Your Python code then (2) scores those outputs: a verifier, a reward-model call, a test harness, anything you can express in code. (3) forward_backward and optim_step turn the scores into a gradient update on the GPU, and (4) save_weights_and_get_sampling_client() refreshes the sampler so the next step draws from the updated model. You own the data, the loop control, and the reward; SageMaker AI runs the GPU-bound sampling, gradient, and checkpoint operations. The same primitives cover supervised fine-tuning (SFT) and other LLM training techniques . For SFT, drop the sampling and reward steps and call forward_backward with a cross_entropy loss over labeled examples. Training session APIs are the right starting point when you need fast iteration cycles and algorithmic freedom, such as a custom loss, a new RL reward signal, or a multi-stage pipeline, but don’t want to provision or operate GPU infrastructure yourself. Usage is billed per token processed, so you’re charged only for the compute your loop consumes. If your reward function takes 10 seconds to score a batch on your machine, no GPU time is billed while it runs. Compared with hourly GPU billing, this has two practical advantages. First, there’s no idle-GPU cost: reward computation, data loading, logging, and debugging happen off the clock, and you’re billed only when you call a GPU-bound operation. Second, cost scales with your dataset and generation volume, not with wall-clock time or cluster size, which makes spend easier to forecast and experiments easier to compare. The savings over reserving GPUs for the full session can be significant for workloads with heavy local computation, such as complex reward models, multi-tool agentic rollouts, or human-in-the-loop evaluation. Training session APIs are built for teams whose work is defined by the training algorithm, not only the dataset. Because you compose the loop yourself, the same primitives support supervised fine-tuning (SFT) with a cross_entropy loss over labeled data, reinforcement learning with ppo , importance_sampling , or cispo (GRPO, PPO, and other group-relative methods), and custom objectives , such as preference optimization or distillation, built from the same pieces. They fit: The supported base models and the AWS Regions where each is available are listed in the training session APIs documentation . Training session APIs sit at a distinct point among the model customization options in SageMaker AI: substantially more control over the training algorithm than fully managed Serverless Model Customization , and far less operational ownership than training on Amazon SageMaker Training Jobs or Amazon SageMaker HyperPod . Figure 3: Where training session APIs fit among the model customization options in SageMaker AI This section takes apart a minimal reinforcement learning loop to show how the operations fit together. The task is GSM8K , a benchmark of roughly 8,500 grade-school math word problems, each with a single numeric answer, as in the following example: Natalia sold clips to 48 of her friends in April, and then she sold half as many clips in May. How many clips did Natalia sell altogether in April and May? → 72 We train a LoRA adapter for OpenAI’s GPT-OSS 20B with Group Relative Policy Optimization (GRPO): for each question the model generates several responses, each response is scored for correctness, and responses that beat the group’s average are reinforced. The complete, runnable example is in the Amazon SageMaker examples repository . Before you open a session, complete the prerequisites in the documentation.",
+      "published_date": "2026-10-22",
+      "tags": [
+        "Advanced (300)",
+        "Amazon SageMaker AI",
+        "Announcements"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agentic, grpo, alignment, reinforcement learning, reward model",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 59,
+    "llm_reason": "訓練迴圈API細節更具技術深度，forward_backward等原語設計值得一寫",
+    "novelty": 9,
+    "impact": 11,
+    "trending": 10,
+    "practicality": 16,
+    "blog_worthiness": 13
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "Adaptive agentic intelligence framework using Strands Agents",
+      "url": "https://aws.amazon.com/blogs/machine-learning/adaptive-agentic-intelligence-framework-using-strands-agents/",
+      "authors": [
+        "Nitin Eusebius"
+      ],
+      "abstract": "Organizations building AI agents face a common challenge: Every request, whether a routine status check or complex analysis, typically gets routed to a single large, expensive model. This one-size-fits-all approach can drive up API costs, introduce unpredictable latency, and remove the possibility of offline operation. Even routine queries that could resolve locally end up requiring a full network round-trip to a cloud-hosted large language model (LLM). The Adaptive Agentic Intelligence Framework (AAIF), built with Strands Agents, takes a different approach. Instead of routing all requests to a single large model, AAIF uses small language models (SLMs) to handle routine tasks locally. More complex requests are routed to cloud-hosted models through Amazon Bedrock . This approach builds on the research position from Belcak et al. at NVIDIA . They argue that small language models are “sufficiently powerful, inherently more suitable, and necessarily more economical for many invocations in agentic systems.” Built on Strands Agents, the framework demonstrates how intelligent model orchestration can help reduce costs while maintaining low latency for local operations. In this post, we walk through the key components of AAIF using Strands Agents with local SLMs through Ollama and cloud models through Amazon Bedrock. We use an Internet of Things (IoT) monitoring scenario as a reference implementation. AAIF organizes AI processing into three layers, each optimized for different task types, as Figure 1 shows: Figure 1: The three AAIF processing layers for smart orchestration, local processing, and cloud processing Figure 1 shows the complete AAIF system architecture. At the center sits the Strands agent, which connects to an Ollama runtime hosting both the 1B-parameter orchestrator model and the vision model. The agent exposes three tools: get_device_telemetry for local sensor data retrieval, analyze_camera_feed for on-device vision processing through llama3.2-vision, and get_expert_insights which calls Amazon Bedrock through boto3 for complex analysis. Incoming user requests flow through the SLM orchestrator, which classifies each request and dispatches it to either a local tool or the cloud endpoint based on task complexity. Figure 2: Complete AAIF system architecture showing the Strands agent, Ollama runtime, tool integrations, and Amazon Bedrock connectivity The framework adapts to your deployment constraints rather than requiring you to restructure your infrastructure around it. This architecture runs on edge devices like a Raspberry Pi with 8 GB of memory, in full cloud deployments where all inference hits Amazon Bedrock, or in hybrid configurations that combine local speed with cloud reasoning. The flexibility comes from separating the routing logic (the SLM orchestrator) from the processing tools, which you can swap or reconfigure independently depending on available hardware and network connectivity. For this walkthrough, you should have the following prerequisites: Create a project directory and start the Ollama server: Create a file called aaif_agent.py and add the following components. Strands Agents uses the @tool decorator to define capabilities that agents can invoke. Start by creating tools for local processing. The first tool retrieves device telemetry data. In a production environment, this would connect to actual IoT sensors. For this walkthrough, it uses simulated device data: The second tool performs vision analysis using a local SLM. The llama3.2-vision model runs entirely on local hardware, which means sensitive camera feeds don’t leave the device: For complex analysis that requires broader reasoning, create a tool that calls Amazon Bedrock. This tool is invoked only when the orchestrator determines that local models can’t handle the request: The core of AAIF is the Strands agent configuration. The agent uses a local SLM (llama3.2:1b) as its orchestrator. Strands Agents supports multiple model providers, and here we use the Ollama provider to run the orchestrator locally: The SLM-powered orchestrator analyzes each request and routes it to the appropriate tool without hardcoded keyword matching. The routing happens through the model’s understanding of the request: Table 1: Request, routing, and latency estimates for local compared to cloud inference With the agent configured, you can interact with it directly: The agent automatically classifies each request and routes it to the appropriate processing layer. No explicit routing rules are needed. The AAIF architecture adapts to different infrastructure requirements by changing the model configuration: When your workload runs entirely in the cloud and no edge hardware is available, replace the Ollama model configuration with Amazon Bedrock for all processing. This routes every request through managed cloud inference, giving you auto scaling without requiring local GPU resources. Teams with reliable low-latency connectivity and no data residency constraints benefit most from this configuration: The hybrid configuration keeps the local SLM orchestrator intact while adding cloud models for requests that exceed local model capabilities. This is the default AAIF configuration shown in this walkthrough. It suits environments where most requests are routine enough to resolve locally, but some require the broader reasoning of a larger model. Cost savings can come from the roughly 80 percent of traffic that doesn’t hit a paid API endpoint. For environments that are fully air-gapped or have strict data sovereignty requirements, replace the cloud tool with a larger local model and run all processing on-device. A 3B-parameter model running on hardware with adequate memory can handle moderately complex tasks that the 1B orchestrator would otherwise escalate. The trade-off is reduced reasoning depth on the hardest queries, but the benefit is data not leaving the premises: The implementation in this post uses local tool calls defined directly in the agent code. For production deployments with multiple agents sharing tools across services, expose these tools as Model Context Protocol (MCP) servers. MCP provides a standardized interface for tool discovery and invocation, so you can centralize tool management and reuse tools across different agents and environments. In Figure 3, we show how to convert AAIF tools into MCP servers for distributed, centralized tool calling. In the distributed configuration as shown in Figure 3, Device 1 acts as the orchestrating hub, running the Strands agent with the SLM router and a local telemetry tool. It connects through the MCP protocol to Device 2, which runs an edge vision processing server with llama3.2-vision. Device 3 serves as a cloud analytics gateway connected to Amazon Bedrock. From the orchestrator’s perspective, all remote tools appear as local function calls because the MCP transport layer handles serialization and network communication transparently. Figure 3: Distributed intelligence with MCP servers To avoid incurring future charges, complete the following cleanup steps: We showed how to build cost-effective AI agents using the Adaptive Agentic Intelligence Framework with Strands Agents. By routing routine requests to local SLMs and reserving cloud models on Amazon Bedrock for complex analysis, AAIF can help reduce API costs while maintaining low latency for routine operations. Before you run this pattern in production, add responsible AI controls to the cloud inference path, since those requests carry tool outputs, retrieved data, and user input. You can attach Amazon Bedrock Guardrails to the Strands BedrockModel with a guardrail ID and version. It then applies content filters for harmful categories, prompt injection filters, and contextual grounding checks that block responses not supported by the source data. To apply the same policies to the local SLM tier, call the standalone ApplyGuardrail API on its inputs and outputs.",
+      "published_date": "2026-10-21",
+      "tags": [
+        "Advanced (300)",
+        "Amazon Bedrock",
+        "Technical How-to"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, mcp, model context protocol, reasoning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 58,
+    "llm_reason": "小模型本地+雲端大模型路由框架，建立在明確研究論點上並有參考實作",
+    "novelty": 9,
+    "impact": 10,
+    "trending": 12,
+    "practicality": 14,
+    "blog_worthiness": 13
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "NVIDIA Developer",
+      "title": "Running Frontier-Class AI Models Across 8 NVIDIA DGX Spark Nodes",
+      "url": "https://developer.nvidia.com/blog/running-frontier-class-ai-models-across-8-nvidia-dgx-spark-nodes/",
+      "authors": [
+        "Shara Tibken"
+      ],
+      "abstract": "AI developers aren’t just running a single model anymore—they’re orchestrating multiple models in parallel, chaining inference calls, and experimenting with frontier-class architectures that demand hundreds of gigabytes of memory. NVIDIA DGX Spark was built to bring AI development to the desk, and now you’ll be able to link even more Spark nodes together. At GTC Berlin, NVIDIA announced official support for eight-node DGX Spark clusters, scaling unified memory to 1 TB and opening the door to frontier-class models, multi-agent workloads, and near-linear pre-training—all running locally. NVIDIA Sync makes it easy to cluster. Its Cluster Assistant handles setup and device management. Support for eight-node clusters in NVIDIA Sync is coming by the end of the year. Read on for benchmark data on how inference, orchestration, and training scale as the cluster grows. Run larger, newer frontier-class models The biggest benefit of an eight-node cluster is memory. A single DGX Spark provides 128 GB of unified memory; four nodes reach 512 GB; eight nodes reach 1 TB. That capacity opens the door to a class of models that previously wouldn’t start on a four-node system, including the full GLM 5.3 (753B) model from Z.ai. Beyond simply fitting these models, the cluster is designed to serve them interactively. As an early example, we ran GLM 5.3 Flash across an eight-node cluster, and measured roughly 80 tokens per second (TPS) in generation, suitable for interactive local development against a frontier-class mixture-of-experts model. The full GLM 5.3 (753B) checkpoint runs across the 8x 128 GB cluster, making it one of the largest open models you can serve locally. Concurrency Prefill, total tokens per second (TPS) Prefill, per user (TPS) Decode, total (TPS) Decode, per user (TPS) 1 1,600 1,600 31 31 4 1,600 750 51 21 8 1,600 473 67 18 Table 1. Full GLM 5.3 (nvidia/GLM-5.3-NVFP4) performance on an eight-node DGX Spark cluster. The model is about 470 GB in NVFP4, measured with MTP3 at concurrency one, four, and eight. Prefill measured at 8K input sequence length (ISL) per request. Faster collectives with a Spark-optimized backend Tensor-parallel inference spends a meaningful fraction of its time in collective operations such as all-reduce. On switch-connected clusters, we have been evaluating a Spark-optimized collective backend, RoCEnante, that reduces collective latency for the small-message, low-concurrency, modest-rank-count pattern typical of tensor-parallel decode on local AI hardware. This backend implements an all-to-all exchange followed by local reduction. Each rank shares its input with every other rank, then adds the inputs locally. A single GPU kernel coordinates the exchange and reduction. The main benefit is fewer communication steps. Ring all-reduce passes data between neighboring ranks over multiple rounds. This approach exchanges data directly with all peers, avoiding that chain of forwarding. For small messages and a modest number of ranks, this can reduce latency. The tradeoff is more data movement. Each rank sends its full input to every peer and reduces all the inputs itself. As messages or number of ranks (nodes) grow, that extra traffic becomes more expensive, making ring all-reduce’s bandwidth efficiency increasingly attractive. If you need to support high concurrency, larger clusters, or ring topologies, NVIDIA Collective Communications Library (NCCL) would perform better. Figure 1. Spark decode scaling with and without ROCEnante on a switch topology using Qwen3.8-27B-NVFP4 (speculative decoding disabled). At eight Spark nodes, ROCEnante delivers a 4.43x speedup vs. 3.05x without it—a 45% improvement in scaling efficiency. In practice we see roughly 5% higher prefill and 21% higher decode throughput at four nodes (NVFP4), and about 18% higher decode throughput at eight nodes on the non-quantized model, consistent with the latency-versus-bandwidth tradeoff above. The backend is merged into FlashInfer and falls back transparently to NCCL if its startup test fails. The backend applies only to switch-connected topologies, because it relies on direct point-to-point exchange between every node. It is not a replacement for NCCL, which remains the supported default and the better choice as cluster size and concurrency grow. The original one-shot all-reduce approach was contributed by the community (Jason Cook/el8). Two, four, eight: Scaling the cluster Low-latency NVIDIA ConnectX-7 NICs and RDMA on Converged Ethernet (RoCE) communication let DGX Spark nodes exchange tensors efficiently, so you can scale a model across more nodes to fit it in memory and to improve throughput. To isolate cluster scaling behavior and remove context-dependent behavior, we benchmarked a dense Qwen3.8-27B (NVFP4) model without speculative decoding/MTP across one to eight nodes: Number of Spark nodes Topology Prefill (TPS) Prefill scaling Decode (TPS) Decode scaling 1 — 2,635 1.00x 11.86 1.00x 2 Direct connect 3,285 1.25x 21.71 1.838x 4 Physical ring 4,446 1.69x 32.82 2.77x 4 Switch (ROCEnante) 4,556 1.73x 36.34 3.06x 8 Physical ring 4,962 1.88x 40.11 3.38x 8 Switch (ROCEnante) 5,105 1.94x 52.58 4.43x Table 2. NVIDIA/Qwen3.8-27B (NVFP4) scaling across topologies, with ROCEnante backend when supported. Measured with llama-benchy with 8192 tokens ISL and 256 tokens OSL at concurrency 1. Scaling is relative to a single Spark at the same precision. Two patterns stand out. First, decode throughput scales strongly with node count, from about 12 TPS on one node to 52 TPS on eight nodes. Second, the best topology depends on the workload: A physical ring delivers excellent decode throughput for a single model spread across all nodes. A switch is needed once you want to split the cluster into independent groups, or run workloads that require direct any-to-any connectivity between nodes. To try this yourself, this networking guide walks through cluster setup starting from a two-node configuration and scaling up. Switchless ring topology and setup simplicity Not every cluster may need a switch. DGX Spark nodes can be wired directly together in a ring, which lowers cost and simplifies setup—an attractive option for enthusiasts and small deployments. Within a four-node DGX Spark deployment, NCCL defaults to ring-based algorithms for tensor-parallel communication, allowing a switchless ring topology to align perfectly with traffic flows and offer impressive throughput at lower expense. As Table 2 shows, the four-node ring performs well in prefill and decode throughput for this workload. The picture changes as you scale or specialize: Eight nodes or split allocations: If you want to split a cluster into, say, two groups of four, a ring cannot express that topology; you need a switch. All-to-all and traditional HPC workloads: Anything that depends on point-to-point patterns (for example, MPI-based clustering) requires a switch; a ring would pay a hop penalty. The optimized collective backend: The Spark-optimized backend described above requires direct point-to-point connectivity between every node, so it applies to switched configurations only. In short: Reach for a switchless ring when you want the simplest, lowest-cost four-node inference box, and choose a switch when you need to scale up to eight nodes, split the cluster, or run communication patterns that a ring cannot serve. Multi-model orchestration with Switchyard Not every request needs your largest model. On a shared eight-node cluster, you can get substantially more aggregate throughput by routing easy requests to a small, fast model and reserving a larger model for the hard ones. NVIDIA NeMo Switchyard makes this practical: A lightweight classifier inspects each request (or session) and routes it to the appropriate model pool, with a load balancer distributing traffic across replicas.",
+      "published_date": "2026-10-22",
+      "tags": [
+        "Agentic AI / Generative AI",
+        "Developer Tools & Techniques",
+        "AI Agent",
+        "AI Inference",
+        "ConnectX",
+        "DGX Spark",
+        "GTC Berlin 2026",
+        "LLMs",
+        "NeMo"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "NVIDIA Developer",
+        "feed_url": "https://developer.nvidia.com/blog/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, multi-agent, mixture of experts, speculative decoding",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 56,
+    "llm_reason": "多節點叢集擴展統一記憶體跑旗艦模型，偏硬體產品擴展而非新技術",
+    "novelty": 7,
+    "impact": 11,
+    "trending": 13,
+    "practicality": 13,
+    "blog_worthiness": 12
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "IBM AI Releases Granite Speech 5.0 2B for Multilingual Transcription and Translation",
+      "url": "https://www.marktechpost.com/2026/10/22/ibm-granite-speech-5-0-2b-release/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "IBM has released Granite Speech 5.0 2B , a new open speech-language model for transcription and translation. Granite Speech 5.0 2B is a 2B-parameter model from IBM that turns speech into text in 6 languages. It ships under Apache 2.0. IBM also updated 2 existing models : the edge-focused Turbo CTC and the diarization-focused 4.1 2B Plus. For developers, the release covers accurate transcription, fast on-device transcription and speaker-attributed transcripts. The model has 3 parts, per the model card . A speech encoder of 16 Conformer blocks is trained with CTC. It uses block attention over 4-second audio blocks. A 2-layer window q-former then projects and downsamples the acoustic embeddings. Total downsampling is 10x, so the LLM sees embeddings at 10 Hz. The LLM is an intermediate checkpoint of granite-4.0-1b-base . IBM extended it to 16k positions with YaRN and fine-tuned it with LoRA adapters. Training used 390,000 hours of public audio plus synthetic data. The synthetic sets target Japanese ASR, keyword biasing and translation. Training took 40 days on 8 H100 GPUs. On the Open ASR Leaderboard , IBM’s chart shows a 5.68% average English WER. That average covers 9 public and 2 private test sets, as of October 21, 2026. Only Qwen3-ASR-1.7B scores better, at 5.40%. Note a source conflict. IBM’s blog reports 5.06% instead. That figure is unofficial, dated October 15, and averages public short-form sets only. Per-set results range widely. The model scores 0.99% on LibriSpeech Clean and 2.21% on LibriSpeech Other. It scores 13.79% on the private conversational set. On the noisy FFASR leaderboard , it ranks #4 of 42 at 14.80% average WER. Qwen3-ASR-1.7B scores 13.41% there. Multilingual CommonVoice WER is 2.60% for Portuguese and 3.50% for Spanish. Japanese is the weakest language at 10.74%. For translation, X-to-English CoVoST BLEU reaches 53.6 for Portuguese and 40.1 for German. English-to-Mandarin was not evaluated. Keyword biasing shows the clearest gain. On Earnings-22, keyword F1 rises from 67.2 to 90.1 with correct keyword lists. With 2,000-term lists mixing correct and wrong terms, it still reaches 82.8. *Leaderboard averages as charted in IBM’s model card from the Open ASR and FFASR leaderboards. Granite Speech 5.0 Turbo CTC keeps its 470M footprint. It now transcribes 7 languages with native punctuation and capitalization. IBM compiled one Conformer block and reused its graph across the stack. That lifted throughput to 19,870 RTFx, up from about 12,600 at launch. The updated Granite Speech 4.1 2B Plus is a drop-in weight update. Average timestamp shift falls from 210.86 to 98.54. Long-form WER drops from 13.53 to 10.22. Biased-keyword WER falls from 11.79 to 6.48. Granite Speech 5.0 2B runs in Transformers , vLLM, llama.cpp and mlx-audio. For GGUF, IBM recommends Q8_0. Lower-bit quantizations lose accuracy on audio longer than about 1 minute. Check out the model card , IBM blog and Granite Speech paper . All credit goes to the researcher of this project. Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post IBM AI Releases Granite Speech 5.0 2B for Multilingual Transcription and Translation appeared first on MarkTechPost .",
+      "published_date": "2026-10-22",
+      "tags": [
+        "Agentic AI",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Audio Language Model",
+        "Editors Pick",
+        "Enterprise AI",
+        "Language Model",
+        "Large Language Model",
+        "Machine Learning",
+        "New Releases",
+        "Staff",
+        "Tech News",
+        "Technology",
+        "Voice AI"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: synthetic data, lora",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 60,
+    "llm_reason": "開源多語音辨識模型架構細節完整並附排行榜比較",
+    "novelty": 11,
+    "impact": 10,
+    "trending": 9,
+    "practicality": 16,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Vercel Open-Sources durable-harness for Crash-Proof Coding Agents",
+      "url": "https://www.marktechpost.com/2026/10/21/vercel-durable-harness-crash-proof-coding-agents/",
+      "authors": [
+        "Michal Sutter"
+      ],
+      "abstract": "Vercel has released durable-harness , an open-source package that keeps coding agent sessions alive through crashes and timeouts. Vercel durable-harness wraps existing harnesses, including Pi, OpenCode, Claude Code and Codex, without changing them . Each session lives in a durable log. A dead function no longer means lost work. For teams moving agents off laptops and into the cloud, that closes a real gap. durable-harness is a set of adapters from Vercel that store a harness session in a Workflow SDK World . A World bundles storage, a queue and a stream behind one interface. The package uses the same machinery that powers Vercel’s Workflow SDK . Harnesses like Pi and Claude Code were designed as long-lived local processes. They keep the session in memory. Locally, the workspace and history sit on the same disk, so resuming takes 1 prompt. In the cloud, a VM with persistent storage does not track which calls completed. Vercel team notes a failed turn or network error then means lost work. It writes each step of a turn to a durable log. Before a model or tool call runs, it records an intent. When the call finishes, it records the outcome. Each turn is backed by a message on Vercel Queues . If the function dies, the queue hands the turn to a new function. That function reads the log and continues. After a crash, the log shows what finished, what was running and what never started: Harness session files are mirrored into the log as well. That covers Claude Code’s transcript, Codex’s rollout and OpenCode’s event store. Model-chosen commands never run on the function’s own disk. The tools docs list 3 workspace options: Typed JSON documents , such as a to-do list, also live in the log. Each holds at most 64 KB. The agent code stays the same across Worlds: 2 environment variables, WORKFLOW_TARGET_WORLD and WORKFLOW_POSTGRES_URL , move an agent to Postgres. Check out the GitHub repo , docs and Vercel’s announcement . All credit goes to the researcher of this project. Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. The post Vercel Open-Sources durable-harness for Crash-Proof Coding Agents appeared first on MarkTechPost .",
+      "published_date": "2026-10-21",
+      "tags": [
+        "Agentic AI",
+        "AI Shorts",
+        "Artificial Intelligence",
+        "Editors Pick",
+        "For Devs",
+        "Harness",
+        "New Releases",
+        "Open Source",
+        "Staff",
+        "Tech News",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 65,
+    "llm_reason": "開源方案解決coding agent崩潰續跑痛點，實用性高且踩中agent熱點",
+    "novelty": 10,
+    "impact": 11,
+    "trending": 13,
+    "practicality": 16,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "Stream low-latency speech from AI agents using Kokoro TTS on Amazon SageMaker AI",
+      "url": "https://aws.amazon.com/blogs/machine-learning/stream-low-latency-speech-from-ai-agents-using-kokoro-tts-on-amazon-sagemaker-ai/",
+      "authors": [
+        "Joseph Cottingham"
+      ],
+      "abstract": "A customer asks an AI voice agent a question and waits. The agent already has an answer, it’s midway through generating a long, multi-paragraph response, but the customer hears nothing for five seconds. By the time an answer arrives, the customer is frustrated, confused, and no longer paying attention. Text-to-speech integrations create exactly that gap. A one-sentence response might generate in 600 milliseconds, but the full response takes five seconds, and the integration waits for all of it before synthesis starts. This post shows how to close that gap. We stream each sentence to a hosted Kokoro-82M text-to-speech (TTS) model on Amazon SageMaker AI as soon as an agent produces it, so synthesis begins on sentence one instead of the finished response. Getting that audio back to a browser needs its own solution too, so we also cover both transports for doing it and what each costs in practice. This solution closes the gap by streaming synthesis alongside generation instead of waiting for it to finish. As the agent produces each sentence, that sentence streams immediately to a hosted Kokoro-82M text-to-speech model, so audio playback can start before the agent finishes speaking its full response. Kokoro-82M holds only 82 million parameters, small enough to run cheaply on a single mid-tier GPU instance. That keeps both latency and inference cost low for a voice agent handling real traffic. Kokoro-82M runs in a custom container on a SageMaker AI real-time endpoint, on an ml.g5.xlarge GPU instance. The container exposes two routes: POST /invocations , which streams a response for one complete input, and WS /invocations-bidirectional-stream , which keeps one connection open across many messages in both directions. The following diagram shows the request path from client to model: Figure 1: Request path from the client to the SageMaker AI real-time endpoint over a bidirectional stream The walkthrough first deploys the endpoint and agent, then works through the client-side changes that make incremental streaming work end to end. The Kokoro-82M endpoint and the agent runtime deploy through two CLI tools, each wrapping its own AWS CDK stacks: speech-infra deploy provisions the Kokoro-82M endpoint. This includes the foundation and model-cache stacks that create the underlying IAM roles and sync the model’s weights into Amazon Simple Storage Service (Amazon S3). The endpoint stack then builds the container image and creates the SageMaker AI model, endpoint configuration, and endpoint. agent-infra deploy provisions the Amazon Bedrock AgentCore runtime hosting the Strands agent, which calls the endpoint you just deployed, so deploy the endpoint first. The bidirectional transport SageMaker AI uses delivers every piece of a client’s message to your container as a binary WebSocket frame. A common way to write a Starlette WebSocket handler is calling receive_text() , which reads message[\"text\"] and raises KeyError if that key isn’t present. Because every message this client sends arrives as binary, that handler fails on every request. The failure is commonly misdiagnosed. A generic exception handler that forwards str(e) to the client turns KeyError('text') into an error frame reading 'text' , which looks like a missing field, not a framing issue. The endpoint itself reports InService throughout, since it accepts connections and responds to every message, with an error each time. Accept either frame type explicitly instead of assuming one will show up: This decodes bytes as UTF-8 when no text field is present, rather than assuming one frame type. Test it by sending a binary frame, because this failure mode produces a well-formed error frame and a healthy endpoint status, not an obvious crash. After your container finishes synthesizing one message’s audio, the instinct is to close the session, the way an HTTP cycle ends. That’s wrong here. After sending a message’s audio and a synthesis_complete control frame, the container loop should go back to waiting on receive() for the next message on the same, still-open session. Close the connection only when the client sends an explicit {\"type\": \"close\"} message. The following diagram shows one session carrying two sentences in sequence, closing only at the end: Figure 2: One bidirectional session carrying two sentences in sequence, closing only at the end This way, you can send several sentences, one after another, on one persistent session, with no reconnection cost between them. Closing eagerly after one response would force a new connection per sentence, undoing most of the latency benefit. With the session behavior in place, the client-side fix for the latency problem is a class that normalizes text arriving in two shapes: a complete string known up front, or a live token stream. It produces the same output either way: complete sentences, ready to send as soon as each one is complete. Call feed() once per fragment of text as it arrives. It returns any newly completed sentences, holding back trailing text. Call flush() once, at the end of input, to release whatever partial text remains even without trailing punctuation. This keeps a stream that ends before a period arrives from dropping a final sentence. This isn’t concurrent synthesis. Every bidirectional handler is a strictly sequential loop: receive a message, synthesize its audio, send that audio, send synthesis_complete , then receive the next message. Sentence two’s audio isn’t generated while sentence one’s still transmits. What incremental sending buys is narrower: synthesis on sentence one begins the instant it exists, rather than waiting for the full response. For a multi-sentence response with real generation time between its first and last sentence, that’s the entire latency win. We verified this against a live endpoint sending a three-sentence input over one session. All three chunks arrived with audio matching the text sent for each: Streaming text into the model incrementally solves half the problem. The other half is getting the resulting audio out to whatever renders it, commonly a browser. Most agent and chat frontends already stream text over Server-Sent Events (SSE): one-directional, and supported natively by most browsers. SSE is a text protocol, not built to carry a raw binary payload. A team adding voice to an existing SSE pipeline naturally reaches for the pattern it already has: base64-encode the audio and wrap it in a JSON event. We measured the cost of that approach across 24 clips, confirmed with Amazon Transcribe that quality didn’t differ across encodings, and compared MP3 against AAC: Base64 inflates every payload by close to the expected 33%. The subtler cost is frame alignment. SSE events are delimited by a blank line, but the audio inside is delimited into MP3 frames. The two schemes don’t necessarily align with how the transport chunks the data. In one measured response, four logical MP3 frames arrived as six delivery chunks, two ending mid-frame. A consumer that treats each delivery chunk as one complete unit fails on ordinary, healthy traffic. The fix buffers incoming bytes and acts only once a delimiter is found: The alternative used today for the model-facing leg skips base64 and SSE framing entirely. It multiplexes raw binary audio and JSON control frames over the same bidirectional session already carrying incremental text input, and tells them apart with one rule. A chunk that fails to decode as a JSON object is audio, forwarded as received, with no encoding step anywhere in the path. One edge case matters: raw PCM audio can legitimately begin with byte 0x7b , the ASCII character { , the same character that opens a JSON object. This rule avoids misclassifying that audio because it requires the entire chunk to parse as valid JSON, not its first byte alone, something a PCM frame will essentially never do.",
+      "published_date": "2026-10-22",
+      "tags": [
+        "Amazon SageMaker AI",
+        "Expert (400)",
+        "Technical How-to"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, alignment",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 59,
+    "llm_reason": "句子級串流TTS合成降低延遲，提供具體可複現架構教學",
+    "novelty": 9,
+    "impact": 9,
+    "trending": 10,
+    "practicality": 17,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "TechCrunch AI",
+      "title": "Microsoft’s Mustafa Suleyman says its AI outperforms doctors on hard cases as he chases ‘medical superintelligence’",
+      "url": "https://techcrunch.com/2026/10/22/microsofts-mustafa-suleyman-says-its-ai-outperforms-doctors-on-hard-cases-as-he-chases-medical-superintelligence/",
+      "authors": [
+        "Rebecca Bellan"
+      ],
+      "abstract": "Microsoft’s AI diagnostic system correctly diagnosed complex medical cases in a simulation more than twice as often as generalist physicians, according to a study published Thursday in Science. Mustafa Suleyman, Microsoft AI’s CEO, called the result a step toward “medical superintelligence.” The system, dubbed MAI-DxO (DxO for short), coordinates several AI agents that act like a panel of doctors. They question a patient, order tests, and debate a diagnosis. In a simulation using complex cases from the New England Journal of Medicine, it was correct 83% of the time. Primary care doctors and general internists, working individually with reference materials, were correct 36% of the time. One note: Cases this complex are usually handled by specialists or physician teams, who weren’t part of the comparison. “There is something very substantial and exciting here,” Dominic King, vice president of Health at Microsoft AI, told TechCrunch. “The biggest challenge in healthcare delivery at the moment is the growing mismatch between demand and supply of medical expertise.” In publishing these results , Microsoft joins Go o gle and OpenAI in claiming that its AI can match or outperform doctors. The study’s own data suggests that much of the improvement comes from more powerful underlying AI models, with Microsoft’s orchestration system adding gains on top. Microsoft tested MAI-DxO with models from several companies, including OpenAI, Google, Anthropic, Meta, and DeepSeek, but its best results came with OpenAI’s GPT-5 and GPT-5.5. Accuracy improvements delivered by DxO (no budget constraints) on CPC over models prompted with baseline prompt across different large language models. Image Credits: Microsoft AI Microsoft measured DxO on cost as well as accuracy, meaning the estimated cost of running the AI on each case. On its own with a short, basic prompt, GPT-5 scored 78.9% on complex cases at about $8,400 per case. DxO cut that cost by about $3,000 but raised accuracy by only about four points. On emergency department cases, there was little improvement in either accuracy or cost improvement between GPT-5 on its own and with the assist from DxO. With GPT-5.5, a newer model released in April 2026, the results split. On complex cases, DxO increased GPT-5.5’s accuracy score from 72% to nearly 87% at a slightly cheaper cost. However, the gains once again didn’t show up on emergency department cases. Both (with and without DxO) scored about 85% at a similar cost. DxO helps most on complex cases and with less capable AI models. Gemini 2.5 Flash, for example, scored 46.4% on its own but nearly 69% with DxO. Even so, the gap between the weaker and stronger models was larger than the boost DxO provided. Microsoft’s researchers said that accuracy gains naturally shrink as models approach the theoretical maximum. “The DxO orchestration helps with the broader challenge of optimization both accuracy and cost,” a spokesperson added. Suleyman, who leads Microsoft’s effort to build its own frontier AI, told TechCrunch that the company is working with the Mayo Clinic to train a foundation model for healthcare, with release planned for next year. He believes this model will enable the company to “make really enormous leaps here,” and says DxO is part of the foundational infrastructure Microsoft is building to see real breakthroughs in healthcare. “I really believe that in 2027, we will be on the verge of a coding style breakthrough for medical records,” Suleyman said. “I think we’re going to be able to stream highly accurate predictions about how a medical record might unfold, and obviously that kind of foresight for a clinician is gold dust.” Suleyman has spent his career trying to use AI to solve medical issues. He was previously a co-founder of DeepMind, which was acquired by Google in 2014. The following year, Google DeepMind acquired King’s startup Hark, a clinical task management app, and the two of them launched DeepMind Health together. Suleyman joined Microsoft to lead its AI unit in 2024, and King followed a few months later. “We’re just true believers,” Suleyman said. He said while the use of generative AI in healthcare is still early, he expects healthcare models to get “an order of magnitude better in capability within the next 24 to 36 months.” “As we’ve seen multiple times in the last five or six years, the progress happens very quickly once you have a flywheel,” Suleyman said. “A flywheel means we have a model in production which we are iterating with real-world usage in order to identify gaps in the model and then patch them and improve them. That’s what’s happened in coding. It’s what happened in chat before that. And I think next year it’s going to start to happen for medical records and for clinical decision support.” Through a new partnership with Beth Israel Deaconess Medical Center in Boston, Microsoft will evaluate the clinical reasoning capabilities of DxO across different hospital settings. “This technology is ready for real-world evaluations, and you can imagine the complexity and diversity of issues that come from a Boston emergency department on a Friday evening,” King said. He explained how the study will work: Patients will get standard treatment, including triage, time with a specialist, treatments, investigations, and decision on whether it’s safe to discharge. In parallel, those who consent will also engage with DxO. Microsoft and its partners will compare DxO’s recommendations against the human doctors’. Google published a clinical study alongside Beth Israel in The Lancet this month to evaluate Google’s AMIE conversational diagnostic AI in real-world urgent care visits, while human physicians monitored the interactions in real time. “We think this will be the biggest study of its kind,” King said. “It will be across not just emergency settings but urgent care environments, and will give us very compelling evidence by the end of the study period around the ability for these systems to be deployed at greater scale in the future.” Microsoft’s study in Science coincides with a manifesto of sorts around what it will take to build medical superintelligence, defined as “the capacity to surpass the strongest contemporary human-led health systems in medical reasoning and coordination across the full arc of care.” Microsoft hopes to move beyond benchmarking individual tasks — like answering medical exam questions and generating diagnoses — into integrating with clinicians and healthcare systems for better outcomes. “This is the kind of technology that everybody in the world wants, and that’s why we’re committed to doing everything we can to accelerate its introduction to the world,” Suleyman said, adding that this focus could be a differentiator for Microsoft compared to the other frontier labs. Microsoft already sells dictation and radiology tools to clinicians and sees DxO as an expansion to those efforts. “We have to have the absolute number one state-of-the-art medical clinical decision support products over the next few years,” Suleyman said.",
+      "published_date": "2026-10-22",
+      "tags": [
+        "AI",
+        "Biotech & Health",
+        "microsoft AI",
+        "Mustafa Suleyman"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "TechCrunch AI",
+        "feed_url": "https://techcrunch.com/category/artificial-intelligence/feed/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: reasoning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 64,
+    "llm_reason": "發表於Science的多代理醫療診斷系統，對比醫生數據具故事性",
+    "novelty": 12,
+    "impact": 15,
+    "trending": 14,
+    "practicality": 7,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "Show HN: Omnara – Open-source alternative to Claude Managed Agents",
+      "url": "https://github.com/omnara-ai/omnara",
+      "authors": [
+        "kmansm27"
+      ],
+      "abstract": "Hey all, Kartik from Omnara ( https://omnara.com ) here. We're building an open-source API for running durable agents. You create an agent with an API call, and Omnara runs the agent loop, gives the agent sandboxes to run commands in, and handles secrets, permissions, and RBAC. Each agent's state is stored in Postgres, so agents survive restarts and cost nothing while idle. You can message them and stream their events over the API. You may remember us from our early days, when we made a remote-control phone app for Claude Code and Codex. Since the harness ran on a laptop back then, we had to build a relay to reach it, it stopped when the laptop closed, and moving it to a cloud sandbox meant syncing code and agent state between machines. We didn't think remote-controlling a local agent was end-game for how people would run agents, so we built a new product where the agent runs in the cloud, any client can talk to it through an API, and it can still use your laptop as one of its machines. Anthropic and OpenAI are building hosted versions of this, like Claude Managed Agents and the OpenAI Agents API. Omnara is an open-source version you can run on your own servers and use your own models. It's basically a harness server like the opencode or codex servers, but durable, scalable, with the usual harness features like file and shell tools, subagents, compaction, permission prompts, MCP, skills, memory, yada yada yada. Here's some interesting architectural decisions we made while building this out: Most harnesses, like Claude Code, Codex, OpenCode, Pi, Goose, etc, run the agent loop in one long-lived process that keeps its log in a JSONL or SQLite file. In Omnara, the log is an append-only event log in Postgres, with inputs, model outputs and tool calls stored as typed rows in their own tables. The loop runs on stateless workers in the control plane. A worker runs one iteration of the loop, either a model call or the tool calls it produced, then releases the agent and puts the next iteration on a queue in Postgres. Whichever worker is free picks it up, so each iteration of an agent's loop can run in a different process on a different machine. Each iteration's result commits in one transaction, so the model output, its tool calls, usage and the next wakeup are saved together or not at all. If a worker dies mid-iteration, nothing commits, its lease expires, and another worker retries it. Agents waiting on a user, a tool or a retry don't hold a worker, so one worker can multiplex thousands of agents. Also unlike other harnesses, the machines that the workers (our agent loop) run on aren't where the agent runs its commands. Instead, any macOS or Linux machine with an internet connection, like your laptop or any cloud sandbox, can run a small daemon (omnarad) that connects out to Omnara, so it doesn't need any open inbound ports. The agent then gets tools for that machine, like running a command or editing a file. An agent can have any number of machines connected to it. A fun thing I like to do is I have my laptop and a cloud sandbox connected to the same agent, so when my laptop is on, my agent codes there and I can interact with it, and I have it often push to Github. When I close my laptop, my agent sees the laptop went offline, pulls the latest changes to its cloud sandbox, and continues there. The entire codebase is open source at  https://github.com/omnara-ai/omnara , and it’s self hostable, even on a single machine with docker compose. You can also use the hosted version at  https://omnara.com . Let me know what you think!",
+      "published_date": "2026-10-22",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 107,
+        "num_comments": 32,
+        "hn_url": "https://news.ycombinator.com/item?id=50183892",
+        "object_id": "50183892"
+      }
+    },
+    "rule_score": 24.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, mcp",
+      "📰 Hacker News: 107 points",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 62,
+    "llm_reason": "開源持久代理執行框架，架構決策細節具工程參考價值",
+    "novelty": 11,
+    "impact": 10,
+    "trending": 10,
+    "practicality": 16,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "AI agent fixed the bug, but what else did it change?",
+      "url": "https://blog.trailofbits.com/2026/10/21/your-ai-agent-fixed-the-bug-but-what-else-did-it-change/",
+      "authors": [
+        "tob_scott_a"
+      ],
+      "abstract": "Page content Today we’re publishing patching-bugs and regression-hunt , two plugins that let engineers delegate patch development and regression checks to agents. Our patching-bugs plugin reproduces reported bugs, develops fixes, and tests them. The regression-hunt plugin checks whether any changes break previously working and supported behavior. Engineers can direct the work and review their results; maintainers can supply their own security assumptions and patching requirements, so the agents work within the project’s rules. We built patching-bugs and regression-hunt through Patch the Planet , our joint initiative with OpenAI, where we’ve co-authored hundreds of security patches for widely used open-source projects. Motivated by our major successes on projects like Scapy , our plugins draw on our analysis of merged patches and thousands of our engineers’ Codex sessions. The plugins provide maintainers with a structured workflow, evidence, independent checks, and best practices to improve their patching hygiene. In our preliminary evaluations, regression-hunt produces 25% fewer false-positive findings than a baseline Codex agent prompted to “review the PR for regressions.” Standardizing the patching process Our September post reported regressions introduced by some of our Patch the Planet patches. Since then, we’ve reviewed every patch that a Trail of Bits engineer authored and maintainers merged upstream. The review confirmed 21 regressions from over 130 PRs merged: 16 functional, one performance, and four build/test. None broke a security protection. (“Regression” refers to a new defect introduced by a change that breaks previously correct and supported behavior along a path a real user or attacker can reach.) For each patch, an agent looked for potential regressions, confirmed each one with a proof-of-concept (PoC) run before and after the change, and then passed the results to an engineer for review. The review was noisy: today’s bug disclosures arrive at an unprecedented speed and scale, and for patching to keep pace, the industry needs to increase its signal-to-noise ratio. The 21 confirmed regressions were identified among 58 candidates in a single run (~36% precision). But because agents take many different approaches and reach different results, each run generates more candidates to manually sort through. That led us to two conclusions: To introduce fewer regressions, we needed a standard way to write patches, with the same checks applied every time. To catch the regressions we still introduce, we needed a standard way to check for them, with written rules for what counts as a regression. Standardizing both steps also makes every run repeatable and comparable. No fixed checklist will catch every regression, so we collect agent trajectories from our engineers’ patching sessions, and use the tasks that an earlier version failed to benchmark for the next one (figure 1). Figure 1: Feedback loop for generating and evaluating patches. How we designed the plugins We used two primary sources to guide the design of our plugins: a review of every patch we merged upstream and the thousands of Codex sessions our engineers used to write those patches. This led to four principles that shaped our patching-bugs and regression-hunt plugins: Opinionated guidance in as few words as possible. We give the agent wide latitude and record only Trail of Bits’ judgment of what constitutes a good patch and a real regression. The goal is to direct the agent towards the desired result with the least possible guidance. Modular steps. You don’t have to run either plugin end-to-end, as both provide multiple skills that can be used in tandem or in isolation. Strict input and output schemas. Every step takes and returns a defined schema that includes the claim, the code revision, the required check, the raw evidence, and open questions. Fixed schemas reduce variability across runs and allow each step to verify the previous step’s work rather than trusting its summary. A live proof of concept for every claim. Every conclusion depends on a PoC run against a live deployment: a built, running instance of the project, reached through the interfaces a real user would use. When reproducing a bug, proving a fix, and confirming a regression, if a step can’t produce a live PoC, its result is inconclusive. regression-hunt reduces false positive rates The regression-hunt plugin (Figure 2): Enumerates candidate regressions by tracing the changed code (the diff) through its callers to its real interfaces. Reproduces each candidate regression on a live deployment of the system. Replays the PoC on the live deployment on a fresh-context agent. Judges the results of all the previous steps to validate that the proof meets the requirements of a regression. Figure 2: The regression-hunt workflow. In addition to the four principles above, there are two core aspects that are critical to the plugin: Defining a regression: The plugin has strong opinions about what a regression is and, more importantly, what a regression is NOT. The burden of proof is placed on the agent (specifically during the “adjudication agent” step) to prove that there is sufficient evidence to show that the suspected regression is not a false positive, an incomplete fix, a latent bug, a pre-existing bug, and so on. The plugin only reports a regression if all of these gates are passed. Incorporating a threat model: If a threat model is available, the orchestrator will intentionally pass this document as part of the global context for each individual agentic step. This is an attempt to require each step/agent to refer back to the threat model before reaching its conclusion. Our review of merged PRs yielded a set of 21 confirmed regressions that we could use to evaluate regression-hunt. We used the whole set to compare the plugin with a baseline Codex agent prompted to “review the PR for regressions.” Across those runs, regression-hunt produced 25% fewer false-positive findings than the baseline, with a 95% confidence interval of 14% to 38%. Its strict evidence requirements also left some known regressions classified as borderline: the plugin identified a possible regression but did not gather enough evidence to confirm it. Fewer false positives therefore came with a tradeoff in how many known regressions it could confidently report. Next, we’ll investigate why these cases remained borderline and improve the plugin’s strategies for gathering evidence. Our goal is to confirm more real regressions while giving maintainers clearer information when the evidence remains inconclusive. patching-bugs streamlines best practices from thousands of agent sessions The patching-bugs plugin is a distillation of all the best practices we’ve identified by analyzing thousands of Codex sessions by Trail of Bits engineers (Figure 3). In addition to the more traditional capabilities (such as reproduction on live deployments and independent adversarial review), the plugin emphasizes: The three-arm proof : The proof runs the same reproduction against three specifications: the original code must fail, the patched code must pass, and a complete revert must fail again. Bringing the bug back by removing the patch provides stronger evidence that the patch—rather than an unrelated environment or test change—actually fixed the bug. Invariant-guided repair: The patch attempts to fix the underlying, violated security invariant rather than fix the specific bug. This helps generalize the patch for possible variants of the same bug class. Incorporates regression analysis: The plugin mandates that regression-hunt is run to ensure that any patch goes through the same standard pipeline to check for mistakes. Figure 3: The patching-bugs workflow. What’s next for the plugins Both patching-bugs and regression-hunt will continue to evolve.\n\n(53 points, 6 comments on Hacker News)",
+      "published_date": "2026-10-22",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 53,
+        "num_comments": 6,
+        "hn_url": "https://news.ycombinator.com/item?id=50183253",
+        "object_id": "50183253"
+      }
+    },
+    "rule_score": 24.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, distillation",
+      "📰 Hacker News: 53 points"
+    ],
+    "llm_score": 61,
+    "llm_reason": "代理自動修補與回歸檢測的量化評估，具體數據具說服力",
+    "novelty": 12,
+    "impact": 11,
+    "trending": 8,
+    "practicality": 15,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "量子位",
+      "title": "LeCun押注的世界模型，中國一家清華系公司已經做進了機器人",
+      "url": "https://www.qbitai.com/2026/10/504653.html",
+      "authors": [
+        "田, 晏林"
+      ],
+      "abstract": "LeCun押注的世界模型，中國一家清華系公司已經做進了機器人 田, 晏林 2026-10-21 15:15:05 來源： 量子位 世界模型賽道新看點：千訣隱變數可辨識性方向的研究，比LeCun相近工作早一年，不堆畫面預測，主打物理規律與跨本體複用。 田晏林 發自 凹非寺 量子位 | 公眾號 QbitAI 世界模型這條賽道，越來越有全球頂尖AI高手過招的架勢了！ Yann LeCun持續押注預測式世界模型，李飛飛帶領World Labs探索可互動的3D世界，全球頭部AI團隊正沿著不同技術路線加速探索。 讓AI真正理解物理世界、預測物理變化，正成為新一輪技術競爭的焦點。 最近，這股世界模型熱潮也延伸至南京。 10月20日， 首屆2026物理AI與世界模型大會 在南京開幕。圖靈獎得主 LeCun、姚期智 都遠端分享了最新觀察。 在這場世界模型領域的學術與產業盛會上，清華系具身智慧公司 千訣科技 ，也在大會上正式釋出了 預測式世界模型Polibrain 。 千訣科技創始人高海川 在開幕式演講中，用一句話解釋了世界模型的獨特價值： 有了地圖，可以推匯出最短路徑；但有了路徑，並不能反過來推匯出一張地圖。 這裡的「地圖」，正是對物理世界及其變化規律的一種抽象理解。 而千訣此次釋出的Polibrain，想做的就是讓機器人擁有這樣一張可以用於預測和規劃的「地圖」。 早在2025年，千訣聯合清華大學團隊就在ICML發表了世界模型相關理論研究，其在隱變數可辨識性、低階偏好等方向上的公開探索， 比LeCun團隊的相近研究早了約一年。 僅僅一年後，千訣已經把相關技術積累推進到了真實機器人應用中。 從環境感知、行動預測，到自主規劃和執行反饋，千訣試圖讓機器人學會根據物理世界的變化，自主決定下一步怎麼做。 目前，這套智慧能力 已在四足、人形、輪式、雙臂等機器人形態上開展適配。 千訣的預測式世界模型Polibrain，究竟有什麼特別之處？他們又是如何讓不同形態的機器人，共用一套智慧大腦的？ 機器人大腦有了新解法 “世界模型講了這麼多，大家真的理解了嗎？” 在開幕式的壓軸演講上，高海川率先丟擲了這樣一個問題。 隨後，他講了一個「古代商人從廣州運送荔枝到長安，怎樣才能找到最快的路線？」的故事。 看過電影《長安的荔枝》的觀眾，對這個難題應該不陌生。 高海川給出了兩種解法。 一種辦法，是把可能的路線都走一遍，從中找出最優解。 另一種方法，則是先弄清廣州到長安沿途有哪些城市、城市之間如何連線，畫出一張地圖，再根據地圖規劃路線。 前者被他用來類比當前的VLA路線，後者則對應世界模型的預測與規劃方法。 區別在於，機器人能否提前推演行動可能帶來的結果，減少實際試錯。 這正是千訣Polibrain預測式世界模型想要解決的問題。 那麼，這套方法放到真實機器人身上，能做什麼？ 千訣提供的一段應用演示影片，展示了一個直觀場景。 在戶外，一臺帶著機械臂、揹著回收筐的四足機器狗，正在執行垃圾回收任務。 它需要自主尋找地面上的垃圾，識別目標位置，移動過去，再規劃機械臂動作，將垃圾抓起來，放進隨身攜帶的回收筐。 看起來只是一套撿垃圾的動作，背後卻有一連串決策難題： 垃圾在哪裡？機器狗應該從哪個方向靠近？機械臂伸出去之後，能不能順利抓住目標？ 尤其是在真實環境中，物體的位置、空間關係都可能發生變化。機器人光知道下一步做什麼還不夠，還得提前判斷，這一步做下去會發生什麼。 這正是預測式世界模型想解決的問題。 Polibrain通過學習環境狀態、歷史資訊和行動結果之間的關係，在任務相關的潛在表徵空間中預測狀態變化。 這裡還有一個關鍵的技術選擇。 Polibrain並 不追求把未來的每一幀畫面完整生成出來 。 對於正在撿垃圾的機器人來說，地面是什麼顏色、背景有多少紋理，未必重要。 真正影響任務完成的是垃圾的位置、機械臂與目標的相對關係，以及抓取動作會如何改變目標狀態。 與其花費大量計算資源還原整個世界，不如集中預測那些真正影響行動的關鍵資訊。 高海川在演講中也強調： “世界模型要做好，關鍵在於狀態表徵。” 但預測得準只是第一步。 真實任務很難完全按照計劃推進。如果抓取失敗，或者目標位置發生變化，機器人還需要知道如何繼續。 Polibrain將環境感知、狀態理解、行動預測、任務決策、動作執行和反饋調整連線起來，形成持續決策閉環。 當執行結果與預測不一致時，模型可以根據新的環境狀態重新評估任務，調整後續行動。 它還支援通過關鍵特徵解碼，追蹤預期狀態與實際結果之間的偏差，為異常定位和任務恢復提供依據。 不過，這套機制在複雜場景中究竟有多可靠，還需要更完整的實測資料驗證。 而且，這張「地圖」，理論上並不只屬於某一種機器人。 人形機器人可以用機械手抓杯子，輪式單臂機器人也可以。 雖然本體結構和控制方式不同，但它們需要理解的物體關係、目標狀態及環境變化規律存在共性。 這意味著， 面向物理世界的部分智慧能力，有機會在不同機器人之間複用。 目前，千訣已在人形、輪式、單臂、雙臂等多種機器人形態上開展適配，探索陪伴服務、餐飲服務、物品整理及精細操作等任務。 不過，要讓不同形態的機器人真正共用一套智慧能力，光有環境預測還不夠。 模型必須從複雜的真實場景中，學到可以跨環境、跨任務複用的規律。 這就涉及千訣更底層的一項研究： 多項式表徵。 比LeCun相近研究早一年，千訣如何突破泛化難題？ 所謂「多項式表徵」，簡單來說，就是 通過一套數學方法， 讓AI從複雜環境中提取真正影響任務結果的關鍵變數， 減少對無關細節的依賴。 為什麼需要這項技術？ 機器人想要適應不同場景，繞不開一個難題： 泛化 。 比如，機器人在一個倉庫學會抓取，換到另一個倉庫，光照、背景、貨架位置一變，表現就可能大打折扣。 問題在於，模型訓練時，很可能記住大量與任務無關的細節。背景紋理、光照條件，甚至物體周圍的擺設，都可能被神經網路當成判斷依據。 這就容易造成 「特徵汙染」 。 另一種問題更隱蔽：模型可能誤認為經常同時發生的現象之間，存在因果關係。 高海川在演講中舉了一個例子。 主人出門前，從抽屜裡拿走鑰匙。這裡有三個事件：主人出門、主人拿走鑰匙、抽屜裡的鑰匙消失。 如果模型只學習事件之間的相關性，就可能錯誤地認為，只要主人出門，抽屜裡的鑰匙就會消失。 等到主人真的忘帶鑰匙，讓機器人幫忙尋找時，機器人反而可能判斷，主人既然已經出門，鑰匙肯定不在抽屜裡了。 顯然，這不符合真實世界的因果關係。 模型究竟是在死記硬背，還是學到了物理世界的規律？ 千訣希望通過多項式表徵，讓模型少記場景細節，多學可遷移的規律。 這條路線背後，有千訣持續數年的研究積累。 2025年，千訣聯合清華團隊在ICML發表《When Do Neural Networks Learn World Models?》，研究神經網路在什麼條件下，能夠從觀測資料中恢復隱藏的世界結構。 研究從 「多工學習」和「低階偏好」 入手，利用Fourier-Walsh變換分析 離散佈爾世界中的函式結構 ，解釋模型何時能夠辨識真實隱變數。 有意思的是，LeCun團隊也從相近的理論視角切入。 2026年5月，LeCun等人發表《When Does LeJEPA Learn a World Model?》，同樣研究世界模型的隱變數可辨識性，以及函式階次與低階偏好之間的關係。 高海川在演講中進一步解釋了兩項研究的差異。 千訣團隊從因果推斷和布林空間的角度提出學習判據，LeCun團隊則從時間維度切入。 雖然研究物件不同，數學工具不同，但兩項研究提出的 學習判據 具有一定 等價性 ，最終匯出的表徵，在資訊層面也具有一定等價性。 事實上，兩者都在嘗試回答同一個問題： AI究竟如何從複雜觀測中，學到能夠泛化的世界結構？ 從公開發表時間看，千訣聯合清華團隊在相近方法論方向上的研究，比LeCun團隊上述論文早了約一年。 2026年，千訣聯合清華團隊進一步提出「有效階」 （Effective Degree，ED），試圖給神經網路的複雜度提供一把可以計算的「標尺」。 以往Benchmark能告訴研究者模型答得對不對，研究者卻不容易判斷模型學到的函式究竟有多複雜。 ED嘗試解決這個問題。 其方法是沿真實資料點之間的插值路徑觀察神經網路，用正交多項式擬合模型輸出，再根據不同階次成分的權重計算複雜度。 低階成分佔主導時，ED較小；高階成分越多、幅度越大，ED就越高。 這樣一來，研究者不僅可以量化、比較模型的函式複雜度，還能將這一指標引入訓練過程，幫助模型減少不必要的複雜變化。 當然，函式更簡單，不意味模型一定掌握了正確的物理規律。 但這項研究 為分析和最佳化模型泛化能力提供了新工具 。 除了學會提取規律，機器人還得記住真正重要的事。 比如，機器人把杯子放進櫃子，關門後就看不見了。等到下一步需要操作這個杯子，必須記得杯子被放在哪裡。 在連續任務中，物體可能被遮擋，部分狀態無法僅憑當前畫面判斷。 於是，千訣團隊還研究了 基於反事實推斷的歷史資訊篩選機制 。 簡單來說，就是判斷某段歷史觀測是否會影響後續預測和決策，再決定是否保留。 機器人無需記住看到的所有畫面，而是重點保留那些會影響後續任務的資訊。 背景是什麼顏色，不一定重要；杯子放進哪個櫃子，卻會影響下一步動作。 「多項式表徵」幫助模型提取關鍵變數，「因果記憶」則幫助模型篩選重要經歷。 兩者共同為機器人應對遮擋、延遲反饋、多步驟任務等複雜情況提供方法支援。 不過，相關基礎研究提供的是技術依據，實際效果還需要更多真實任務驗證。 總不能機器人每換一個房間，就重新學習一遍怎麼幹活吧？ 多項式表徵與因果記憶，為模型學習和利用可遷移的規律提供了技術基礎。 但學到的規律，怎麼才能讓不同形態的機器人共同使用？ 這就涉及另一個問題：如何把對世界的理解，與具體執行動作的機器人本體分開。 不造機器人，千訣想做所有機器人的大腦 說回那顆要送往長安的荔枝。 即便已經有了地圖，想把荔枝真正送到長安，也還需要馬匹、車船、驛站等不同運輸環節協同工作。 同樣，機器人有了對世界的理解，也不意味著它必須獨立完成所有動作。 高海川舉例說，讓機器人把衣服放進洗衣機，人形機器人可以一隻手拿衣服，另一隻手開門。 但如果換成只有一隻機械臂的輪式機器人呢？ 它完全可以通過智慧家居IoT系統，讓洗衣機自己開啟門。 硬體不同，執行方式不同，但最終對物理世界產生的變化可以相同。 這也是 千訣「松耦合世界模型架構」 想要解決的問題。 具體來說，Polibrain將面向環境與任務的共用表徵，與具體機器人的動作執行能力相對分離。 對世界的理解可以共享，至於怎麼執行，則由不同機器人甚至自動化裝置根據自身能力決定。 這套思路也決定了 千訣的產品定位：不造機器人本體，而是為不同形態的機器人提供智慧能力。 而且，千訣的目標不只包括 通用機器人 ，也包括 面向具體任務的專用機器人 。 高海川認為，具身智慧的商業落地可能是漸進的，不必一開始就追求完整的人形形態。 比如，減少一隻機械臂，可以成為酒店配送機器人；換成雙臂，可以進入餐飲服務場景；進一步調整本體結構，又能用於巡檢、安保、環衛清潔等任務。 形態可以因場景而變，底層對世界的理解卻有機會複用。 更值得關注的是，這種跨本體複用還有一層 資料價值 。 具身智慧長期面臨物理互動資料不足的問題。真機採集成本高、積累緩慢，不同形態的資料又難以直接共享。 從資料來源看，可以將機器人學習所需的資料大致分為三個層次： 底層是第一視角影片、人類操作影片等無本體資料，幫助模型學習環境、物體關係及互動過程。 中層是真機遙操等機器人本體資料，建立具體動作與物理環境變化之間的聯絡。 頂層是真實業務場景中的反饋資料，讓模型發現長尾問題，並持續迭代。 三類資料各有作用，但要讓它們真正產生價值，還需要解決跨本體資料難以複用的問題。 高海川認為，人形、輪式、四足乃至掃地機器人，雖然結構不同，但對物體關係、任務目標和環境變化的理解存在共性。 Polibrain希望通過共享高層表徵，讓不同形態積累的資料有機會服務同一套模型。 更多機器人接入，覆蓋更多真實場景；資料持續積累，推動模型泛化；模型能力提升，又有機會吸引更多機器人廠商和客戶。 由此，一套跨本體資料飛輪有了形成的可能。 不過， 共用表徵不代表資料就能自動打通。 高海川也提到了不同機器人企業之間的資料壁壘。 對於各家本體廠商而言，資料本身具有商業價值，開放共享並不容易。 千訣作為獨立模型公司，正在通過服務不同機器人企業，探索跨本體資料的協同利用。 從理論研究到真實機器人的應用，Polibrain的釋出，為預測式世界模型走向產業應用提供了一個觀察樣本。 至於跨本體資料能否真正打通，模型能力能否隨著應用規模持續提升，還需要更多真實場景的驗證。 現在，「地圖」已經有了。 但從畫出地圖，到把那顆「荔枝」真正送到長安，還有一段長路要走。 版權所有，未經授權不得以任何形式轉載及使用，違者必究。 田, 晏林 清華具身模型登頂全球第一！突圍GPT-6、輝達，不靠外掛和額外資料 2026-10-09 AI算力硬合作，馬斯克還是更相信中國製造 2026-10-04 最火AI崗位FDE：月薪5萬，都幹這些… 2026-10-04 直播回顧：工業AI的下一個機會在哪？ 2026-09-30",
+      "published_date": "2026-10-21",
+      "tags": [
+        "資訊"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "量子位",
+        "feed_url": "https://www.qbitai.com/feed"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: world model",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 62,
+    "llm_reason": "世界模型用於機器人跨本體複用，聲稱早於LeCun團隊具一定學術話題性",
+    "novelty": 13,
+    "impact": 12,
+    "trending": 14,
+    "practicality": 8,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "HuggingFace Blog",
+      "title": "Ensemble forecasting with IBM Granite time-series models",
+      "url": "https://huggingface.co/blog/ibm-research/granite-timeseries-ensemble-r1",
+      "authors": [],
+      "abstract": "Back to Articles Ensemble forecasting with IBM Granite time-series models Enterprise Article Published October 22, 2026 Upvote 13 +7 Fearghal O'Donncha Fearghal Follow ibm-research Chandramouli Kamanchi rry003 Follow ibm-research Guruprasad Ranjini Follow ibm-research Wesley M. Gifford wmgifford Follow ibm-research Natalia Martinez Gil natalialmg91 Follow ibm-research Bradley Eck bradleyjeck Follow ibm-research Pankaj Dayama pankajdayama Follow ibm-research Roman Vaculin vaculin Follow ibm-research Ayhan Sebin ayhansebin Follow ibm-research Four open Granite models, one extensible forecasting interface, and less\nguesswork about which model to use. Pre-trained time-series models can forecast without training on your dataset, but you still have to choose one. A model that handles smooth industrial signals well may struggle with noisy retail demand or a long seasonal horizon, and the best choice depends on the series and the task. Granite Timeseries Ensemble reduces that choice to a sensible default. One recipe combines four complementary Granite architectures and returns median and quantile forecasts, with no retraining and no fitted ensemble weights. Start with the Probabilistic Ensemble (uniform probability pooling), compare the adaptive Inter Quartile Range (IQR) Ensemble, and extend the same interface with compatible forecasters. The ensemble recipe and its default Granite members are permissively licensed. The idea will be familiar from weather forecasting. Ensemble forecasts explore a range of possible outcomes, and systems such as the North American Multi-Model Ensemble combine different models for seasonal prediction. Time-series forecasting benefits in a similar way: complementary models offer different views of what comes next, and an ensemble merges those views into one forecast. Try Granite Timeseries Ensemble Install Granite TSFM and load the recommended four-model recipe directly from\nHugging Face: pip install \"granite-tsfm>=0.3.11\" import pandas as pd from tsfm_public.models.ensemble.modeling_ensemble import QuantileEnsembleForecaster df = pd.read_csv( \"https://raw.githubusercontent.com/zhouhaoyi/ETDataset/main/ETT-small/ETTh1.csv\" , parse_dates=[ \"date\" ],\n) ensemble = QuantileEnsembleForecaster.from_pretrained( \"ibm-granite/granite-timeseries-ensemble-r1\" ,\n) result = ensemble( df.tail( 1024 ), timestamp_column= \"date\" , target_columns=[ \"OT\" ], context_length= 1024 , prediction_length= 24 ,\n) print (result.prediction_outputs) # point forecast print (result.quantile_outputs) # quantiles The recipe stores the ensemble configuration rather than merged model weights. It downloads the four member checkpoints at runtime, so allow extra time for the first run. For the full configuration, member checkpoints, evaluation details, and limitations, see the model card . result.prediction_outputs contains the point forecast, while result.quantile_outputs contains the quantile predictions which by default range from 0.1 to 0.9. Applications can use the point value as a central prediction and selected quantiles to express forecast ranges. For example, the 0.1 and 0.9 quantiles define a central forecast interval with nominal 80% coverage. The ensemble members The default recipe combines four pre-trained Granite models with different architectures: Model Architecture Granite PatchTST-FM-r1 Patched Transformer Granite PatchTST-FM-r2 Patched Conformer Granite FlowState-r1.1 State-space model Granite TTM-r3 Tiny Time Mixers (MLP mixer) For background, see the PatchTST-FM-r1 paper , PatchTST-FM-r2 architecture overview , FlowState paper , and Tiny Time Mixers paper . These architectures capture trends, seasonality, and local variation in different ways, so their errors need not coincide. A 50-year review of forecast\ncombinations describes how combining forecasts can reduce the risk of picking the wrong single model, while stressing that member quality and diversity still matter. Two ways to combine the forecasts Each member returns quantile forecasts. The two main recipes use different rules to turn those forecasts into one predictive distribution and its median. Probabilistic Ensemble: the recommended default The Probabilistic Ensemble (uniform probability pooling) gives each member equal influence, pools their quantile forecasts in probability space, and extracts the requested quantiles from the combined values. Because the weights are fixed, there is no fitting step and no weighting hyperparameters to tune for a new series. The forecast combination puzzle offers useful motivation: in point forecasting, simple equal-weight combinations\nhave often held up well against methods with estimated weights. This recipe applies the same equal-influence idea to probabilistic forecasts. It is the default loaded in the example above. IQR Ensemble: an adaptive alternative The IQR Ensemble weights members according to their forecast spread, giving narrower intervals greater influence. It approximates each member’s interquartile range from the closest available quantiles around the 25th and 75th percentiles. Weights vary by sample, target, and horizon step, and like the Probabilistic Ensemble, nothing is fitted from historical forecast errors. Isotonic regression keeps the combined quantiles from crossing. A narrower interval does not necessarily mean a more accurate or better-calibrated forecast, and IQR weighting can favor an overconfident member. If you want to experiment, the recipe exposes a temperature setting (higher values move the weights toward uniform) and an optional cap on any single member's weight. Load the evaluated IQR recipe by changing only the subfolder: ensemble = QuantileEnsembleForecaster.from_pretrained( \"ibm-granite/granite-timeseries-ensemble-r1\" , subfolder= \"recipes/granite-iqr\" ,\n) Which method should I use? Your goal Start with Why A simple default Probabilistic Ensemble Equal influence, no fitted weights Adaptive weighting based on forecast spread IQR Ensemble Influence varies with each member's predicted spread Start with the Probabilistic Ensemble. If forecast spread looks informative for your application, compare the IQR Ensemble against it on representative data, since accuracy and calibration depend on the series and the horizon. Does the ensemble improve on its members? We evaluated both recipes on 97 GIFT-Eval dataset configurations. The models\nforecast without fine-tuning, and test targets were not used to select or fit\nthe aggregation method. Here we compare the official ensemble submission results\nwith the four constituent models, using published leaderboard scores and ranks captured on 20 October 2026. GIFT-Eval reports MASE for point forecasts and CRPS/MWQL (the benchmark's mean_weighted_sum_quantile_loss metric) for probabilistic forecasts. Scores\nare normalized to Seasonal Naive and geometrically averaged across configurations.\nLower is better. Forecast MASE ↓ MASE Rank ↓ CRPS / MWQL ↓ CRPS Rank ↓ Granite Ensemble R1 — Prob 0.683 ★ 47.175 ★ 0.471 50.948 Granite Ensemble R1 — IQR 0.684 48.773 0.471 47.619 ★ Granite PatchTST-FM-r2 0.685 51.371 0.467 ★ 48.918 Granite FlowState-r1.1 0.701 66.474 0.490 69.485 Granite PatchTST-FM-r1 0.717 74.794 0.488 68.134 Granite TTM-r3 0.724 83.062 0.520 88.959 ★ Best value among the forecasts shown. Lower is better. Rank columns average per-configuration ranks against the full GIFT-Eval reference leaderboard, not just these six forecasts, so rank values can shift as entries are added to the leaderboard. Both ensembles outperform all four individual members on aggregate MASE and average MASE Rank. The Probabilistic Ensemble achieves the lowest MASE among these six forecasts: 0.683 compared with 0.685 for PatchTST-FM-r2. Lower average MASE Rank indicates stronger relative point-forecast performance across GIFT-Eval’s diverse dataset configurations.",
+      "published_date": "2026-10-22",
+      "tags": [],
+      "organization": "HuggingFace",
+      "raw_metadata": {
+        "feed_name": "HuggingFace Blog",
+        "feed_url": "https://huggingface.co/blog/feed.xml"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: fine-tuning, state space model",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 56,
+    "llm_reason": "免重訓練的開源時序集成預測方法，實務價值高但領域較小眾",
+    "novelty": 11,
+    "impact": 9,
+    "trending": 7,
+    "practicality": 16,
+    "blog_worthiness": 13
+  }
+]
