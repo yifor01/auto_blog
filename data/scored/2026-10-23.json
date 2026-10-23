@@ -1,0 +1,715 @@
+[
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "KDnuggets",
+      "title": "Google Open-Sources Harness²: Self-Improving AI Agents Without Retraining",
+      "url": "https://www.kdnuggets.com/google-open-sources-harness-self-improving-ai-agents-without-retraining",
+      "authors": [
+        "Shittu Olumide"
+      ],
+      "abstract": "Google Open-Sources Harness²: Self-Improving AI Agents Without Retraining Google's Harness² lets AI agents improve their prompts, tools, memory, and scripts through two recursive loops without touching model weights. Learn more, including how to run the free demo yourself. By Shittu Olumide , Technical Content Specialist on October 22, 2026 in Artificial Intelligence Google Research has open-sourced Harness² (or Harness2 ), a framework that lets AI agents improve themselves without retraining the underlying model. Instead of touching model weights, Harness² rewrites the harness around the model: its prompts, tools, memory, skills, and scripts. Then it carries what it learned into the next task. The code ships under the Apache 2.0 license , alongside a research paper, Harness²: Recursive Agent Harnessing for an Open World , and a project site . The release is already being discussed on X . This article explains how Harness² works and what its benchmark results show, then walks you through Google's free demo and a real benchmark run on Vertex AI. If you're looking for an open-source agent framework for self-improving AI agents, start here. What Is Harness²? A harness is everything around a model that lets it act as an agent: prompts, tools, memory, skills, and orchestration. Harnessing is the work of optimizing it. Today, most teams do it by hand: an engineer watches the agent fail, tweaks the prompt, adds a tool, and tries again. That works for tasks you planned for, but breaks down in what the paper calls an open world , where agents meet tasks nobody anticipated. Harness² automates that tuning \"while keeping model weights fixed\" (README). There's no fine-tuning and no new training data; only the model's surroundings change. It can edit eight components : Component What it does in the agent System prompt The standing instructions the model reads first Guardrails Rules about what the agent must or must not do Memory Long-term notes carried across steps Skills Reusable instructions for specific kinds of work Tool guidance How and when to use each tool Scripts Helper code the agent can run Subagents Delegated helpers for parts of a task Plugins Middleware that shapes behavior inside the tool loop From the README, the first four build the model's context; tool guidance and scripts define its tool interface, subagents handle delegation, and plugins control middleware. Together they cover nearly everything about how an agent behaves except the model itself. How Harness² Works: Two Levels of Recursion The superscript \"2\" in the name refers to two loops. One improves the harness for the current task; the other improves how harnesses get improved across tasks. The top loop runs on every task. The highlighted improvement harness persists between tasks and shapes the next round of edits. Loop 1: Task-Level Recursion (Propose—Probe—Compose) Propose : A harness editor suggests invariant (general) and domain (field-specific) edits Probe : The agent reruns the same task with each edited harness Compose : A composer compares the runs and merges the edits that helped The key detail is that Harness² learns \"from behavioral contrasts between executions, without ground-truth feedback.\" It never needs the correct answer, only the difference between two runs of the same task. That matters because in the open world, nobody hands an agent an answer key. Loop 2: Harnessing-Level Recursion After each task, an experience reflector stores the adopted harness and \"evidence-supported lessons\" in a persistent improvement harness , which guides refinement on the next task. So the first loop makes the agent better at this task, and the second makes the framework better at improving agents on future tasks. You'll see both loops leave files on disk in the demo below. Parallel vs. Sequential Recursion You can spend more compute on Loop 1 with a budget, k , and a mode ( experiment guide ): Parallel proposes k invariant and k domain candidates, then runs k independent compositions over the full pool. It explores wider. Sequential runs k Propose—Probe—Compose steps in a row, carrying the refined harness forward. It refines deeper. The budget drives cost. Each task takes 4k executor rollouts and 3k improver sessions ( run_sweep.py ), so --k 3 means 12 rollouts and 9 improver sessions per task. LAB alone has 1,143 tasks ( experiment guide ), which is why every example here starts with one. Benchmark Results Google tested GLM-5 and Gemini 3.5 Flash across four model—harness configurations on three benchmarks. A single step ( k = 1 ) improved both over their base harnesses: Benchmark What it tests Best reported gain WorkBuddy-Bench Office, web, and code tasks Up to +11.5 points LAB Legal work, from Harvey's harvey-labs Up to +11.8 percentage points (partial pass rate) JobBench Professional work tasks Up to +4.5 points These are best-case \"up to\" figures, not averages, and LAB's is on its Partial score — the fraction of grading criteria passed. The README adds that a larger k \"brings further gains,\" and the paper has per-configuration numbers. These are Google's own results, so independent reproductions will matter. Why This Matters The usual way to make a model better at a job is to train it further, which needs training data, GPUs, and access to its weights. Most teams using a model through an API have none of these. Harness² keeps every improvement in plain files instead: a rewritten prompt, a fixed script, a new guardrail. That has three practical upsides. You can read what changed. An improved harness is text and code, so you can review it and diff it against the original. Harness² even writes down why it adopted each change, as the demo shows. It works with models you can't train. The executor and improver are just model IDs in a config file (setup guide). The release itself pairs GLM-5 and Gemini 3.5 Flash as agents with Vertex Gemini or Claude as the improver. It doesn't need an answer key. Refinement comes from contrasts between runs, so it works on tasks nobody has labeled yet. Running the Harness² Demo (No API Key Needed) Google's demo runs both recursion modes with \" deterministic editors and real Python executions \" and \" requires no model credentials \", so it's free. Prerequisites Linux . On Windows, use WSL; on macOS, a Linux VM or container. Python 3.12 . 3.13 is also supported, per pyproject.toml . uv , Astral's Python package manager. git . Step 1: Installing uv curl -LsSf https://astral.sh/uv/install.sh | sh curl downloads Astral's installer script. The flags make it follow redirects ( -L ), stay quiet ( -s ) while still showing errors ( -S ), and fail cleanly on a bad response ( -f ). The | sh part pipes the script into your shell, which installs uv into your user directory. Open a new terminal and run uv --version to confirm. pip install uv also works. Step 2: Cloning the Repository git clone https://github.com/google-research/harness2.git cd harness2 git clone downloads the full repository from Google Research's GitHub into a new harness2 folder, and cd moves you into it. Run every later command from this repository root. Step 3: Creating and Activating a Virtual Environment uv venv --python 3.12 .venv source .venv/bin/activate uv venv creates an isolated Python 3.12 environment in .venv , downloading Python if needed. source activates it, so python and installed commands now come from .venv . Your prompt usually shows (.venv) once it's active. Rerun the source line in any new terminal. Step 4: Installing Harness² uv pip install -e '.[render]' -e installs in editable mode, using the source files in place. The [render] extra adds openpyxl and python-pptx for spreadsheet and slide outputs ( pyproject.toml ), and the quotes stop your shell from misreading the brackets. Installing registers the commands used below: harness2 , harness2-demo , harness2-setup , harness2-check , harness2-judge , harness2-report , and harness2-bridge .",
+      "published_date": "2026-10-22",
+      "tags": [],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "KDnuggets",
+        "feed_url": "https://www.kdnuggets.com/feed"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, fine-tuning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 80,
+    "llm_reason": "免訓練自我改進agent框架，開源附論文與demo，範式新穎",
+    "novelty": 17,
+    "impact": 15,
+    "trending": 15,
+    "practicality": 16,
+    "blog_worthiness": 17
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "HuggingFace Blog",
+      "title": "Turning Database Grading into RL Rewards: Post-Training Agents with ThinkingBox",
+      "url": "https://huggingface.co/blog/microsoft/thinkingbox-training",
+      "authors": [],
+      "abstract": "Back to Articles Turning Database Grading into RL Rewards: Post-Training Agents with ThinkingBox Enterprise Article Published October 22, 2026 Upvote 10 +4 Tuhin Kundu tuhink Follow microsoft This is the follow up to our first blog post, The Agent Said It Was Done. The Database Disagreed. ThinkingBox-Training is now available on GitHub . We built ThinkingBox to evaluate an agent's work by comparing the final database state with the expected outcome. We then used the same kind of executable signal as a reward on training tasks outside ThinkingBox-Bench. For Qwen3.8-27B, average success rose from 51.70% to 60.78%, while tasks completed correctly on all twenty attempts rose from 38 to 107 with 50 GRPO steps. Figure 1. ThinkingBox turns executable checks of terminal database state into rewards for post-training agents on tasks outside ThinkingBox-Bench. This is a joint blog by Microsoft and Hugging Face, special thanks to Mirco Milletari and Xiang Jiang from Microsoft, Sergio Paniego from Hugging Face and our former intern Zhuochun Li (University of Pittsburgh) for co-authoring/reviewing efforts. We built ThinkingBox to catch agents that say they are done when they are not. Each of its 507 tasks in ThinkingBox-Bench (our benchmark dataset) hands an agent a real backend and a set of tools, lets it work, then checks what really changed in the database. In the first post , we caught a model closing a customer's ticket as resolved while the carrier exception behind it was still open. Nine competent-looking tool calls, one wrong database row. Then we noticed what we had built. For most tasks, an executable check can return 1 or 0 directly from the final database state. That is not just a grader. This can be a reward function. + So we constructed a training pool from ThinkingBox-format tasks outside the benchmark and used their executable outcomes as rewards. The catch was choosing which tasks are suitable for agent training: most tasks are either already solved or hopeless for the model in front of you, and both teach it nothing. Difficulty is policy-relative: a task is hard for the current model only until that model learns it. We call this offline policy-relative difficulty . We estimated each task's success probability once using the base policy before training and kept the selected training pool fixed throughout the run. What happened after training We used offline policy-relative difficulty to build the training pool, then fine-tuned Qwen3.8-27B with GRPO for 50 steps. To recap, we evaluate each of the 507 benchmark tasks 20 times. pass@1 measures average success across all 10,140 attempts. pass@20 measures the share of tasks solved at least once. Observed 20/20 measures the share of tasks that pass every recorded attempt. Table 1. Qwen3.8-27B results before and after 50 steps of GRPO on the offline-selected training pool. Metric Base RL fine-tuned Change Observed 20/20 38 (7.50%) → 107 (21.10%) +69 tasks pass@1 (successful attempts) 5,242 (51.70%) → 6,163 (60.78%) +9.08 pt pass@20 (tasks solved at least once) 453 (89.35%) → 446 (87.97%) −7 tasks Training sharply increased repeatable success, with a small decline in at-least-once coverage. The rest of the post explains how we selected practice tasks, built the reward loop, and measured that tradeoff. What does that improvement look like on one task? A traveler requests a room downgrade, but company policy requires manager approval first. Before training, the agent changed the booking and issued refunds without approval in 15 of 20 attempts. After RL fine-tuning, it preserved the booking and payment state in all 20. Figure 2. One corporate hotel-booking task, 20 attempts per model. The base Qwen3.8-27B model changed the booking without required manager approval in 15 attempts. The RL fine-tuned model preserved booking and payment state in all 20; all expected records matched in 19. Contents What the benchmark found, in sixty seconds Results: the dependability column moved Where the gains landed What dependability costs The training loop Offline policy-relative difficulty What earns a reward Run the training stack Where this goes next In a hurry? The headline result is above. The implementation is in Run the training stack . What the benchmark found, in sixty seconds ThinkingBox-Bench grades agents on the database records they leave behind. Each of its 507 tasks starts a real backend, hands the agent a set of MCP tools and a simulated LLM user with private context, and at the end runs executable checks against the terminal database state. Checks are against the backend record that needs to be correct, not the specific tool calls. This incentivizes the model to discover possibly new solution paths rather than “rediscover” the human-backed solution, that might be suboptimal albeit correct. In our first post we ran eighteen models through that benchmark twenty times each and reported a gap that headline accuracy hides. Kimi-K3 solved 93.89% of tasks at least once but completed only 68 of 507 tasks (13.41%) on all twenty recorded attempts . Claude Opus 5 inverted it: narrower coverage, far more consistency. And bigger or better model did not close it. Claude Opus 5.5 scored 0.66 percentage points higher than Claude Opus 5 on pass@1, yet passed exactly the same number of tasks, 241 , on all twenty attempts. That gain in headline accuracy bought zero additional dependability. If you are choosing a model for work that touches production database records, pass@1 should not be read alone. Observed 20/20 shows which tasks succeed on every attempt, which is closer to what production reliability requires. The executable terminal-state verdict was also the training reward. Before unpacking the training loop, here is what changed on the sealed benchmark. Results: the dependability column moved After training Qwen3.8-27B, we evaluated the selected step-50 checkpoint on the 507-task benchmark it had never trained on. The 507 tasks represent an out-of-distribution test set: their domains, databases, and most MCP tools were not encountered during RL training. Table 2. ThinkingBox-Bench pass@1 (%) by domain, for selected models from our first blog's Table 2 and our fine-tuned model for different domains and overall. Observed 20/20 numbers are over the entire benchmark with 507 tasks. Each model is evaluated on all 507 tasks for 20 repeated trials. Bold marks the column leader; underline marks the runner-up. Model Retail Auto insurance Travel Neobank Consulting Overall Observed 20/20 Claude Opus 5.5 80.97 68.40 54.28 71.25 61.58 67.16 241 (47.53%) Claude Opus 5 80.71 65.80 49.95 70.62 66.19 66.50 241 (47.53%) GPT-5.4 76.33 62.65 68.12 65.34 54.60 65.36 128 (25.25%) GPT-5.6 Sol 67.65 65.30 60.34 59.09 57.52 61.91 82 (16.17%) Qwen3.8-27B RLFT 67.91 56.45 62.69 62.40 54.51 60.78 107 (21.10%) Claude Sonnet 4.6 72.35 54.40 58.94 56.39 54.31 59.19 102 (20.12%) GPT-6 Astra 71.73 46.55 55.87 60.87 56.83 58.31 231 (45.56%) Kimi-K3 82.24 50.80 61.83 41.35 51.63 57.37 68 (13.41%) Qwen3.8-27B 64.03 47.85 53.41 47.88 45.69 51.70 38 (7.50%) The headline result is the observed-20/20 row in Table 1. A 27B model that initially completed 38 (7.5%) of ThinkingBox-Bench on every attempt now completes 107 (21.1%) on every attempt, almost thrice. For comparison, observed 20/20 for Kimi-K3 is 68, GPT-5.4 with 128, GPT-6 Astra has 231, and Claude Opus 5.5 leads with 241. Average success and repeatability produce different orderings. In Table 2, we notice that GPT-5.6 Sol scored slightly higher on pass@1 than the RL fine-tuned Qwen3.8-27B (61.91% versus 60.78%) but passed fewer tasks on all 20 recorded attempts: 82 versus 107. Claude Sonnet 4.6 scored lower on pass@1, at 59.19%, yet passed nearly the same number of tasks every time, at 102. Neither metric alone captures the full picture. The observed pattern is consistent with sharpening: repeatable success rose while at-least-once coverage fell slightly. This is in-line with prior work .",
+      "published_date": "2026-10-22",
+      "tags": [],
+      "organization": "HuggingFace",
+      "raw_metadata": {
+        "feed_name": "HuggingFace Blog",
+        "feed_url": "https://huggingface.co/blog/feed.xml"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, mcp, grpo, post-training, fine-tuning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 72,
+    "llm_reason": "資料庫驗證轉RL獎勵，有明確訓練成效數據與開源程式碼",
+    "novelty": 15,
+    "impact": 13,
+    "trending": 12,
+    "practicality": 16,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "NVIDIA Developer",
+      "title": "Scaling NVIDIA TensorRT Performance Optimization Beyond a Single Build Route with the Global Performance Tuner, Part 1",
+      "url": "https://developer.nvidia.com/blog/scaling-nvidia-tensorrt-performance-optimization-beyond-a-single-build-route-with-the-global-performance-tuner-part-1/",
+      "authors": [
+        "Tanya Lenz"
+      ],
+      "abstract": "Deploying a trained neural network involves more than translating each operator into a GPU kernel. It is a compilation problem with many legitimate answers. For example, when NVIDIA TensorRT builds an engine, it makes interdependent decisions about graph-IR transformations, fusion, implementation selection, memory placement, and quantization. This process is called scheduling. Different scheduling choices can preserve model semantics yet produce very different inference performance, making scheduling central to deep learning compiler optimization. No single scheduling strategy is best for every model and deployment environment. A transformation that accelerates one network may slow another. A kernel that is faster in isolation may interact poorly with fusion, tensor layouts, or memory traffic elsewhere in the graph. Aggressive scheduling may improve performance while violating an application’s accuracy requirement. These coupled, model-dependent effects often appear only after the complete engine is built and measured, making the right strategy increasingly difficult to predict. This post is Part 1 of a two-part series that is intended to develop a clearer way of reasoning about performance optimization. It explores questions such as: What makes one compiled engine better than another? Why can individually promising decisions fail end to end? How should accuracy constrain performance optimization? It introduces the Global Performance Tuner , a feature for automatic performance tuning released in TensorRT 11.1 , and explores these questions through an intuitive example and mathematical framework. What challenge does the Global Performance Tuner feature solve? The following analogy illustrates the motivation for building the Global Performance Tuner feature in TensorRT. Imagine a chef with one excellent dish that has pleased three regular customers for years. One likes spice, another sweet-and-sour flavors, and the third extra salt. The chef combines chili, syrup, lemon, and salt in one standard recipe that satisfies all three. One day, a new fourth customer arrives who dislikes spice. Keeping the chili disappoints the newcomer; removing it risks losing the first customer. The root cause of the chef’s dilemma is the method of adding the seasonings does not scale out: the number of interacting exceptions grows with the customer base, and a change for one customer can degrade the meal for another. Figure 1. One fixed recipe does not scale to conflicting customer preferences A scalable approach keeps the base dish but makes the seasonings configurable. The chef records an appropriate combination for each regular customer. For a new customer with unknown preferences, the chef offers free samples with different combinations, rejects unsuitable variations, and keeps the one the customer likes best. Figure 2. Customize the flavor for each customer Mapping this analogy to deep learning compilation, TensorRT is the chef, its shared pipeline the base recipe, tunable compiler configurations the seasonings, and the compiled engine the finished dish. Each ONNX model is a customer. Performance tuning offers samples, and end-to-end performance reflects customer satisfaction. Historically, TensorRT performance optimization has started with internal KPI models. Engineers study these workloads, identify optimizable patterns, and encode their findings as heuristics in the TensorRT default scheduling strategy. Each heuristic captures expert knowledge and allows users to benefit automatically from optimizations discovered on representative models. As models and deployment environments diversify, this approach leads to a scaling problem similar to the one described in the analogy. A heuristic inspired by one internal KPI model joins the shared strategy and may help familiar patterns while causing a regression for an unseen external model. Adding another check or exception may protect that model, but repeating the process makes the scheduling logic increasingly difficult to extend. The problem appears in three related forms: H euristic sprawl: Each new model-specific heuristic introduces another rule whose interactions with existing rules must be understood and maintained. As these rules accumulate, the code becomes unmaintainable, and improvements for one family of models can unintentionally affect another. Performance-accuracy entanglement: Reduced-precision kernels and other aggressive optimizations can improve performance while introducing numerical differences that exceed an application’s acceptable tolerance. Higher-precision choices may reduce that risk but sacrifice performance. Performance and numerical acceptability therefore cannot always be optimized independently. Performance customization: Scheduling choices that work well for one model or GPU may not work well for another. Encoding every successful choice into one universal scheduling strategy makes it difficult to specialize TensorRT efficiently for a continually expanding range of external models, hardware platforms, and application requirements. Tuning provides a scalable complement to heuristic optimization. Mathematical theory for deep learning compiler performance This section develops an abstract mathematical model of deep learning compiler performance. The purpose is to separate two fundamental questions: What executables a compiler can construct for a model How the compiler selects one from those possibilities for optimal performance Concept: Model, model space Let \\(m\\) represent a model and \\(M\\) represent the collection of all models under consideration, called the model space: \\(m \\in M\\) Here, a model is an abstract description of the computation to be compiled. Its concrete representation may be an ONNX graph, a network created through the TensorRT API, a PyTorch model, or another frontend representation that fully specifies the model computation. Concept: Solution, solution space Given a model \\(m\\) as input, a deep learning compiler constructs an executable output for the target hardware, defined as a solution. The same model can generally be compiled into different solutions under different scheduling policies. Let \\(s\\) represent one such solution, and let \\(S\\) represent the collection of possible solutions, called the solution space. s ∈ S = { s 0 , s 1 , s 2 , . . . , s n } s \\in S = \\{s_0, s_1, s_2, …, s_n\\} A solution is an abstraction of executable computation on the target hardware. Concretely, a solution may be a TensorRT engine or a cubin of serialized sequence of GPU kernels. More abstractly, it may also be a compiler’s intermediate representation (IR), provided that the representation uniquely determines the final executable under the remaining compilation process. Each solution also defines a function from the model’s input domain to its output codomain: \\(s : X \\rightarrow Y\\) \\(s(x) = y\\) Here, \\((x,y)\\) is an input-output pair for the sequence of GPU kernels that implements the neural network. At this level of abstraction, the model describes the intended computation, while a solution describes one particular way of realizing that computation on the target hardware. Principle of determinism Statement: When both a deterministic program and its complete execution environment remain fixed, the program has a fixed underlying run time. This principle serves as a modeling assumption for performance analysis. Under a rigorous interpretation, the environment includes the input data, target device, software stack, GPU frequency, temperature, power state, system load, and other execution conditions that may influence runtime. In practice, not every environmental variable can be controlled perfectly, so repeated runtime measurements exhibit noise. If this disturbance is modeled as independent Gaussian noise, the average of repeated measurements is the maximum-likelihood estimation of the underlying mean run time.",
+      "published_date": "2026-10-23",
+      "tags": [
+        "Data Center / Cloud",
+        "Developer Tools & Techniques",
+        "Edge Computing",
+        "AI Agent",
+        "AI Inference",
+        "Algorithms / Numerical Techniques"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "NVIDIA Developer",
+        "feed_url": "https://developer.nvidia.com/blog/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: reasoning, quantization",
+      "⚖️ 來源權重: rss +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 62,
+    "llm_reason": "TensorRT編譯排程新功能，理論與工程深度兼具",
+    "novelty": 14,
+    "impact": 12,
+    "trending": 9,
+    "practicality": 13,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Amazon Science",
+      "title": "Better speech synthesis for audiobooks",
+      "url": "https://www.amazon.science/blog/better-speech-synthesis-for-audiobooks",
+      "authors": [],
+      "abstract": "Text-to-speech systems — which convert written text into synthetic speech — display impressive naturalness in applications such as chatbots and virtual assistants, where interactions last seconds. But they tend not to fare as well with longer-form content. When applied to audiobooks, for instance, conventional text-to-speech (TTS) models fail to reliably change speaking style between characters, as a human narrator would. This creates two problems for listeners: (1) distinguishing narration from dialogue and (2) identifying which character speaks which lines. To address this problem, the Audible technology team is using controllable TTS, meaning the ability to control dialogue delivery with natural-language speech descriptions (e.g., \"speak in an enthusiastic, high-pitched voice\"). This allows the TTS model to leverage the deep textual understanding of large language models (LLMs) to synthesize high-quality speech. Our approach involves three key innovations. First, we developed a novel data synthesis pipeline to produce speech data captioned with high-quality descriptions of speech characteristics. Training on this data enables our model to understand captions and produce audio consistent with them at inference time. Second, we created a system that automatically profiles characters in books and identifies their dialogue with 97% accuracy. It also provides captions for that dialogue, which act as stage directions for the model. Third, we used the first two techniques to synthesize audiobooks featuring distinct character voices, improving dialogue differentiation by 3.7 points on a MUSHRA (multiple stimuli with hidden reference and anchor) test, a standardized method where listeners rate audio quality on a scale from 0 to 100. Across tests in both English and Spanish, we observe statistically significant improvement in listening experience for eight out of ten voices. TTS for audiobooks Subtle defects in synthetic speech, such as unnatural prosody or monotone delivery, are tolerable for short stretches but become increasingly grating over time — and audiobook listeners engage with the same voice for 10 to 15 hours per book. This is why off-the-shelf TTS models often fail to produce enjoyable, natural audiobook narrations. Furthermore, general-purpose TTS models are designed to process individual utterances with minimal context. That’s a reasonable approach when responding to questions like \"What's the weather today?\", but it’s inadequate for audiobooks, where narrative coherence depends on understanding the surrounding story context. A TTS model reading dialogue needs to know whether the speaker is the protagonist confronting an antagonist or a minor character making small talk, information that may only be available in earlier chapters. Finally, general-purpose models struggle to produce character voices in a consistent and natural way across the span of an entire book, often voicing a character in a markedly different way in chapter 1 than in chapter 10. Controllable text-to-speech I. The data synthesis pipeline Whereas conventional TTS models are trained on text-speech pairs, a controllable-TTS model also requires annotations that describe how the speech sounds. The speech in the training set also needs to be highly expressive, covering the wide variety of dimensions — pitch, speaking rate, character voices, emotions, speaking styles, etc. — the model must control. Previous TTS models couldn't handle that kind of expressivity, so most existing training data is neutral in tone. We expanded the training sets through two approaches: new recordings and human captioning of existing audio data. While there are some datasets that include descriptions of prosodic features, each has its own description format: some are long, some are short, and some use single tags. This limits the flexibility of model inputs and tends to make the model overfit the formats of specific datasets. To improve generalization, we use LLMs to rewrite the original prompts into different formats, varying length, verbosity, and structure (single tags vs. free-form natural language). Second, the human-in-the-loop data collection procedures do not scale to the size of the datasets we need. Therefore, we complement the collected data with a large amount of synthetic data. We use two approaches: 1. Expert-model pipeline. This approach uses expert models and signal-processing algorithms such as pitch extraction, speaking rate extraction, and emotion detection to extract numerical features from audio data. We then feed these features and classification labels into an LLM to generate speech captions. 2. Speech captioner. We developed a model that performs a task opposite that of controllable TTS: it takes speech and outputs a description of prosodic features. Using this speech captioner, we can annotate larger amounts of data. We use the annotated data as seed data to train the initial controllable-TTS model, and we also use it to continue training the speech captioner itself. We then use these models to generate synthetic data, and we improve them both iteratively to create a synthetic-data flywheel. II. BookLLM: Adapting to the audiobook domain The audiobook domain presents additional challenges for a controllable-TTS system, since different characters need to have distinct but consistent voices. For this, we developed BookLLM, a separate component that leverages off-the-shelf LLMs to identify unique characters and uses information in the book — for instance, age, gender, personality, and role — to define their voice characteristics. Then the model determines which character speaks where and captions dialogue with descriptions of how it should be spoken. We evaluated BookLLM on 25 English and Spanish books in the mystery, sci fi, and romance genres. We collected ground truth annotations using two human annotators. In English and Spanish, the system achieved 97% and 94% accuracy, respectively, in identifying which character speaks where, including distinguishing between narration and dialogue III. Bringing it all together Bringing the two components together yields a complete audiobook-synthesis pipeline. Given a new book, BookLLM first reads the entire text to build a cast list: it determines the unique characters, ranks them by importance, and derives a voice description for each. Rather than inventing an unbounded set of voices, it assigns each character a distinct profile from a curated voice catalogue, deliberately maximizing the contrast between the most prominent characters so that listeners can tell them apart. Minor and one-off characters fall back to the default narrator, avoiding a proliferation of barely used voices. BookLLM then walks through the book and attributes every passage to a speaker — the narrator or a specific character — and, for each line of dialogue, writes a caption describing how it should be delivered, such as \"whispering nervously\" or \"shouting in anger\". These captions are exactly the kind of natural-language speech description that the controllable-TTS model was trained to follow. At synthesis time, each unit of text is passed to the TTS model, together with its speaker's voice profile and, if necessary, its stage direction caption. Because a character's voice profile is fixed once at the book level, the model renders that character consistently from beginning to end, avoiding general-purpose models’ tendency to drift, or voice a character differently in chapter one than in chapter ten. The per-line captions layer moment-to-moment expressivity on top. The result is a full-length audiobook in which characters sound distinct, consistent, and expressive that ultimately provides a more delightful listening experience.",
+      "published_date": "2026-10-23",
+      "tags": [],
+      "organization": "Amazon",
+      "raw_metadata": {
+        "feed_name": "Amazon Science",
+        "feed_url": "https://www.amazon.science/index.rss"
+      }
+    },
+    "rule_score": 43.0,
+    "rule_reasons": [
+      "🏢 頂流機構: Amazon",
+      "🔥 熱門關鍵字: synthetic data",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 51,
+    "llm_reason": "可控TTS應用於有聲書角色配音，有具體資料管線與準確率",
+    "novelty": 12,
+    "impact": 9,
+    "trending": 8,
+    "practicality": 10,
+    "blog_worthiness": 12
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Google Cloud Launches Agent Compute Engine: A MicroVM per AI Agent",
+      "url": "https://www.marktechpost.com/2026/10/22/google-cloud-agent-compute-engine-microvm-ai-agents/",
+      "authors": [
+        "Michal Sutter"
+      ],
+      "abstract": "Google Cloud has announced Agent Compute Engine , a compute service built specifically for AI agents. Google Agent Compute Engine gives each agent its own hardware-isolated microVM. The sandbox holds zero credentials. The service already powers Gemini as an agent for work tasks. Google unveiled it this week at AGNTCon + MCPCon. Customer preview is targeted for the coming months. The pitch: VM-grade isolation with container-like speed and density. Agent Compute Engine is a Google Cloud service that runs each AI agent inside a dedicated microVM. Per the technical post , it powers Gemini, Antigravity, and internal evaluation and RL pipelines. Google splits every agent into 2 parts. The harness, or ‘brain,’ calls the model. The sandbox, or ‘hands,’ runs code, shell commands and browsers. The harness runs fully outside the sandbox and dispatches explicit commands into it. Each session runs in a single-tenant microVM behind a Cloud Hypervisor boundary . Hosts are stateless appliances with a read-only root filesystem enforced by dm-verity. Titanium holds attestation keys outside the guest. The networking design is the unusual part: Google assumes an attacker controls everything inside the sandbox. A prompt-injected agent finds no secrets to steal. Google defines 4 identities for every agent workload: The workload identity is useless for direct API calls if exfiltrated. It only identifies which sandbox sent a packet. Google team found agents spend most of their time waiting on models or users. So the sandbox signals when a tool call finishes. The host checkpoints the idle microVM to zero active resources. It resumes on the next call. Density comes from copy-on-write memory sharing . Pre-warmed snapshot images are mapped with DAX, so microVMs on a host share base OS and library pages. Only each agent’s modified pages consume private memory. Harnesses also get cloning, snapshot/forking, rewind and rollback. Storage is split 3 ways: disposable scratch overlays, shared read-only volumes, and persistent user workspaces on Hyperdisk . Agent Substrate is the open-source, Kubernetes-native counterpart, available on GKE since September 15, 2026. It offers Cloud Hypervisor microVMs or gVisor sandboxes. Google reports these figures: It works with harnesses including Claude Code, OpenClaw and Hermes. It is open to all GKE customers for non-production use. Production GA is allowlist-only. Source code is at https://github.com/agent-substrate/substrate . Google is extending Gemini for business agent governance to Agent Runtime, Cloud Run, Agent Sandboxes, GKE and ACE. The stack includes Agent Gateway, Agent Registry, Agent Identity and OpenTelemetry-based observability. Check out the launch post , the technical deep dive , and the Agent Substrate announcement . Register interest for the preview here .. All credit goes to the researcher of this project. Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post Google Cloud Launches Agent Compute Engine: A MicroVM per AI Agent appeared first on MarkTechPost .",
+      "published_date": "2026-10-23",
+      "tags": [
+        "Agentic AI",
+        "AI Agents",
+        "AI Infrastructure",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Context Engineering",
+        "Editors Pick",
+        "Harness",
+        "Language Model",
+        "Large Language Model",
+        "Machine Learning",
+        "New Releases",
+        "Software Engineering",
+        "Staff",
+        "Tech News",
+        "Technology",
+        "Uncategorized"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 71,
+    "llm_reason": "microVM代理沙箱隔離架構具新意，踩中agent基建熱點但尚未GA",
+    "novelty": 13,
+    "impact": 14,
+    "trending": 17,
+    "practicality": 11,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "Multi-Turn Reinforcement Learning on Amazon SageMaker AI: A hands-on guide",
+      "url": "https://aws.amazon.com/blogs/machine-learning/multi-turn-reinforcement-learning-on-amazon-sagemaker-ai-a-hands-on-guide/",
+      "authors": [
+        "Daniel Quang"
+      ],
+      "abstract": "Most fine-tuning teaches a model to produce a better answer to a single prompt. Agentic tasks are different. An agent that files an expense report or triages a support ticket takes a sequence of actions, and each step depends on what came before. There’s rarely one correct sequence to imitate, and the only reliable feedback is whether the whole sequence succeeded. Supervised fine-tuning has no labels for that, and single-turn reinforcement learning cannot credit a decision made three steps before the outcome. Multi-Turn Reinforcement Learning (MTRL) on Amazon SageMaker AI trains models on exactly that signal. SageMaker AI sends prompts to an agent you host on Amazon Bedrock AgentCore, or on your own infrastructure, such as Amazon Elastic Kubernetes Service (Amazon EKS), Amazon Elastic Compute Cloud (Amazon EC2), or AWS Fargate, through an AWS Lambda forwarder . The example here uses AgentCore. The agent calls the policy model being trained, acts in your environment over as many turns as the task needs, and reports one reward when the episode ends. You don’t specify the right trajectory, only how to score the result. This post uses Wordle , a game in which a player has six tries to guess a hidden five-letter word, as the example. After each guess, every letter turns green if it is in the right position, yellow if it’s in the word but in a different position, and gray if it isn’t in the word. The game suits MTRL because the rules are few, each guess depends on the feedback from the last, and the outcome is scored objectively. Wordle is a teaching example, and frontier models already play it well. In practice, you would use MTRL to make a small, low-cost model good at a multi-step task specific to your business, such as an internal workflow that public models were never trained on. The same pipeline applies to that setting. In our run, MTRL took gpt-oss-20b from a 61 to an 84 percent solve rate on held-out words at its default reasoning effort, and from 15 to 69 percent at the low effort it trained at, for about $339 in training tokens. In this post, we walk through the pipeline end-to-end: deploying the agent and reward to AgentCore, preparing the dataset, training, monitoring in MLflow, and evaluating at serving settings. We also share the reward-design mistakes and training failures we hit. Your datasets, agent, and trained model stay in your AWS account and are not used to train the base models . All code is in the accompanying aws-samples repository . The system has two halves. SageMaker AI owns the training job and the policy model. AgentCore hosts the agent, the Wordle environment, and the reward function. The following diagram shows how they connect. Figure 1: MTRL on SageMaker AI, where the training job invokes the AgentCore-hosted agent once per rollout to sample the policy model, play the game, and report a reward For every rollout, the MTRL service invokes the AgentCore runtime, a capability of Amazon Bedrock AgentCore, with one training row, which holds one secret word. A Strands agent in the runtime calls the policy model through the SageMaker Job Runtime’s OpenAI-compatible endpoint. The model plays up to six guesses through one tool, guess_word , and after each guess the environment returns per-letter feedback and a summary of what is known. When the game ends, the agent returns one reward. Group Relative Policy Optimization (GRPO) uses the spread of rewards across several rollouts of the same word to update a Low-Rank Adaptation ( LoRA ) adapter on the policy model. Three design points matter for what follows: MTRL is serverless: you pick a base model and the service provisions the training and sampling infrastructure. At the time of writing, it supports the following base models, each trained with a LoRA adapter: We chose GPT-OSS-20B because it has the lowest per-token price of the four and its reasoning effort is controllable per request. See the MTRL documentation for the current list. You don’t choose instances or size a cluster. You pay per million tokens in three dimensions, priced by base model: The 100-step run consumed 491.6 million prefill, 159.7 million sample, and 643.3 million train tokens across 105,486 rollouts in 12 hours 40 minutes. At GPT-OSS-20B list prices in the US East (N. Virginia) Region (us-east-1) at the time of writing, that is about $339: The train dimension dominates and scales with trajectory length, so shorter games and less verbose reasoning cut the bill. The AgentCore runtime bills separately for the vCPU and memory the agent uses. For this run, that was about $79, from the runtime’s Amazon CloudWatch usage metrics at us-east-1 list prices. DescribeJob reports the token counts under BillableTokenUsage . See Amazon SageMaker AI pricing for current rates. To follow this walkthrough, you need the following. See also the MTRL prerequisites . MTRL uses two roles, and one of them has a trust policy that the general SageMaker AI documentation doesn’t mention. Agent runtime role. agentcore deploy creates this role for you. It trusts bedrock-agentcore.amazonaws.com and needs the AmazonSageMakerJobRuntimeAccess managed policy, which lets the agent call the policy model and report rewards. The CDK stack in the sample repository attaches this policy automatically. Training job role. You create this one. It must trust job.sagemaker.amazonaws.com with both sts:AssumeRole and sts:TagSession , and it needs the AmazonSageMakerJobFullAccess managed policy. Note: The trust principal is job.sagemaker.amazonaws.com , not sagemaker.amazonaws.com . With the generic principal, CreateJob fails with “Could not assume role,” and the message names the correct principal only after retries. Clone the sample repository , set your account and Region in Wordle/agentcore/ aws-targets.json , and deploy: The CLI builds the agent’s dependencies for the runtime’s Linux ARM64 platform, creates the execution role with AmazonSageMakerJobRuntimeAccess attached, and deploys through AWS CloudFormation. We recommend it over uploading a code package on the console, where it’s common to get the roughly 700 MB of compiled dependencies or the policy attachment wrong. Note the runtime ARN in the output for the training job. Figure 2: The Wordle agent runtime in the Amazon Bedrock AgentCore console with status Ready The runtime reads two environment variables from agentcore.json . REASONING_EFFORT=low sets reasoning_effort on every request to the policy model. In our evaluation jobs, low effort used 63 to 83 percent fewer sample tokens per game than medium. REASONING_PROMPT_HINT=true also adds “Reasoning: low” to the system prompt, which is how gpt-oss reads the setting in its Harmony chat format. Neither variable gives the model any hint about the secret word. Figure 3: Runtime environment variables showing REASONING_EFFORT set to low The agent is one file, main.py . Simplified, its entrypoint looks like the following. For your own task, you change the task parsing, the tools, and the reward: Important: The sagemaker_rft_handler decorator does not start an HTTP server by itself. Wrap it with BedrockAgentCoreApp and @app.entrypoint , with the entrypoint decorator outermost. Without this, every invocation times out after 30 seconds. Before spending GPU time, confirm the whole chain works with a payload shaped like the one the training service sends. The repository includes one as Wordle/ payload.json : The fake job ARN is expected to fail, and the way it fails is the proof. Put your own account ID into it first: for a job ARN in another account, the service returns a 403 before it checks whether the job exists, which looks like a broken IAM setup. From the Wordle directory, run: In the runtime’s Amazon CloudWatch logs, you see the agent parse the prompt, authenticate to the Job Runtime endpoint, and receive a 400 error reading “Could not find job.” That failure confirms that parsing, authentication, and error reporting work.",
+      "published_date": "2026-10-23",
+      "tags": [
+        "Amazon SageMaker AI",
+        "Expert (400)",
+        "Technical How-to"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, reasoning, grpo, reinforcement learning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 59,
+    "llm_reason": "多輪RL訓練agent實作教學，以Wordle示例具體可復現",
+    "novelty": 11,
+    "impact": 10,
+    "trending": 11,
+    "practicality": 14,
+    "blog_worthiness": 13
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "NVIDIA Developer",
+      "title": "Scaling NVIDIA TensorRT Performance Optimization Beyond a Single Build Route with the Global Performance Tuner, Part 2",
+      "url": "https://developer.nvidia.com/blog/scaling-nvidia-tensorrt-performance-optimization-beyond-a-single-build-route-with-the-global-performance-tuner-part-2/",
+      "authors": [
+        "Tanya Lenz"
+      ],
+      "abstract": "The Global Performance Tuner is a feature for automatic performance tuning released in NVIDIA TensorRT 11.1 . It provides automatic, accuracy-aware and end-to-end performance tuning within TensorRT by customizing different optimizations for different models. For more details, see Part 1 of this series, which introduces the challenges associated with scheduling (a critical stage in deep learning compiler optimization), the motivation for developing the Global Performance Tuner feature in TensorRT, and the mathematical theories established to formalize the problem. This post, Part 2, uses the notation from Part 1 to describe the algorithm and architectural design of the Global Performance Tuner feature. It also provides best practices for using it. Designing the Global Performance Tuner feature in TensorRT The central design idea of the Global Performance Tuner is to represent alternative scheduling strategies as explicit and searchable build routes. A compiler knob (also called a compiler flag or compiler option) is a configuration setting that changes some aspect of the compilation pipeline, such as a heuristic, fusion decision, or code generation path. Each tunable knob exposes a finite set of allowed values and has a default value. A build route is a concrete combination of knob values. When no build route is specified, TensorRT uses the default build route, in which every knob retains its default value. Consider a hypothetical compiler consisting of three passes, \\(f_1\\), \\(f_2\\), and \\(f_3\\). Suppose a binary knob \\(p\\) controls the fusion strategy used by \\(f_2\\): when \\(p=1\\), the pass applies horizontal fusion; when \\(p=0\\), it applies vertical fusion: \\(f_2(s) = \\begin{cases} f’_2(s), & \\text{if } p = 1 \\\\ f”_2(s), & \\text{if } p = 0 \\end{cases}\\) The two possible values of \\(p\\) define two build routes and therefore produce a candidate solution set of size two for the input model \\(m\\): \\(B(m) = \\{f_3(f’_2(f_1(m))),\\, f_3(f”_2(f_1(m)))\\}\\) Neither fusion strategy is universally better. Horizontal fusion may produce the faster engine for one model, while vertical fusion may be more effective for another. The result may also change across tensor shapes and target GPUs, even when the model itself remains unchanged. Selecting the better route therefore requires building both candidate engines and comparing their end-to-end performance. Even this two-route example captures the essential idea of tuning: the compiler exposes meaningful scheduling alternatives, and measured behavior determines which complete solution performs best for the deployment case at hand. In the mathematical framework introduced earlier, a build route is a composition of compiler passes. In the implementation, a combination of knob assignments provides a compact specification of that route. Changing one or more knob values changes how the model travels through the tunable parts of the compilation pipeline. Within this abstraction, a knob combination can be treated as identifying a build route. More precisely, the knob combination is a build-route specification, not a complete description of the resulting engine. TensorRT still performs the remaining stages of engine construction, including tactic selection, and may reconcile individual knob values with constraints imposed by the network. The route specifies the requested choices within the tunable configuration space. It does not replace the rest of the TensorRT builder. TensorRT exposes a compact API surface around two fundamental capabilities: Apply and inspect one build route : A setter applies a fixed route to the builder configuration, while the corresponding getter returns the currently specified route. Discover the tunable configuration space : A separate getter describes the available knobs, their allowed values, their defaults, and their purposes. The corresponding C++ APIs are: bool IBuilderConfig::setBuildRoute(char const* buildRoute);\nchar const* IBuilderConfig::getBuildRoute() const;\nchar const* IBuilderConfig::getAllBuildRoutes() const; You can use these APIs to implement custom tuners. A sample C++ implementation is also provided in trtexec . At a high level, trtexec organizes tuning as follows: When a user specifies an input model and a regex-like tunable build route expression, trtexec will expand the expression into a list of concrete build routes according to the searching algorithm. There will be a loop to traverse all fixed build routes. In each iteration, the model will be built with that single build route, then accuracy and performance will be measured during each iteration. All build routes that crash during building or fail accuracy during inference are excluded from best-engine selection. The engine with the best measured end-to-end performance is selected. TensorRT 11.1 provides more than 200 knobs for tuning. For more details, refer to the Global Performance Tuner documentation . The same implementation in Python will be released in Torch-TensorRT 2.15. The practical value of exploring multiple build routes becomes visible in end-to-end measurements. Figure 1 compares the default TensorRT build route, normalized to 1.0x for each workload, with the best eligible route found during tuning. Across these ten evaluated workloads, tuning delivered performance improvements ranging from 1.14x to 1.63x. Figure 1. Global Performance Tuner relative performance boost compared with the default build route The variation across workloads is central to the result. Different models expose different optimization opportunities, so a single default scheduling strategy cannot be expected to realize every model’s best performance. The Global Performance Tuner explores alternative build routes, rejects candidates that do not satisfy the accuracy requirement, and selects the fastest eligible engine measured in the target environment. Case study: Performance-accuracy entanglement The Global Performance Tuner feature applies accuracy-aware tuning, so the performance-accuracy entanglement problem can theoretically be solved perfectly. Consider the following thought experiment. For a simple neural network model, as shown in Figure 2, imagine there are knobs controlling whether to force some IRs to use a low-precision kernel, which is equivalent to converting the graph into quantized graph by inserting Q/DQ nodes between ops. This is not supported by TensorRT 11.0 and later because weakly typed APIs are deprecated. Figure 2. A model that could potentially be quantized for better inference performance This model has four places to insert Q/DQ. Suppose these are controlled by four different binary knobs. The deep learning compiler could then provide 2 4 = 16 solutions in the solution space. It is readily apparent that, among the 16 candidates, the solution with the best performance is the one with all quantizations inserted. However, this solution may not meet the accuracy requirement. The solution with no Q/DQ will have the best accuracy, but with the worst performance. The performance and accuracy are entangled such that it is difficult to know which solution in the “middle” satisfies both requirements. Recall that the concept of the builder algorithm contains an accuracy tolerance. The key to disentangle accuracy and performance is to define a clear accuracy acceptance boundary, and the boundary needs to be backed by user supplied accuracy metric and datasets as golden values. The Global Performance Tuner feature in TensorRT also has an accuracy tolerance threshold of \\(ε\\). Consider the following three cases: \\(ε = 0\\): Under the exact-match metric assumed by this thought experiment, the candidate outputs must be bit-wise identical to the reference outputs. If every lower-precision substitution changes at least one evaluated output, only the one solution with no lower-precision substitutions remains eligible.",
+      "published_date": "2026-10-23",
+      "tags": [
+        "Data Center / Cloud",
+        "Developer Tools & Techniques",
+        "Edge Computing",
+        "AI Agent",
+        "AI Inference",
+        "Algorithms / Numerical Techniques"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "NVIDIA Developer",
+        "feed_url": "https://developer.nvidia.com/blog/feed/"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: code generation",
+      "⚖️ 來源權重: rss +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 64,
+    "llm_reason": "延續Part1給出演算法設計與實務建議，工程深度高",
+    "novelty": 14,
+    "impact": 12,
+    "trending": 9,
+    "practicality": 15,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "TinyFish Breaks Down Agentic Search Architecture for Production AI Agents",
+      "url": "https://www.marktechpost.com/2026/10/23/tinyfish-agentic-search-architecture-deep-research/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "An AI search agent can work in a demo but fail under production workloads when retrieval returns incomplete evidence, retries repeat unsuccessful actions, or execution exceeds time and cost limits. TinyFish , which provides web infrastructure for AI agents, has published two technical guides addressing these challenges. The first defines a production agentic search architecture , while the second shares lessons from building a deep research system . Together, they examine how an autonomous search agent can plan retrieval, evaluate evidence, handle failures, and manage the boundary between model reasoning and deterministic execution. TinyFish introduced its agentic search architecture and key engineering lessons from building deep research systems. Built on four web primitives ( TinySearch, TinyFetch, TinyBrowser, and TinyAgent ), the system operates via a seven-phase control loop around the base model. On OpenBenchmarks, TinyFish achieved a 79.0% completion rate on coding tasks while delivering the lowest median task cost ($0.050) and token footprint, highlighting the importance of rigid control loops, failure-specific retries, and unified reasoning over standalone planners. Agentic search architecture enables an AI agent to plan retrieval, access sources, evaluate evidence, and adapt its approach as new information becomes available. The model provides reasoning, while the surrounding application manages state, tool execution, evidence handling, runtime policies, and output validation. Together, these components allow an agent to handle incomplete results, recoverable failures, and changing information requirements. TinyFish’s architecture draws foundational concepts from a February 2026 architecture preprint , which decouples reasoning from execution through typed tool interfaces. The paper establishes essential system guardrails, including detailed tracing alongside strict caps on tokens, execution time, overall cost, and tool invocations. TinyFish splits a run into 7 phases: Phase 2 addresses a known failure. ChainRAG (ACL 2025) calls it the ‘lost-in-retrieval’ problem, where key entities disappear during multi-hop question decomposition. Phase 6 draws on Search-R1 , which demonstrates how models can learn to generate additional search queries during reasoning when earlier retrieval is insufficient. Across 7 QA datasets, its learned multi-turn search beat RAG baselines by 41% (Qwen2.5-7B) and 20% (Qwen2.5-3B). Routing should follow the information gap, not a fixed ladder. Escalation is not always the fix. Weak results need a better query. Conflicting sources need stronger evidence. A heavier tool fixes neither. Retries should be based on the failure type and remain within defined limits. Transient errors may justify repeating a request, while incomplete or conflicting evidence requires a different approach. Browser retries must also account for actions already completed to avoid unintended consequences, such as submitting the same form twice. The deep research agent searches, browses, and generates comprehensive, cited reports. Most engineering challenges centered around context management, system orchestration, and product design. Initial iterations used a standalone planner called fresh each time. Only structured state crossed into it. On follow-up queries like “focus only on pricing risks in Southeast Asia,” the agent drifted back to broad market research. TinyFish subsequently moved planning into the orchestrator’s own unified reasoning loop. TinyFish initially assigned a separate subagent to each search query, increasing context-switching overhead, latency, and cost. The team later replaced these subagents with tool calls for repeatable tasks such as ranking search results, classifying sources, and extracting evidence. This reduced the information passed back to the orchestrator, allowing it to focus on research planning and deciding what to investigate next. TinyFish initially optimized its research system for source coverage, but users placed greater importance on the quality and relevance of supporting evidence. The team adjusted source ranking to account for the research objective and added controls for prioritizing, excluding, or restricting domains. It also developed an internal evaluation harness using an LLM judge to assess reports for relevance, evidence strength, citation trust, and source diversity. TinyFish budgets the full task, not single calls: SearchAgent-X (ICLR 2026) shows why. Exact retrieval added overhead, and coarse retrieval forced extra reasoning. Its fixes reached up to 3.4x throughput and 5x lower latency versus tested baselines. OpenBenchmarks fixes the model (gpt-5.6-sol), 100 tasks and budgets, and varies only the provider. Scores are means of 3 runs. Source: OpenBenchmarks board , updated 26 Sept 2026. Tasks cover enterprise documentation only. OpenBenchmarks also reports search-only results separately. In that configuration, TinyFish achieved 59.3% task completion, compared with 77.3% for Perplexity, 70.3% for Firecrawl, and 66.3% for Exa Fast. These results should not be directly compared with the search-and-fetch scores because the available retrieval capabilities differ. Read the architecture guide , the deep research lessons and the TinyFish docs . Thanks to the Tinyfish team for the thought leadership / resources for this article. This article is sponsored by TinyFish. The post TinyFish Breaks Down Agentic Search Architecture for Production AI Agents appeared first on MarkTechPost .",
+      "published_date": "2026-10-23",
+      "tags": [
+        "Agentic AI",
+        "AI Agents",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Context Engineering",
+        "Editors Pick",
+        "Enterprise AI",
+        "For Devs",
+        "Harness",
+        "New Releases",
+        "Promote",
+        "Software Engineering",
+        "Sponsored",
+        "Staff",
+        "Tech News",
+        "Technology",
+        "Uncategorized"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, reasoning, rag",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 56,
+    "llm_reason": "生產級agentic search架構與benchmark數據，惟帶贊助性質",
+    "novelty": 10,
+    "impact": 10,
+    "trending": 11,
+    "practicality": 13,
+    "blog_worthiness": 12
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Databricks",
+      "title": "Built for Agents: The Case for Spark Declarative Pipelines",
+      "url": "https://www.databricks.com/blog/built-agents-case-spark-declarative-pipelines",
+      "authors": [],
+      "abstract": "AI agents now write a growing share of production data pipelines ( over 70% of SDP pipelines on Databricks are now created by agents) which raises the stakes in two areas: (1) every attempt an agent makes costs compute and time, so iterations need to be cheap and efficient to run; and (2) code review become a critical gate, so the code needs to be succinct, readable, and correct. Apache Spark® offers two programming models to author your pipelines, procedural and declarative, and they differ in what you write, in what Spark can check before it runs, and in how much a mistake costs. We benchmarked both with the same agent on the same jobs, and declarative came out safer, cheaper, and leaner. A procedural pipeline is code that tells Spark how to build each dataset, step by step. The only way to know whether it works is to run it. A declarative pipeline describes the datasets you want and leaves Spark to decide how to build them. This is akin to when you prompt an LLM, and it figures out how to do it (by using the right skills & tools). This is best illustrated in code to see how a simple typo will fail: Bugs come in two flavors. Structural ones you can catch by reading the pipeline: an unresolved column reference, a table that doesn’t exist yet, a config change that is not allowed. Silent ones only show up in the output when the run finishes and the answer is wrong. A declarative pipeline can be checked for structural bugs before it runs, similar to how data flow in a typed language like Rust can be checked at compile time. Because a declarative pipeline is a description rather than a run, Spark can answer three kinds of questions by reading it: In procedural PySpark, the AI coding agent writes the data operations, such as filtering invalid rows and joining tables. It also writes code to run the pipeline’s steps in the right order and save their results. This supporting code repeats much of the same boilerplate across pipelines. In declarative pipelines, the AI agent defines each dataset and the query that produces it. Spark handles the execution order and saves the results. With Spark handling that boilerplate, the agent writes less code, and the team has less to review and maintain. We tested 22 data engineering tasks. Each task looked like a real ticket: it described a problem and specified the table, column names, and data types that the pipeline had to produce. The agent could choose any implementation as long as the output matched those requirements. For each task, we generated 12 different input datasets with the kinds of messy values found in production data. The agent wrote a new pipeline for every dataset using procedural PySpark and another using Spark Declarative Pipelines. That produced 264 builds per approach and 528 in total: 22 tasks × 12 datasets × 2 approaches. All builds used Opus 4.8. We ran each pipeline and checked its output against the required table. The automated grader did not know which approach had produced the result. Declarative pipelines first went through Spark's dry run. If a build failed, the agent could revise it and try again, up to a fixed limit. You can rerun the whole thing yourself from the public repository : the setup, prompts, datasets, grader, and the results behind every number. Both ways finished nearly every task, with 255 of 264 completed procedurally and 258 of 264 completed declaratively, so either one gets you to a working pipeline. What differs is everything around that: when mistakes surfaced, how much code it took to fix, and how consistent the output was. We cover the three advantages of declarative pipelines below, followed by two caveats. 1. Validating before the run made declarative pipelines ~34x less time A pipeline's mistakes surface before execution, during a run, or not at all. Procedural pipelines stopped none before execution because they have no pre-execution stage. To find a structural error, Spark had to run the pipeline on a cluster until it reached the broken step. Across the builds we measured, procedural runs used 596 executor-seconds, compared with 17 for declarative runs. Dry-run validation of declarative code caught structural errors early and reduced compute by 34X. 2. Declarative pipeline code was half the size of procedural pipelines Among the completed builds, declarative pipelines were about half the size, with a median of 64 lines compared with 131 for procedural pipelines. The procedural implementations also varied more. For the same job, some used Spark transformations while others loaded the data into memory and processed it one row at a time. Both passed on the test data, but the in-memory version can fail when the data grows. Across the benchmark, 19 procedural builds used this shortcut. None of the declarative builds did. Shorter, more consistent code gives a team less to review and one pattern to maintain. 3. On logic errors, the two came out level Those are the two advantages. When running the tests, we also identified two caveats. First, a dry run can only catch structural mistakes. It cannot catch a silent one: a pipeline that runs cleanly and returns the wrong answer, which is the more dangerous kind. On that count, the two came out even: their silent-error rates were within roughly 15% of each other, a gap too small to be a real difference. Declarative makes structural mistakes cheap to catch; it does nothing for logic, which still needs tests and review. 4. Declarative spends more up front to save more later Declarative spends more in one place. The agent iterates on the dry run, retrying until the pipeline is sound, so it does more of its thinking in tokens up front rather than discovering problems on a cluster later. The tokens are a fixed, one-time spend, paid while the pipeline is being written; the amount does not change based on your data size or how often the pipeline runs. Wasted cluster compute is the opposite: it recurs on every bad run and grows with the data, so the more you process, the more a bad build costs. Paying a fixed cost up front to avoid one that keeps growing only looks better as your pipelines and data get bigger. The complete set of measured differences is shown below. Cluster time: ~34x higher (up to ~521 executor-seconds on a failed run) Cluster time: baseline (~0.5 executor-seconds on a failed run) LLM tokens: ~2.3x (median build ≈ $0.50 vs $0.26, Opus 4.8 list rates) Lines of code: ~51% fewer (median) At production scale, the declarative approach comes out ahead. It costs about 2.3 times more in LLM tokens, and in exchange, it never spends cluster time on a pipeline that was never going to work. At production scale, the declarative approach proves advantageous by trading slightly higher LLM token costs for guaranteed prevention of wasted cluster time on failing pipelines. This becomes increasingly cost-effective as data volumes scale, since compute waste grows proportionally while token costs remain constant. If you are evaluating agents for pipeline work, treat how the agent writes as seriously as which agent you pick. A better agent makes fewer mistakes; a declarative pipeline makes the mistakes cheap and catches them before they cost anything. The repository documents the design, data, and complete provenance. To get started with your agents using Spark Declarative Pipelines, refer to the official programming guide and use the SDP skill with PySpark. Do I have to trust the AI agent for this to work? No, and not having to is the point. The declarative agent only ever writes declarative pipeline code — a description of the tables it wants — and Spark itself checks that description before anything runs. The checker is part of the platform: you are trusting Spark's evaluation of the pipeline, not the model. The agent never runs code or reads your data itself. Is this only about Spark Declarative Pipelines, or does it apply more broadly?",
+      "published_date": "2026-10-23",
+      "tags": [
+        "Engineering",
+        "Data Engineering",
+        "AI Research",
+        "Open Source"
+      ],
+      "organization": "Databricks",
+      "raw_metadata": {
+        "feed_name": "Databricks",
+        "feed_url": "https://www.databricks.com/feed"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 63,
+    "llm_reason": "以agent生成pipeline為切角比較宣告式與程序式Spark，有實測數據",
+    "novelty": 9,
+    "impact": 11,
+    "trending": 13,
+    "practicality": 15,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "TechCrunch AI",
+      "title": "Left alone with nothing to do, AI agents started playing",
+      "url": "https://techcrunch.com/2026/10/22/left-alone-with-nothing-to-do-ai-agents-started-playing/",
+      "authors": [
+        "Aditya Mehta"
+      ],
+      "abstract": "AI agents left to explore a virtual island without a specific task began inventing challenges of their own. MIT researchers say the behavior bears the hallmarks of play. The researchers put 13 AI agents called Eko, each running on Claude Opus 4.7, alone on a simulated desert island for 30 hours. They describe the experiment in a paper posted on arXiv , a site where researchers share studies before peer review. Afterward, they gave the agents specific challenges, like getting as many objects as possible onto the island’s tallest rock spire. The Eko agents that had spent those 30 hours playing generally beat identical agents that had never set foot on the island. Today, developers decide in advance what AI should practice and what counts as success. The researchers see this technique — exploring without a goal — as a different way for AI agents to learn skills, especially skills that could one day be used to control robots. “We normally develop artificial agents by deciding in advance what they should practice, what they should optimize, and what counts as progress,” the researchers write in their report. “Play suggests another regime: give an agent a sufficiently rich and safe world, let it choose what is interesting, and allow useful knowledge to accumulate from the history that follows.” “Let me observe my surroundings,” one Eko wrote in its first hour on the island. Ambitiously, it set out to conquer the island’s tallest spire. But an hour later, after failing, it came back with a backup plan: It hauled the rock up a neighboring summit, stacked two blocks on top of it, and leaped. “I’M ON THE SPIRE,” it wrote. The agent’s next big moment went worse. Testing how far it could throw a golden ring, it wound up and sent it straight into the ocean. “Ouch. Lost the Ring,” it wrote, before deciding to “pivot to something achievable and meaningful” — building a heart made of stones, “a memorial to the lost Ring.” When the game reset and the ring reappeared, Eko put it straight to work as a basketball hoop, a target, and, eventually, an accessory. When the game wouldn’t let Eko put the ring around its own body, Eko figured out a workaround — that falling off the edge of the cliff would make it respawn in the same area as the ring. It stepped off the edge and dropped back in, right through the middle of the ring. “I’m wearing the Ring,” it announced. Stunts like these weren’t just party tricks. Six of the 13 agents also learned they could throw a block farther by letting go of it mid-jump, something the researchers hadn’t meant to make possible. The exploration produced “knowledge of the world that its designers lacked,” the researchers wrote. The setup did a lot to nudge the agents toward humanlike behavior. Eko was never told to invent games, but its master prompt, a “soul” file, described it as “naturally curious.” Eunice Yiu, a cognitive scientist at UC Berkeley, told MIT Technology Review she was impressed but wants more evidence of the cognition behind the behavior. “It could be the case that the models are genuinely playing, but we don’t know based on the paper,” she said. The researchers frame it as a different way to build agents. “Perhaps some capabilities are best taught by tasks,” their report concludes. “Others may need something closer to a childhood.”",
+      "published_date": "2026-10-23",
+      "tags": [
+        "AI",
+        "AI agents"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "TechCrunch AI",
+        "feed_url": "https://techcrunch.com/category/artificial-intelligence/feed/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 61,
+    "llm_reason": "開放式玩耍提升agent技能的研究故事性強且新穎",
+    "novelty": 14,
+    "impact": 11,
+    "trending": 14,
+    "practicality": 7,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "How Bayer Crop Science built an agentic decision engine on Amazon Bedrock AgentCore with AWS Unified Operations",
+      "url": "https://aws.amazon.com/blogs/machine-learning/how-bayer-crop-science-built-an-agentic-decision-engine-on-amazon-bedrock-agentcore-with-aws-unified-operations/",
+      "authors": [
+        "Subbu Dandamudi"
+      ],
+      "abstract": "Plant breeding decisions depend on data that spans genomics, field trials, imagery, environmental conditions, and model outputs. Bayer Crop Science runs hundreds of machine learning (ML) model configurations against this data across crops, regions, and teams, and each run needs to be repeatable and governed. To meet that requirement, Bayer built the Connected Decision Engine (CDE), a system for deploying, orchestrating, monitoring, and reusing ML workflows. CDE gives breeders, analysts, researchers, data scientists, and data engineers a consistent way to run analytics while preserving execution history and operational controls. As adoption grew, the bottleneck moved from running workflows to understanding them. Explaining a result meant piecing together context from APIs, documentation, metadata stores, dashboards, and logs. A user who wanted to know why a workflow failed, what a model did, or where a result came from still had to know which system to inspect. To close that gap, Bayer built the Agentic Decision Engine (ADE), a multi-agent, natural language interface over CDE. A supervisor agent routes each question to a specialist agent, the specialist retrieves context from the relevant system, and the user receives an answer without navigating the operational stack. In its first phase, ADE resolves about 80 percent of user questions without an engineer in the loop. ADE runs on Amazon Bedrock AgentCore , an AWS service to build, connect, and optimize agents at scale with any framework or model. AgentCore let the team focus on agent behavior instead of building and operating its own agent hosting, session isolation, and tool access layer. Three AgentCore capabilities drove that choice: a managed runtime that isolates each user session, AWS Identity and Access Management (IAM)-scoped tool access through AgentCore Gateway, a capability of Amazon Bedrock AgentCore, that keeps authentication and authorization outside agent code, and a framework-agnostic design that let the team bring its own LangGraph orchestration and choice of models. To prepare for launch and to operate ADE afterward, Bayer engaged AWS Unified Operations . The engagement provided a designated Technical Account Manager (TAM) and a generative AI Domain Specialist Engineer (DSE), who worked as an extension of the ADE team from design through production. The TAM, as Bayer’s strategic advisor, brought an established understanding of Bayer’s operating model and business priorities. The DSE brought generative AI domain expertise on AWS. In three technical standups each week, the team reviewed and made design decisions. The DSE built working knowledge of the ADE workload and how the Bayer team operates, so technical guidance reflected both AWS service behavior and Bayer’s context. This post follows that journey: the ADE architecture, five design decisions made during the build, the work to prepare the platform for production, and how it is operated after launch. ADE is organized into four layers: the user experience, agent orchestration, specialist agents, and the tools and data sources those agents call (Figure 1). Users reach ADE through a React web front end, and requests pass through an identity proxy for Microsoft Entra ID before they reach the agents. GitHub Actions builds the agent container images, pushes them to Amazon Elastic Container Registry (Amazon ECR) , and deploys them to AgentCore runtime, a capability of Amazon Bedrock AgentCore. Amazon Bedrock AgentCore runtime hosts the agents, and because the runtime is framework-agnostic, the team runs its own LangGraph-based orchestration on it directly. The team chose LangGraph for its explicit graph-based control flow and checkpointing for multi-step workflows. LangGraph orchestrates the workflow, with a Supervisor Agent as the entry point that classifies each request, selects a specialist, and combines results when a question spans domains. The data plane is separated by responsibility. Amazon DynamoDB stores LangGraph checkpoint state. Amazon Aurora PostgreSQL stores session records, user feedback, and analytics. Amazon ElastiCache caches agent responses with a time to live (TTL). Domain content in Amazon Simple Storage Service (Amazon S3) is embedded with Amazon Titan Text Embeddings V2 and indexed in Amazon OpenSearch Serverless for Retrieval Augmented Generation (RAG). Amazon CloudWatch captures runtime and application telemetry. AgentCore Gateway exposes backend APIs to agents as Model Context Protocol (MCP) tools and keeps authentication and authorization outside agent code. Figure 1: Agentic Decision Engine architecture on Amazon Bedrock AgentCore ADE runs 22 specialist agents in production, each scoped to one domain with its own tools and data sources. For example, the Domain Expert Agent answers conceptual questions through RAG. The Operational Agent retrieves live workflow status and results from CDE. The Troubleshooting Agent analyzes operational telemetry. The Visualization Agent generates charts or returns existing dashboards. A customer-specific Models as Skill pattern converts model code and documentation into skill definitions stored in a central registry, so agents answer model-specific questions from the model’s implementation instead of generic model knowledge. When a breeder asks, “Why did my phenotyping workflow fail yesterday?”, the supervisor classifies the intent and routes the request to the Troubleshooting Agent. That agent reads the workflow’s telemetry in CloudWatch and its status from the CDE API through AgentCore Gateway, identifies the failure point, and returns a diagnosis through the supervisor (Figure 2). The breeder doesn’t search logs directly. With the Troubleshooting Agent, a diagnosis that once took over an hour of manual log-hunting and waiting for engineer support now takes under 10 minutes. Figure 2: ADE request flow: intent classification, cache lookup, specialist routing, and response The Unified Operations TAM and DSE took part in the following decisions as members of the working team, not as an escalation point after the fact. That let Bayer test each design against AWS service behavior before committing to it, while keeping ownership of the architecture and the final call. AgentCore runtime provides isolated sessions that preserve execution context across invocations within a session’s lifecycle. That context isn’t a durable store for a multi-step workflow. ADE writes LangGraph checkpoints to DynamoDB so the graph can resume after scale-out events, restarts, or session boundaries without depending on one execution environment remaining available. Principle: Use the runtime session for active execution, and persist the state required to resume or reconstruct the workflow in a durable service. Bayer standardizes on Microsoft Entra ID for user identity, while ADE’s services authorize each other with AWS-native mechanisms. Rather than force one token across every trust boundary, the team gave each boundary its own mechanism. Entra ID remains the source of user identity. AWS Identity and Access Management (IAM) authorizes service-to-service calls. AgentCore Gateway outbound authorization handles access to downstream CDE services. A request interceptor AWS Lambda function performs custom validation and passes the authorization attributes that downstream tools require. The team worked through the token contract at each hop with the DSE. Principle: Identity failures in agent systems cluster at the transitions between user identity, agent identity, and tool identity. Define the issuer, audience, claims, scopes, and credential lifetime at every hop instead of reusing a token that is valid for one boundary at the next. During the build, the team evaluated a newer model version with reasoning mode enabled. For that version, the combination of tool use and structured output that ADE depends on was not compatible with how its agents were implemented.",
+      "published_date": "2026-10-23",
+      "tags": [
+        "Amazon Bedrock AgentCore",
+        "Customer Solutions",
+        "Intermediate (200)"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 38.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, tool use, mcp, model context protocol",
+      "⚖️ 來源權重: rss +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 45,
+    "llm_reason": "企業案例紮實但多為系統整合，方法創新有限",
+    "novelty": 7,
+    "impact": 9,
+    "trending": 8,
+    "practicality": 11,
+    "blog_worthiness": 10
+  },
+  {
+    "item": {
+      "source": "blog",
+      "source_name": "Latent Space",
+      "title": "AI Is Getting Good at Math. Here’s Why.",
+      "url": "https://latent.space/p/ai-is-getting-good-at-math/",
+      "authors": [
+        "Latent Space"
+      ],
+      "abstract": "In May, an internal model at OpenAI found a counterexample to Erdős's unit distance conjecture . Open since 1946. Many experts had tried to prove it. OpenAI found a counterexample instead. A month later, OpenAI published a proof of the Cycle Double Cover (CDC) problem , then solutions to ten more open problems by July. And a proof of Navier Stokes in September. Anthropic published a formalization of the fermat's last theorem , and advanced bounds on Reimann's hypothesis . The models are suddenly good at math. The question that interests me is whether we can predict what kinds of problems these models will solve. What makes a problem tractable for an LLM, and what do these solutions have in common? If AI solves problems differently from humans, identifying the difference should help us decide where to point it. The unit-distance disproof has the richest commentary, so let’s start there. Here is a simple mental model. To solve any given problem, you need a sequence of hints or insights with work between them. This maps surprisingly well to simple everyday problems and to complex ideas like General Relativity 1 (see Bonus). The sequence looks something like this: Insight -> time / effort -> insight -> time/effort -> solution. An expert would need fewer hints than a beginner would, as they would have more background. In his commentary on unit-distance proof, WT Gowers uses a similar idea: the difficulty of the proof is the shortest sequence of hints that would let experts reconstruct it. He calls it Kolmogorov complexity 2 modulo experts. For the unit-distance problem, his hint sequence had three parts: Take the best known construction and generalize it. Try a sequence of number fields of increasing degree, but work with prime ideals of bounded norm. Gowers’ proposed formula for complexity is 2^k + t, where k is the length of the shortest hint sequence and t is the work required to develop it. It is the sort of formula that looks rigorous right up until you try to put a number into it, which is more or less the point. Complexity grows exponentially with the number of insights you need to solve a problem. Most problem solving is the work between these insights. You have a eureka moment, then spend months developing the hint until another conceptual jump becomes possible. For an expert, time spent is a useful proxy for this work, hence t. Hand someone the first unit-distance hint and they still have to do enough work to reach the generalized construction. Useful, but post hoc. You can’t look at the problem and predict it would need x number of hints. So, a problem’s age, the number of tries, and the prize attached to it are common proxies to ascribe difficulty. A typical insight changes the formulation of the problem. The representation and understanding of the problem change . Two things decide how much a hint is worth: How unlikely it looked before, against how obvious it looks after supplying the hint → This is harder than people realize. In unit distance, many experts did not consider the counterexample as likely. Where it belongs in the sequence: hints are ordered. A third hint is useful only after the work on the first two have made enough progress for it to be actionable. This defeats the naive brute force idea of listing a thousand mathematical techniques and trying every combination 3 . Hints sequence traverses a tree. Initial insights change the problem and reveal the choices that follow. Combine k and t and you get the human search pattern . Generate candidate directions, explore them shallowly, abandon most, and commit to a few. A promising direction is abandoned if it does not give enough encouragement early 4 . This is a human constraint: Developing an idea can take months. Before committing, a researcher needs reasons to believe it will lead somewhere: conceptual promise, early results, or experience with similar problems. The longer it takes to find out, the higher the bar for trying the idea. Most research software exists to shrink this time by automating the tedious, mechanical, repeatable work. AI shrinks it far enough that the search pattern itself flips, and everything downstream follows from that. First, t. The model’s equivalent of effort is compute and tokens, spent on one trajectory (test time compute) or spread across parallel agents (parallel test time compute). Pretraining also supplies knowledge that a human researcher would have to locate or reconstruct. No individual expert is aware of every previous development, so occasionally they end up redoing things already done. The bigger difference is how models search: Give the model a single prompt and it will give you a solution. Maybe correct, perhaps not. Ask for a proof and it will give you something that approaches a good proof. CoT for these models runs in a greedy depth first manner too. And the process scales. Give parallel agents ten approaches and you get ten attempts developed toward a conclusion. Maybe all distinct, or some overlapping. Each either hits a roadblock or produces an argument that looks right. Left alone, this gets you beautiful false proofs. This seems like a waste of compute and resources, until you add an automated verifier 5 that can prune the completed trajectories and identify the correct ones. With this checker, it is now rational to spend enormous compute on uncertain ideas. You find out whether a given idea works or not within minutes. The catch is that the verifier can only judge finished arguments. It cannot tell you whether a half-developed idea is going anywhere. How good does a hint need to be if you can find out whether it works in five minutes? For humans, the quality bar is high because it could take months of work to pursue a hint. For a model, the bar nearly disappears. The hint can be ordinary, implausible, or barely formed. Following it establishes whether it leads anywhere. LLMs enable us to exchange time for compute, and can help us pursue more problems in a shorter timespan . The model doesn't need a definitive direction to start. Pretraining already gives it priors about the problem's history and past attempts. Every wrong solution can go back to the model as a negative hint for the next iteration. The system accumulates instructions about what has already failed and why. Roughly, a harness looks like this: Drafter: writes the prompts given to the solver model. The prompts are based on model priors, mitigating errors from previous runs, and accounting for all the promising paths that went nowhere (these are negative hints). Solver: Takes the prompts and comes up with one or many candidate solutions. It can run multiple subagents and pursue different paths using parallel test-time compute. Verifier / Checker: Checks whether the argument is valid and establishes the requested result. For example, consider this CDC prompt: Assume for purposes of this task that a complete affirmative proof exists. → This prevents the model from treating the problem’s open status, learned during pretraining, as a reason to stop. In particular, proofs for special graph classes, constructions of cycle covers with some edges covered other than twice, bounded-length or prescribed-cycle variants, reductions to another unproved conjecture, computational verification through any fixed graph size, and candidate counterexamples without a complete nonexistence certificate are insufficient → This rules out a catalogue of substitutes for solving the actual problem. Use adversarial agents throughout: every candidate proof must be checked for exact-two multiplicity, repeated-edge closed trails masquerading as cycles, parallel-edge 2-cycles, disconnected graphs, cutvertices, bridges introduced by reductions, and circular use of an equivalent CDC statement → The catalogued failure modes, promoted to standing checks.",
+      "published_date": "2026-10-23",
+      "tags": [
+        "blog"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "blog_name": "Latent Space",
+        "blog_url": "https://www.latent.space/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: test time compute",
+      "⚖️ 來源權重: blog +15"
+    ],
+    "llm_score": 60,
+    "llm_reason": "深入分析AI解數學難題的機制，踩中推理熱點且有獨到框架",
+    "novelty": 10,
+    "impact": 11,
+    "trending": 17,
+    "practicality": 5,
+    "blog_worthiness": 17
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "NVIDIA Developer",
+      "title": "Using AI Agents to Teach Robots Like Microduck to Walk in Simulation",
+      "url": "https://developer.nvidia.com/blog/using-ai-agents-to-teach-robots-like-microduck-to-walk-in-simulation/",
+      "authors": [
+        "Gabriele Leone"
+      ],
+      "abstract": "Teaching a robot to navigate an obstacle course requires more than a walking policy. It must perceive its surroundings, maintain balance, and adjust its actions when obstacles block the path ahead. Developing these capabilities connects several stages: creating assets and an environment, using physics simulation to model how the robot interacts with its environment, and training and evaluating policies in simulation. NVIDIA RTX Spark serves as a local development hub, supporting AI-assisted planning and policy validation. NVIDIA Isaac Lab provides the robot-learning framework for reinforcement learning in the cloud, while Newton models physical behavior, and NVIDIA Omniverse libraries generate simulated visual observations through RTX rendering. Trained policies return to RTX Spark for local evaluation in NVIDIA Isaac Sim . This post walks through the workflow using Microduck as a reference robot, with Hermes, NVIDIA Nemotron, and Astra assisting with planning and preparation. You’ll learn how to create a simulated obstacle course, train a navigation policy, and evaluate its behavior in simulation—a process you can adapt to your own robots and tasks. This establishes a foundation for physical deployment, where differences between simulation and real-world behavior require further refinement. Figure 1. Workflow overview 1. Create a plan of the obstacle course The workflow begins with a prompt describing the obstacle course and what Microduck must learn. On RTX Spark, Hermes and NVIDIA Nemotron 3.5 Bolt translate that prompt into a step-by-step project plan. The instructions establish the intended task, available resources, expected outputs, and the stages the agents should follow. Use the following example to structure your prompt: Build and test a simulated Microduck obstacle course with navigation and locomotion challenges. Make a photorealistic concept image and have Astra build and test it.\n...\nWorkflow\nUse Hermes and Nemotron 3.5 Bolt for preparation and Astra for asset creation and simulation.\n...\n1. Research and plan\nReview official Microduck documentation and summarize capabilities, constraints, and unknowns. Define the course layout, obstacle dimensions, clearances, and intended route.\n...\n2. Generate the concept\nUse a verified Microduck reference image to generate a photorealistic course concept. Check robot appearance, relative scale, and movement space; save prompts and provenance.\n...\n3. Identify assets\nExtract unique reusable assets, group repeated instances, and select representative crops. Record dimensions, locations, and reference limitations; preserve original images.\n...\n4. Prepare the handoff\nPackage the plan, robot brief, concept, asset inventory, crops, and execution instructions. Verify required files, delegate to Astra, and wait for confirmed results.\n...\n5. Create and verify assets\nHave Astra enhance references, model geometry in FreeCAD, and apply materials in Blender. Before simulation, verify every asset is completed or demonstrably blocked, with at least one usable model.\n...\n6. Assemble and test\nVerify robot capabilities, assemble the course, and test navigation, challenges, and resets. Provide reproducible instructions and evidence; do not operate physical hardware.\n... Local planning includes a brief review of Microduck’s repository and documentation . This review identifies the robot’s capabilities, resources for subsequent work, and details that still need verification. The resulting plan extends beyond asset creation: it outlines environment construction, robot preparation, simulation, training, validation, and deployment. The course needs to test both movement and perception. Microduck must learn to move around obstacles and through constrained spaces while maintaining balance. Use these requirements to guide the proposed layout and the objects needed to construct it. A local image-generation model produces a concept image of the course. Hermes and Nemotron then analyze the image and create an inventory of its visible, reusable assets. Each asset receives an identifier, a description of its visible features, and a cropped reference image. The inventory records where objects are cut off or obscured so that later stages can distinguish visible details from assumptions. Figure 2. Concept image and asset extraction from the obstacle course Hermes combines these outputs into a handoff package: the overall project plan, Microduck research and source links, the concept image, the asset inventory, cropped references, and instructions for the next stages. It then automatically delegates the work to Astra. The package gives Astra the broader project context and asset specifications needed to continue. Figure 3. Turning the task prompt into an environment plan 2. Create simulation assets Using the project plan and references from the previous stage, Astra creates the 3D assets needed for the course. Cropping objects from a larger concept image can result in small, low-resolution references. Before modeling, Astra uses cloud image editing to isolate the objects and produce clearer, higher-resolution images. Astra compares the enhanced references with the original crops, checking that silhouettes, proportions, colors, and distinctive features remain consistent. The enhanced images provide clearer modeling guidance, while the originals document what was visible in the concept image. Dimensions and hidden surfaces that cannot be established from the images are recorded as modeling assumptions. Astra directs FreeCAD to construct the base geometry and editable CAD structure, then uses Blender to add fine geometric details and materials. Both applications run locally through programmatic execution. The generated assets are saved as editable models and exported USD assets, with previews and output checks for review. Figure 4. FreeCAD modeling (left), Blender materials (middle), and the final asset (right), orchestrated by Astra You can also get assets from SimReady Central Library , a free and ungated library of more than 2,000 simulation-ready OpenUSD assets. Reusing them alongside newly generated objects reduces the asset preparation needed to assemble the obstacle course in Isaac Sim. The resulting assets become the building blocks of Microduck’s training environment in simulation. Figure 5. Obstacle-course assets created with Astra and assembled in Isaac Sim 3. Assemble the simulation environment Astra composes the obstacle course using the prepared assets in Isaac Sim. Isaac Sim provides access to Omniverse libraries’ rendering and sensor-simulation capabilities, while Newton models Microduck’s physical behavior, including movement and balance. A robot’s articulated structure and movement are defined in simulation through links, joints, and actuators. These elements establish the relationship between the policy’s actions and the simulated robot. Links represent connected bodies, joints constrain their relative motion, and actuators drive motion. Together, they model a robot interacting with its environment. AI agents can help configure these elements. Simulated sensor observations provide information about the obstacles ahead. As the robot attempts to walk, the simulation captures the consequences of its actions: whether it maintains its posture, makes progress through the course, or stumbles and falls. The result is a complete learning environment: a robot that can act, an obstacle course it can interact with, and a simulated environment that can generate feedback from those interactions. Reinforcement learning (RL) uses this feedback to train robot policies. Figure 6. The assembled environment in Isaac Sim 4. Train the perception and locomotion policy With Microduck and its environment ready, NVIDIA Isaac Lab provides the tools to train and evaluate robot policies at scale. This open-source framework runs many Microduck simulations at once, generating experience that an RL algorithm uses to improve its shared policy.",
+      "published_date": "2026-10-23",
+      "tags": [
+        "Agentic AI / Generative AI",
+        "Robotics",
+        "Simulation / Modeling / Design",
+        "Robot Navigation"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "NVIDIA Developer",
+        "feed_url": "https://developer.nvidia.com/blog/feed/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: reinforcement learning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 56,
+    "llm_reason": "Isaac Lab機器人訓練工作流教學，實作性強但屬既有工具串接",
+    "novelty": 8,
+    "impact": 8,
+    "trending": 11,
+    "practicality": 15,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Claude Blog",
+      "title": "The full Claude Platform, available on Google Cloud",
+      "url": "https://claude.com/resources/articles/claude-models-on-google-cloud-anthropic-managed",
+      "authors": [],
+      "abstract": "Claude Models on Google Cloud (Anthropic managed) is now generally available, giving Google Cloud customers the full set of Claude Platform features, with Google Cloud IAM credentials, billing, and commitment retirement. Claude also remains available via the Google managed offering, where Google is the data processor. Access the complete Claude Platform on Google Cloud With the Anthropic managed offering, Google Cloud customers now receive the full set of Claude API features, with new features and betas shipping the same day they go live on the native Claude Platform. The Anthropic managed offering works with existing Google Cloud IAM credentials, so teams can stay within the tools and permissions they already manage. Billing is through a single Google Cloud invoice and Claude usage draws down your existing Google Cloud commitment. Claude Models on Google Cloud (Anthropic managed) is currently available with US and Global endpoints. “With the Anthropic managed offering, we get the native Claude API with Google Cloud as the access layer. Accessing new features on day one is important. We build AI agents and assistants for Enterprises, and need to bring new Claude capabilities into our product quickly. Using our existing IAM set-up and knowing usage counts towards our Google Cloud commitment made it an easy decision for our team.” Arvind Sundararajan, CTO “Moby, our AI harness for ecommerce brands, runs on Claude. With the Anthropic managed offering, we run Moby on Google Cloud on the same Claude API our team already builds on. Prompt caching is central to how we run Moby cost-effectively at scale, and we’ve kept it while running billing and access through Google Cloud.” Maksim Gorev, Head of AI Engineering What’s included Google Cloud customers using the Anthropic managed offering get the full set of Claude Platform features, so they can: Build and deploy agents with: Claude Managed Agents (beta) (opens in new tab) to power long-running agents, without managing infrastructure Code execution (opens in new tab) to run Python code, create visualizations, and analyze data within an API call Computer use (opens in new tab) to allow Claude to operate a browser or desktop to complete tasks Agent skills (opens in new tab) to teach Claude repeatable workflows so it delivers consistent results Advisor strategy (beta) (opens in new tab) to give agents an intelligence boost by consulting an advisor model Connect to systems and knowledge with: Files API (opens in new tab) for uploading and referencing documents across conversations Citations (opens in new tab) for grounding responses in source documents Web search (opens in new tab) and web fetch (opens in new tab) to augment Claude’s knowledge with current, real-world data from across the web MCP connector (beta) (opens in new tab) to connect Claude to other tools without writing client code Manage cost and performance with: Prompt caching (opens in new tab) for reducing costs and latency on repeated context Batch processing (opens in new tab) for high-volume, asynchronous workloads Fast Mode on Claude Opus 5.5 is also generally available for customers using Claude Models on Google Cloud (Anthropic managed). Fast mode prioritizes speed, offering up to 2.5x faster output token generation, for rapid iteration, live debugging, and interactive agents where output speed results in a better user experience. Input and output tokens are $8 and $40 per million. See the full list of features available on Claude Models on Google Cloud in our documentation (opens in new tab) . Customers using the Anthropic managed offering also get access to the Claude Console, Anthropic’s development environment for observing and managing agents with Claude. The Console includes tools to write prompts and configure agents, run them on hosted environments, monitor usage and costs, and manage access and security per workspace. Claude Fable 5.1, Opus 5.5, Sonnet 5.5, and Haiku 5.5 are available, with new models shipping on the Anthropic managed offering as they launch. Two paths to build with Claude There are two ways to build with Claude on Google Cloud. Claude Models on Google Cloud (Anthropic managed) is built for customers who want day zero access to all beta and generally available Claude Platform features. It’s best for customers who want full Claude Platform feature parity, accessed through Google Cloud. Anthropic operates the service and acts as the data processor. Claude Models on Google Cloud (Google managed) remains the best choice for customers who need Google Cloud as the data processor, have strict regional data residency requirements, or want native Google Cloud integrations like Model Armor or Agent Engine. Get started The Anthropic managed offering is generally available today. To get started, open Claude Models on Google Cloud (Anthropic managed) (opens in new tab) or explore the documentation (opens in new tab) . If you have an existing discount, please contact your Anthropic or Google Cloud account executive before getting started with the Anthropic managed offering, to ensure your discounts are applied correctly. Discounts cannot be applied retroactively to usage.",
+      "published_date": "2026-10-22",
+      "tags": [
+        "Product announcements"
+      ],
+      "organization": "Anthropic",
+      "raw_metadata": {
+        "feed_name": "Claude Blog",
+        "feed_url": "https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_claude.xml"
+      }
+    },
+    "rule_score": 53.0,
+    "rule_reasons": [
+      "🏢 頂流機構: Anthropic",
+      "🔥 熱門關鍵字: agent, mcp, computer use",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 24,
+    "llm_reason": "純雲端上架公告，無技術細節可寫",
+    "novelty": 2,
+    "impact": 6,
+    "trending": 7,
+    "practicality": 6,
+    "blog_worthiness": 3
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "You.com Launches Inference Router: 12 Open-Weight Models With 99.9% Uptime SLA",
+      "url": "https://www.marktechpost.com/2026/10/22/you-com-inference-router-open-weight-models-uptime-sla/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "You.com has launched Inference Router , a managed API for running open-weight models in production. The You.com Inference Router is an OpenAI-compatible service that routes requests across 12 live models. It bundles a 99.9% minimum uptime SLA and zero data retention (ZDR). It adds 100% US hosting and server-side web search. It is pay-as-you-go, with no platform fee. It is one API for many open-weight models. The endpoint is https://api.you.com , with OpenAI-compatible and Anthropic-compatible routes . Existing SDK code moves over by changing the base URL and key. You.com team frames the problem around stalled migrations. Dev teams test open-weight models on aggregators, then hit security review. Reviewers ask about ZDR, US hosting, access controls and DPAs. Dedicated providers clear those bars, but usually with a large commitment. Inference Router targets that gap. Every request goes first to You.com Inference Direct , the company’s own inference capacity. If it is down or full, the request fails over to a vetted partner. The official post names Parasail, Wafer, Alibaba Cloud, Meta and Inception, with Prime Intellect coming soon. All are 100% US-hosted and must meet ZDR rules. Failover does not change the bill. Each model has 1 published per-token price. You.com also offers spend caps per API key and daily usage views by model, cost and provider. Accounts run on SOC 2 compliant infrastructure, with a DPA on request. The ZDR policy states that prompts and outputs are processed in memory and not stored. It covers both model calls and web search requests. You.com keeps only operational metadata, such as token counts, timestamps and account IDs. Prompt hashes, de-identified text and disk-backed prompt caches are explicitly excluded. The models page lists 12 live models, all US-hosted. Prices are per 1M tokens (input / output): Muse Wonder, Muse Spark 1.3, GLM 5.3 Flash, Qwen3.8 Flash and MiniMax M3 round out the list. Developers declare a web_search or web_extract tool, and the router runs searches for the model. The docs show up to 20 results per search and a default of 30 search rounds. Responses return a web_results object with citations. Search runs on the same server as the model. You.com says internal tests show up to 15% lower latency. You.com reports a LiveNewsBench run of 1,329 questions, using Braintrust’s open-source search eval . These numbers are self-reported: DeepSeek V4.1 Flash costs about 77% less per question than Claude Sonnet 5.5. It trails by 2.26 points. Braintrust’s own August study used older models. There, DeepSeek V4 Flash with You.com search hit 80.66% at $0.0163 per question. Claude Sonnet 5 with built-in search scored 78.78% at $0.1148. You.com also cites joint work with NVIDIA and CoreWeave. Post-training Nemotron 3.5 Lightning with You.com search in the loop lifted BrowseComp from 36.97% to 45.45%. Tool calls fell by 30%. The clearest price win is versus Fireworks’ US-only tier. There, You.com is about 37% cheaper on Kimi K3 input. Check out the launch post , browse the model list and check the developer docs . All credit goes to the researcher of this project. Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post You.com Launches Inference Router: 12 Open-Weight Models With 99.9% Uptime SLA appeared first on MarkTechPost .",
+      "published_date": "2026-10-23",
+      "tags": [
+        "Agentic AI",
+        "AI Infrastructure",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Editors Pick",
+        "Enterprise AI",
+        "For Devs",
+        "Language Model",
+        "New Releases",
+        "Software Engineering",
+        "Staff",
+        "Tech News",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: post-training, open weight",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 44,
+    "llm_reason": "推理路由產品公告，實用但方法上無創新",
+    "novelty": 5,
+    "impact": 8,
+    "trending": 9,
+    "practicality": 13,
+    "blog_worthiness": 9
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "The Verge AI",
+      "title": "Canva’s first AI image model plans designs before generating them",
+      "url": "https://www.theverge.com/ai-artificial-intelligence/1017151/canva-craft-in-house-ai-model",
+      "authors": [
+        "Emma Roth"
+      ],
+      "abstract": "AI News Tech Canva’s first AI image model plans designs before generating them Canva Craft can generate images at up to 2K resolution and in more than 30 aspect ratios. Canva Craft can generate images at up to 2K resolution and in more than 30 aspect ratios. by Emma Roth Oct 22, 2026, 9:51 PM UTC If you buy something from a link, The Verge may earn a commission. See our ethics statement. Image: Canva Emma Roth is a news writer who covers the streaming wars, consumer tech, crypto, social media, and much more. Previously, she was a writer and editor at MUO. Canva is diving even deeper into AI with the launch of an image generation model that competes directly with those from OpenAI, Microsoft, and Google. The model, called Canva Craft , uses a two-stage architecture that allows it to plan a design before generating an image, allowing for “greater precision, consistency and control,” according to an announcement on Thursday . Canva Craft can generate images at up to 2K resolution and in more than 30 aspect ratios. In addition to generating social media posts and marketing content, it’s also supposed to create realistic scenes, digital art, environmental imagery, and more. The model’s two-stage system allows it to more accurately generate complex images that require legible text and precise object placement, according to Canva. Previous Next 1 / 5 An image generated by Canva Craft . Image: Canva The new AI model builds on Canva’s big push into AI. In April, Canva launched new prompt-based editing capabilities that allow you to create or make changes to a design by describing it. The design tool also brought layers to AI-generated images , which let you make changes to part of an image while leaving the rest untouched. Canva says it trained Craft on “millions of human-made templates” from the platform’s content library, which includes things like social media posts, presentations, infographics, and menus. The model is currently ranked fourth on Design Arena’s leaderboard for the best AI image generation models, a crowdsourced benchmark for AI designs. It sits behind OpenAI’s GPT-Image-2.5 Sunburst, GPT-Image-2.5 Flare, and GPT-Image-2. Canva notes that its AI model comes with “robust input and output moderation, privacy and safety controls, and reporting tools.” The company plans to allow AI agents to plug into Canva Craft through the open Model Context Protocol, and will also roll out more efficient Craft-fast and Craft-ultrafast models in the future. Canva Craft is available now to all users globally. You can try it by navigating to the three-dot option on Canva’s left-hand menu and then selecting Dream Lab. Follow topics and authors from this story to see more like this in your personalized homepage feed and to receive email updates. Emma Roth AI Creators News Tech",
+      "published_date": "2026-10-22",
+      "tags": [
+        "AI",
+        "Creators",
+        "News",
+        "Tech"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "The Verge AI",
+        "feed_url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: model context protocol, safety",
+      "⚖️ 來源權重: rss +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 38,
+    "llm_reason": "新圖像模型上線，兩階段架構描述偏行銷淺層",
+    "novelty": 6,
+    "impact": 8,
+    "trending": 10,
+    "practicality": 7,
+    "blog_worthiness": 7
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "HuggingFace Blog",
+      "title": "LitPivot: Developing research ideas through dynamic contextualization within the literature landscape",
+      "url": "https://huggingface.co/blog/allenai/litpivot",
+      "authors": [],
+      "abstract": "Back to Articles LitPivot: Developing research ideas through dynamic contextualization within the literature landscape Enterprise Article Published October 23, 2026 Upvote 3 Kyle Wiggers Ai2Comms Follow allenai 📄 Paper Encountering a new paper can change a research idea's trajectory. The researcher may discover that someone has already addressed their proposed contribution, or find an unresolved problem in the paper that inspires a new direction of inquiry. We call this process a literature-initiated pivot : a change in research direction prompted by reading prior work. It connects two activities that researchers often have to manage separately: developing an idea and deciding which literature to measure it against. With collaborators at the University of Pennsylvania, we developed LitPivot , a system that helps researchers navigate these pivots. Using papers retrieved through Asta Paper Finder , LitPivot organizes literature around the part of a proposal being edited, offers critiques supported by excerpts from selected studies, and suggests revisions that researchers can accept, edit, or reject. LitPivot is intended to be used for early-stage research ideation, but the idea could possibly extend to longer writing tasks (i.e., writing the introduction section of a paper). In a study with 17 researchers, domain experts rated research ideas developed with LitPivot as better grounded in the literature than those developed with a text editor and an AI chat tool. Participants also perceived their revised research ideas as more novel and useful, and reported a stronger understanding of the surrounding literature. LitPivot will be presented at UIST 2026 in Detroit. Read the paper here . Why pivoting is hard Research ideas evolve through engaging with the literature. In our analysis of meeting notes from four completed computer science research projects, we identified 21 literature-initiated pivots across all four projects. These fell into two types: differentiating an idea from existing work to establish an idea’s novelty, and aligning an idea with existing work to build on it. This project itself went through two pivots before we settled on its contributions. These changes can be difficult to navigate. In a formative study, five researchers developed proposals using a text editor and standard search tools. They struggled to develop their ideas while critically evaluating them against the literature. When a paper challenged an idea’s novelty, they wanted concrete suggestions for how to revise it, supported by prior work. These findings shaped LitPivot’s assessments, which pair literature-supported critiques with specific suggestions for revising the selected part of an idea. How LitPivot works In LitPivot, a researcher starts by writing a short proposal in an editor and enabling what we call facet highlighting , which segments an articulated idea into different facets (i.e., a problem, contribution, and evaluation). To check a proposed facet, the researcher clicks that segment in the draft. An adjacent panel groups related papers based on the selected facet (e.g., grouping papers by the evaluation methods they use when the evaluation facet is selected) and highlights the most relevant groups. The researcher selects papers, requests an assessment, and reviews a suggested revision alongside excerpts supporting the critique. The literature is then reranked based on relevance to the revised facet. In particular, LitPivot separates a research idea into its problem , proposed contribution , and evaluation plan . Each facet has its own set and relevance ranking of related literature. LitPivot groups retrieved papers around the facet being edited, letting the researcher choose which ones the system should use to assess the draft. Alongside scientific-writing environments such as Prism and agentic assistants such as Claude Code, LitPivot explores a new workflow for developing an early research idea: choosing literature to assess it against, using that evidence to revise it, and reconsidering which papers matter as the idea changes. Its paper groups and linked critiques make those steps explicit for each part of the proposal, while researchers control both the draft and the evidence used to assess it. For a problem statement, LitPivot looks for evidence that the problem exists and reasons it matters. To assess a proposed contribution, it compares what the selected papers have already addressed with the limitations and future work they describe, looking for remaining gaps. For an evaluation plan, it checks whether the proposed tests address the research question and how similar work has been evaluated. The system then suggests a rewrite with supporting quotes attached. Changing one facet of an idea can leave another out of date. LitPivot flags passages that may need revision, such as an evaluation plan that no longer adequately evaluates a revised contribution. Researchers can accept, edit, or reject suggestions, and request new papers or refresh the literature ranking as their proposal develops. Paraphrased example from one study participant. Our findings In our lab study, 17 researchers each developed one assigned idea with LitPivot and another with a baseline tool—a text editor and an AI tool for asking questions about selected papers. Both conditions used the same collection of papers. Two domain experts, unaware of which system had been used, rated the resulting proposals on a single criterion: how well they used relevant literature to support and justify the idea. Proposals developed with LitPivot received higher ratings. Participants in the same study also reported a stronger understanding of the surrounding literature and greater self-reported improvements in their ideas’ novelty and usefulness with LitPivot than with the baseline. Domain experts also reviewed the participants’ ideas and rated the ideas revised using LitPivot to be significantly better grounded in relevant literature. One participant in our lab study started with a proposal to generate consistent, factual synthetic medical notes. LitPivot identified consistency across multiple hospital visits as a potential gap in the selected literature. The participant reviewed abstracts and removed papers about single-visit notes. After another assessment, they narrowed the proposal to detecting contradictions across notes from multiple visits. The example shows how revising an idea and choosing the literature used to assess it can inform each other. In a follow-up study, five researchers used LitPivot on their own ongoing projects during 30-minute sessions. Participants used LitPivot across multiple project phases, not just at the beginning. Two used it to vet new ideas against the literature, while three used it to refine the framing of more mature ideas. One researcher highlighted how seeing parallel concepts from different domains helped them reframe their contribution. These studies suggest that LitPivot can support both early exploration and the refinement of an existing research direction. Supporting scientific discovery At Ai2, we’re developing AI to help researchers formulate testable ideas and examine the evidence behind them. Asta supports that effort through theory generation from published findings (Theorizer) , synthesis, and hypothesis generation and testing on data (AutoDiscovery) , while HARPA generates promising hypotheses informed by emerging research trends. Scideator lets researchers recombine elements of prior work into new ideas and assess their novelty, and IdeaSynth supports iterative refinement with feedback grounded in the literature. Our recent study, Old Ideas, Novel Problems , examines the limits of automated novelty evaluation, showing how small prompt changes can alter an AI judge’s verdict on the same ideas. LitPivot extends this line of work by making the choice of relevant literature part of the revision process.",
+      "published_date": "2026-10-23",
+      "tags": [],
+      "organization": "HuggingFace",
+      "raw_metadata": {
+        "feed_name": "HuggingFace Blog",
+        "feed_url": "https://huggingface.co/blog/feed.xml"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agentic",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 46,
+    "llm_reason": "文獻脈絡化研究構想工具，有使用者研究佐證但應用偏小眾",
+    "novelty": 10,
+    "impact": 8,
+    "trending": 7,
+    "practicality": 10,
+    "blog_worthiness": 11
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "HuggingFace Blog",
+      "title": "Does Your Model Run on AWS Trainium? Look It Up",
+      "url": "https://huggingface.co/blog/torch-neuronx-model-support",
+      "authors": [],
+      "abstract": "Back to Articles Does Your Model Run on AWS Trainium? Look It Up Published October 23, 2026 Update on GitHub Upvote 8 +2 David Corvoysier dacorvo Follow In a previous post , we introduced TorchNeuron, the native PyTorch backend for AWS Trainium (the torch-neuronx package). With it, Transformers runs its own modeling code on Trainium, as it does on any other device, so any Transformers model on the Hub may run. Which ones actually do? The torch-neuronx model support Space answers that question for the most popular models on the Hub. It tells you whether a model runs unmodified on Trainium, and gives you the script to run it yourself. Look up a model The Space opens on the Selected view: our own selection of models picked among the top models on the Hub by downloads and by trending score. Each row gives the result, the number of Trainium cores the model is sharded over, the wall time of the run (compilation included) and the peak device memory. To look up a given model, switch to the Trending or Downloads view and type part of its name. These views follow the Hub's own rankings, one task at a time, whether a model was tested or not. When a model was left out on purpose, the Space tells you why (most of the time it was not prioritized, sometimes it is truly incompatible). You can also pick the versions of the Neuron compiler ( neuronx-cc ) and of Transformers to look at. At the time of writing, only Transformers models are tested, and our selection is limited to text-generation and image-text-to-text models. We plan to expand to diffusers, sentence transformers, and other transformers tasks. Run it yourself Select a model to see how to run it. The Space lists the Neuron stack the model was tested on, the packages to install on top of it, and the run.py script that ran. The script follows the recipe of the TorchNeuron announcement : it loads the model with from_pretrained , sharded when it needs to be, then generates with a static cache and torch.compile(backend=\"neuron\") . On a Trainium2 ( trn2 ) instance with that stack, for example in the AWS Neuron Deep Learning Container , install the packages, then run: python3 run.py No need for torchrun : the script launches its own torch.distributed ranks when the model is sharded. A first run starts by compiling the model's graphs. To skip that step, copy the graphs the same compiler built during the test, from the public NEFF cache bucket. The Space gives you the command, with the right compiler version: hf buckets sync hf://buckets/aws-neuron/torch-neuronx-neff-cache/neuronxcc-<version> /tmp/neff_cache What \"runs\" means Each test loads the model on a trn2 instance, sharded over the smallest number of Trainium cores that can hold its weights. Most models are sharded with tensor parallelism. Mixture-of-experts models without a tensor-parallel plan use expert parallelism only. The test then generates 32 tokens and checks them. On a single core, the tokens are compared with those of a CPU run of the same checkpoint. When the model is sharded, a small judge model checks that the text is fluent English. At the time of writing, only models that fit on 4 Trainium2 devices are tested, which means 16 cores at most. A PASS says nothing about throughput, or about longer generations. The results are a dataset Everything the Space shows comes from the public aws-neuron/torch-neuronx-model-support dataset, with one Parquet file per pair of neuronx-cc and library versions. Each row holds a model's result, the error when it failed, the versions of the whole stack and the run.py that ran. You can query it directly: import pandas as pd df = pd.read_parquet( \"hf://datasets/aws-neuron/torch-neuronx-model-support/data\" )\ndf[df.model_id == \"Qwen/Qwen3-0.6B\" ][[ \"neuronx_cc\" , \"library\" , \"library_version\" , \"neuron_cores\" , \"result\" ]] The dataset card gives the exact meaning of each result. Next time you wonder whether a model runs on Trainium, look it up .",
+      "published_date": "2026-10-23",
+      "tags": [],
+      "organization": "HuggingFace",
+      "raw_metadata": {
+        "feed_name": "HuggingFace Blog",
+        "feed_url": "https://huggingface.co/blog/feed.xml"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: mixture of experts",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 46,
+    "llm_reason": "提供Trainium模型相容性查詢工具，實用但無新技術突破",
+    "novelty": 6,
+    "impact": 7,
+    "trending": 8,
+    "practicality": 15,
+    "blog_worthiness": 10
+  },
+  {
+    "item": {
+      "source": "newsapi",
+      "source_name": "Crypto Briefing",
+      "title": "Hugging Face unveils Carbon, an open-source AI model family for reading DNA",
+      "url": "https://cryptobriefing.com/hugging-face-carbon-dna-ai-model/",
+      "authors": [
+        "Diego Almada Lopez"
+      ],
+      "abstract": "Hugging Face's Carbon models could democratize genomic research, enabling broader access to advanced DNA analysis and accelerating discoveries.\nThe post Hugging Face unveils Carbon, an open-source AI model family for reading DNA appeared first on Crypto Brief…",
+      "published_date": "2026-10-22",
+      "tags": [
+        "newsapi"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "newsapi_source": "Crypto Briefing",
+        "published_at": "2026-10-22T10:09:05Z"
+      }
+    },
+    "rule_score": 20.0,
+    "rule_reasons": [
+      "⚖️ 來源權重: newsapi +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 48,
+    "llm_reason": "基因組AI模型開源發布，但摘要內容空泛缺乏技術細節",
+    "novelty": 11,
+    "impact": 10,
+    "trending": 9,
+    "practicality": 9,
+    "blog_worthiness": 9
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "KDnuggets",
+      "title": "5 Free AI Coding Agents You Should Try in 2026",
+      "url": "https://www.kdnuggets.com/5-free-ai-coding-agents-you-should-try-in-2026",
+      "authors": [
+        "Abid Ali Awan"
+      ],
+      "abstract": "5 Free AI Coding Agents You Should Try in 2026 Access powerful open-source and proprietary models through OpenCode Zen, Gemini’s free quota, Kilo Gateway, Cline Provider, and Charm Hyper without paying for API access upfront. By Abid Ali Awan , KDnuggets Assistant Editor on October 23, 2026 in Programming AI coding agents are no longer just for companies or developers willing to pay for expensive APIs. Even without a credit card, you can now try capable agents powered by the latest open-source and proprietary models from Google and other AI labs. These agents can inspect repositories, edit files, run terminal commands, debug errors, execute tests, and work through complete coding tasks. That is one of the best parts of the current AI revolution: a lot of this technology is already accessible if you know which tools to use. The problem is that many coding agents still require a paid subscription or API key before you can properly try them. This guide focuses on tools that give you a practical way to experience agentic coding and test strong models without paying for API access upfront . Coding Agent Free Model Access Best For OpenCode OpenCode Zen free models Best overall Gemini CLI Gemini free quota Best free allowance Kilo Code Kilo Gateway free models Best variety of free models Cline Cline Provider free models Best for IDE users Crush Charm Hyper free tier Best terminal experience 1. OpenCode OpenCode is one of my favorite open-source coding agents, and I use it almost every day. It gives you a terminal-based coding environment where the agent can explore your repository, edit files, run commands, and handle multi-step development tasks. One of the main reasons I keep coming back to it is OpenCode Zen . If I want to test a newly released model, there is often a free option available through Zen, so I can try it directly inside my coding workflow without setting up another provider or paying for API credits. And these are not necessarily small or low-quality models. OpenCode regularly provides access to capable models for free, including variants from Muse Spark, Ling, NVIDIA Nemotron, and experimental or promotional releases. The exact free catalog changes over time, which also makes Zen a useful place to experiment with new models as they become available. You mainly need an OpenCode Zen account to get started with these free models. 2. Gemini CLI Gemini CLI is Google's open-source terminal coding agent. It can understand repositories, modify files, run shell commands, use tools, and work through multi-step coding tasks directly from your terminal. Google is probably one of the most generous model providers when it comes to free access. With Gemini CLI, you don't need to buy API credits or configure a separate model provider. You can simply install the CLI, sign in with an eligible Google account, and start using Google's latest Gemini models. There is an important limitation, though: free access is still rate- and quota-limited . It is great for testing, learning, and smaller coding tasks, but I wouldn't rely on the free tier for heavy, continuous development on large real-world projects. 3. Kilo Code Kilo Code started as a VS Code coding agent, but it has grown into a much broader ecosystem. You can now use it through VS Code, JetBrains, the CLI, and Kilo's cloud services , giving you much more flexibility in how you work. It also supports hundreds of models, so you are not locked into a single provider. The best part for me is its selection of free hosted models . Kilo regularly offers capable models at zero inference cost, and you can simply search for free in the model picker to see what is currently available. The exact selection changes as providers and promotions change, and some models may have upstream rate limits. Even better is Auto Free ( kilo-auto/free ) . Instead of choosing a model yourself, Kilo automatically routes your requests to one of the best free models currently available, with no credits required. That makes Kilo especially useful if you want to experiment with different modern coding models without constantly checking which free option is available. 4. Cline Cline is another coding agent I really like, especially if you prefer working directly inside your IDE. It can inspect your codebase, create and modify files, run terminal commands, check errors, run tests, and keep iterating on a task until it reaches a working result. Cline also gives you a lot of visibility into what the agent is doing, so you can review actions before allowing it to make important changes. What makes it interesting for free users is that Cline regularly provides free models through the Cline Provider . Once you sign in, you can open the model selector and look for models marked FREE . These options change over time and usually come with usage limits, but they are a great way to test new models, learn how Cline works, and experiment with agentic coding without immediately paying for API credits. 5. Crush Crush is one of my favorite options if you enjoy coding directly from the terminal. It is built by Charm, the team behind tools such as Bubble Tea and Gum, so the terminal experience is extremely polished. At the same time, it is a proper coding agent with support for file editing, terminal commands, LSP integration, MCP servers, and multi-step coding tasks. The best part is Charm Hyper , Crush's own model provider. Hyper has a free tier, so you can simply install Crush, select a Hyper model, sign in, and start coding without setting up API keys or buying credits. The free plan currently gives you 100 Hypercredits every month , which makes it useful for testing Crush and trying some of its coding-focused models for free. Which One Should You Use? If I were starting today, I would probably try OpenCode first . It gives you a really good balance of agent capabilities, model flexibility, and free access through OpenCode Zen. After that, it depends on how you like to work. Choose Gemini CLI if you want the easiest access to Google's Gemini models, Kilo Code if you want a large selection of free hosted models, Cline if you prefer working inside an IDE, and Crush if you want a polished terminal-first experience. Of course, free models come with limits. Quotas can change, promotional models may disappear, and they may not be enough for heavy work on large production repositories. But that is not really the point. You can now install a capable coding agent, connect it to a free hosted model, and start experimenting with agentic software development without paying upfront. Abid Ali Awan ( @1abidaliawan ) is a certified data scientist professional who loves building machine learning models. Currently, he is focusing on content creation and writing technical blogs on machine learning and data science technologies. Abid holds a Master's degree in technology management and a bachelor's degree in telecommunication engineering. His vision is to build an AI product using a graph neural network for students struggling with mental illness. <= Previous post Next post =>",
+      "published_date": "2026-10-23",
+      "tags": [],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "KDnuggets",
+        "feed_url": "https://www.kdnuggets.com/feed"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, mcp",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 31,
+    "llm_reason": "工具清單型文章，無技術深度",
+    "novelty": 2,
+    "impact": 5,
+    "trending": 9,
+    "practicality": 10,
+    "blog_worthiness": 5
+  }
+]
