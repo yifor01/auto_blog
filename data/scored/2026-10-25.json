@@ -1,0 +1,536 @@
+[
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Researchers from Stanford and UC Berkeley Introduce TokenGate: Token-Gated Attention Makes Long-Context Prefill Up to 11.3x Faster",
+      "url": "https://www.marktechpost.com/2026/10/25/stanford-berkeley-tokengate-learned-token-pruning-llm-prefill/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "Stanford and UC Berkeley researchers released TokenGate , a module for long-context prefill. TokenGate learned token pruning lets an existing LLM skim its input. Only the tokens that matter get full processing. The research team reports 1.4x to 11.3x faster time-to-first-token (TTFT) with no accuracy loss. Peak prefill memory drops 1.5x to 3.4x. Code and checkpoints are on GitHub under Apache-2.0. TokenGate is a drop-in component that adds trainable token pruning to pretrained LLMs. Transformers push every token through every layer. Attention cost grows quadratically with length. Training-free pruning is cheap but loses accuracy at high pruning rates. Architectural changes often need pre-training from scratch. The forward pass splits into 3 phases: Only the document part of the prompt is prunable. The question is never pruned. Top-K selection is not differentiable, which blocks end-to-end training. TokenGate borrows the Mixture-of-Experts router trick. Each kept token’s score becomes a bias on attention logits above the gate. That bias gives gradients a path back to the scorer. A learnable per-head gain and a learnable temperature refine this. The temperature corrects for each query seeing fewer keys. Training uses plain next-token loss. Each step averages a full-context loss and a random-budget loss. So 1 trained gate works across budgets. The research team tested Qwen3-1.7B on RepoBench-P, 2WikiMultihopQA, MultiNews, BioDEX and needle-in-a-haystack (NIAH). Baselines were FastKV, SlimInfer, DASH, GemFilter, FlexPrefill and MInference, on the same LoRA backbone. The learned selector beats FastKV’s heuristic at the same layer. Even random-K selection scores higher on the TokenGate backbone. The research team credits backbone co-adaptation. Yes, Qwen3.5-2B mixes Gated DeltaNet and full-attention layers. On NIAH 32k, TokenGate at layer 3 matched full-prefill accuracy. It ran 3.8x faster than full prefill and 2.1x faster than FastKV. Gating at layers 1 or 2 reached 7.8x, within 6% accuracy. FastKV can only prune attention layers. Self-reported gains use different setups, so they are not directly comparable. Pruning layers come from TokenGate’s Appendix C.2 . The GitHub Repo needs Python 3.10+ and CUDA PyTorch 2.9+. An optional FlashAttention-2 key-bias kernel speeds up dense Qwen3. It costs 1.0x to 1.1x a plain call. Without it, inference falls back to FlexAttention. A {state} placeholder marks the prunable document. generate takes a max_kept_prefill_tokens budget. Checkpoints cover all 5 tasks on Qwen3-1.7B, plus a Qwen3.5-2B NIAH gate. Example: liana313/tokengate-niah-qwen3-1.7b . Training mirrors a TRL/PEFT recipe. Each step is 1.3x slower than plain LoRA. Runs converged faster on 4 of 5 tasks. Mean training time was 1.8 versus 2.2 A100 hours. Check out the Paper , GitHub repo and Hugging Face paper page . Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post Researchers from Stanford and UC Berkeley Introduce TokenGate: Token-Gated Attention Makes Long-Context Prefill Up to 11.3x Faster appeared first on MarkTechPost .",
+      "published_date": "2026-10-25",
+      "tags": [
+        "Agentic AI",
+        "AI Infrastructure",
+        "AI Paper Summary",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Editors Pick",
+        "Language Model",
+        "Machine Learning",
+        "New Releases",
+        "Software Engineering",
+        "Staff",
+        "Tech News",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 38.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: mixture of experts, lora, long context",
+      "⚖️ 來源權重: rss +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 72,
+    "llm_reason": "可微分token剪枝加速長文本prefill達11倍，附程式碼可復現",
+    "novelty": 13,
+    "impact": 13,
+    "trending": 13,
+    "practicality": 17,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Microsoft Open-Sources Agensh: A Multi-Agent Harness for 1,024 Agents",
+      "url": "https://www.marktechpost.com/2026/10/24/microsoft-agensh-multi-agent-harness-1024-agents/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "Microsoft Research has open-sourced Agensh , a decentralized harness for large teams of coding agents. The Agensh multi-agent harness removes the central orchestrator that most agent frameworks depend on. Every worker picks its own sub-task, shares findings and merges code into a common Git repo. On ProgramBench, the team scaled the setup from 1 agent to 1,024 agents. Agensh is a multi-agent harness from Microsoft Research that coordinates many LLM agents without a lead agent. The target problem is the orchestrator ceiling. In orchestrator-worker designs, a lead agent plans, assigns and merges all work. The research paper cites Claude Code agent teams, Codex sub-agents, Copilot fleet and Kimi Agent Swarm as examples. Agensh lets the workers do that coordination themselves. Each worker runs the same 5-step loop, concurrently and asynchronously: Three services connect the workers. Gitea hosts the shared workspace, with branches, PRs and merge conflicts. Mattermost carries a team channel plus direct messages for urgent collisions. A shared context board, adapted from DeLM , stores typed notes: OBSERVED, FACT, FAIL, CLAIM and PATCH_SUMMARY. The loop lives in the prompt, not in runtime code. Every worker gets the same prompt except its ID. Agensh sits on top of a single-agent harness. The experiments used GitHub Copilot CLI . The research paper states thin adapters can connect other harnesses, such as Claude Code. Microsoft team tested the 5 hardest ProgramBench tasks: FFmpeg, gromacs, pandoc, PHP-src and ctags. Agents rebuild each program from its observed behavior. They work offline, within 6 hours. Reference repos range from 2,767 files (pandoc) to 26,266 files (PHP-src). With GPT-5.6-sol at high reasoning effort, the mean final test-pass rate moved as follows: That is a 9.47-point gain, about 49% relative. On pandoc alone, scores were 33.89% (1), 41.75% (8), 43.11% (32), 50.94% (128) and 55.06% (1,024). Speed improved too: on pandoc, 128 agents passed 30% at the 30-minute checkpoint. 32 and 8 agents needed 60 and 90 minutes. The README adds a newer model. With GPT-6.1-sol, pandoc rose from 56.19% (1 agent) to 79.59% (32 agents). That is a 41.64% relative gain. These GPT-6.1-sol figures are not in the v1 paper. The research team traced worker trajectories at each scale: None of these roles was hard-coded. The release includes a single-node Docker Compose team and a single-agent baseline. Both use native Copilot ACP sessions. You need Linux with Docker Engine, Compose v2, systemd, cgroup v2 and Python 3.11+. Defaults are 8 workers, 6 hours per task and gpt-5.6-sol at high effort. You also need ProgramBench (v1.2.5 was validated) and a model API token. Full steps sit in the reproduction guide . Check out the Paper , GitHub Repo and Project Page . Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post Microsoft Open-Sources Agensh: A Multi-Agent Harness for 1,024 Agents appeared first on MarkTechPost .",
+      "published_date": "2026-10-25",
+      "tags": [
+        "Agentic AI",
+        "AI Agents",
+        "AI Infrastructure",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Editors Pick",
+        "For Devs",
+        "Harness",
+        "Machine Learning",
+        "New Releases",
+        "Open Source",
+        "Python",
+        "Staff",
+        "Tech News",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, multi-agent, reasoning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 74,
+    "llm_reason": "去中心化協調千規模編碼agent，突破orchestrator瓶頸",
+    "novelty": 14,
+    "impact": 13,
+    "trending": 16,
+    "practicality": 14,
+    "blog_worthiness": 17
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "Cerebras Deploys Trillion-Parameter AI Models",
+      "url": "https://www.cerebras.ai/blog/how-we-deploy-trillion-parameter-frontier-models-on-cerebras",
+      "authors": [
+        "gmays"
+      ],
+      "abstract": "Oct 22 2026 How we deploy Trillion-parameter frontier models on Cerebras Sarah Chieng One of the most frequently asked questions we get is how we deploy large models on Cerebras wafer-scale chips. A single Cerebras WSE-3T wafer has 44 GB of on-chip memory, and trillion-parameter frontier models need terabytes for their weights alone. In this post, we’ll explain how we split a large frontier model across multiple WSE-3T wafers, to run multi-trillion parameter models at 1000-2000+ tokens per second. We’ll use the open source model Kimi K3, with ~3 trillion parameters, as an illustrative example. By the end, you'll understand: How we fit the full model into on-chip memory How we map the model across multiple chips How we handle a high # of concurrent requests Breaking it down with Kimi K3 Kimi K3 is an open source, 3T parameter model with 69 linear-attention layers and 24 dense layers. It scores an impressive 88.3% on Terminal-Bench 2.1 (vs. GPT-5.6 Sol's 88.8%) and 91.2% on BrowseComp (vs. GPT-5.6 Sol's 90.4%). These results demonstrate frontier-level coding and agentic capabilities, even outperforming leading proprietary models on some benchmarks. Read more about Kimi K3 here . For this illustrative example, we use: A 256k assumed average request size 4-bit weight quantization (like the Hugging Face implementation ) An 8-bit KV cache #1: Size of Each layer To calculate the total number of Cerebras WSE-3T wafers we need to support Kimi K3, let’s first calculate the size of each model layer. Kimi K3 has 3 trillion parameters. If all 3T parameters are stored at 4 bits each, the raw parameter payload is: Dividing that payload by 93 layers then gives: #2: Number of Wafers Now that we know each layer needs about 16 GB, we can figure out how many layers fit on each 44 GB wafer. The answer depends on the layer type: Dense layers need additional room for a KV cache, because each dense (full-attention) layer stores the keys and values for every token in every active request. So, we place one dense layer per wafer and leave the remaining SRAM for its KV cache. Linear-attention layers do not require additional room for a KV cache. Instead of storing keys and values for every token, a linear-attention layer keeps a small, fixed-size state per request, regardless of context length. That leaves room for two linear layers per wafer (2 × 16 GB = 32 GB). Therefore, with Kimi K3’s 69 linear layers and 24 dense layers , we get: This gives us a total wafer count of 35 + 24 = 59 wafers. #3: Connecting the wafers together Cerebras executes models in a pipeline. After the Cerebras compiler maps the model layers across regions of wafers, the runtime maps the path for tokens to flow between wafers. For ultrafast latency, only activations need to be passed between the wafers, and this can be done via RDMA over Ethernet. This is roughly 2 microseconds per hop. It’s important to emphasize that because each Cerebras wafer has 44 GB of on-chip SRAM and each layer is only 16 GB, we are typically able to fit entire layers of the model directly on the chip. This means that in most cases, the model weights never have to move, and layers don’t need to be split across wafers. Only activations cross from one wafer to the next. #4: How we serve 1 request Now that we have our wafers connected together and the model laid out, we can think of each wafer as one stage in an assembly line: the model’s weights for each stage stay in place, and the request’s intermediate results move through the layer stages. For example, Wafer 1 runs model layers 1–2 and sends its activations to wafer 2. Wafer 2 runs layers 3–4 and passes its results to Wafer 3, and so on until the last wafer produces the next token. #5: How we serve many requests This raises a common misconception. If a token has to travel through each wafer in order, doesn’t each wafer sit idle while it waits for its turn? In effect, wouldn't the system be running at a batch size of one? No! If we only sent one request down the line at a time and waited for it to complete before starting the next request, this would be an inefficient use of the pipeline. Instead, we keep the entire pipeline full with different requests. Because the model is split into pipeline stages already, each stage can work on a different request at the same time. While stage 3 processes a token for request A, stage 2 processes one for request B, and stage 1 one for request C. In our example, each stage is a layer. In production, Cerebras uses much finer-grained stages, and many more of them. Loading player... Each stage can also process a micro-batch , a small group of requests, rather than a single request. So the number of requests in flight is roughly the number of stages times the micro-batch size. Loading player... To understand the tradeoff, smaller micro-batches make each request even faster, while larger micro-batches increase total throughput. #6: How many requests can we serve? The amount of on-chip memory allocated to KV cache determines the maximum number of concurrent requests. Every request in flight needs its own KV cache on each dense-layer wafer, so the size of on-chip memory sets the ceiling on concurrent requests. As explained above, we only need to calculate KV cache requirements for dense layers. For each 44 GB wafer that already has one dense layer, we can calculate the remaining space for the KV cache with: Total wafer storage - size of one dense layer. In this case: Calculating the # of Concurrent Requests To find the number of concurrent requests supported for any particular model mapping, we first calculate how much cache a single 256k request takes up: To then calculate the total number of concurrent requests this configuration would support, we divide: The total number of concurrent requests represents the number of simultaneous requests moving through the pipeline at any point in time. Unlike a GPU batch, those requests don’t wait for one another to finish, they stream through the pipeline continuously. Of course, neither concurrency nor batch size tells you exactly how efficiently an inference system performs. When evaluating the throughput of an inference system, the more meaningful metric is total token throughput per unit of power (e.g. tokens per second per megawatt), when measured at the same output generation speed. How this scales beyond 3T parameters The same approach extends to larger models: calculate the memory needed for weights and request state, distribute the model across wafers, and connect them into a pipeline. Each additional wafer contributes compute and on-chip memory, allowing us to accommodate models that exceed the capacity of any single chip. Thanks for learning with us! Interested in deploying a model on Cerebras or building with our inference cloud? Get started with our free API: cloud.cerebras.ai Reach out to our sales team: sales@cerebras.ai Designs by Halley Chang. Thanks to Atharva Talpade, Zhenwei Gao, Angela Yeung, Jessica Liu, Joyce Er, Emma Call, and Rohan Gupta for their review and feedback.\n\n(327 points, 116 comments on Hacker News)",
+      "published_date": "2026-10-25",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 327,
+        "num_comments": 116,
+        "hn_url": "https://news.ycombinator.com/item?id=50227356",
+        "object_id": "50227356"
+      }
+    },
+    "rule_score": 36.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agentic, quantization, kv cache",
+      "🔥 HN 爆紅: 327 points"
+    ],
+    "llm_score": 67,
+    "llm_reason": "萬億參數模型跨晶片部署實戰解析，工程細節紮實且話題正熱",
+    "novelty": 8,
+    "impact": 12,
+    "trending": 16,
+    "practicality": 14,
+    "blog_worthiness": 17
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Hugging Face Releases Carbon-X, a 14B Open DNA Language Model that Brings DNA and Natural Language Together for the First Time",
+      "url": "https://www.marktechpost.com/2026/10/25/hugging-face-carbon-x-14b-dna-language-model/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "Hugging Face has released Carbon-X , an open DNA language model with 14.8B parameters. Carbon-X is a decoder-only model from Hugging Face Bio. It reads raw DNA in a chat and answers in English. It predicts whether mutations are benign or pathogenic, flags regulatory regions, classifies organisms and predicts next bases. The weights ship under Apache 2.0, so labs can keep sensitive sequences on their own GPUs. Hugging Face built it with Zhongguancun Academy and TIGEM / University of Naples Federico II. Carbon-X starts from Qwen3-14B . DNA and text share 1 token stream in 1 decoder. There is no separate DNA encoder, unlike earlier work such as BioReason . The key structure piece is a hybrid tokenizer. It keeps Qwen3’s BPE vocabulary for text and adds 5,515 DNA tokens. These include 4,096 non-overlapping 6-mers, 1,364 tail tokens and 3 markers. One DNA token covers 6 base pairs. DNA runs of 6 or more A/C/G/T bases are tagged automatically. The backbone is a standard Qwen3 stack. It has 40 layers, hidden size 5120 and GQA with 8 KV heads. Training ran in four stages, per the model card : As per the release post, learning rate was the hardest knob. High rates learned DNA but forgot English. A lower rate, a 14B model and a long run fixed the trade-off. RL applied directly to Qwen3-14B never beat the 50% chance baseline on FrontierVEP. All scores are self-reported by Hugging Face. Carbon-X ran with thinking disabled. Competitors ran at their best reasoning effort. Carbon-X sits 27 points above Qwen3-14B and 0.8 points below GPT-6.1 Sol. It leads on coding-variant effects and next-base prediction. Frontier models still win on complex variants and single-base variants. Refusals shape these numbers. On NextBase, Opus 5.5 falls from 17.7% at low effort to 1.1% at max effort as refusals rise. Gemini 4 Argon drops from 58% to 38% on FrontierVEP as effort increases. Carbon-X also keeps general skills: 79.3% prompt-level strict accuracy on IFEval. Hugging Face prices Carbon-X at measured throughput on an H200 at $5 per hour. On that basis, it reports about 1/1,800 of GPT-6.1 Sol’s inference cost per problem. Scoring the 2.4 million ClinVar variants of uncertain significance would cost about $300. The same job costs $32,000 to $4 million on frontier models. Carbon-X also works as a sub-agent. Kimi K3’s DNA index rose from 49.4% to 60.5% when it consulted Carbon-X. Keep enable_thinking=False . The model was post-trained and evaluated that way. Check out the model card , release blog , GGUF weights and GitHub repo . Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post Hugging Face Releases Carbon-X, a 14B Open DNA Language Model that Brings DNA and Natural Language Together for the First Time appeared first on MarkTechPost .",
+      "published_date": "2026-10-25",
+      "tags": [
+        "Agentic AI",
+        "AI Infrastructure",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Editors Pick",
+        "Language Model",
+        "Large Language Model",
+        "Machine Learning",
+        "New Releases",
+        "Open Source",
+        "Staff",
+        "Tech News",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, reasoning",
+      "⚖️ 來源權重: rss +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 66,
+    "llm_reason": "DNA與自然語言共用token空間的開源LM，架構新穎少見",
+    "novelty": 15,
+    "impact": 11,
+    "trending": 10,
+    "practicality": 14,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "Five Qwen3.8-27B models match Fable 5 Using GVS5H Harness",
+      "url": "https://github.com/slee-persis/GVS5H",
+      "authors": [
+        "rzk"
+      ],
+      "abstract": "GVS5H: Five Qwen3.8-27B Models Match Claude Fable 5 on LiveCodeBench Hard GVS5H: Gorilla vs. 5 Humans Results Opus 5 ran on an earlier version of the scaffold, in a single pass served through OpenRouter rather than five on a pinned backend. Abstract. Frontier coding performance is typically bought with larger proprietary models at high cost. We introduce ledger-based zero-shot self-orchestration, a training-free method in which fresh instances of one model decompose problems and coordinate through a shared filesystem holding a plan, notes and current solution. Across eleven open and closed-weight models on the 100 latest hard LiveCodeBench problems, the method yields gains of up to 25.6 percentage points on pinned backends and offers two routes to frontier-level accuracy. Orchestrated Qwen3.8 Flash Next reaches 93.0% pass@1 against Fable 5's 90.4% at 9% of the cost, and locally served, open-weight Qwen3.8-27B rises from 66.8% to 92.4%. Gains are not universal: some models are unchanged or worse. Transcript analysis attributes the gain to decomposition and persistent context. Inference-time organization can approach frontier coding accuracy at a fraction of the cost, or slightly exceed it on self-hostable weights. — the paper Running the code Needs uv and an API key for the model you want to test. cd codebase/v2-current export OPENAI_API_KEY=... LCB_RELEASE=release_v6 \\\nESCALATION_CLOUD_MAX_TOKENS=128000 \\\nESCALATION_CLOUD_TIMEOUT=7200 \\\nMULTIAGENT_MODEL=openai:gpt-5.6-terra \\\nuv run --no-project --python 3.12 --with ' datasets<4 ' --with numpy --with anthropic \\ python escalation/run_bench.py --engine multiagent --only lcb --lcb 100 --parallel 8 --engine multiagent runs the manager; --engine single is the one-call baseline. Other models: anthropic:<model> , dashscope:<model> , openrouter:<model> , each with its own *_API_KEY . The pass@1 score prints at the end. Results are written to runs/results.json , workspaces to runs/ws/ . License Code is under the MIT License . The paper, figures and run data are under CC BY 4.0 . The LiveCodeBench fork, the benchmark problem statements\nand the LaTeX template files keep their own licenses. See NOTICE.md for\nwhich license covers which path.\n\n(179 points, 66 comments on Hacker News)",
+      "published_date": "2026-10-25",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 179,
+        "num_comments": 66,
+        "hn_url": "https://news.ycombinator.com/item?id=50228167",
+        "object_id": "50228167"
+      }
+    },
+    "rule_score": 20.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: open weight",
+      "⬆️ HN 熱門: 179 points"
+    ],
+    "llm_score": 73,
+    "llm_reason": "多實例自組織協調讓小模型逼近頂級模型，成本效益驚人",
+    "novelty": 14,
+    "impact": 13,
+    "trending": 14,
+    "practicality": 15,
+    "blog_worthiness": 17
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "Why is AI generated language so hard to understand?",
+      "url": "https://arxiv.org/abs/2610.29162",
+      "authors": [
+        "canjobear"
+      ],
+      "abstract": "Computer Science > Computation and Language [Submitted on 21 Oct 2026] Title: Why is AI-generated language so hard to understand? Authors: Thomas Hikaru Clark , Matias B. Martin , Kyle Mahowald View a PDF of the paper titled Why is AI-generated language so hard to understand?, by Thomas Hikaru Clark and 2 other authors View PDF HTML (experimental) Abstract: There is a widespread sense that AI-generated text has recently become harder to understand. In this study, we investigate a set of psycholinguistic features that are known to correlate with human processing difficulty (e.g., object relative clauses, long syntactic dependencies, low-frequency n-grams). Using a novel corpus of AI-generated text across diverse domains, we find that AI models use these difficult features more often than paraphrases generated by round-trip translation. Compared with human writing, all nine frontier and near-frontier models use more inanimate subjects with animate verbs and more low-frequency n-grams, and most also use longer dependencies, more stacked nouns, and more reduced object relatives in conversation; we also demonstrate substantial variation across model families. We propose and test a hypothesis as to why: while human language is optimized for successful communication, AI-generated text is increasingly optimized for other goals like math, code, and reasoning, in which there is a pressure for \\textit{information density} rather than successful communication. We provide a proof-of-concept for this hypothesis by fine-tuning a language model under a length penalty, which leads to a divergence from human-like linguistic behavior. Our findings highlight the axes of misalignment between linguistic processing demands in humans and LLMs, and point toward possible remedies. Subjects: Computation and Language (cs.CL) ; Artificial Intelligence (cs.AI) Cite as: arXiv:2610.29162 [cs.CL] (or arXiv:2610.29162v1 [cs.CL] for this version) https://doi.org/10.48550/arXiv.2610.29162 Focus to learn more arXiv-issued DOI via DataCite (pending registration) Submission history From: Thomas Clark [ view email ] [v1] Wed, 21 Oct 2026 03:54:08 UTC (528 KB) Full-text links: Access Paper: View a PDF of the paper titled Why is AI-generated language so hard to understand?, by Thomas Hikaru Clark and 2 other authors View PDF HTML (experimental) TeX Source view license Additional Features Audio Summary Current browse context: cs.CL < prev | next > new | recent | 2026-10 Change to browse by: cs cs.AI References & Citations SciX Google Scholar Semantic Scholar export BibTeX citation Loading... BibTeX formatted citation × loading... Data provided by: Bookmark Bibliographic Tools Bibliographic and Citation Tools Bibliographic Explorer Toggle Bibliographic Explorer ( What is the Explorer? ) Connected Papers Toggle Connected Papers ( What is Connected Papers? ) Litmaps Toggle Litmaps ( What is Litmaps? ) scite.ai Toggle scite Smart Citations ( What are Smart Citations? ) Code, Data, Media Code, Data and Media Associated with this Article alphaXiv Toggle alphaXiv ( What is alphaXiv? ) Links to Code Toggle CatalyzeX Code Finder for Papers ( What is CatalyzeX? ) DagsHub Toggle DagsHub ( What is DagsHub? ) GotitPub Toggle Gotit.pub ( What is GotitPub? ) Huggingface Toggle Hugging Face ( What is Huggingface? ) ScienceCast Toggle ScienceCast ( What is ScienceCast? ) Demos Demos Replicate Toggle Replicate ( What is Replicate? ) Spaces Toggle Hugging Face Spaces ( What is Spaces? ) Spaces Toggle TXYZ.AI ( What is TXYZ.AI? ) Related Papers Recommenders and Search Tools Link to Influence Flower Influence Flower ( What are Influence Flowers? ) Core recommender toggle CORE Recommender ( What is CORE? ) Author Venue Institution Topic About arXivLabs arXivLabs: experimental projects with community collaborators arXivLabs is a framework that allows collaborators to develop and share new arXiv features directly on our website. Both individuals and organizations that work with arXivLabs have embraced and accepted our values of openness, community, excellence, and user data privacy. arXiv is committed to these values and only works with partners that adhere to them. Have an idea for a project that will add value for arXiv's community? Learn more about arXivLabs . Which authors of this paper are endorsers? | Disable MathJax ( What is MathJax? )\n\n(236 points, 191 comments on Hacker News)",
+      "published_date": "2026-10-25",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 236,
+        "num_comments": 191,
+        "hn_url": "https://news.ycombinator.com/item?id=50223647",
+        "object_id": "50223647"
+      }
+    },
+    "rule_score": 25.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: reasoning, fine-tuning",
+      "⬆️ HN 熱門: 236 points"
+    ],
+    "llm_score": 58,
+    "llm_reason": "心理語言學視角解析AI文字難懂原因，洞察新穎有趣",
+    "novelty": 13,
+    "impact": 9,
+    "trending": 13,
+    "practicality": 7,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "How to Run Underdog Saluki 27B: 2-Bit Qwen3.8-27B Tool-Calling Guide",
+      "url": "https://www.marktechpost.com/2026/10/24/underdog-saluki-27b-coding-guide-llama-cpp/",
+      "authors": [
+        "Sana Hassan"
+      ],
+      "abstract": "In this tutorial, we work with Underdog Saluki 27B , a 7.9 GB build of Qwen3.8-27B that its makers say keeps tool calling intact at about two bits per weight and even edges out the full 54 GB model on their own 120-task benchmark. Saluki is built on ISTA-DASLab’s GSQ-RCO quantization of the same model, so we put both files side by side in stock llama.cpp. We start with the files themselves: a tensor-by-tensor diff of the two GGUF headers, then a byte-level comparison that shows whether Saluki is a remix of ISTA’s bits or a changed model. We then serve each file on one GPU, read its memory and speed, and score both on the same seeded 120 tasks from the Berkeley Function Calling Leaderboard, using BFCL’s own checker with strict and lenient parsing. Everything the notebook touches is pinned before anything runs. The setup cell records the llama.cpp release, both model files and fourteen BFCL files by size and SHA-256, and it fixes the sampler for every request, because llama-server otherwise falls back to defaults we did not choose. It detects the platform, an NVIDIA GPU on Linux or an Apple-silicon Mac, and on Colab it ensures the CUDA 12 runtime libraries the prebuilt llama. cpp needs are importable.cpp needs are importable. We download the CUDA build of llama.cpp b11565, both 2-bit files and the BFCL data, and check every byte against its pin. The Hugging Face downloads are resumable, and the hashes are the Hub’s own LFS digests at a fixed revision, so a silently replaced file would stop the notebook rather than change its results. BFCL’s task files, answer files, and checker code all come from one gorilla commit. The cell prints how long the downloads took, which is the slowest part of the run on Colab. Reading the two GGUF headers in plain Python shows exactly what Saluki changed. Both files have the same 851 tensors with the same shapes, and the type table predicts each file’s size in bytes. Saluki changes the type of 146 tensors and every change cuts bits: most fall on the feed-forward down projections and the output layer, and the small DeltaNet gate vectors drop from BF16 to Q8_0. No attention or DeltaNet projection matrix changes, and the header still names ISTA DASLab as the quantiser. Same types don’t mean the same weights, so we compare the bytes of the 705 tensors that keep their type. Only one of 352 quantized matrices is byte-identical, yet 98.4% of their bytes match, consistent with small edits to the underlying weights followed by re-quantizing on the same grids. The unquantized norm and gate vectors settle it: most changed by a median of a few parts in ten thousand. Saluki is a lightly changed model, not a re-encoding of ISTA’s file. Qwen3.8-27B is a hybrid: 48 of its 64 blocks are Gated DeltaNet linear-attention layers with a fixed recurrent state, and only every fourth block keeps full attention. The KV cache therefore costs 64 KiB per token instead of 256 KiB, plus about 150 MiB of state per sequence. We start llama-server with one slot, read its buffers from the log, check where its default sampler comes from, and look at the prompts the chat template builds with thinking off, on, and at low effort. Speed comes from the server’s own timings rather than a stopwatch around the request. We send a 256-token and a 1,024-token prompt with the prompt cache off and force 128 output tokens, which gives a prefill rate and a decode rate at each length. A dense 27B model reads its full weight file for every generated token, so decode speed mostly depends on memory bandwidth, and the same probe runs again on ISTA’s file later for a like-for-like comparison. Underdog Bench’s 120 tasks are not published, so we draw our own: 24 per kind from the same five BFCL v4 categories, with a fixed seed. We send each task to the server as an OpenAI tool request, converted with BFCL’s own function, with thinking off and greedy decoding. Strict scoring uses only the calls llama.cpp parses and BFCL’s ast_checker, while lenient scoring re-reads the raw reply with a forgiving parser, which is how we test the vendor’s strict-versus-forgiving gap. Turning thinking on is the card’s advice for general use, but at 27B every reasoning token costs time. We re-run six seeded multi-call tasks with reasoning on at the lowest effort and compare them with the same tasks run with thinking off: pass or fail, output tokens and seconds. Six tasks cannot settle whether thinking improves tool calls, so the cell focuses on cost and shows how many extra tokens a single tool call buys when the model thinks first. The parent file follows the same path. We stop Saluki’s server, start one on ISTA’s IQ2_XS file with the same flags, read its memory, repeat the speed probe and score it on the same 120 tasks with the same checker and parsing rules. Running one model at a time keeps each well within the GPU’s memory, and using one harness for both removes differences in prompts, sampling, or parsing from the comparison. Because both models answered the same tasks, the comparison is paired. The cell prints the per-kind scores next to the vendor’s per-kind numbers for Saluki and runs an exact McNemar test on the tasks where the two files disagree, for strict and lenient scoring. A gap of a few tasks in 120 sits inside run-to-run noise, as the vendor’s page itself concedes, so the test tells us whether our sample shows a real difference. Scores hide where calls go wrong, so this cell breaks the failures down by BFCL’s own error types: wrong number of calls, wrong or missing arguments, a call made when no tool fits, and replies the stock server could not parse. It also lists the tasks the lenient reading rescues and prints one failed task beside its expected answer, the quickest way to tell a model error from a scoring artifact. The summary prints each step’s one-line result and the claims ledger (held, did not hold, or undecided), along with the hardware and the llama. cpp version.cpp version. It closes with what the notebook does not test: the full-size Qwen3.8-27B, the vendor’s own task lists, the agentic and math benchmarks, and the vision add-on. In conclusion, Saluki is not quite what its file suggests. Its header keeps ISTA’s 851-tensor layout and saves bits only where ISTA spent more, yet its bytes and unquantized vectors show a model whose weights were changed, consistent with Underdog calling it a preview checkpoint. That turns the tool-calling comparison with its parent into a test of that training rather than of quantization alone. Both files run in stock llama.cpp, one at a time, and BFCL’s own checker gives a paired comparison on identical tasks. Small samples, greedy decoding, and a single run limit what any one notebook can claim, so the intervals matter as much as the scores. Check out the FULL CODES here . All credit goes to the researcher of this project. Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post How to Run Underdog Saluki 27B: 2-Bit Qwen3.8-27B Tool-Calling Guide appeared first on MarkTechPost .",
+      "published_date": "2026-10-25",
+      "tags": [
+        "Artificial Intelligence",
+        "Editors Pick",
+        "Language Model",
+        "Staff",
+        "Technology",
+        "Tutorials"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agentic, function calling, reasoning, quantization, kv cache",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 47,
+    "llm_reason": "量化模型比較教學實用但方法非原創",
+    "novelty": 5,
+    "impact": 6,
+    "trending": 9,
+    "practicality": 16,
+    "blog_worthiness": 11
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Cognition Open-Sources an Agent Plugin that Helps Secure Systems against Recent Cybersecurity Threats",
+      "url": "https://www.marktechpost.com/2026/10/24/cognition-devin-vulnerability-fixes-plugin-php2shell-nodejs-gitlab/",
+      "authors": [
+        "Michal Sutter"
+      ],
+      "abstract": "Cognition has released the Devin Vulnerability Fixes plugin , a free, open-source set of agent skills. It targets three critical remote code execution (RCE) advisories. They cover PHP2Shell , the Node.js October 21, 2026 security release and a CVSS 10.0 self-managed GitLab bug . The skills run in Devin and in any coding agent that reads SKILL.md files . Cognition packaged the remediation workflow it used internally . Developers can do inventory, approve, patch, test, then ship 1 pull request per repository. The Devin Vulnerability Fixes plugin is a set of three Agent Skills from Cognition. They find and patch vulnerable PHP, Node.js and self-managed GitLab deployments. The source is on GitHub under the MIT license. Cognition’s product page lists it as free and open source. Every skill follows the same five-step shape : The skills also encode known patching traps. Debian and Ubuntu backport fixes without changing upstream versions, so php -v can mislead. Ubuntu 24.04’s fixed package is 8.3.6-0ubuntu0.24.04.13 . Digest-pinned images need a new digest. Changing Composer’s require.php patches nothing. In Devin, open Customize, then Plugins, then Browse Marketplace, and search for Vulnerability Fixes. The Devin CLI uses devin plugins install CognitionAI/devin-marketplace#plugins/devin-vuln-fixes . For other agents, run npx skills add CognitionAI/devin-vuln-fixes . Claude Code users can add the marketplace and run /plugin install vuln-fixes@cognition-skills . Then ask in plain language, such as ‘Please fix my PHP vulnerability.’ Slash commands also work: /fix-php-vuln , /fix-node-vuln and /fix-gitlab-vuln . These tools solve adjacent problems. Dependabot and the code-fix agents work on application dependencies and source code. Cognition’s plugin targets the runtime layer: base images, OS packages and infrastructure-as-code. Check out the GitHub repo , the Cognition blog post and the plugin page . Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post Cognition Open-Sources an Agent Plugin that Helps Secure Systems against Recent Cybersecurity Threats appeared first on MarkTechPost .",
+      "published_date": "2026-10-25",
+      "tags": [
+        "Agentic AI",
+        "AI Agents",
+        "AI Infrastructure",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Context Engineering",
+        "Editors Pick",
+        "For Devs",
+        "Harness",
+        "New Releases",
+        "Open Source",
+        "Python",
+        "Software Engineering",
+        "Staff",
+        "Tech News",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 56,
+    "llm_reason": "打包既有修補流程為agent skill，實用但創新有限",
+    "novelty": 6,
+    "impact": 9,
+    "trending": 13,
+    "practicality": 16,
+    "blog_worthiness": 12
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "No signs of AI payoff outside the tech sector",
+      "url": "https://www.apollo.com/wealth/insights-news/insights/daily-spark/no-signs-of-ai-payoff-outside-the-tech-sector",
+      "authors": [
+        "the-mitr"
+      ],
+      "abstract": "Macroeconomic Indicators & Trends October 24, 2026 No Signs of AI Payoff Outside the Tech Sector About the Author Torsten Slok Partner, Chief Economist Despite massive investments and widespread hype around artificial intelligence, the technology has delivered zero financial payoff to corporate America outside of tech. Revenue per worker is rising for the Mag 7 but is flat for the S&P 493, see the first chart below. Profit margins are rising for the Mag 7 but are flat for the S&P 493, see the second chart below. And there are still no signs of AI boosting productivity growth, see the third chart below. With no impact on the bottom line, mainstream corporate America is pulling back and starting to view token spending not as a source of growth but as a cost center that weighs on margins. VC-backed companies are spending more and more on tokens, but mainstream corporate America does not need the latest model and is unwilling to pay for it. As long as agentic AI and token spending are confined to a small part of the economy, the macroeconomic effects of AI will be very limited, see the fourth and fifth charts below. The question looking ahead is whether, even as models become commoditized, mainstream corporate America can turn increasingly cheap intelligence into higher revenue growth and higher profit margins. That may be harder than it sounds. AI may be a great calculator, but in business, intelligence is mostly judgment. Judgment depends on context, and the answer varies with which human or which model you ask. Perhaps most importantly, AI does not understand accountability, trust, culture, unwritten rules, ethical trade-offs or fairness, all of which shape reputational risk and ultimately drive revenue growth and profit margins. The bottom line is that the AI story will be decided in the S&P 493, not the Mag 7, and so far, there is no evidence that revenue growth or margins are improving outside the tech sector. 5 pages Note: Inflation adjusted to 2019 Q4. Sources: Bloomberg, Macrobond, Apollo Chief Economist 5 pages Sources: Bloomberg, Macrobond, Apollo Chief Economist 5 pages Note: Total Factor Productivity (TFP) is the utilization-adjusted series from the San Francisco Fed (Fernald, 2014), adjusted for cyclical variation in factor utilization. Sources: Federal Reserve Bank of San Francisco, US Bureau of Labor Statistics, Apollo Chief Economist 5 pages Sources: Ara Kharazian, Chief Economist, Ramp; Apollo Chief Economist 5 pages Sources: Ramp AI Index, Apollo Chief Economist Download high-res charts Are you a financial professional? Tell us your role for a more relevant Apollo.com experience. I'm a Wealth Professional I'm an Institutional Investor I'm neither of these Thanks for letting us know. Your preference has been saved. Disclosures This presentation may not be distributed, transmitted or otherwise communicated to others in whole or in part without the express consent of Apollo Global Management, Inc. (together with its subsidiaries, “Apollo”). Apollo makes no representation or warranty, expressed or implied, with respect to the accuracy, reasonableness, or completeness of any of the statements made during this presentation, including, but not limited to, statements obtained from third parties. Opinions, estimates and projections constitute the current judgment of the speaker as of the date indicated. They do not necessarily reflect the views and opinions of Apollo and are subject to change at any time without notice. Apollo does not have any responsibility to update this presentation to account for such changes. There can be no assurance that any trends discussed during this presentation will continue. Statements made throughout this presentation are not intended to provide, and should not be relied upon for, accounting, legal or tax advice and do not constitute an investment recommendation or investment advice. Investors should make an independent investigation of the information discussed during this presentation, including consulting their tax, legal, accounting or other advisors about such information. Apollo does not act for you and is not responsible for providing you with the protections afforded to its clients. This presentation does not constitute an offer to sell, or the solicitation of an offer to buy, any security, product or service, including interest in any investment product or fund or account managed or advised by Apollo. Certain statements made throughout this presentation may be “forward-looking” in nature. Due to various risks and uncertainties, actual events or results may differ materially from those reflected or contemplated in such forward-looking information. As such, undue reliance should not be placed on such statements. Forward-looking statements may be identified by the use of terminology including, but not limited to, “may”, “will”, “should”, “expect”, “anticipate”, “target”, “project”, “estimate”, “intend”, “continue” or “believe” or the negatives thereof or other variations thereon or comparable terminology. Sign Up for The Daily Spark Get daily data-driven insights from industry-leading economist Dr. Torsten Slok delivered right to your inbox, every day. Subscribe\n\n(597 points, 639 comments on Hacker News)",
+      "published_date": "2026-10-25",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 597,
+        "num_comments": 639,
+        "hn_url": "https://news.ycombinator.com/item?id=50224463",
+        "object_id": "50224463"
+      }
+    },
+    "rule_score": 26.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agentic",
+      "🔥 HN 爆紅: 597 points"
+    ],
+    "llm_score": 49,
+    "llm_reason": "HN熱議AI投資回報率數據，產業論戰性強但非技術",
+    "novelty": 4,
+    "impact": 10,
+    "trending": 18,
+    "practicality": 3,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Recode China AI",
+      "title": "🗞️DeepSeek’s $15B Round, Moonshot launches K3.1 Pro, and China’s AI Jobs Policy",
+      "url": "https://www.recodechinaai.com/p/deepseeks-15b-round-its-38gpu-hour",
+      "authors": [
+        "Tony Peng"
+      ],
+      "abstract": "China AI Weekly Digest summarizes the week’s big news, model updates, compute, policy, products, and research, drawn from the China AI Index newsfeed . The digest is (mostly) compiled and drafted by an AI agent using credible news outlets; I fact-check and edit it. Read to the end for “One to Watch” as this week’s video pick. This week: 306 stories tracked (0 editor picks, 90 English-language, 216 Chinese-language) over 2026-10-16–2026-10-23. DeepSeek reportedly raises roughly $15 billion, with Tencent and CATL among its biggest backers. Reuters reports that DeepSeek’s latest round has reached about RMB100 billion, against a RMB500 billion pre-money valuation. Tencent and CATL are among the largest investors; Meituan, Geely and GigaDevice are also participating, according to its sources. Reuters says completion is expected in the coming days and the terms could still change. ( Reuters / Bloomberg ) China moves to adapt employment policy to AI development. The State Council’s General Office issued guidance setting out 18 tasks across six areas, pairing AI-driven job creation with measures to manage displacement. The priorities include developing new occupations, helping smaller businesses retain and expand their workforce, and assessing the employment risks of AI adoption. The guidance also calls for AI training, support for workers changing roles, and stronger labor protections and social insurance for flexible and gig workers. Alongside these measures, it proposes using AI to improve employment services and establishing monitoring and early-warning systems for job-market disruption. Together, the measures signal that Beijing wants employment considerations built into AI adoption, with support for both new opportunities and workers whose jobs are changing. ( 財聯社 ) Moonshot AI launched Kimi K3.1 Pro with a one-million-token context window , alongside a Highspeed version it says runs two to three times faster. The update targets practical work like building software, creating editable 3D assets and conducting financial research. In Moonshot’s reported Terminal-Bench 4.0 results, K3.1 Pro scored 65.7%, ahead of GPT-6 Astra’s 58.2% and just below Claude Opus 5.5’s 66.4%. The model reports 55 on artificial analysis intelligence index, the fourth best model. The company also proactively curbs hacking ability in K3.1 by removing cyber-related data in mid- and post-training. Both versions are available through Kimi’s products and API, with full model weights scheduled for release by November 4. ( Kimi technical blog ) Washington restricts DeepSeek in civilian government systems while Beijing keeps a route open for model exports. A Department of Home Security order made public this week bars covered DeepSeek products from federal civilian procurement and requires their removal from agency systems, including certain third-party implementations. Meanwhile, China’s proposed AI export controls remain under consultation through November 15, with provisions facilitating open-source releases and excluding technology already in the public domain. State media reports that DeepSeek and MiniMax have completed registration for open-sourcing and overseas licensing. ( AP / SCMP / Recode China AI ) Chinese AI labs are churing out flash-model updates and inference tools. Plus, K3.1 is coming! DeepSeek released DeepInfer on October 20, making its internally developed inference framework available to other developers. The framework supports V4.1-Flash on both Nvidia’s SM100 Blackwell GPUs and Huawei’s Ascend 950 chips. The company says its production system serves 155 trillion tokens daily from a single cluster, generating $38 in revenue per GPU-hour even at off-peak pricing. ( SCMP / @deepseek_ai ) MiniMax launched M3.1 Flash and acknowledged the anonymous “Space Bunny” as an earlier version. Its launch announcement lists API prices of $0.15 per million input tokens and $0.60 per million output tokens. VentureBeat reports strong business-task results alongside a high hallucination rate. ( VentureBeat / @MiniMax_AI ) Ant announced open weights for Ling-3.0-flash-Sante, its healthcare-focused mixture-of-experts model, reporting 124 billion total parameters and 5.1 billion active parameters per token. It also announced five Ming-3.0 speech models spanning synthesis, audio understanding and speech recognition, and previewed Ling-3.1-flash-1019, claiming improvements on Artificial Analysis intelligence and agent benchmarks. ( @AntLingAGI / @AntLingAGI / @AntLingAGI ) Tencent announced Hy Memory 2.0, including a memory model, framework and MemHub, a CLI and Mac tool intended to synchronize memories across AI applications. ( @TencentHunyuan ) Chip orders, production constraints and semiconductor financing showed how much infrastructure still sits behind cheaper AI. ByteDance, Alibaba and Tencent reportedly ordered more than three million Nvidia RTX PRO 5500 cards, with a combined sticker value above $35 billion, Reuters reports. These are orders for export-compliant workstation GPUs, primarily for inference—not confirmed deliveries. Nvidia reportedly cannot guarantee fulfillment because demand exceeds planned production. ( Reuters ) Cambricon’s third-quarter profit rose 148% year on year to about $210 million, SCMP reports. Yet Bloomberg highlighted sales below expectations and output constraints, adding a production-side qualification to the earnings growth. ( Bloomberg / SCMP ) CXMT’s profit turnaround, supported by rising memory prices, did not prevent its shares from falling more than 6%, according to CNBC. ( Bloomberg / CNBC ) Alibaba’s DAMO Academy unveiled an automotive RISC-V roadmap and the Xuantie E908A processor IP. Its next-generation C950A targets autonomous-driving and embodied-AI workloads; the roadmap’s performance targets should be distinguished from shipping products. ( 量子位 ) HuiXi Intelligent reported more than RMB2.5 billion in cumulative financing this year as it expands its embodied-AI chip business. That figure is a year-to-date total, rather than the size of a single newly disclosed round. ( 36Kr ) China’s draft technology-export catalogue also covers AI and memory-chip design and computing systems exceeding 10,000 accelerator cards. The proposal includes facilitation for specified activities, including overseas fabrication and Chinese companies’ own overseas computing centers; the final rules remain unsettled. ( Recode China AI ) Outside DeepSeek’s proposed round, personal assistants and robotics components attracted disclosed capital. Today AI disclosed more than $200 million in cumulative financing for its personal-AI business. Its product direction centers on persistent memory and assistance that improves with a user’s history. ( 36Kr ) YITA Dynamics completed seed and seed-plus financings totaling more than RMB100 million. Investors include Matrix Partners China, SenseTime Guoxiang Capital, CCB International, Galbot and Fourier. The company develops embodied-intelligence operating platforms and power systems, putting this investment in the robotics component stack. ( 投資界 ) Alongside cross-border restrictions, Beijing added institutional support for data development and AI-related employment. China launched National Data Group in Xiongan, a state-owned enterprise tasked with developing and utilizing data resources and supporting AI development. Vice-Premier Ding Xuexiang attended its inauguration, placing a new corporate institution behind the national data-industry agenda. ( Bloomberg / SCMP ) The State Council’s General Office issued guidance on adapting employment policy to AI development, including expanding employment opportunities in emerging fields. It brings labor-market adjustment into the policy discussion alongside the push to deploy AI across industries. ( 財聯社 ) The US sanctioned five Chinese entities, including MiraclePlus and Shanghai Zhisuan Technology, in connection with suspected trade-secret theft.",
+      "published_date": "2026-10-25",
+      "tags": [],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "Recode China AI",
+        "feed_url": "https://www.recodechinaai.com/feed"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, post-training, mixture of experts",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 33,
+    "llm_reason": "資金與政策新聞摘要，無技術深度",
+    "novelty": 2,
+    "impact": 8,
+    "trending": 14,
+    "practicality": 2,
+    "blog_worthiness": 7
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Interconnects",
+      "title": "Podcast: Kimi K3.1 Pro, the new cyber reality, and Muse musings",
+      "url": "https://www.interconnects.ai/p/podcast-kimi-k31-pro-the-new-cyber",
+      "authors": [
+        "Nathan Lambert"
+      ],
+      "abstract": "We — Nathan and Florian — wanted to discuss all the messy trade-offs of a busy week in AI and ask all the pressing questions like: Why did Kimi K3.1 Pro have a mixed reaction with such incredible benchmarks? Will it be adopted? Were we wrong about the risks of open-weight models and cybersecurity? Why do cyber experts discuss recent events so differently than AI experts? What comes next in the few months? What will change our minds? We will write more about this subject, but wanted to bring you behind the curtain as we aspire to quickly learn more about the cybersecurity industry and trends across the last few years that have been leading us today. We conclude the podcast with some lighter topics, from Muse-maxing to excitement in still hiring junior technical talent. Please send us questions and topics, as we plan to record more of these podcasts going forward. Listen on Apple Podcasts , Spotify , and wherever you get your podcasts . For other Interconnects podcasts, go here . YouTube ↓ 08:15 Kimi’s open-weight cyber principles 11:23 You can hack everything era 15:54 PHP2Shell, LiteLLM, and the new internet 24:00 Abliterated APIs, safeguards, and trusted access 31:41 Anthropic not hiring juniors employees 36:16 Florian’s Muse addiction My thread with Dean Ball about the “boy who cried wolf” story of the frontier labs Kimi K3.1 Pro announcement blog Kimi K3.1 Pro on Artificial Analysis Intelligence Index Kimi K3.1 on Artificial Analysis defensive cyber benchmarks Open-weight Mythos would’ve been fine take PHP “hasn’t caused a disaster yet” update Abliteration.ai serving abliterated models API Morph serving abliterated DeepSeek via API Joshua Saxe’s Substack on AI and cybersecurity Azeem Azhar, “The internet’s Wuhan moment” Anthropic, “How employment is changing at Anthropic” LiteLLM security incident report 00:00:00 Nathan Lambert: We are back with another Interconnects podcast. We are with Florian, eval guy, recently moved to SF. Florian, is Kimi K3.1 Pro , name is a mouthful, going to live up to the benchmark scores, for example on Artificial Analysis , or where is it going to land? 00:00:17 Florian Brand: In the past, the Kimi models always lived up to the expectations, but this release is kind of weird compared to the others. I think it is also partially because they are becoming more professional, and the previous model drops were kind of out of nowhere. This time, which also got some criticism, they launched a bigger social media campaign, which allegedly also involved paying people to post about the model without disclosing. 00:00:56 Nathan Lambert: I think a lot of companies do this and tell you not to mention it, but it’s a mess. It’s bad form. No company should do it. Essentially, one person tweeted a screenshot of the press instructions for Kimi that said, “Don’t say this is a paid promotion.” And to my knowledge, no one has corroborated it after that. 00:01:15 Florian Brand: Yeah, and there are right now a few of these model launches, including by American companies, that are just very obviously astroturfed. We have seen launches where it’s thousands of retweets and a few hundred likes, because it works so well to get the attention. Some of them disclose that it is a paid ad while others don’t. But in general, we have seen the professionalization of model launches over time, and pretty quickly. A year ago, everyone just dropped the model, then patched vLLM afterwards, so no one was actually able to run any of the open models for a while. Now you get all the inference frameworks on day one, you get all the inference providers on day one. Or, which is also what we see more and more, the model creator has a few weeks of exclusive access before they release the weights. And that’s also what’s happening with K3.1 Pro. I think it’s two weeks of exclusive access before they release the model weights. 00:02:38 Nathan Lambert: They said the weights would come out by November 4th. And the headline things... I don’t know if I’m going to be able to share screen. I don’t have this set up on this computer. But the headline is this Artificial Analysis number where it’s ahead of GPT-6 Astra. And then if you look at the Kimi K3.1 blog, they have their headline numbers, which are really strong, and then they also have some numbers later on which seem a bit more jagged. I think it was Terminal-Bench Science , which is 20 points behind GPT-6 Astra. I think there were a few others, like ProgramBench . Do you know Terminal-Bench Science and ProgramBench? Are any of these things that people think are important benchmarks for frontier models? Or how do you explain the fact that on Artificial Analysis the model is top, what, three, four? It’s the two latest Claude 5.5 models, Muse Wonder Full, and then Kimi K3.1, which looks crazy. It just looks like totally crazy scores, and I think everybody is still surprised by it. But then there’s this long tail of details that you use to evaluate a model now. I had posted a thread on Twitter of, “What are people’s impressions?” And there’s a lot of people that are like, “This seems not great,” and then some people that are like, “Yeah, it’s fine.” I don’t know, there’s a mixed bag. Relative to K3, which I think was pretty unanimously, this feels like a big model and the post-training seemed a little bit undercooked for that. Maybe this is just a tiny bit RL fried. We’ll see where we land. 00:04:26 Florian Brand: For the benchmarks, one of the things is that the benchmarks that are right now used by Artificial Analysis, they will post their new version probably very soon after we release this podcast. 00:04:43 Nathan Lambert: We can’t tell you the exact date, but both of us know. 00:04:48 Florian Brand: In general, the Artificial Analysis benchmarks are rather short in terms of time horizon, whereas something like ProgramBench is really long and also very explorative. Other benchmarks are telling the model, “All right, this is the goal, and I want you to reach it,” whereas ProgramBench is more like, “All right, here’s what I want, but you need to explore a lot.” And I think that might be the reason that we see some differences: their RL training is still more towards the exploitative side of model training versus the explorative side, where you need to find the solution somehow before you actually know what you’re doing. 00:05:41 Nathan Lambert: But if you’re using a three trillion parameter model, I feel like you kind of want it to be pretty robust at exploration. Because if you’re going to want to use a model for pretty known coding tasks, like using DeepSeek-V4.1-Flash-1017 , which is not that far behind on these scores, it’s just going to be way faster. It might not be wildly different on cost per task with the actual token numbers. That’s why I think it’s pretty reasonable criticism of this Kimi release: a big model has got to be... Because it’s going to be slower, it’s got to be like Fable, which is just... I still think Fable is really nice if you’re doing very blurry things. I revert to it when checking my slides over sometimes, where I just feel like it kind of gets me a bit better, where Opus is really, really grindy. I think the open-weight models are better in this kind of grindy perspective, because you can just get them to be faster and cheaper. 00:06:44 Nathan Lambert: It seems like Kimi is gearing up for this Flash-style release with their naming change. Previous Kimi models were just K2, K2.6, K3, and now this is K3.1 Pro. So a lot of the company forecasting, investment-y side of interest on Twitter was, a lot hinges on this for Kimi, because it’s kind of true. We’re not the inference experts, but serving the model seems like you’ve got to commit way more resources to serve this three trillion versus this 700 billion parameter model. You’re going to need NVL72 racks, I’m guessing, to do it well.",
+      "published_date": "2026-10-25",
+      "tags": [],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "Interconnects",
+        "feed_url": "https://www.interconnects.ai/feed"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: post-training, open weight",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 34,
+    "llm_reason": "播客閒聊形式，觀點討論而非技術內容",
+    "novelty": 3,
+    "impact": 6,
+    "trending": 12,
+    "practicality": 3,
+    "blog_worthiness": 10
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "TechCrunch AI",
+      "title": "The AI graveyard: a running list of projects and startups that didn’t make it",
+      "url": "https://techcrunch.com/2026/10/24/the-ai-graveyard-a-running-list-of-projects-and-startups-that-didnt-make-it/",
+      "authors": [
+        "Lauren Forristal"
+      ],
+      "abstract": "Relay, an AI-powered workflow automation tool built as an alternative to Zapier, shut down entirely in August. The product let users automate email and task workflows using AI agents, but as OpenAI, Google, and other larger platforms built similar automation directly into their own tools, five-year-old Relay struggled to hold on to a reason to exist as a stand-alone product. More recently, chatbot platform Character.ai filed for bankruptcy just five years after launching. Aside from Character.ai and Relay, plenty of AI bets never even survive inside the companies that build them. According to S&P Global Market Intelligence , about 42% of AI initiatives are ultimately abandoned by their corporate parents. The reasons vary: insufficient funding, technical challenges, competition, difficulty scaling, or just weak user demand. The result is a growing AI graveyard. Below is a look at some of the most notable AI products, startups, launches, and bets that have shut down, pivoted, or significantly missed expectations. Think of it less as a scorecard of flops than as a record of what these attempts can (hopefully) teach the rest of the industry. OpenAI has taken several stumbles Image Credits: SeongJoon Cho/Bloomberg / Getty Images Even the biggest players aren’t immune. OpenAI, one of the most valuable private companies in the world, has had its own share of casualties and missteps. One of the more recent examples was its attempt to turn ChatGPT into a broader “ super app .” On July 9, OpenAI updated the app to combine several experiences, including separate “Chat,” “Codex,” and “Work” modes, while renaming the traditional, familiar version “ChatGPT Classic.” The redesign quickly drew criticism from users who found the new interface confusing and cluttered, and OpenAI rolled back the change soon after , bringing the familiar ChatGPT interface back. That wasn’t OpenAI’s only attempt to pull everything under one roof. The company has also shut down several stand-alone apps and folded their features directly into ChatGPT — a strategy that’s worked out better than the redesign did. ChatGPT Atlas, a stand-alone AI-powered web browser, lasted less than a year before being discontinued on August 9, with its most useful features absorbed into ChatGPT. The company did the same thing with Operator , an AI agent that could browse the web and complete tasks on a user’s behalf, and OpenAI has increasingly built image generation directly into ChatGPT, shrinking the role of DALL-E as its own separate destination for creating images. We also can’t forget its video-sharing platform, Sora , which struggled with high operating costs and user-retention challenges and shut down in March 2026. Apple’s Siri AI Image Credits: Artur Widak/NurPhoto / Getty Images When Apple unveiled Apple Intelligence in 2024, an improved Siri was one of the highlighted features. The pitch promised a Siri that could understand context, know what was happening across apps, and get tasks done effectively. However, Apple repeatedly pushed back the release of the new Siri, citing various reasons like engineering issues and bugs . This delay eventually contributed to a $250 million settlement over claims regarding how Apple marketed the AI capabilities of the iPhone 16. Siri AI finally appeared in the iOS 27 beta this past July, with the new AI-powered version rolling out to English-language users first this month; support for other languages is expected to follow. Microsoft’s Recall Announced at its 2024 Build developer conference, Microsoft’s Recall feature was pitched as an AI-powered “photographic memory” for Windows PCs, periodically taking screenshots of what a user was doing so they could later search back through their own digital history. Predictably, the announcement triggered an immediate backlash over privacy and security. Critics argued that Recall could create a searchable archive of highly sensitive information, including passwords, private messages, financial details, and other activity. Microsoft delayed the feature for nearly a year, giving the company time to rethink its security and privacy protections. Even after a redesign, the controversy hasn’t gone away. A cybersecurity researcher recently built a tool that could extract and display data that Recall had captured, reviving questions about whether Microsoft has actually fixed the underlying problem. Notion Mail Image Credits: Notion Notion Mail launched in April 2025 as an AI-focused email product designed to help users organize and automate their inboxes. However, the company noticed its users were using separate AI agents to handle their email inboxes instead. As a result, Notion Mail is scheduled to shut down on September 22 . Humane AI Pin Image Credits: Brian Heater The Humane AI Pin is probably one of the most well-known failures in AI hardware. Designed to provide AI features through a wearable device rather than a traditional smartphone, Humane raised $230 million from investors and garnered significant attention. But the product struggled mightily with performance, and the situation worsened when Humane warned customers to stop using its charging case because of a potential battery fire risk. Humane then shut down its AI Pin business in February 2025, with most of the company’s assets acquired by HP for $116 million. Rabbit R1 Image Credits: Rabbit The Rabbit R1 was another heavily hyped AI device. Unveiled at CES in January 2024, the AI companion was designed to perform tasks on behalf of its owner. Rabbit said it had sold 100,000 units shortly after launch. However, strong initial sales didn’t mean it was a strong product. Early reviews described the device as unfinished, with unreliable performance and a limited number of useful integrations. The company hasn’t given up, though. It has continued updating the R1, positioning it as a computer controller capable of performing agentic tasks. It also recently announced a new hardware project, dubbed “Project Cyberdeck,” aimed at creating a portable device built for vibe-coding. Huxe Image Credits: Huxe Huxe was an AI audio app, built by former developers of Google’s NotebookLM, that turned written information into conversational, podcast-style audio. The company shut down in May 2026, partly as larger platforms began offering similar experiences to large existing audiences. For instance, Spotify has been expanding its own AI-powered audio tools. Yupp Image Credits: Yupp Yupp was an interesting AI product: a free playground that allowed users to compare responses from hundreds of AI models side by side. Users could also vote on responses and earn cryptocurrency through the platform. At its peak, the platform let users test more than 800 models, including from companies such as OpenAI, Google, and Anthropic. But according to its founders, Yupp never achieved strong enough product-market fit to survive. The platform shut down in March 2026. Figgs AI Figgs AI operated from 2023 to 2024, letting users create and interact with customizable AI characters for role-play and storytelling. The platform reportedly drew more than 1 million users, but its developers said keeping the service free became too expensive to sustain, and they shut it down . Character.ai Founded in 2021 by former Google researchers Noam Shazeer and Daniel De Freitas, Character.ai became a buzzed-about consumer AI app by letting people chat with customizable bots, many of them modeled on celebrities and fictional characters. It raised $150 million at a $1 billion valuation in 2023. Then, the next year, Google paid a reported $2.7 billion to license its technology and bring its founders back into its orbit, leaving the startup to carry on without them. The trouble piled up after that. Families sued, alleging the chatbots contributed to teen suicides and self-harm, and Disney sent a cease-and-desist letter over unauthorized use of its characters. Character.",
+      "published_date": "2026-10-24",
+      "tags": [
+        "AI",
+        "evergreens",
+        "Microsoft",
+        "OpenAI",
+        "siri ai"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "TechCrunch AI",
+        "feed_url": "https://techcrunch.com/category/artificial-intelligence/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, vibe coding",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 23,
+    "llm_reason": "純新聞列表無技術內容，僅產業觀察價值",
+    "novelty": 2,
+    "impact": 5,
+    "trending": 8,
+    "practicality": 2,
+    "blog_worthiness": 6
+  },
+  {
+    "item": {
+      "source": "newsapi",
+      "source_name": "Amazon.com",
+      "title": "Build RAG-ready indexes from Amazon S3 with Amazon OpenSearch intelligent ingestion",
+      "url": "https://aws.amazon.com/blogs/big-data/build-rag-ready-indexes-from-amazon-s3-with-amazon-opensearch-intelligent-ingestion/",
+      "authors": [
+        "Hang Zuo"
+      ],
+      "abstract": "Amazon OpenSearch intelligent ingestion is a fully managed, serverless capability that turns documents and structured data in Amazon S3 into RAG-ready, searchable indexes with no pipelines to manage. Learn how it works and when to use Ingestion Jobs or Ingest…",
+      "published_date": "2026-10-23",
+      "tags": [
+        "newsapi"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "newsapi_source": "Amazon.com",
+        "published_at": "2026-10-23T21:50:38Z"
+      }
+    },
+    "rule_score": 20.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: rag",
+      "⚖️ 來源權重: newsapi +15"
+    ],
+    "llm_score": 34,
+    "llm_reason": "AWS產品功能介紹，行銷性質高於技術深度",
+    "novelty": 4,
+    "impact": 6,
+    "trending": 7,
+    "practicality": 10,
+    "blog_worthiness": 7
+  },
+  {
+    "item": {
+      "source": "newsapi",
+      "source_name": "Plos.org",
+      "title": "Efficacy and safety of fluoroquinolones in the treatment of human brucellosis: A systematic review and meta-analysis",
+      "url": "https://journals.plos.org/plosntds/article?id=10.1371/journal.pntd.0013822",
+      "authors": [
+        "Mohsen Mohammadi-Sartang, Nastaran Rafieipour, Shahla Afrasiabian, Roya Mahmoudi, Yousef Moradi, Medi Karimi, Karo Servatyari"
+      ],
+      "abstract": "Author summary Brucellosis is a zoonotic infection in which treatment failure and relapse remain important concerns. We compared fluoroquinolone-based regimens with standard treatments for human brucellosis. Fluoroquinolone-based regimens were associated with…",
+      "published_date": "2026-10-23",
+      "tags": [
+        "newsapi"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "newsapi_source": "Plos.org",
+        "published_at": "2026-10-23T14:00:00Z"
+      }
+    },
+    "rule_score": 20.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: safety",
+      "⚖️ 來源權重: newsapi +15"
+    ],
+    "llm_score": 0,
+    "llm_reason": "醫學meta分析與GenAI主題完全無關",
+    "novelty": 0,
+    "impact": 0,
+    "trending": 0,
+    "practicality": 0,
+    "blog_worthiness": 0
+  }
+]
