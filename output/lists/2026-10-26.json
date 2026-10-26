@@ -1,0 +1,701 @@
+{
+  "date": "2026-10-26",
+  "github": [
+    {
+      "title": "TauricResearch/TradingAgents",
+      "slug": "tauricresearch-tradingagents",
+      "url": "https://github.com/TauricResearch/TradingAgents",
+      "abstract": "Deutsch | Español | français | 日本語 | 한국어 | Português | Русский | 中文 TradingAgents: Multi-Agents LLM Financial Trading Framework News [2026-10] TradingAgents v0.7.0 released with runs on your own ChatGPT Plus or Pro plan, backtests scored from the first close after each decision, a note at start-up when a newer release is out, and a wheel attached to each GitHub release. [2026-10] TradingAgents v0.6.0 released with reports saved as one HTML page, a provider per model tier so the managers and analysts can run on different models, past decisions settled for every ticker while the analysts work, and company news read from Yahoo search while Yahoo's news feed is down. [2026-09] TradingAgents v0.5.2 released with parallel analysts for a faster analysis, a CLI that runs without prompts from flags such as --ticker and --date , the run's settings recorded in every report, and backtests that see only data published by each analysis date. Full release notes are in CHANGELOG.md . Earlier news [2026-09] TradingAgents v0.5.1 released with a package layout organised by what each module holds (import paths moved), optional Jev screening of social posts, GPT-6 Sol and Luna as the default models, and fixes to run isolation and SEC EDGAR statements. [2026-09] TradingAgents v0.5.0 released with point-in-time integrity across every dated path, SEC EDGAR fundamentals served as filed, backtesting over a ticker and date grid, portfolio-aware runs, and current model lineups across every provider. [2026-08] TradingAgents v0.4.0 released with look-ahead / point-in-time fixes across FRED macro, social sentiment, and the decision-log memory; clearer decision signals; working CLI checkpoint resume; Trader price grounding; and the GPT-5.6 and GLM-5.3 models. [2026-07] TradingAgents v0.3.1 released with correctness and stability fixes: Alpha Vantage look-ahead filtering, graph-router crash-safety, graph-shape-aware checkpoint resume, working crypto sentiment sources, a configurable LLM retry budget, Bedrock API-key auth, and Claude Sonnet 5 / Fable 5 support. [2026-06] TradingAgents v0.3.0 released with a verified data-access contract, an expanded provider registry (NVIDIA, Kimi, Groq, Mistral, Bedrock, and any OpenAI-compatible endpoint), FRED and Polymarket data vendors, a current-generation model catalog, and a CI gate. [2026-05] TradingAgents v0.2.5 released with the grounded Sentiment Analyst, GPT-5.5 etc. model coverage, Qwen/GLM/MiniMax dual-region support, TRADINGAGENTS_* env-var configurability with API-key auto-detection, remote Ollama support, non-US alpha benchmarks, and ticker path-traversal hardening. [2026-04] TradingAgents v0.2.4 released with structured-output agents (Research Manager, Trader, Portfolio Manager), LangGraph checkpoint resume, persistent decision log, DeepSeek/Qwen/GLM/Azure provider support, Docker, and a Windows UTF-8 encoding fix. [2026-03] TradingAgents v0.2.3 released with multi-language support, GPT-5.4 family models, unified model catalog, backtesting date fidelity, and proxy support. [2026-03] TradingAgents v0.2.2 released with GPT-5.4/Gemini 3.1/Claude 4.6 model coverage, five-tier rating scale, OpenAI Responses API, Anthropic effort control, and cross-platform stability. [2026-02] TradingAgents v0.2.0 released with multi-provider LLM support (GPT-5.x, Gemini 3.x, Claude 4.x, Grok 4.x) and improved system architecture. [2026-01] Trading-R1 Technical Report released, with Terminal expected to land soon. 🚀 TradingAgents | ⚡ Installation & CLI | 🎬 Demo | 📦 Package Usage | 🤝 Contributing | 📄 Citation 🎉 TradingAgents officially released! We have received numerous inquiries about the work, and we would like to express our thanks for the enthusiasm in our community. So we decided to fully open-source the framework. Looking forward to building impactful projects with you! TradingAgents Framework TradingAgents is a multi-agent trading framework that mirrors the dynamics of real-world trading firms. By deploying specialized LLM-powered agents: from fundamental analysts, sentiment experts, and technical analysts, to trader, risk management team, the platform collaboratively evaluates market conditions and informs trading decisions. Moreover, these agents engage in dynamic discussions to pinpoint the optimal strategy. TradingAgents framework is designed for research purposes. Trading performance may vary based on many factors, including the chosen backbone language models, model temperature, trading periods, the quality of data, and other non-deterministic factors. It is not intended as financial, investment, or trading advice. Our framework decomposes complex trading tasks into specialized roles. Analyst Team Fundamentals Analyst: Evaluates company financials and performance metrics, identifying intrinsic values and potential red flags. Sentiment Analyst: Aggregates news headlines, StockTwits, and Reddit chatter into a single sentiment read to gauge short-term market mood. News Analyst: Monitors global news and macroeconomic indicators, interpreting the impact of events on market conditions. Technical Analyst: Utilizes technical indicators (like MACD and RSI) to detect trading patterns and forecast price movements. The selected analysts work at the same time, each on its own tools, and the research debate starts once all of their reports are in. Researcher Team Comprises both bullish and bearish researchers who critically assess the insights provided by the Analyst Team. Through structured debates, they balance potential gains against inherent risks. Trader Agent Composes reports from the analysts and researchers to make informed trading decisions, determining the timing and magnitude of trades. Risk Management and Portfolio Manager Continuously evaluates portfolio risk by assessing market volatility, liquidity, and other risk factors. The risk management team evaluates and adjusts trading strategies, providing assessment reports to the Portfolio Manager for final decision. The Portfolio Manager approves/rejects the transaction proposal. If approved, the order will be sent to the simulated exchange and executed. Installation and CLI Installation Clone TradingAgents: git clone https://github.com/TauricResearch/TradingAgents.git cd TradingAgents TradingAgents needs Python 3.11 or later. Create a virtual environment in any of your favorite environment managers: conda create -n tradingagents python=3.13\nconda activate tradingagents Or with uv : uv venv --python 3.13 source .venv/bin/activate Install the package and its dependencies ( uv pip install . with uv): pip install . Docker Alternatively, run with Docker: cp .env.example .env # add your API keys docker compose run --rm tradingagents After updating the repository, rebuild the image with docker compose build . Results, reports, the memory log and the cache live in the tradingagents_data volume. To keep them in a folder on the host instead, create the folder and point TRADINGAGENTS_DATA_DIR at it, in .env or the shell: mkdir -p data && TRADINGAGENTS_DATA_DIR=./data docker compose run --rm tradingagents . For local models with Ollama: docker compose --profile ollama run --rm tradingagents-ollama Required APIs TradingAgents supports multiple LLM providers. Set the API key for your chosen provider: export OPENAI_API_KEY=... # OpenAI (GPT) export GOOGLE_API_KEY=... # Google (Gemini) export ANTHROPIC_API_KEY=... # Anthropic (Claude) export XAI_API_KEY=... # xAI (Grok) export DEEPSEEK_API_KEY=... # DeepSeek export DASHSCOPE_API_KEY=... # Qwen (international, dashscope-intl.aliyuncs.com) export DASHSCOPE_CN_API_KEY=... # Qwen (China, dashscope.aliyuncs.com) export ZHIPU_API_KEY=... # GLM via Z.AI (international) export ZHIPU_CN_API_KEY=... # GLM via BigModel (China, open.bigmodel.cn) export MINIMAX_API_KEY=... # MiniMax (global, api.minimax.io) export MINIMAX_CN_API_KEY=... # MiniMax (China, api.minimaxi.com) export OPENROUTER_API_KEY=... # OpenRouter export MISTRAL_API_KEY=...",
+      "stars_today": 1376,
+      "language": "Python"
+    },
+    {
+      "title": "NVIDIA/SkillSpector",
+      "slug": "nvidia-skillspector",
+      "url": "https://github.com/NVIDIA/SkillSpector",
+      "abstract": "SkillSpector Security scanner for AI agent skills. Detect vulnerabilities, malicious patterns, and security risks before installing agent skills. Overview AI agent skills (used by Claude Code, Codex CLI, Gemini CLI, etc.) execute with implicit trust and minimal vetting. In the 31,132-skill analyzed subset of the research dataset, 26.1% of skills contain vulnerabilities and 5.2% show likely malicious intent . SkillSpector helps you answer: \"Is this skill safe to install?\" SkillSpector is part of the NVIDIA Verified Skills pipeline , which scans, evaluates, and signs agent skills before publication. Skills that pass are published to the NVIDIA skills catalog . Documentation Scan agent skills before installation — Hosted guide: when to scan, how to read a report, and how to gate installs. Development guide — Architecture, package layout, and how to extend the analyzer pipeline. Analysis resource bounds — Fail-closed bundle, parser, nested-artifact, ledger, and finding ceilings. Pi extension — Install SkillSpector as a Pi tool for scanning skills from inside agent sessions. OpenCode extension — Install SkillSpector as an OpenCode tool and /skillspector command for scanning skills from inside agent sessions. Features Multi-format input : Scan Git repos, URLs, zip files, directories, or single files 71 vulnerability patterns across 17 categories: prompt injection, data exfiltration, privilege escalation, supply chain, excessive agency, output handling, system prompt leakage, memory poisoning, tool misuse, rogue agent, anti-refusal, trigger abuse, dangerous code (AST), taint tracking, YARA signatures, MCP least privilege, and MCP tool poisoning Two-stage analysis : Fast static analysis + optional LLM semantic evaluation Live vulnerability lookups : SC4 queries OSV.dev for real-time CVE data with automatic offline fallback Multiple output formats : Terminal, JSON, Markdown, and SARIF reports Risk scoring : 0-100 score with severity labels and clear recommendations Baseline / false-positive suppression : Accept known findings via a glob-rule or fingerprint baseline so re-scans surface only new issues ( docs ) Quick Start Installation Open-source software notice: This project will download and install additional third-party open source software projects. Review the license terms of these open source projects before use. Create and activate a virtual environment first (all make targets assume the venv is active). Use uv or pip ; the Makefile uses uv if available, otherwise pip . Quick install with uv (CLI-only): uv tool install git+https://github.com/NVIDIA/skillspector.git # Update later: uv tool update skillspector If you plan to run skillspector mcp , install the MCP extra at install time: uv tool install ' skillspector[mcp] @ git+https://github.com/NVIDIA/skillspector.git ' From source: # Clone the repository git clone https://github.com/NVIDIA/skillspector.git cd skillspector # Create and activate virtual environment uv venv .venv && source .venv/bin/activate # or: python3 -m venv .venv && source .venv/bin/activate # Install for production use make install # Or install with development dependencies make install-dev Docker (no Python required) Run SkillSpector without installing Python by building it locally from the included Dockerfile . The image is based on the Docker Official Python 3.12-slim-bookworm image. Build the image: make docker-build # or: docker build -t skillspector . Scan a local directory by mounting your current directory into /scan , the container's working directory: docker run --rm -v \" $PWD :/scan \" skillspector scan ./my-skill/ --no-llm Scan with LLM analysis by passing credentials with a local .env file: cat > .env << ' EOF ' SKILLSPECTOR_PROVIDER=anthropic ANTHROPIC_API_KEY=sk-ant-... EOF docker run --rm \\\n  -v \" $PWD :/scan \" \\\n  --env-file .env \\\n  skillspector scan ./my-skill/ Or pass credentials directly from your shell environment: docker run --rm \\\n  -v \" $PWD :/scan \" \\\n  -e SKILLSPECTOR_PROVIDER=anthropic \\\n  -e ANTHROPIC_API_KEY= \" $ANTHROPIC_API_KEY \" \\\n  skillspector scan ./my-skill/ Write a report to the host filesystem by writing to the mounted directory: docker run --rm --user \" $( id -u ) : $( id -g ) \" \\\n  -v \" $PWD :/scan \" \\\n  skillspector scan ./my-skill/ --no-llm --format json --output report.json Optional alias for repeated static scans: alias skillspector-docker= ' docker run --rm -v \"$PWD:/scan\" skillspector ' skillspector-docker scan ./my-skill/ --no-llm Basic Usage # Scan a local skill directory skillspector scan ./my-skill/ # Scan a single SKILL.md file skillspector scan ./SKILL.md # Scan a Git repository skillspector scan https://github.com/user/my-skill # Scan a zip file skillspector scan ./my-skill.zip Size limits SkillSpector enforces two independent caps on remote and archive inputs to bound the impact of oversized downloads and zip bombs: Per-ingest cap : INGEST_MAX_BYTES (100 MiB) — applied to streamed URL downloads, total uncompressed size of zip archives, and post-clone disk usage of Git repos. Zip member cap : INGEST_MAX_ZIP_MEMBERS (10,000) — caps the number of entries in a single zip. Note that the per-file 1 MB analysis cap ( MAX_FILE_BYTES ) is a separate, downstream limit: it bounds what individual analyzers will read out of an already-ingested directory. The ingest caps above bound how much content can land on disk in the first place. A breach of either ingest cap fails closed with an IngestLimitExceededError . Output Formats # Terminal output (default) - pretty formatted skillspector scan ./my-skill/ # JSON output - machine readable skillspector scan ./my-skill/ --format json --output report.json # Markdown output - for documentation skillspector scan ./my-skill/ --format markdown --output report.md # SARIF output - for CI/CD integration and IDE tooling skillspector scan ./my-skill/ --format sarif --output report.sarif Batch Scanning Scan entire directories of skills in parallel from contrib/batch_scan/ : python -m contrib.batch_scan.batch_scan ./my-skills/ --no-llm\npython -m contrib.batch_scan.batch_scan ./my-skills/ --workers 20 -f json -o report.json\npython -m contrib.batch_scan.batch_scan ./tests/fixtures/ -f terminal --workers 20 Supports multilingual detection (zh/ja/ko) and terminal/JSON/Markdown output. For LLM scans with higher concurrency, configure multiple API keys following .env.example — the pool improves throughput\nand resilience, provided the keys don't share an account-level rate limit. See the contrib guide for details. Note on LLM support: The default configuration targets DeepSeek as the\ncheapest public option. DeepSeek-Chat is expected to sunset , and the contributor\ndoes not have hardware to test against local models. The batch scanner was\noriginally tested with OpenAI-compatible endpoints — DeepSeek's lack of\nstructured-output support required manual JSON-parsing patches. If you can\ncontribute a more universal backend (Ollama, vLLM, or a different provider),\nPRs are very welcome. Comparing MCP Registry snapshots Start with raw registry payload captures ( registry-before.json and registry-after.json ). Save a scan report as previous.json , then compare a\nlater scan against that generated local report: skillspector scan registry-before.json --mcp-registry --format json --output previous.json\nskillspector scan registry-after.json --mcp-registry --format json \\\n  --mcp-registry-compare previous.json --output compared.json The optional comparison object lists added and removed server identities,\nchanged normalized fields with their previous and current values, and an unchanged_count . Identity is the server name and version, so a new version\nappears as an addition and the old version as a removal if it is absent from the\nnew scan. Acquisition source and scan timestamp are excluded from comparison. unmodeled_changes lists same-identity records whose raw-record hash changed\nwhile normalized fields match; these are not counted as unchanged.",
+      "stars_today": 203,
+      "language": "Python"
+    },
+    {
+      "title": "mvanhorn/last30days-skill",
+      "slug": "mvanhorn-last30days-skill",
+      "url": "https://github.com/mvanhorn/last30days-skill",
+      "abstract": "/last30days English | Français | Deutsch | Español | Português (Brasil) | 日本語 | 簡體中文 An AI agent-led search engine scored by upvotes, likes, and real money - not editors. This README tracks the current v3 pipeline. The runtime skill spec lives in skills/last30days/SKILL.md , which is the source of truth for the latest command and setup behavior. Claude Code (recommended — auto-updates via marketplace): /plugin marketplace add mvanhorn/last30days-skill\n/plugin install last30days Codex, Cursor, Copilot, Gemini CLI, or any of 50+ Agent Skills hosts: npx skills add mvanhorn/last30days-skill -g ( -g installs globally for your user, available across all projects. Drop it to scope per-project.) More install options (claude.ai web, OpenClaw, manual) in the Install section below. Zero config. Reddit, HN, Polymarket, and GitHub work immediately. Run it once and the setup wizard unlocks X, YouTube, TikTok, arXiv, Techmeme, and more in 30 seconds. Reddit upvotes. X likes. YouTube transcripts. TikTok engagement. Polymarket odds backed by real money and insider information. That's millions of people voting with their attention and their wallets every day. /last30days searches all of it in parallel, scores it by what real people actually engage with, and an AI agent judge synthesizes it into one brief. Google aggregates editors. /last30days searches people. You can't get this search anywhere else because no single AI has access to all of it. Google search doesn't touch Reddit comments or X posts. ChatGPT has a deal with Reddit but can't search X or TikTok. Gemini has YouTube but not Reddit. Claude has none of them natively. Each platform is a walled garden with its own API, its own tokens, its own auth. But you can bring your own keys and browser sessions, and suddenly an AI agent can search all of them at once, score them against each other, and tell you what actually matters. That's the unlock. Not one better search engine. A dozen disconnected platforms, bridged by an agent. /last30days Peter Steinberger You have a meeting tomorrow. You Google them. You get their LinkedIn from 2023. /last30days gives you what they're actually doing this month: joined OpenAI to work on Codex, fighting Anthropic's ban on third-party agents, shipping 23 PRs at 85% merge rate, building \"LobsterOS\" for cross-device agent control, and r/ClaudeCode hit 569 upvotes debating whether he's a hero or \"insufferable.\" Scattered across X posts, Reddit threads, YouTube transcripts, and GitHub commits. None of it was on Google. Why this exists I built it to keep up in AI. Everything changes every day and the Reddit and X nerds are always on top of it first. I needed better prompts, and the training data was always months behind what the community had already figured out. But it turned into something bigger. Now I run it before a sales call to know the last 30 days truth about a business. Before a meeting to read someone's recent tweets and podcast transcripts. Before a Disney World trip to know which rides are closed and what the community says about Genie+. Before I build anything to know what problems people are actually hitting. If you're meeting with a CEO, have you read all their tweets and YouTube transcripts from the last 30 days? I have. Sources, scored by the people Source What the people tell you Reddit The unfiltered take. Top comments with real upvote counts, free, no API key. The real opinions that Google buries. X / Twitter The hot take, the expert thread, the breaking reaction. First to know, first to argue. YouTube The 45-minute deep dive. Full transcripts searched for the 5 quotable sentences that matter. TikTok The creator reaching 3.6M people with a take you'll never find on Google. Instagram Reels The influencer perspective with spoken-word transcripts. The visual culture signal. Hacker News The developer consensus. 825 points, 899 comments. Where technical people actually argue. Polymarket Not opinions. Odds. Backed by real money. 96% confidence on album sales. 4% on an acquisition. GitHub For people: PR velocity, top repos by stars, release notes. For topics: issues and discussions. Digg Story clusters from Digg's AI and Tech sections, with attributable inline quotes from X (no X auth required). Auto-enabled when digg-pp-cli is on PATH. arXiv The papers behind the hype. New research in the window, free, no API key. Auto-enabled when arxiv-pp-cli is on PATH (first-run setup installs it). Techmeme The tech-news editorial layer, date-windowed to your 30 days. Free, no API key. Auto-enabled when techmeme-pp-cli is on PATH (first-run setup installs it). LinkedIn The professional signal. Posts and articles, with articles weighted as high signal. Meta Ads What a brand is paying to say. Live Meta ad creatives launched this month, with copy, promo codes, and spoken transcripts. StockTwits Trader sentiment. Auto-activates when your topic is a ticker or crypto. Threads The post-Twitter text layer. Conversations from creators and brands. Pinterest Visual discovery. Pins, saves, and comments on products and ideas. Xiaohongshu (RED) Chinese lifestyle, product, and creator signals. Requested explicitly with --search xhs when a logged-in x-mcp browser plugin or xiaohongshu-mcp service is running locally. Bluesky The decentralized social layer. AT Protocol posts from the post-Twitter migration. Perplexity Controlled Agent API synthesis, OpenRouter Sonar fallback, raw Search API rows, and explicit Deep Research. DEV Community (dev.to) Developer articles and top comments through the public, keyless API. Opt in with --devto-tags , --search devto , or INCLUDE_SOURCES=devto . Truth Social Posts searched with TRUTHSOCIAL_TOKEN ; available when authenticated. Telegram Public posts from named channels. Opt-in; requires SCRAPECREATORS_API_KEY and a channel list. No keyword discovery. Trustpilot Company TrustScore, review count, and an AI summary of customer feedback. Opt-in; requires trustpilot-pp-cli on PATH and a usable session. Amazon Product ratings, prices, and customer reviews. Opt-in; requires an authenticated brightdata CLI and uses your Bright Data credits. DripStack Financial newsletters and analyst writeups through a public, keyless API. Opt in with --search dripstack or INCLUDE_SOURCES=dripstack . Jobs / careers pages Public job postings as evidence of a company's focus. Selected with --hiring-signals , --search jobs , or the research plan. Local corpus Your local Markdown and text files, plus PDFs when pdftotext is on PATH. Opt in with --corpus or LAST30DAYS_CORPUS_DIRS . Web The editorial coverage, the blog comparisons. One signal of many, not the only one. Ask /last30days to include the sources you need. Availability depends on credentials, installed tools, the topic, and explicit opt-ins. See source requirements for configuration. A Reddit thread with 1,500 upvotes is a stronger signal than a blog post nobody read. A TikTok with 3.6M views tells you more about what's culturally relevant than a press release. Polymarket odds backed by $66K in volume are harder to argue with than a pundit's guess. The synthesis ranks by what real people actually engaged with. Social relevancy, not SEO relevancy. What people actually use it for Before a meeting. /last30days Peter Steinberger - joined OpenAI's Codex team, fighting Anthropic's ban on third-party agents, 23 PRs merged at 85% merge rate on GitHub, building LobsterOS for cross-device agent control. r/ClaudeCode: \"Ever since OpenClaw released, it was widely known that if you run it through anything other than the API, you were gonna get banned eventually\" (227 upvotes). That's not on LinkedIn. To read hiring signals. /last30days Listen Labs --hiring-signals - current jobs and careers pages become cited evidence for focus shifts: hiring into enterprise security, customer success, infrastructure, or product expansion. The report says what the hiring appears to signal, not what the roadmap will ship. To find the topic before it peaks.",
+      "stars_today": 157,
+      "language": "Python"
+    },
+    {
+      "title": "gitroomhq/postiz-app",
+      "slug": "gitroomhq-postiz-app",
+      "url": "https://github.com/gitroomhq/postiz-app",
+      "abstract": "Postiz is a social media management platform for scheduling, automating, and analyzing your content. Use Postiz Cloud for a fully managed experience, or deploy the open-source edition on your own infrastructure. Explore the docs » Watch the YouTube Tutorials» Register · Join Our Discord (devs only) · Public API NodeJS SDK · N8N custom node · Make.com integration Schedule posts to: With your favorite AI agent: 🔌 See the leading Postiz features ✨ Features Our Sponsors Sponsor Logo Description Hostinger Hostinger is on a mission to make online success possible for anyone – from developers to aspiring bloggers and business owners Virlo Virlo is the #1 social media trend spotting and all-in-one GTM tool for teams leveraging short-form video ChatbotX The ManyChat alternative that you can self-host, white-label, and resell to your clients. Bring your own OpenClaw, Hermes, or Claude agents! RapidProxy RapidProxy provides 90M+ residential IPs for social media, browser automation, and AI workflows, with smart rotation and stable sessions. From $0.55/GB; use RAPID10 for 10% off. Intro Schedule all your social media posts (many AI features) Measure your work with analytics. Collaborate with other team members to exchange or buy posts. Invite your team members to collaborate, comment, and schedule posts. Perfect for automation (API) with platforms like N8N, Make.com, Zapier, etc. Tech Stack Pnpm workspaces (Monorepo) NextJS (React) NestJS Prisma (Default to PostgreSQL) Temporal Resend (email notifications) Quick Start To have the project up and running, please follow the Quick Start Guide Sponsor Postiz We now offer a few options to sponsor Postiz: Just a donation: You like what we are building, and want to buy us some coffee so we can build faster. Main repository: Get your logo with a backlink from the main Postiz repository. Postiz has over 7M downloads and 20k views per month. Link: https://opencollective.com/postiz Postiz Cloud vs. Open-source Choose Postiz Cloud for a fully managed experience, or deploy Postiz Open-source on your own infrastructure. Both provide the same core Postiz product and features. We do not \"gate\" features or limit the license. The main difference is the infrastructure you need to own, approval from social media providers, and deployment that might be hard at times (let your LLM deploy it) Area Postiz Cloud Postiz Open-source (self-hosted) Cost Subscription per plan, 7-day free trial Free forever (AGPL-3.0); you pay only for your own infra Setup time Sign up and connect channels in minutes Deploy with Docker / Coolify / Railway / any VPS; you configure Postgres, Redis, storage and env vars Hosting & data Hosted by Postiz; data stored in our infrastructure Runs on your own server; data never leaves your environment Social platform apps Pre-approved apps for every channel, ready to use You create your own developer apps on each platform and go through their approval (Meta, YouTube, TikTok can take weeks) Channels Limited by plan tier Unlimited, every supported provider Posts per month Limited by plan tier Unlimited Team members Limited by plan tier Unlimited Scheduling, calendar views, cross-posting, repeated posts, post comments & delays, sets, signatures Included Included Internal & Global Plugs, RSS auto-post, customer groups Included per plan Included Analytics Included per plan Included (requires your own app credentials with analytics scopes) AI Copilot, AI images, AI videos Included with monthly quotas per plan; keys managed by Postiz Available if you bring your own OpenAI (and other provider) API keys; no quota, you pay the provider AI video clipping Included with monthly clipping minutes per plan Requires your own provider keys and extra configuration Smart Agent Included per plan Available with your own LLM key Public API & webhooks Included per plan Included Agentic surfaces (MCP, CLI, Claude / ChatGPT / Codex / OpenClaw / Cursor connectors) Included, hosted MCP endpoint Included, you point the MCP / CLI at your own instance Custom integrations Included per plan Included; you can also modify the code and add providers Updates & maintenance Automatic, zero downtime for you You pull new images and run migrations yourself Uptime, backups, security patches Managed by Postiz Your responsibility Support Priority support via Discord / email per plan Community support on Discord and GitHub Source access & customization No (SaaS) Full source code, fork and modify freely under AGPL Compliance / data residency Postiz-controlled regions Any region or air-gapped environment you choose Postiz Compliance This GitHub repository contains the open-source, self-hosted edition of Postiz. Postiz is also available as Postiz Cloud, a fully managed service at postiz.com. Postiz hosted service uses official, platform-approved OAuth flows. Postiz does not automate or scrape content from social media platforms. Postiz does not collect, store, or proxy API keys or access tokens from users. Postiz never asks users to paste API keys into our hosted product. Postiz users always authenticate directly with the social platform (e.g., X, Discord, etc.), ensuring platform compliance and data privacy. License This repository's source code is available under the AGPL-3.0 license .",
+      "stars_today": 146,
+      "language": "TypeScript"
+    },
+    {
+      "title": "Narcooo/inkos",
+      "slug": "narcooo-inkos",
+      "url": "https://github.com/Narcooo/inkos",
+      "abstract": "Story Creation AI Agent 面向長短篇小說、劇本劇作、互動影遊、IP 內容與多語言翻譯的創作智慧體系統 English | 中文 | 日本語 InkOS 網頁版上線！ 立刻體驗 InkOS 是一個面向故事創作與多語言翻譯的 AI Agent 系統：長篇連載、獨立短篇、劇本劇作、同人番外、仿寫續寫、互動影遊、開放世界和長文翻譯，都可以從同一個工作臺開始。支援 Studio、TUI、CLI 互動形式，把創意、設定、角色、記憶、審稿、修訂、封面、互動狀態和跨語言交付交給智慧體統一管理。 🎉🎉 InkOS 入選首批 KIMI 開源合作夥伴 🎉🎉 感謝 Kimi 贊助本專案！Kimi K3 是 Moonshot AI 迄今能力最強的模型，也是全球首個開源 3T 級模型，擁有原生視覺能力與 100 萬 Token 上下文。搭配 InkOS，K3 可以參與長短篇小說、劇本、互動影遊與多語言內容的規劃、寫作、審稿和修訂；InkOS 則持續管理角色、設定、伏筆與故事狀態，讓長篇創作更連貫、更可控。 kkaiapi ｜一個 Key 調模型，一個 MCP 接資料與工具。 支援 Claude、GPT、Gemini、DeepSeek 等主流模型，按量付費、共用餘額，用於 InkOS 寫作、審稿與封面生成。 檢視模型與價格 → · InkOS 接入指南 → · MCP 接入 → 💡 寫小說，先給 Agent 接一層專業資料 —— 寫小說不只缺模型，更缺素材。推薦搭配 火花資料API（huohuaapi） ：按呼叫計費的小說 / 網文創作資料，讓 Agent 動筆前先查小說正文、章節結構、人物設定、文風和創作方法等帶來源素材，而不是只靠 Prompt 硬湊一份“劇情提綱”。 v2.0.0 - 統一 Pi Agent Harness 與專業創作核心 本分支為 2.0 開發版本，使用本地構建進行驗證。舊專案先執行 inkos work migrate --json 檢視升級清單，再執行 inkos work migrate --apply 匯入統一創作庫；原目錄與早期版本清單備份會保留，衝突不會覆蓋已有作品。 遷移會轉換 1.x 的書籍預設配置、規則和狀態快照，保留正文、原始目錄及未填寫的歷史資訊。舊寫作控制欄位保留在原件中，2.0 使用 Profile 的操作策略。缺少執行時狀態的專案以草稿進入創作庫，需完成狀態重建後再繼續生產。 本地開發與真實生產驗收統一使用 kkaiapi（ https://api.kkaiapi.com/v1 ）：文字按 DeepSeek V4 Flash / Pro 分工，封面使用 gpt-image-2 。在專案 llm.cover 中配置服務和模型，CLI 與 Studio 讀取同一配置，封面可複用 kkaiapi 服務金鑰。 已有短篇可以在作品對話中要求按審稿意見整篇修訂，或執行 inkos short revise <story-id> --instruction \"修復審稿指出的時間線與證據鏈問題\" 。系統會更新相關章節、大綱和銷售包，再次審稿，並保留原稿版本。 InkOS 2.0 把“Chat Agent 調工具”和“各類作品管線”收斂成一套圍繞 pi-agent 的生產 harness。模型負責理解、提議和呼叫能力；InkOS 負責確認、上下文、狀態、原子落盤和產物真實性。長篇、短篇、劇本、分鏡、互動影遊、Play 與翻譯繼續保留各自的專業方法，但共享同一套執行、檢索、觀測和恢復基礎設施。 模型配置 ：Studio 內建多服務配置、模型路由和封面服務配置；支援 kkaiapi / OpenRouter 等全球主流模型聚合入口，以及自定義 OpenAI Chat Completions、OpenAI Responses 和 Anthropic Messages 服務。 單一生產 Harness ：Studio Chat、TUI、 inkos interact 與生產 worker 共用 pi-agent 工具迴圈和結構化 action/result；既有 pipeline 降為可直接呼叫、可中斷、可觀測的確定效能力，不再維護平行的自然語言決策核心。 19 個內建專業 Skills ：長篇寫作 / 審稿、商業短篇、Play、劇本、分鏡、互動影遊、翻譯、拆稿、市場研究、匯入、封面與去 AI 味都擁有獨立 SKILL.md ；各作品型別複用 Skill 架構，不復用不適合自己的長篇提示詞。 統一本地檢索 ：故事記憶、材料庫和 Skill 參考資料共用 SQLite FTS5 / BM25 檢索投影；原始檔案仍是權威來源，索引可重建，檢索結果保留來源與位置。 書籍參考資料綁定 ：匯入材料可以顯式綁定到某本書並宣告用途，寫作時按當前任務檢索相關段落，而不是把所有檔案全文塞進上下文。 安全章節工作區 ：正文、狀態、伏筆和執行快照先在章節工作區內校驗，再原子提交；失敗不會出現“狀態已推進、正文未落盤”。Studio 可檢視改寫工作區和真實審稿問題。 跨作品生產一致性 ：Short、劇本、分鏡、互動影遊、Play 與翻譯接入統一 run snapshot、Skill 綁定、字數觀測、取消訊號和失敗恢復，同時保留各自的狀態模型與創作規則。 長任務與模型呼叫更穩 ：多章寫作按一個可恢復任務順序執行；首 Token / 流式空閒超時、過期狀態修復和原子檔案集降低被動卡住或半完成的機率。 TUI 對齊 Studio ：新增 /new 、 /short 、 /play 、 /cover 、 /write 明確入口，結構化 /confirm / /cancel ，會話級 /model 切換和明暗終端自適應配色；普通自由文本仍交給 Agent 理解。 模型與工作臺補齊 ：新增 LM Studio 本地服務，動態模型目錄和外部母本匯入可持久化；Studio 支援自定義封面 Base URL、寬屏章節預覽和安全章節重寫。 主要創作形態 長篇小說 — 從創作簡報建書，生成世界觀、角色、卷綱和章節意圖；寫作、審稿、修訂、狀態結算都是可獨立呼叫、可追溯的 Harness action。上下文按 protected / compressible 分層組織，避免長書越寫越亂。 劇情多線推演 — 在寫下一章前，基於當前正史生成 2-5 條彼此隔離的未來分支，並在 Studio Chat 中橫向比較章節節拍、人物決定、預計變化、風險和作者意圖匹配度。採用分支只會儲存 selected-branch-plan.md 候選計劃，不會修改正文、大綱或正史狀態；正史變化後舊推演會標記為過期。 InkOS Short — Studio Chat 和 CLI 可以直接產出獨立短篇：完整正文、大綱記錄、審稿記錄、簡介賣點、封面提示詞，並在配置封面服務後生成封面圖。 InkOS Play — 新增開放世界與分支互動。你可以用自然語言指定世界契約、時間推進方式、角色 agent、物品 / 證據 / 關係規則和視覺風格；系統維護世界狀態、可點選選擇、自由動作、HUD 和自動配圖。 Studio Chat — 普通聊天、建書、短篇、封面、互動世界都走同一套 action surface。重動作先確認，生成物可預覽，可通過聊天修改章節、封面提示詞、世界狀態和持久化文本產物。 Native English novel writing now supported！ Set --lang en to write in English. See English README for details. 歡迎交流 當前更新相對頻繁，後續會持續新增功能與最佳化寫作效果。\n歡迎加群反饋問題、提出需求，也歡迎關注專案動態 — 我們的目標是做最強的基於小說的內容生態創作 AI Agent。 快速開始 安裝 需要 Node.js 22.16 或更高版本 。 npm i -g @actalk/inkos 通過 OpenClaw 使用 🦞 InkOS 已釋出為 OpenClaw Skill，可被任何相容 Agent（Claude Code、OpenClaw 等）直接呼叫： clawhub install inkos # 從 ClawHub 安裝 InkOS Skill 通過 npm 安裝或克隆本專案時， skills/SKILL.md 已包含在內，🦞 可直接讀取——無需額外從 ClawHub 安裝。 安裝後，Claw 應優先通過共享互動入口呼叫 InkOS： inkos interact --json --message \" 繼續當前書，但把節奏再收緊一點 \" 這條入口直接走和專案 TUI 相同的互動執行核心，因此 OpenClaw、TUI、Studio 共用同一套控制腦。當前 JSON 輸出包含 assistant 文本回復和 interaction session 資訊；真正的執行結果以工具結果和落盤檔案為準，不從模型口頭宣告推斷完成。 底層規劃、上下文組裝、寫作和審稿由同一 Harness action 排程，不再作為平行入口暴露。也可以在 ClawHub 搜尋 inkos 線上檢視。 Agent Skills InkOS 直接使用標準 SKILL.md 作為專業能力擴展，不再維護一套 InkOS 私有 Skill 協議。Skill 只向 Chat Agent 提供專業說明和靜態參考資料，不會增加執行許可權；建立、寫入、編輯和生成圖片仍然由 InkOS 工具與確認閘門控制。 可用方式： 放到標準目錄：專案 skills/ 、 .agents/skills/ ，或使用者目錄 ~/.agents/skills/ 、 ~/.openclaw/skills/ 。Studio 也可以匯入包含 SKILL.md 的完整資料夾和靜態參考資料；專案匯入統一儲存到 .agents/skills/ 。 或設定 INKOS_SKILL_DIRS=/abs/path/to/skills ，可指向單個 skill 目錄，也可指向包含多個 skill 子目錄的目錄。多個目錄按系統分隔符分隔。 在 Chat 裡用 @skill-id 強制本輪使用，例如： @detective-play 做一個證據鏈驅動的開放世界 。 不寫 @skill-id 時，Chat Agent 根據使用者當前意圖決定是否呼叫 use_skill ；不再通過 session 型別、關鍵詞或字串包含匹配機械啟用。 外部 Skill 只提供指令和靜態參考資料，InkOS 不會自動執行其中的指令碼；它也不會繞過現有工具許可權與確認閘門。 專業創作方法統一由 Skill 提供。要調整內建方法，可在 Studio 匯入同 ID 的專案 Skill 作為覆蓋；Agent 檔案只保留動態任務、上下文和工具協議。 最小 SKILL.md 示例： --- name : Detective Play description : Detective evidence and suspect-board play. --- Use evidence chains; do not turn clues into generic atmosphere. 配置 當前 InkOS 將 LLM 配置分成兩條清晰路徑： Studio 用視覺化服務配置 ， CLI / daemon / 部署環境支援 env 覆蓋 。兩者不會互相汙染。 方式一：Studio 服務配置（推薦） 適合本地寫作、Web 工作臺和視覺化管理。 inkos init my-novel cd my-novel\ninkos 請從啟動日誌顯示的本機地址開啟 Studio。預設本地服務只接受同源瀏覽器請求；自定義嵌入或反向代理可通過服務啟動參數 allowedOrigins 明確配置可信來源。 開啟 Studio 後進入「模型配置」： 選擇服務商，例如 Google Gemini、Moonshot、MiniMax、智譜、百煉或自定義端點。 選擇協議型別：OpenAI Chat Completions、OpenAI Responses 或 Anthropic Messages；自定義端點應按上游實際協議選擇。 貼上 API Key，點選「測試連線」。 選擇可用模型，儲存配置。 回到書籍頁面開始寫作。 Studio 執行時只使用： provider bank 預設值\n→ inkos.json 裡的 services / 當前 service / defaultModel\n→ .inkos/secrets.json 裡的 service API Key 即使檢測到 ~/.inkos/.env 或專案 .env ，Studio 也只會展示提示，不會用 env 覆蓋 service、model、baseUrl 或 API Key。API Key 存在專案內的 .inkos/secrets.json ，不會寫進 inkos.json 。 方式二：CLI / daemon / 部署環境的 env 配置 適合終端批處理、伺服器部署、CI、Docker、守護程序和一次性切模型。 全域性 env： inkos config set-global \\\n  --provider < openai | anthropic | custom > \\\n  --base-url < API 地址 > \\\n  --api-key < 你的 API Key > \\\n  --model < 模型名 > 也可以手動寫 ~/.inkos/.env 或專案 .env ： INKOS_LLM_PROVIDER=custom\nINKOS_LLM_BASE_URL=https://api.moonshot.cn/v1\nINKOS_LLM_API_KEY=sk-...\nINKOS_LLM_MODEL=kimi-k2.5 # 可選 INKOS_LLM_SERVICE=moonshot # 推薦寫；不寫時會盡量從 baseUrl 自動識別 INKOS_LLM_TEMPERATURE=0.7\nINKOS_LLM_THINKING_BUDGET=0\nINKOS_DEFAULT_LANGUAGE=zh\nINKOS_LLM_EXTRA_top_p=0.9 CLI 合成順序： Studio/project service 配置\n→ .inkos/secrets.json service key\n→ global ~/.inkos/.env\n→ project .env\n→ 當前程序環境變數\n→ CLI 參數 也就是說，CLI 預設可以複用 Studio 配好的服務和金鑰；如果 env 裡聲明瞭 INKOS_LLM_SERVICE 、 INKOS_LLM_MODEL 、 INKOS_LLM_BASE_URL 或 INKOS_LLM_API_KEY ，則作為覆蓋層生效。舊 env 只寫 baseUrl + model + apiKey 也能繼續用，InkOS 會盡量從 baseUrl 反推 service。 一次性指定服務或模型： inkos write next --service google --model gemini-2.5-flash\ninkos write next --service moonshot --model kimi-k2.5 --no-stream\ninkos agent \" 繼續寫下一章 \" --api-key-env MOONSHOT_API_KEY\ninkos doctor --service minimaxCodingPlan --model MiniMax-M2.7 --service 會從 provider bank 自動推導 baseUrl、協議和相容策略； --model 必須屬於最終 service，否則會直接報錯，避免把 Kimi 模型發到 Gemini 這類錯配問題。 方式三：多模型路由（可選） 給不同 Agent 分配不同模型，按需平衡質量與成本： # 給不同 agent 配不同模型/提供商 inkos config set-model writer < model > --provider < provider > --base-url < url > --api-key-env < ENV_VAR > inkos config set-model auditor < model > --provider < provider > inkos config show-models # 檢視當前路由 未單獨配置的 Agent 自動使用全域性模型。 配置排查 inkos doctor doctor 會顯示當前 effective config mode、service/model/API Key 來源，並嘗試 API 連通性。常見模式： 模式 含義 studio-project Studio 執行時：只使用 Studio/project 配置和 secrets cli-project CLI 執行時：以 Studio 配置為基礎，再疊加 env 和 CLI 參數 environment CLI / daemon 直接使用當前環境配置 如果服務測試失敗，優先檢查服務商、模型和協議是否匹配。Google Gemini 的 AI Studio API Key 可用於 Gemini OpenAI-compatible endpoint；InkOS 會自動停用 Google 不支援的 OpenAI store 參數。MiniMax 預設走官方 OpenAI-compatible /v1/chat/completions ，並優先使用可工作的非流式 transport，避免流式返回 usage 但無正文的問題； MiniMax-M3* 會預設關閉 thinking 返回，M2.x thinking 由上游限制無法關閉。 LLM 配置更新 Studio / CLI 配置隔離 ：Studio 固定使用服務頁配置和 .inkos/secrets.json ；CLI、daemon、部署環境支援 env 覆蓋和一次性命令參數。 Provider bank 能力表 ：內建 Google Gemini、Moonshot、MiniMax、智譜、百鍊、DeepSeek、矽基流動、火山、騰訊混元、文心、訊飛星火、OpenRouter、kkaiapi、Ollama、CodingPlan 等服務的 baseUrl、協議、模型和相容策略。 模型歸屬校驗 ： --service google --model kimi-k2.5 這類錯配會直接報錯，避免把請求發到錯誤服務商。 Google Gemini 相容修復 ：AI Studio API Key 可直接用於 Gemini OpenAI-compatible endpoint，InkOS 會自動停用 Google 不支援的 OpenAI store 參數。",
+      "stars_today": 107,
+      "language": "TypeScript"
+    },
+    {
+      "title": "HarnessRouter/harnessrouter",
+      "slug": "harnessrouter-harnessrouter",
+      "url": "https://github.com/HarnessRouter/harnessrouter",
+      "abstract": "The unified interface for agent harnesses. Build agent products without handling harness engineering. HarnessRouter is the infrastructure layer that turns existing harnesses like Codex and Claude Code into plug-and-play agent backends, letting your product run tasks, retrieve results, and switch harnesses through one API. HarnessRouter implements the Unified Harness Protocol (UHP) and provides an OpenAI Responses-compatible API, handling persistent sessions, streaming progress, files, artifacts, cancellation, and structured failures. Switch harnesses. Optimize cost and latency. Eight harness × model configurations on the same task. Each metric compares its best and worst results. The lowest-cost and fastest configurations vary by task. Methodology 30 harness bases today: Codex, Claude Code, Hermes, Pi, DeepSeek Harness, OpenCode, Kilo Code, Qwen Code, Gemini CLI, Cline, Oh My Pi, goose, Kimi Code CLI, MiniMax Code, Aider, OpenHands, CheetahClaws, Grok Build, Agent Zero, System One, Qoder Cloud Agent, MiMo Code, jcode, OpenSquilla, nanobot, ZeroClaw, Mistral Vibe, Docker Agent, fast-agent and Deep Agents Code. The support matrix shows which run on which provider. Tip Get started: Run locally · Integrate into your product · Starter kits · Use managed Cloud Quickstart Self-host Community Edition with your own provider keys, on infrastructure you control. Start with one Docker command, wait for the first launch, then connect a model provider and run your first task. You need: Docker · About 4 GB of disk · A provider API key No HarnessRouter account required. No bundled model or trial key. 1. Start HarnessRouter docker run -d --name harnessrouter \\\n  -p 127.0.0.1:3000:3000 \\\n  -v harnessrouter:/data \\\n  harnessrouter/harnessrouter Docker pulls the image if needed. The named volume preserves your database, files, installed harness CLIs, and workspaces between restarts. Existing installation or custom setup Already installed? docker pull harnessrouter/harnessrouter downloads the latest image but does not upgrade a running container. Follow the upgrade and backup guide . Port 3000 busy? Use -p 127.0.0.1:3100:3000 and open port 3100 instead. Keep the loopback binding while using the initial credentials. Do not add --user . The entrypoint and Runner need root to manage per-session users. The Console and Gateway run unprivileged; agent processes run as their session’s user. For version pinning, Compose, and scripted setup, see the setup guide . 2. Wait for the first launch docker logs -f harnessrouter The first launch installs the enabled harness CLIs. Continue when the logs show: [harnessrouter] ready on :3000 Press Ctrl+C to stop following logs. The container keeps running. Console not ready or a harness missing? If the browser refuses the connection, retry after a few seconds while the Console finishes starting. For a missing harness, check backends available: and any requested but not installed warning in the logs. 3. Open the console Open http://localhost:3000 , or your chosen host port, and sign in: Username harnessrouter Password harnessrouter Warning Change the default password in Profile. Keep the instance local until you change it. Saving briefly restarts the Console and signs out other browsers. See the sign-in screen Using an existing volume or custom credentials? Check credential precedence and setup . These credentials sign you into the Console. You do not need a HarnessRouter API key to run tasks here. 4. Connect a model provider Open the account menu at the bottom of the rail and choose Bring your own key . Find your provider, press Add key , and paste its API key. Its supported models become available in the Console. This provider key authorizes model requests. It is separate from the HarnessRouter API key used for product integration below. See the provider setup screen 5. Set up your first agent Open Start , say what your agent should do for your users, and press Continue . In Set up an agent harness , leave the agent harness and model on Auto or choose them, then save. HarnessRouter builds the setup on one of your own models: it writes the agent's instructions, picks the harness, model, skills, plugins and tools the job needs, and leaves an example request in the box. Send it to run the first task. Try an example first. Under Start in HarnessRouter , pick one of the three example jobs. Its request plays back a recorded run, so you see a finished task without spending tokens. Write under it to carry on with your own model. Change a setup (optional) Open the setup in Studio and choose Settings to change its model, instructions, skills, plugins, tools, environment and limits. Add plugins, skills, MCP servers and environments for the whole workspace under Add-ons . The agent harness is fixed once a setup is saved: make a new setup to use another. See New setup Integrate your harness into your product backend with one API Run product tasks with built-in or custom harnesses as pluggable agent backends. Call your self-hosted instance’s OpenAI Responses-compatible API and select the harness with metadata.harness_id . No Cloud deployment is required. Once your harness runs successfully in the Console: Open API Keys in the Console rail of the same CE instance ( default local address ), name the key, and press Create . Store the secret shown once as HARNESSROUTER_API_KEY in your product backend. Never expose it in browser code. This CE-issued key is separate from your Console password and provider key. Call the API with the Harness ID shown in the Console and a model served by your connected provider. export HARNESSROUTER_BASE_URL=http://localhost:3000/api/harness\n\ncurl --fail-with-body -sS \" $HARNESSROUTER_BASE_URL /v1/responses \" \\\n  -H \" Authorization: Bearer ${HARNESSROUTER_API_KEY :? } \" \\\n  -H ' content-type: application/json ' \\\n  -d ' { \"input\":\"Reply with exactly: it works.\", \"metadata\":{\"harness_id\":\"codex\"}, \"model\":\"gpt-5.4-mini\", \"stream\":false } ' The task and its transcript appear in the same workspace in the Console. Set \"stream\": true to receive server-sent events. Join a caller's trace to the task. Send the W3C Trace Context headers traceparent and tracestate on the request, and the task's model calls carry a child of that trace: the same trace id, a new span id and the sampled flag, so the provider's log and yours are one trace. A value that is not valid W3C syntax is dropped, never refused: a broken tracing header does not fail a task. baggage is never read and never leaves the instance. Retry a task without running it twice. Send the same request with the same Idempotency-Key when retrying a task. For example, send this request twice using the URL and API key above (key generation needs Python 3): IDEMPOTENCY_KEY= $( python3 -c ' import uuid; print(uuid.uuid4()) ' ) for attempt in 1 2 ; do curl --fail-with-body -sS \" $HARNESSROUTER_BASE_URL /v1/responses \" \\\n    -H \" Authorization: Bearer ${HARNESSROUTER_API_KEY :? } \" \\\n    -H ' content-type: application/json ' \\\n    -H \" Idempotency-Key: $IDEMPOTENCY_KEY \" \\\n    -d ' { \"input\":\"Reply with exactly: it works.\", \"metadata\":{\"harness_id\":\"codex\"}, \"model\":\"gpt-5.4-mini\", \"stream\":false } ' printf ' \\n ' done Both responses have the same id , and the session contains one turn: the retry returns the first request's result without starting another execution. If the first request is still running, the retry waits for it. Use a new key for each new logical request. Reusing a key with a different request body returns 409 ; changing only stream still counts as the same request. See Tasks §6: Idempotency . Never put a long exact value such as a token, an id or a hash in the prompt: the agent retypes what it reads, and a model drops and swaps characters in strings like that.",
+      "stars_today": 95,
+      "language": "Python"
+    },
+    {
+      "title": "Significant-Gravitas/AutoGPT",
+      "slug": "significant-gravitas-autogpt",
+      "url": "https://github.com/Significant-Gravitas/AutoGPT",
+      "abstract": "AutoGPT — Your team of AI Experts Bring in specialists for content, sales, research, and recurring work. Brief them in plain English. Let Otto coordinate. Sign up for a trial · Watch the demo · Meet the Experts · Pricing · Self-host · Contribute One conversation. The right expertise. Tell Otto what's on your plate. It brings in the right Experts, hands over the work, and keeps you up to date. Talk to a specialist directly when you want to get into the details. Each Expert has a role you can shape with your instructions, context, skills, and connected apps. Start with a ready-made specialist or create your own. Meet your team Put them to work Otto · Head of AI Coordinate a job across specialists and bring their work back to you. Maria · SEO Content Manager Turn a target keyword into a content brief and article draft. Max · Account Executive Research prospects, draft outreach, and prepare the next conversation. Frankie · Executive Assistant Prepare meeting context, email drafts, and a digest for the day. Explore the Experts → See the team at work One launch brief to Otto. Maria prepares the article, Max researches prospects, and Frankie prepares the launch review. experts-demo.mp4 Watch the full 45-second demo → · Sign up for a trial A 15-second highlight of a real run, edited and sped up. In this example, the team prepares the work for review without sending or publishing it. From a first brief to a routine Choose your Expert. Tell Otto what you need, pick a specialist, or create one for your own way of working. Brief them on the job. Share the context, connect the apps they need, and agree on the first outcome. Review and refine. Check the work and adjust the instructions. Activate routines for jobs that keep coming back. You choose which accounts each Expert can access, set spending controls, and follow progress in their activity. See how it works → Get started AutoGPT Platform Use the hosted Platform to get your team running without managing the infrastructure or supplying model API keys. Sign up for a trial → The hosted Platform is a paid service. See current plans, trial terms, and usage pricing . Self-host AutoGPT Run AutoGPT on your own infrastructure. You provide model credentials, configure the deployment, and manage its updates and operation. The quickest way to self-host is the single-container image on\nDocker Hub, significantgravitas/autogpt : docker run -d \\\n  --name autogpt \\\n  --restart unless-stopped \\\n  --shm-size 2g \\\n  --ulimit nofile=65536:65536 \\\n  --log-driver json-file \\\n  --log-opt max-size=50m \\\n  --log-opt max-file=5 \\\n  -p 127.0.0.1:3000:3000 \\\n  -e AUTOGPT_PUBLIC_URL=http://localhost:3000 \\\n  -v autogpt-data:/data \\\n  significantgravitas/autogpt:latest Give the first boot a few minutes, then open http://localhost:3000 , create your account, and make it\nthe administrator: docker exec autogpt autogpt-admin promote you@example.com Requirements, closing signup, ports, model providers, backups, and upgrades are\ncovered in the guide: Read the single-container guide → On Linux, macOS, and Windows, the installer sets up the same image with one command. To run each service in its own container with Docker Compose, or to develop from\nsource, use the manual self-hosting guide . Hosted Platform Self-hosted Setup and operations Managed by AutoGPT Managed by you Model access Built in Bring your own model credentials or a local model Cost Paid plan and usage Your infrastructure and model usage Data and infrastructure Hosted by AutoGPT Runs on your infrastructure See the license for the repository's usage terms. Workflows when you need more control Experts can use skills and workflows to do their jobs. The visual builder lets you define repeatable steps, connect tools, and inspect how work runs. Start with a workflow from the marketplace or build your own. Visual builder : connect blocks, branch logic, and control the steps. Marketplace : discover workflows you can adapt to your work. Integrations : connect the tools your team uses. Build with us Explore the code, report a problem, or help improve AutoGPT. Resource Where to go Platform source and development setup autogpt_platform/ Documentation agpt.co/docs Contributing CONTRIBUTING.md Bugs and feature requests GitHub Issues Community and support Discord License Component License What it means autogpt_platform/ Polyform Shield Free for personal and internal business use; cannot be sold as a competing hosted service classic/ and everything else MIT Permissive open-source use AutoGPT Classic Looking for the original standalone AutoGPT? Explore Classic , Forge , or agbenchmark . Contributors Sign up for a trial → Deutsch | Español | français | 日本語 | 한국어 | Português | Русский | 中文",
+      "stars_today": 79,
+      "language": "Python"
+    },
+    {
+      "title": "homeassistant-ai/ha-mcp",
+      "slug": "homeassistant-ai-ha-mcp",
+      "url": "https://github.com/homeassistant-ai/ha-mcp",
+      "abstract": "Breaking change (v7.3.0): ha_config_set_yaml has been moved to beta . The Unofficial and Awesome Home Assistant MCP Server A comprehensive Model Context Protocol (MCP) server that enables AI assistants to interact with Home Assistant. Using natural language, control smart home devices, query states, execute services and manage your automations. 🚀 Get Started The recommended way to run ha-mcp is the HA-MCP Custom Component . It installs into Home Assistant through HACS, runs the full server in-process , and works on every Home Assistant installation type — Home Assistant OS, Supervised, Container, and Core — with full feature parity. It is the easiest setup in every case: setup asks for an administrator access token and how clients may connect. Add it to Home Assistant via HACS (the preferred install): Quick start: The setup below is for version 9.0.0 (October 28, 2026) and later; earlier versions show a shorter setup form without the administrator account step. Install the HA-MCP Custom Component from HACS — click the badge above, or in HACS open Integrations → ⋮ → Custom repositories , add https://github.com/homeassistant-ai/ha-mcp (category: Integration ), then Download .\nAlready installed from the earlier homeassistant-ai/ha-mcp-integration repository? It keeps receiving the same releases; nothing to change. Restart Home Assistant. Decide which administrator account the server acts as. Either create a long-lived access token on your own account (your profile → Security → Long-lived access tokens → Create token ; it works from anywhere if it leaks, and the server's changes show under your name), or, safer, create an account just for HA-MCP under Settings → People → Add person with Allow login , Local access only and Administrator on. Never use your own login for the second option. Go to Settings → Devices & Services → Add Integration , search for HA-MCP Custom Component and choose HA-MCP Server . Paste your token, or enter the user name and password of the account you made for HA-MCP (HA-MCP creates its token), pick how clients may connect — Remote access through Home Assistant (start with Secret URL , the simplest; Home Assistant sign-in adds a login) and/or Network access: Local network — then click Submit . Both start disabled, so a client on another device needs one of them. Copy the connect URL from the entry's Configure screen ( Settings → Devices & Services → HA-MCP Custom Component → HA-MCP Server → Configure ). A notification confirms the server started and points you there. Paste that URL into your AI client — done. Connect URL. The Configure screen gives you a Home Assistant webhook URL for remote clients — https://<your-ha-domain>/api/webhook/<webhook-id> through Nabu Casa or any reverse proxy already pointed at Home Assistant (locally, http://<ha-host>:8123/api/webhook/<webhook-id> ). For clients on the same network, the server is also reachable directly at http://<ha-ip>:9584/private_<random> . Replaces other install methods: the in-process server is a complete, standalone ha-mcp install — it takes the place of the app (add-on), Docker, and uvx/PyPI (stdio) methods. Run only one; do not run the in-process server alongside another install. Local only? Leave remote access disabled at setup (or turn off Remote access via webhook in the entry options) — no webhook is registered at all, while the direct port and sidebar panel keep working. Settings panel: while the server runs, an admin-only HA-MCP panel appears in the Home Assistant sidebar for managing tools, feature flags, backups, and themes. Optional authentication: set Authentication mode to ha_auth to require a Home Assistant account sign-in instead of using the secret URL as the credential. Manual install (no HACS): copy custom_components/ha_mcp_tools/ from this repository into your Home Assistant config/custom_components/ directory, then restart and add the integration as above. The component's second entry type, the File & YAML services entry ( HA-MCP File & YAML Tools ), is only needed if you enable ha-mcp's opt-in file and YAML editing tools (feature flags, off by default) — skip it otherwise; you can add it later at any time. It works with any server type (in-process, app, Docker, or stdio). Full in-process server documentation → · Setup Wizard for client-specific config → 🏠 Home Assistant app (add-on) Prefer to run ha-mcp as a Home Assistant app (add-on) ? On Home Assistant OS and Supervised installs it is a close second — no access token to manage, and it works with Claude Desktop, Claude.ai, ChatGPT, and any other MCP client on your local network or configured for remote access. Add the repository to your Home Assistant instance: If that opens the App store without an add-repository dialog (a known Home Assistant issue ), add it manually: Settings → Apps → Install app → ⋮ → Repositories , then paste https://github.com/homeassistant-ai/ha-mcp . Install \"Home Assistant MCP Server\" from Settings → Apps → Install app and click Start . (Home Assistant 2026.2 renamed \"Add-ons\" to \"Apps\"; on older versions this is the Add-on store.) Open the Logs tab to find your unique MCP URL. Connect your AI client to that URL — no token or credential setup needed . Full app documentation → ⚠️ Configure exactly one install method per client. The custom component, the app, Docker/PyPI, and local stdio are independent ways to run the same server — pick one and point your AI client at that single URL. Keeping two entries for the same server in one client (for example a local uvx ha-mcp@latest entry with HOMEASSISTANT_URL / HOMEASSISTANT_TOKEN alongside an app or component URL) is a known cause of connection hangs. Other install methods These run the server outside Home Assistant — useful for Container / Core installs (which can't run apps) or a separate host. The Setup Wizard generates the exact client-specific config for each. Docker (HTTP server): run ghcr.io/homeassistant-ai/ha-mcp in HTTP mode, pointed at your Home Assistant URL and a long-lived token (an administrator's is recommended; non-admin tokens work with limitations), and connect your client to its secret URL. See the Setup Wizard for the full command and per-client config. PyPI / uvx (HTTP server): run the published ha-mcp package with uvx ha-mcp@latest (or pip) as a streamable-HTTP server the same way. Details in the Setup Wizard . Local stdio (not recommended): runs ha-mcp on your own machine over stdio. The one-command installers in the Demo server section below use this path; the Setup Wizard covers connecting it to your own Home Assistant. OIDC authentication: gate remote access behind an external identity provider (Authentik, Keycloak, Auth0, etc.) instead of a secret URL — all authenticated users share the server's Home Assistant credentials. See OIDC Mode . ⚠️ stdio has known transport issues. The stdio transport has connection problems that streamable HTTP does not ( #1713 ). It is recommended only for demo/testing tinkering — for a real setup, use the custom component or an HTTP method above. 🌐 Remote access (Nabu Casa / Webhook Proxy app / OpenAI Tunnel) Using the HA-MCP custom component? You do not need the Webhook Proxy — the component has its own built-in webhook for remote access (see the Get Started quick start at the top). The proxy is for the app (it can also front another external server via its mcp_server_url option). The OpenAI Tunnel below is different: it applies to any install method when Home Assistant isn't publicly reachable at all (no Nabu Casa or reverse proxy). Already have Nabu Casa or another reverse proxy pointing at your Home Assistant? The Webhook Proxy app routes MCP traffic through your existing setup — no separate tunnel or port forwarding needed. Install the MCP Server app (see above) and the Webhook Proxy app from the same store Start the webhook proxy and restart Home Assistant when prompted Copy the webhook URL from the app logs: MCP Server URL (remote): https://xxxxx.ui.nabu.",
+      "stars_today": 36,
+      "language": "Python"
+    },
+    {
+      "title": "eugeniughelbur/obsidian-second-brain",
+      "slug": "eugeniughelbur-obsidian-second-brain",
+      "url": "https://github.com/eugeniughelbur/obsidian-second-brain",
+      "abstract": "Your vault is the memory. Claude, Grok Bot, Codex - same brain. Your vault outlives whichever CLI you switch to. obsidian-second-brain: AI second brain for Obsidian - persistent memory for Claude Code, Codex, Cursor and Grok Bot Crew: one logbook for all your agents Crew works without Obsidian. Claude Code, Codex, Cursor, and Grok Bot share job records in any plain folder.\nEach agent sees what the others finished and can leave a lesson for review. Grok Bot joins the same team through its existing runner. A lesson becomes a rule only when a human runs keep . Crew runs no background loop. curl -fsSL https://raw.githubusercontent.com/eugeniughelbur/obsidian-second-brain/main/scripts/quick-install.sh | bash Restart Claude Code, then type /crew setup . Pick ~/crew or wiki/team/ inside your Obsidian vault.\nCodex users run /hooks once to trust Crew's hooks. Setup prints a Grok Bot profile block to paste. 18:40 | codex | brand | Astra pass, 0 errors Setup, exact commands, and limits . Python 3.10 or later; no extra packages for Crew.\nShared agent memory isn't new. What Crew adds is the three parts above. An evolution of Karpathy's LLM Wiki pattern : a vault that rewrites itself. Every source updates existing pages instead of just appending new ones. Contradictions reconcile automatically. Your vault compounds while you sleep. Powered by OKM - Open Knowledge Metabolism : every stored fact is timeless, dated, or a pointer - so your knowledge base never fills with facts that used to be true. Built for developers · founders and operators · writers · researchers - pick a preset at setup Start with three: /obsidian-init to set up, /obsidian-save to capture, /obsidian-find to recall. The other 42 are there when you need them. auto-synthesis · thinking tools that argue with you live research from X, the web, and YouTube · 4 scheduled agents · 4 role presets write-time AI-first validator · /create-command interview flow · multilingual trigger schema Install → · Demos · See it in action · All commands · Presets · OKM · Discussions One /obsidian-save - five cross-linked notes. Real footage, synthetic vault. More demos → If this looks useful, star the repo . It is how other people find it. v0.18 - Crew (October 2026): Claude Code, Codex, Cursor and Grok Bot now share one logbook, so each agent knows what the others did. One line per job in any plain folder or your vault, read through each agent's own hooks; lessons agents leave each other become rules only when you keep them; no background loop. Plus source quality labels and German triggers from contributors. See the changelog → The Problem You use Claude every day. Every session starts from scratch. You re-explain everything. The conversation ends. Everything disappears. Claude Code has no persistent memory across sessions - and neither does Grok Bot, Codex, Gemini, or any of the others. You take notes in Obsidian. Hundreds of files. They just sit there. You make the same decision twice because you forgot you made it six months ago. Ideas rot in daily notes. Nobody connects the dots. Two powerful tools. Completely disconnected. You already have the long-term memory. The thing doing the thinking cannot reach it. How this extends Karpathy's LLM Wiki Karpathy's pattern is brilliant. Drop sources, LLM creates wiki pages, ask questions. This skill takes it further: Karpathy's LLM Wiki obsidian-second-brain New sources Append new pages, cross-reference Rewrite existing pages. People get updated, claims revised, stale facts replaced. Contradictions Flagged, you resolve manually /obsidian-reconcile resolves them automatically Patterns Surface when you ask /obsidian-synthesize finds unnamed patterns and writes synthesis pages on its own When it runs On demand, when you prompt 4 scheduled agents: morning brief, nightly consolidation, weekly review, vault-health check Note format Human-readable wiki pages AI-first: ## For future agent preamble + frontmatter for LLM retrieval, not human review If Karpathy's wiki is a knowledge base you maintain with an LLM, this is a knowledge base that maintains itself. What Happens When You Install This After a meeting: /obsidian-save Claude pulls out every decision, person, task, and idea and saves each one to the right note. You do nothing. You recorded a voice memo: /obsidian-ingest meeting.m4a Claude transcribes it with a local Whisper install, attributes speakers where the transcript makes them identifiable, extracts every promise and action item, and distributes across entity pages, task boards, and the daily note. You screenshot a whiteboard: /obsidian-ingest photo.png Claude reads the image, extracts text and structure, creates concept notes, links to related projects. A photo becomes knowledge. You have a finished text document: /obsidian-ingest report.docx Word ( .docx , .doc ) and OpenDocument ( .odt ) files uploaded or copied into the vault follow the same local-source rules as PDFs and Markdown. The helper converts a private copy to a temporary PDF, then ingestion uses the existing PDF path. Text and figures use that path; comments and revision markup are excluded. The original stays unchanged and remains the source under the existing provenance rules. Requires Python 3.10+ and LibreOffice 26.2+ , installed separately. Run python scripts/document_to_pdf.py \"path/to/report.docx\" ; it prints the PDF path. Put soffice on PATH or add --soffice with its executable path (Windows: C:/Program Files/LibreOffice/program/soffice.com ; macOS: /Applications/LibreOffice.app/Contents/MacOS/soffice ). Remove the generated PDF and its temporary parent folder after capture. No additional Python packages are needed. See the ingest command . Presentation and spreadsheet formats remain outside scope. You find a great video: /obsidian-ingest https://youtube.com/... Claude doesn't summarize into one note. It REWRITES your existing pages. People get updated. Contradictions get resolved. Patterns trigger new synthesis pages. One URL in. The vault is smarter. Before a big decision: /obsidian-challenge Claude searches your vault for past failures and reversed decisions on the same topic. Pushes back with your own words. Your vault holds you accountable. You want to see the big picture: /obsidian-visualize Claude generates a visual canvas of your entire vault. Hub nodes centered, color-coded by type, orphans highlighted. Open it in Obsidian and see the shape of your knowledge. You go to sleep: The nightly agent runs 5 phases: closes the day, reconciles contradictions, synthesizes cross-source patterns, heals orphan notes, and rebuilds the index. You wake up to a smarter vault. You start a new day: /obsidian-daily Claude pulls your calendar events, overdue tasks, and overnight changes into today's note. Your morning starts informed. Someone shares an X post: /x-read https://x.com/... Grok with live X access fetches the post, the thread, and the replies. Returns verbatim text + TL;DR + key claims + reply sentiment + voices to watch. No more screenshots. You're planning today's content: /x-pulse \"AI automation\" Grok scans X for what's trending in your topic right now. Returns 3-5 emerging themes (with rep posts + key voices), gaps nobody is filling, hook formats that are working, and 3 specific post ideas you could write today. You need real research: /research \"AI memory tools\" Perplexity Sonar Pro pulls a deep dossier with citations: summary, key facts (every claim with a recency marker and source domain), timeline, key players, contrarian views, recommended further reading, open questions. Saved to your vault, auto-opens in Obsidian. You want vault-first deep research: /research-deep \"AI memory tools\" Scans your vault for what you already know. Identifies gaps. Spawns 3-5 targeted searches via Perplexity (web) and Grok (X discourse). Synthesizes a delta report: what's new, what's confirmed, contradictions to resolve, recommended vault updates. Vault baseline doesn't get re-researched. Only gaps get filled.",
+      "stars_today": 35,
+      "language": "Python"
+    },
+    {
+      "title": "nicobailon/pi-subagents",
+      "slug": "nicobailon-pi-subagents",
+      "url": "https://github.com/nicobailon/pi-subagents",
+      "abstract": "pi-subagents pi-subagents lets Pi delegate work to focused child agents. Use it for code review, scouting, implementation, parallel audits, saved workflows, background jobs, and anything else that benefits from a second or third set of model eyes. pi-subagents-chain.mp4 Install pi install npm:pi-subagents That is the only required step. pi-subagents needs Pi 1.2.0 or newer. Background children use the host's SDK: npm Pi keeps its detached Node runner; the official Pi 1.2.0 Linux x64 standalone release loads the same runner through Pi's embedded SDK, without a separate SDK install. See Standalone background execution for the supported boundary and validation gate. Try this first You do not need to create agents, write config, or learn slash commands. After installing, ask Pi in plain language: Use reviewer to review this diff. Ask oracle for a second opinion on my current plan. Challenge assumptions and tell me what I might be missing. Use scout to understand this code based on our discussion, then ask me clarification questions. Run parallel reviewers: one for correctness, one for tests, and one for unnecessary complexity. That is enough to start. Pi decides whether to call the subagent tool, which agent to use, and how to compose the work. How it works Pi is the parent session. A subagent is a focused child Pi session with its own job. When you ask for a subagent, Pi starts the child, gives it the task, and brings the result back. Foreground children run as sessions inside the parent Pi process and stream in the conversation. Background children run as sessions inside a detached runner process that keeps working and can be checked later. Installing the extension does not start an automatic reviewer in the background. When the session's model can take a new tool mid-conversation, fresh parent sessions initially expose the small subagents_enable loader instead of the full subagent schema. When your request or applicable instructions authorize delegation, Pi can call the loader itself; the unchanged subagent tool is available on the next model request. With other models, fresh sessions start with subagent active, because adding a tool later would make the provider miss its prompt cache. The toolActivation setting changes this. Complexity alone does not authorize delegation. bg_wait and supervisor replies remain available without activation. If you want every implementation reviewed, say so in your prompt or project instructions: When you finish implementing, run a reviewer subagent before summarizing. Builtin agents The extension ships with agents you can use immediately: Agent Use it when you want... scout Fast local codebase recon: relevant files, entry points, data flow, risks. researcher Web/docs research with sources and a concise research brief. Requires pi-web-access in the child . evidence-auditor Independently checks whether important research claims are supported by their sources. Requires pi-web-access in the child . worker Implementation work. Edits files, validates, escalates unapproved decisions instead of guessing. reviewer Read-only code review against the task/plan, tests, edge cases, and simplicity. oracle A second opinion before acting. Challenges assumptions without editing. delegate A lightweight general delegate that behaves close to the parent session. Rule of thumb: scout before you understand the code, researcher before you trust external facts, evidence-auditor before you rely on important research, worker to implement, reviewer to check, and oracle when the decision itself feels risky. Common workflows The package includes /council and council-mode , plus documented model-based council-* profile examples that you add in your own agent directory. Want Ask naturally Get a second opinion \"Ask oracle to review this plan and challenge assumptions.\" Solve a hard problem \"Use oracle to investigate this bug before we edit.\" Review a diff \"Use reviewer to review this diff.\" Run parallel reviewers \"Run reviewers for correctness, tests, and cleanup.\" Debate a material decision \"Use /council with model-based advisors to compare this decision.\" Implement then review \"Implement this, then review it.\" Review until clean \"Run a review loop on this change with a max of 3 rounds.\" Execute a plan carefully \"Have worker implement this approved plan, then run reviewers and apply the feedback.\" Scout before planning \"Use scout to inspect the auth flow before planning.\" Run in the background \"Run this in the background.\" Use a saved workflow \"Run the review chain on this branch.\" Browse agents \"Show me the available subagents.\" See running work \"Show active async runs.\" or \"Show the subagent fleet.\" Check setup \"Check whether subagents are configured correctly.\" For implementation work, the recommended loop is clarify → scout → worker → fresh reviewers → worker . Packaged prompt shortcuts like /parallel-review and /review-loop make these patterns repeatable — see Workflows . Where running work shows up Foreground runs stream progress in the conversation. Background runs keep working after control returns to you. In the TUI, a persistent FleetView below the editor keeps active work visible. /subagents-fleet opens a live inspector where you can browse children, read transcripts, steer a running child, or stop a run. You can also just ask: \"Show me the current async runs.\" Details, keybindings, and the machine-readable run artifacts are in Observability . For bounded orchestration, maxSubagentSpawnsPerRun limits cumulative logical children in one run tree. It defaults to 64 and stays separate from active concurrency and the session-wide cumulative spawn budget. See Configuration . If something feels off /subagents-doctor or ask: \"Check whether subagents and intercom are set up correctly.\" For installed-version help, use /subagents-guide [topic] or subagent({ action: \"guide\", options: { topic: \"workflows\" } }) . The default topic is overview ; available topics are overview , workflows , agents , missions , observability , tool-reference , configuration , models , watchdog , extension-api , and council . Documentation The full reference lives in docs/ : Doc What's in it Agents Custom agents, frontmatter reference, overriding builtins, tools, extensions, skills, per-agent memory. Models Single-model selection and launch, defaults, per-role overrides, recommended tiering, thinking levels, model scope enforcement, profiles. Workflows Orchestration patterns, prompt shortcuts, scripted workflows, worktree isolation, child-to-parent coordination, the recursion guard. Watchdog The opt-in adversarial change reviewer, scope monitoring, LSP checks, and child tool permissions. Tool reference Every subagent parameter, management actions, status/control actions, acceptance gates, external CLI runners. Observability FleetView, the fleet inspector, lifecycle artifacts, events, logs, session sharing. Missions and schedules Durable mission records, delivery receipts, timed and recurring runs. Configuration Every config.json key and environment variable. Extension API The RPC, delegation API, preflight, capability ceilings, trusted workflow resources , background-work providers, Herdr integration.",
+      "stars_today": 31,
+      "language": "TypeScript"
+    }
+  ],
+  "papers": {
+    "hf": [
+      {
+        "title": "UserArena: Benchmarking Interactive User Simulation for Long-Horizon Shopping Agents",
+        "slug": "userarena-benchmarking-interactive-user-simulation-for-long",
+        "url": "https://huggingface.co/papers/2610.30932",
+        "abstract": "UserArena introduces a real-world interactive benchmark with long-horizon shopping trajectories and an evaluation framework, alongside On-Policy Trajectory Distillation to improve simulator fidelity for agentic recommendations.",
+        "upvotes": 47,
+        "arxiv_id": "2610.30932",
+        "authors": []
+      },
+      {
+        "title": "HiSTEVE 1.0: Harnessing Human-Interface VLA Agents for Open-World Games",
+        "slug": "histeve-1-0-harnessing-human-interface-vla-agents-for-open",
+        "url": "https://huggingface.co/papers/2610.31162",
+        "abstract": "HiSTEVE is a hierarchical vision-language-action agent that combines long-horizon planning with native keyboard-and-mouse control to perform complex open-ended tasks in Minecraft.",
+        "upvotes": 38,
+        "arxiv_id": "2610.31162",
+        "authors": []
+      },
+      {
+        "title": "RSIHub: A Composable Framework for Agent-Evolution Methods",
+        "slug": "rsihub-a-composable-framework-for-agent-evolution-methods",
+        "url": "https://huggingface.co/papers/2610.32253",
+        "abstract": "RSIHub is an open-source framework that standardizes agent-evolution research by providing shared infrastructure for building, comparing, and extending methods with reusable components and consistent evaluation.",
+        "upvotes": 34,
+        "arxiv_id": "2610.32253",
+        "authors": []
+      },
+      {
+        "title": "RynnUnify: Towards Unified Embodied Brain",
+        "slug": "rynnunify-towards-unified-embodied-brain",
+        "url": "https://huggingface.co/papers/2610.32965",
+        "abstract": "RynnUnify is a 16B unified embodied model that integrates visual planning, physical reasoning, and robot control, achieving state-of-the-art results on long-horizon embodied tasks.",
+        "upvotes": 31,
+        "arxiv_id": "2610.32965",
+        "authors": []
+      },
+      {
+        "title": "Omni-Woodpecker: Hallucination Correction via Evidence-Prior Rebalancing for Omni LLMs",
+        "slug": "omni-woodpecker-hallucination-correction-via-evidence-prior",
+        "url": "https://huggingface.co/papers/2610.27103",
+        "abstract": "Omni-Woodpecker is a training-free framework that reduces cross-modal hallucinations in omni LLMs by identifying modality conflicts and rebalancing hidden representations to suppress misleading priors.",
+        "upvotes": 21,
+        "arxiv_id": "2610.27103",
+        "authors": []
+      },
+      {
+        "title": "Every Weight Is a Path of Shared Discrete Decisions",
+        "slug": "every-weight-is-a-path-of-shared-discrete-decisions",
+        "url": "https://huggingface.co/papers/2610.31931",
+        "abstract": "TWIG represents neural network weights as shared discrete decision paths, unifying compression methods and enabling efficient fixed-weight circuits with optimized discrete choices.",
+        "upvotes": 18,
+        "arxiv_id": "2610.31931",
+        "authors": []
+      },
+      {
+        "title": "Dual Exam: Controlled Evaluation of Multimodal Agents and World Models",
+        "slug": "dual-exam-controlled-evaluation-of-multimodal-agents-and",
+        "url": "https://huggingface.co/papers/2610.31066",
+        "abstract": "Dual Exam evaluates multimodal agents and world models separately across diverse domains, revealing uneven performance and no coupled success in pilot tests.",
+        "upvotes": 16,
+        "arxiv_id": "2610.31066",
+        "authors": []
+      },
+      {
+        "title": "DirCast: Live Esports Directing and Commentary with a Single Streaming Video-Language Model",
+        "slug": "dircast-live-esports-directing-and-commentary-with-a-single",
+        "url": "https://huggingface.co/papers/2610.31734",
+        "abstract": "DirCast is a streaming video language model that simultaneously directs live esports broadcasts by selecting cameras and generates real-time commentary using only past context.",
+        "upvotes": 16,
+        "arxiv_id": "2610.31734",
+        "authors": []
+      },
+      {
+        "title": "On-Policy Self-Training: Data-Free Self-Improvement in Large Language Models",
+        "slug": "on-policy-self-training-data-free-self-improvement-in-large",
+        "url": "https://huggingface.co/papers/2610.32770",
+        "abstract": "Foundation models can self-improve across text and vision tasks by generating synthetic questions and reasoning traces guided only by high-level topics, without external supervision.",
+        "upvotes": 12,
+        "arxiv_id": "2610.32770",
+        "authors": []
+      },
+      {
+        "title": "DraMaze: A Multi-Agent Pipeline with Future-Aware Memory for Diverse Microdrama Script Generation",
+        "slug": "dramaze-a-multi-agent-pipeline-with-future-aware-memory-for",
+        "url": "https://huggingface.co/papers/2610.32002",
+        "abstract": "DraMaze improves long-form microdrama script generation by using evolutionary tree search guided by trope memory and backward narrative dependency trees to enhance plot diversity and coherence.",
+        "upvotes": 11,
+        "arxiv_id": "2610.32002",
+        "authors": []
+      }
+    ],
+    "others": [
+      {
+        "title": "Huni: A Networked Testbed for Real-time Human and Generative AI Interaction",
+        "slug": "huni-a-networked-testbed-for-real-time-human-and-generative",
+        "url": "https://www.semanticscholar.org/paper/f7085dfe3d1e94ea7bc5245eed0ccb6321d24056",
+        "abstract": "Real-time audio/video-based interaction between humans and generative AI (GenAI) systems is now widely deployed in mainstream applications such as OpenAI ChatGPT and Google Gemini. Unlike traditional human-to-human realtime communication, human-GenAI interaction introduces fundamental challenges for today's network infrastructure. However, systematically evaluating different design factors remains difficult in the absence of controlled and reproducible experimental platforms that can isolate key components for human-GenAI interaction. In this paper, we present Huni, a networked testbed for real-time human-GenAI interaction. Huni provides end-to-end control over the interaction pipeline, such as transmission paradigms (e.g., WebRTC, QUIC/HTTP-3, and Media over QUIC), adaptation algorithms (e.g., congestion control and bitrate adaptation), network conditions (e.g., bandwidth, round-trip time, and packet loss), and GenAI processing logic. We demonstrate the usability of Huni through two case studies: (i) comparing call setup time across different WebRTC and QUIC-based schemes, and (ii) evaluating the performance of multiple congestion control algorithms under diverse network conditions. We hope Huni can facilitate future research on real-time human-GenAI interaction.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 1,
+        "published_date": "2026-10-26",
+        "authors": [
+          "Rui-Zhi Cheng",
+          "Mohamed Mohsin Shaik",
+          "Guo-Wu Xie",
+          "Bo Han"
+        ]
+      },
+      {
+        "title": "RadarAgent: Agentic Tool Utilization for Radar-to-Language Understanding",
+        "slug": "radaragent-agentic-tool-utilization-for-radar-to-language",
+        "url": "https://www.semanticscholar.org/paper/ff989afa2d06b05c233c3dc01bc4569f661cc4d2",
+        "abstract": "MmWave radar senses human motion without recording appearance or identity, which makes it attractive for privacy-aware applications. However, its raw point clouds and signal-level features are hard for people to read. Existing radar-language models make such data queryable by training a radar tokenizer aligned to a language model, at the cost of specialized pipelines, paired data, and architecture-specific engineering. We present RadarAgent, an agentic framework that exposes radar processing as callable tools and lets a foundation model reason over them to describe motion in natural language, with no radar-token pretraining. In HumanML3D-style motion captioning, it exceeds the Radar-LLM baseline on key semantic metrics across several backbones, improving ROUGE-L from 36.0 to 39.6 and BERTScore from 83.3 to 90.7, and tool calling clearly outperforms flat feature prompting.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-26",
+        "authors": [
+          "Shuang He",
+          "Yixuan Gao",
+          "Rajalakshmi Nandakumar"
+        ]
+      },
+      {
+        "title": "AI-Assisted Writing Across Medical Journals: Heterogeneity in Prevalence and Trends",
+        "slug": "ai-assisted-writing-across-medical-journals-heterogeneity-in",
+        "url": "https://www.semanticscholar.org/paper/f22c7c6ae1c2949aad67855aeeac1e149e9ff723",
+        "abstract": "AI-Assisted Writing Across Medical Journals: Heterogeneity in Prevalence and Trends. medRxiv",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-26",
+        "authors": [
+          "M. D. Flanders",
+          "M. Caunca",
+          "A. Mehrotra",
+          "S. F. Ackley"
+        ]
+      },
+      {
+        "title": "NPUGen: NPU as KV Generator for Stable Long-Context Mobile LLM Inference",
+        "slug": "npugen-npu-as-kv-generator-for-stable-long-context-mobile",
+        "url": "https://www.semanticscholar.org/paper/ed77bdda705520f9cdef659cc346b6a20e21378d",
+        "abstract": "As on-device large language model (LLM) applications like mobile agents become increasingly popular, long-context inference has become a key challenge. The key-value (KV) cache is the foundation of efficient autoregressive decoding, but its memory footprint grows rapidly with context length, often exceeding the memory limits of mobile devices. Existing KV cache management methods, such as compression and storage offloading, often lead to performance degradation or unpredictable stall latency. We find that in the prevalent CPU/GPU-decoding mobile pipelines, the NPU remains largely idle during decoding and can recompute missing KV cache more efficiently than storage offloading. We therefore propose NPUGen, whose KV recomputation engine generates missing KV cache on the idle NPU via a prefill-like forward pass, avoiding unstable storage I/O, CPU intervention, and unnecessary data movement. NPUGen further introduces a hidden-state anchor mechanism that eliminates redundant prefix recomputation, and turns KV recomputation into a schedulable background service to cope with resource contention and guarantee foreground QoS. Experiments on smartphones with Qualcomm SoCs across multiple long-context tasks show that NPUGen significantly reduces decoding latency and fluctuations, providing fast and stable long-context inference on resource-constrained mobile devices.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-26",
+        "authors": [
+          "Kun Wang",
+          "Jia-Ni Cao",
+          "Zhen-Jiang Li"
+        ]
+      },
+      {
+        "title": "WiP: A New Sense for Agents to Understand Human Behavior through mmWave",
+        "slug": "wip-a-new-sense-for-agents-to-understand-human-behavior",
+        "url": "https://www.semanticscholar.org/paper/eaee2294a4676849837452d6907358120c8ec60e",
+        "abstract": "While Large Language Models (LLMs) excel in processing text, vision, and audio, they remain blind to human behaviors in everyday physical environments. Millimeter-wave (mmWave) sensing offers a privacy-preserving, device-free perceptual channel. As LLMs cannot inherently process radar modalities, the core challenge is how to convert continuous radar observations into tokens that an LLM can understand without losing human kinematics. To address this bottleneck, we present mmMind, an interactive cognitive agent driven by pose-guided kinematic tokenization. By leveraging 3D human pose to supervise a spatial-temporal radar encoder, mmMind generates continuous tokens that faithfully preserve intricate posture transitions and physical kinematics. A lightweight projector then maps these tokens directly into the LLM's embedding space, unlocking multi-turn contextual interaction and spatial-temporal reasoning. Evaluations on a 17.9-hour real-world dataset demonstrate substantial improvements over baselines in radar captioning and physical question answering.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-26",
+        "authors": [
+          "Duo Zhang",
+          "Zhe-Hui Yin",
+          "Xu-Sheng Zhang",
+          "Hong-Liu Yang",
+          "Zhi-Yun Yao",
+          "Da-Qing Zhang"
+        ]
+      },
+      {
+        "title": "WIP: AMAS: An Android Macro Action System for Efficient LLM Mobile Agents",
+        "slug": "wip-amas-an-android-macro-action-system-for-efficient-llm",
+        "url": "https://www.semanticscholar.org/paper/e75e820566585cbf30edbe9aa469fc1a2f0747ed",
+        "abstract": "Recent advances in LLMs have enabled mobile agents that can automate user tasks through natural language interaction with app interfaces. However, current agents execute tasks as sequences of basic UI actions (taps, swipes), incurring extra latency, token cost, and accumulating error risks. Motivated by this, we propose AMAS, an Android Macro Action System that constructs reusable, system-grounded macro actions by identifying system-level application entry transitions that directly jump to task-relevant, app-specific screens. Results show that AMAS reduces agent's average LLM calls by 23.22%, LLM latency by 26.38%, and token cost by 21.9%, while having a 6.0% gain on success rate. Further coverage analysis shows that AMAS constructs 184 stable and distinct macro actions across the 20 benchmark apps, averaging 9.2 per app. At the task level, AMAS provides every task with at least one macro action, and 54.3% of tasks coverage. These results demonstrate that system-level macro actions can provide broad coverage while improving both the efficiency and reliability of LLM-based mobile agents.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-26",
+        "authors": [
+          "Wen-Rui Lu",
+          "Mu Yuan",
+          "Bu-Fang Yang",
+          "Si-Yang Jiang",
+          "Wei Gao",
+          "Zhen-Yu Yan",
+          "Guo-Liang Xing"
+        ]
+      },
+      {
+        "title": "Real-Time RAN Observability at the Far Edge: AI on the Fronthaul",
+        "slug": "real-time-ran-observability-at-the-far-edge-ai-on-the",
+        "url": "https://www.semanticscholar.org/paper/e752e3e1d856c0f8961610264c05be04dd2df93c",
+        "abstract": "Operational RAN observability is reported every 5 to 15 minutes, averaging over as many as 1.8 million slots. Resolution is only half the problem: the quantities that explain a physical-layer fault, such as the beamforming weights the DU computed and the elements each layer actually drove, are not counted at all. Neither limit will cope with 6G integrated sensing, non-terrestrial networks, and ever-larger MIMO arrays. The 7.2x fronthaul split puts a standardized, tappable boundary in the middle of every modern base station; we argue it is the right place to obtain real-time observability, and that the analysis must run at the far edge, because the evidence is transient: it crosses the wire once, cannot be averaged down without losing the fault, and is not recoverable afterwards at any resolution. From passive captures, with no vendor-supplied instrumentation and no cooperation from either the DU or the radio supplier, we recover DU-side scheduling behavior and radio-side execution, including the per-beam and per-layer beamforming weights carried on the C-plane, separating measured quantities from those conditioned on an array hypothesis. On that extraction we ground an eleven-agent platform in which a language model only interprets measurements. Across three independent capture labs covering 4T4R, 32T32R, and 64T64R radios, a fourth lab read over the M-plane, and a dataset of 87 distinct captures, one unmodified code path recovered per-layer weights and revealed three faults nobody was looking for, two of them on the DU side, including a pair of effectively un-beamformed layers for which no alarm currently exists. A separate root-cause diagnosis was confirmed by the repair that followed.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-26",
+        "authors": [
+          "Sridhar Rajagopal",
+          "Eran Pisek",
+          "Gabriele Gemmi",
+          "Michele Polese",
+          "Hong-Wei Wang",
+          "Akash Gupta"
+        ]
+      },
+      {
+        "title": "Resource-Constrained Lifelogging: A Utility-Based Replacement Policy for Video Understanding",
+        "slug": "resource-constrained-lifelogging-a-utility-based-replacement",
+        "url": "https://www.semanticscholar.org/paper/df55cac8cdd74bf9db107170473b03a1a8c2a905",
+        "abstract": "Lifelogging on personal mobile devices allows users to interact with their past experiences through Multimodal Large Language Models (MLLMs) hosted on edge servers. However, offloading continuous lifelog data streams is severely constrained by limited edge storage. In this work, we present an end-to-end edge-offloaded lifelogging system featuring a utility-based replacement policy to manage multimodal databases under strict storage constraints. To preserve semantically valuable data, we propose diversity- and variance-based utility functions to quantify lifelogs' representativeness, formulating the replacement decisions as a multiple-choice knapsack optimization problem. We evaluate our system under multiple real-world storage constraints using an egocentric video dataset for video question answering, simulating interactive discussions between users and MLLM-powered AI assistants. Experimental results demonstrate that our utility-based replacement policies: (i) boost accuracy by 102.5% on average (by 135% at most) compared to the First-In-First-Out (FIFO) baseline, (ii) achieve at least 78.2% relative coverage compared to unlimited storage, and (iii) incur merely 1.96% communication overhead and 0.03% computation overhead. This work facilitates scalable, long-term digital memory for AI assistants, paving the way for resource-efficient immersive communication services.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-26",
+        "authors": [
+          "Tun-Yuan Chang",
+          "Cheng-Hsin Hsu"
+        ]
+      },
+      {
+        "title": "Bern Sleep-Wake Registry: temporal extraction of comorbidities from unstructured clinical text using a large language model",
+        "slug": "bern-sleep-wake-registry-temporal-extraction-of",
+        "url": "https://www.semanticscholar.org/paper/da031c00a19b50105227c5d78ffad18d8eeefa1b",
+        "abstract": "Bern Sleep-Wake Registry: temporal extraction of comorbidities from unstructured clinical text using a large language model. medRxiv",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-26",
+        "authors": [
+          "I. Filchenko",
+          "F. Dennstaedt",
+          "K. Zub",
+          "F. I. Pompizii",
+          "J. van der Meer",
+          "A. Adamantidis",
+          "N. Cihoric",
+          "M. H. Schmidt",
+          "C. L. Bassetti"
+        ]
+      },
+      {
+        "title": "Demo: Multi-Device Cuffless Blood Pressure Monitoring via PPG-to-ECG Generation",
+        "slug": "demo-multi-device-cuffless-blood-pressure-monitoring-via-ppg",
+        "url": "https://www.semanticscholar.org/paper/d694e7f3ef43b5dda56ce8f6ebcd487e0baa4c68",
+        "abstract": "Cuffless blood pressure (BP) monitoring is central to managing cardiovascular diseases, and is commonly based on photoplethysmography (PPG) or electrocardiography (ECG). ECG delivers better BP accuracy, but straps and patches make it impractical for daily use; PPG is already present on the rings and watches people wear all day, yet carries far less cardiac information. We bridge the two by generating ECG from PPG: a diffusion model performs a selective, ECG-targeted generative process conditioned on PPG, using a QRS-adaptive forward process together with scale- and frequency-alignment modules that constrain R-peak position, amplitude range and heart rate. This demo runs that pipeline live on heterogeneous commodity wearables—two smart rings (Circular Ring, OmniRing), a smart watch (Mi Band 4) and our own PPG wristband. Attendees wear the device of their choice, watch an ECG being synthesized from their own PPG in real time, and compare the resulting estimate against an Omron cuff, shown alongside a signal-quality index and the running error against the cuff.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-26",
+        "authors": [
+          "Hui Ji",
+          "Peng-Fei Zhou"
+        ]
+      },
+      {
+        "title": "When Not to Diagnose: Evaluating Evidence-Sufficiency Recognition in ECG Multimodal Language Models with ECGTrustBench",
+        "slug": "when-not-to-diagnose-evaluating-evidence-sufficiency",
+        "url": "https://www.semanticscholar.org/paper/cc74e6e393c50dad1ff6680d0d43dfbf4bb811ed",
+        "abstract": "Mobile electrocardiogram (ECG) capture routes photographed or scanned 12-lead images to an AI model or a clinician, yet missing leads, calibration loss, or photographic degradation can remove diagnosis-critical evidence while the tracing remains visually readable. A condition-aware evidence-sufficiency check is therefore needed to flag unusable captures for recapture or clinician review before diagnosis. Existing ECG multimodal large language model (MLLM) evaluations cannot support this, as they assume every question is answerable. We introduce ECGTrustBench, which evaluates evidence-sufficiency recognition as answerable-versus-insufficient QA over 3,300 image-question pairs, with corruption criteria unanimously approved by three licensed clinicians. Across ECG-specific, medical-domain, general-domain, and proprietary MLLMs, we find a consistent gap between answering and abstaining: ECG-specific models reach up to 77.3% clean accuracy yet abstain on at most 10% of evidence-deficient cases, while proprietary models achieve recognition up to 82%. Overall, current models respond more to visible degradation than to missing diagnostic evidence, highlighting a critical gap for evidence-sufficiency gating.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-26",
+        "authors": [
+          "Qi-Jia Huang",
+          "Jing-Xia Jiang",
+          "F. Syed",
+          "Abdul Haseeb Riaz",
+          "Yi-Ran Chen",
+          "Jingping Nie"
+        ]
+      },
+      {
+        "title": "PersonaBreak: inducing low-safety personas for automated LLM jailbreaking",
+        "slug": "personabreak-inducing-low-safety-personas-for-automated-llm",
+        "url": "https://www.semanticscholar.org/paper/ca0d55942dba75eb00a552ace8437a75a8be9432",
+        "abstract": "PersonaBreak: inducing low-safety personas for automated LLM jailbreaking. Journal of Supercomputing",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-26",
+        "authors": [
+          "Lv-Qing Qiu",
+          "Hong Xie",
+          "Qian Kang",
+          "Jian-Neng Chen"
+        ]
+      },
+      {
+        "title": "SpatialMind: Spatially Aware On-Device Embodied AI via Viewpoint Integration",
+        "slug": "spatialmind-spatially-aware-on-device-embodied-ai-via",
+        "url": "https://www.semanticscholar.org/paper/c52dd696d54d59b2910d3ceb4c0fd865ed7b0bf7",
+        "abstract": "On-device embodied AI allows local processing of visual data and prompt responses to user requests. Applying embodied AI to more complex domains requires spatial cognition, to properly comprehend the 3D environment and geometric relations between objects. However, existing vision-language models (VLMs) are weak in spatial cognition due to their limitations to 2D image understandings. In this paper, we present SpatialMind, a new on-device embodied AI technique that bridges the gap between 2D visual inputs and 3D physical reality, by injecting 3D spatial knowledge into on-device VLMs in a sparse form of 2D allocentric spatial memory. This memory is constructed by systematically aligning cross-frame visual features to a unified global viewpoint, and we prune the scope of on-device computation to maximize the compute efficiency in memory construction and VLM reasoning. Experiment results in diverse indoor environments show that SpatialMind greatly enhances the performance of spatially aware on-device embodied AI tasks, with high adaptability, robustness and compute efficiency.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-26",
+        "authors": [
+          "Hao-Ming Wang",
+          "Qi-Yao Xue",
+          "Wei-Chen Liu",
+          "Boyuan Yang",
+          "Xiang-Yu Yin",
+          "Wei Gao"
+        ]
+      },
+      {
+        "title": "Demo: MobileClaw: A Notification-Driven, Human-Gated Mobile LLM Agent",
+        "slug": "demo-mobileclaw-a-notification-driven-human-gated-mobile-llm",
+        "url": "https://www.semanticscholar.org/paper/c47e5a7b81a4a15abb2b3619e0d6da738f479ae8",
+        "abstract": "Smartphone assistants built on large language models (LLMs) today either drive an application's screen display or wait to be asked through chatting; neither is integrated into the event stream produced by the mobile OS and user-installed applications. We demonstrate MobileClaw, an Android system component that attaches an external LLM to the OS notification channel. A background service captures every posted notification and asks the model for recommended further actions; an interactive front end carries out the user's requests through built-in skills, operated through OS API calls rather than screen automation. The model is treated as an untrusted component: nothing it decides takes effect unless the user confirms it. Notification text and everything the app reads from the device pass a sanitizer before they leave the phone, and privileged operations run in a separate process behind an allowlist it re-checks itself. Demo attendees may fire synthetic or real notifications, manipulate local resources on the device, approve or reject suggested actions, and watch the model's reasoning trace in real time.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-26",
+        "authors": [
+          "Boyuan Yang",
+          "Alexander Du",
+          "Ozzie Hassel",
+          "Jash Uganandan",
+          "Wei Gao"
+        ]
+      },
+      {
+        "title": "Educating Humans, Training Machines: From Doing to Becoming in the Age of Artificial Intelligence",
+        "slug": "educating-humans-training-machines-from-doing-to-becoming-in",
+        "url": "https://www.semanticscholar.org/paper/c109922313a501cd0e1f506ec314c7e1f270ee4e",
+        "abstract": "Artificial intelligence (AI) is rapidly reshaping higher education. Generative AI systems can summarize texts, generate written work, provide feedback, assist in problem solving, and support increasingly complex cognitive activities across disciplines. While these technologies create significant opportunities for teaching and learning, they also challenge long-standing assumptions about the relationship between academic task performance and evidence of learning. This paper argues that the central challenge for higher education is not simply integrating artificial intelligence into the classroom but reconsidering the purpose of education through a shift from task-oriented learning focused on “doing” toward developmental learning centered on “becoming.” Drawing upon Bloom’s Taxonomy, experiential learning, transformative learning, situated learning and research on human–AI collaboration, this paper develops a conceptual framework for examining the changing relationship between cognitive task performance and learner development in AI-augmented educational environments. Rather than assigning lower-order cognition to artificial intelligence and higher-order cognition exclusively to humans, the framework recognizes that AI can support activity across cognitive levels while distinguishing successful task performance from the intellectual development of the learner. The paper argues that the educational value of AI ultimately depends on whether its use contributes to the development of judgment, agency, reflection, ethical responsibility, creativity, and intellectual identity. Implications for curriculum design, assessment, faculty development, and institutional policy are discussed.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-26",
+        "authors": [
+          "James Belcher"
+        ]
+      },
+      {
+        "title": "WiP: RadTomDop: Physics-Guided Diffusion Reconstruction for X-Band Doppler Radio Tomography in Device-Free Indoor Localization",
+        "slug": "wip-radtomdop-physics-guided-diffusion-reconstruction-for-x",
+        "url": "https://www.semanticscholar.org/paper/b29d0df9dc4014bd4eb1f8401a715daf6c6aa703",
+        "abstract": "RadTomDop presents a device-free indoor localization system that couples compact 10.585 GHz reflective Doppler probes with radio-tomographic spatial reconstruction. The distributed probes acquire motion-induced perturbations of reflected X-band signals and forward synchronized measurements through an embedded CAN/Ethernet pipeline. To recover indoor activity from sparse and cluttered measurements, RadTomDop introduces a Doppler-conditioned physics-guided diffusion reconstruction module instead of conventional smooth inverse reconstruction. The model enforces consistency with the calibrated RTI forward operator while learning plausible room-constrained activity patterns. This end-to-end prototype transforms reflected-wave measurements into interpretable activity maps and object trajectories, enabling privacy-preserving indoor detection and tracking without tags, wearables, or active transmitters.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-26",
+        "authors": [
+          "M. Styła",
+          "Barbara Stefaniak",
+          "P. Adamkiewicz",
+          "T. Rymarczyk",
+          "Grzegorz Kłosowski",
+          "D. Wójcik"
+        ]
+      },
+      {
+        "title": "WiP: GuardedMobile: Runtime Verification for LLM-Based Mobile GUI Agents in High-Stakes App Workflows",
+        "slug": "wip-guardedmobile-runtime-verification-for-llm-based-mobile",
+        "url": "https://www.semanticscholar.org/paper/ad2e8a079dc41e03cf9961a502fb677de9abd24a",
+        "abstract": "The next failure mode for mobile GUI agents is not a bad answer in a chat window; it is a bad tap on a phone. In high-stakes app workflows, one tap can submit a form, upload identity, disclose private data, accept terms, change account state, or authorize payment. This paper presents GuardedMobile, a lightweight runtime verifier that mediates proposed mobile GUI actions before app execution. We introduce MobileRiskBench-WiP, a trace-based benchmark of 52 workflows, including 12 ambiguous stress cases with misleading button labels and weak confirmation screens. Across three LLM-like agents and action-noise levels of 0.00, 0.10, and 0.20, Full GuardedMobile-Stress reduces unsafe workflow rate by about 95% and risk-weighted failure by about 95%, while retaining 86.5% task completion. The result is preliminary: stress tests show a safety-completion tradeoff, including clarification requests, delay, false positives, and residual unsafe actions.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-26",
+        "authors": [
+          "Ruo-Xi Li"
+        ]
+      },
+      {
+        "title": "Artificial intelligence support in synchronous collaborative CAD activities: task-dependent effects and methodological implications",
+        "slug": "artificial-intelligence-support-in-synchronous-collaborative",
+        "url": "https://www.semanticscholar.org/paper/aa063acdfaaca70d95395dd9b72bfb713ecec346",
+        "abstract": "Artificial intelligence support in synchronous collaborative CAD activities: task-dependent effects and methodological implications. Design Science",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-26",
+        "authors": [
+          "Jelena Šklebar",
+          "T. Martinec",
+          "S. Škec",
+          "M. Štorga"
+        ]
+      },
+      {
+        "title": "GUARD-EYE: Guiding User Awareness with Real-time Detection for EYe health and Engagement",
+        "slug": "guard-eye-guiding-user-awareness-with-real-time-detection",
+        "url": "https://www.semanticscholar.org/paper/a6de087a264728352606528b0acab4576f4dfc24",
+        "abstract": "Digital Eye Strain (DES) is a prevalent health issue caused by extended screen usage, improper viewing distances and poor ambient lighting. Current preventative measures rely on static timers and lack the environmental context necessary for personalized intervention. We introduce GUARD-EYE, a context-aware wearable smart-headset system designed to actively monitor and mitigate DES risk factors using the sensor capabilities of modern smart glasses. The system uses a depth sensor, visible light cameras, and edge-based YOLO object detection to dynamically determine viewing distance, ambient lighting, and digital screen usage. We propose a heuristic eye strain risk model that leverages these sensor streams to calculate a real-time fatigue score and trigger audiovisual feedback during extended unsafe conditions. In addition, the system integrates Large Language Model (LLM)-generated contextual insights to deliver more personalized, dynamic behavioral feedback based on viewing data. To compare intervention strategies across diverse scenarios, we introduce a novel LLM-based user simulation framework1. Across three modeled compliance personas, the exploratory simulation produced a lower fatigue burden index for contextual alerts (5.12/10) than for the no-alert baseline (6.74/10), suggesting that context-aware intervention policies warrant further evaluation with human participants.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-26",
+        "authors": [
+          "Thomas Montemayor",
+          "Zi-Fan Zhou",
+          "Hao-Wei Li",
+          "Jia-Nan Jiang",
+          "Xiao-Zhen Wang",
+          "Bin Li"
+        ]
+      },
+      {
+        "title": "Separating Safety from Preference in Clinical LLM Evaluation",
+        "slug": "separating-safety-from-preference-in-clinical-llm-evaluation",
+        "url": "https://www.semanticscholar.org/paper/9ffc6a59e2b81d6e159d0e481747c061894ff5b2",
+        "abstract": "Conversational AI increasingly answers patients' rehabilitation questions, but a fluent, well-liked answer can still be clinically unsafe, and preference-only evaluation hides this by collapsing many judgments into one winner. We ran a human-centered evaluation of the mRehab Advisory Agent with two cohorts in distinct roles: six domain experts rate clinical safety and correctness, and three end users rate helpfulness, affect, and clarity, alongside blinded best-to-worst rankings exported as provenance-rich records. In a 200-question pilot (435 ranked triples), raters ranked the agent first most often (53.3%; p < 0.001), yet it led on affect and clarity, not helpfulness, and drew the lowest expert safety rate (88.8% vs. 93.7% for two GPT-4.1 mini comparators). That gap traced to a single expert with near-zero agreement, so it points to rater calibration rather than an unsafe agent, and catching it depended on recording safety separately from preference. As these agents take on more patient guidance, the gap between what sounds good and what is safe will only grow, and evaluations that keep both signals will matter more than leaderboards that report one.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-26",
+        "authors": [
+          "Kritarth Dandapat",
+          "Tanmay Anishkumar Master",
+          "Anarghya Das",
+          "Wei Bo",
+          "Ming-Xi Lei",
+          "Emily Liu",
+          "L. Cavuoto",
+          "S. Bhattacharjya",
+          "Heamchand Subryan",
+          "Wen-Yao Xu"
+        ]
+      },
+      {
+        "title": "Sparsity-Aware Scheduling for Efficient MoE-Based LLM Serving on Edge Servers",
+        "slug": "sparsity-aware-scheduling-for-efficient-moe-based-llm",
+        "url": "https://www.semanticscholar.org/paper/9fe82306d866c61c39e2c145f2e2403bc6859ef6",
+        "abstract": "To support real-time and domain-customized edge intelligent applications, LLMs are increasingly deployed on edge computing servers. However, we observe that current MoE-based LLM serving systems, inherited from the cloud-based architectures, face a critical sparsity-vanishing problem when serving at the edge: tokens within an input batch often activate a large fraction of experts, which incurs significant I/O overhead from frequent expert swapping between CPU and GPU memory, ultimately degrading system throughput. In this work, we propose Saber, a sparsity-aware scheduling framework optimized for efficient MoE-based LLM serving on edge servers. The core idea of Saber is to introduce a group-level batching strategy that dynamically identifies requests with similar activated experts, and coalesces them to construct sparsity-preserving input batches. To ensure efficient online execution, activation patterns are precomputed and clustered offline, enabling fast request grouping through a lightweight classifier at runtime. Additionally, Saber incorporates a utility-driven priority scheduling mechanism to maximize inference throughput while maintaining low latency by intelligently adjusting group priorities. Experiments on representative MoE-based LLMs demonstrate that Saber significantly outperforms existing sparsity-agnostic schedulers, achieving up to 3.8× lower batch execution time and 3.27× higher throughput at comparable latency levels.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-26",
+        "authors": [
+          "Yan Zhuang",
+          "Chen Gong",
+          "Zhen-Zhe Zheng",
+          "Jia-Le Lei",
+          "Xiao-Yao Huang",
+          "Jie Wu",
+          "Fan Wu",
+          "Gui-Hai Chen"
+        ]
+      },
+      {
+        "title": "WiP: Beyond Tokenization: Structure-Aware Attention and Hybrid Backbone for Wireless Foundation Models",
+        "slug": "wip-beyond-tokenization-structure-aware-attention-and-hybrid",
+        "url": "https://www.semanticscholar.org/paper/9c4eb140bf713e0ccac5cf03cfe36017a9312da0",
+        "abstract": "Plume showed that protocol-aware tokenization lets a compact 140M-parameter model rival frontier LLMs on 802.11 trace understanding [6]; Plume-2 showed that architecture and scale move the needle, yet tokenization still dominates [7]. This work asks the next question: does the training architecture itself matter? We study two architecture-level levers that do not touch the tokenizer. First, a structure-aware attention bias A = QKT + b, where b injects packet-trace geometry from the existing separator tokens. Second, a hybrid Mamba/attention backbone that interleaves linear-time state-space layers with a few dense global attention layers [4, 5]. On five real-world failure categories, the five configurations span 96.1–98.6% Top-1 accuracy. Mamba and the reduced-attention hybrid achieve 1.7× and 1.5× the Transformer's forward-pass throughput while trailing its accuracy by 2.1 and 0.6 points, respectively. In our preliminary single-run results, the structure bias improves Top-1 by 0.4 points on the Transformer and 0.8 points on the hybrid. The biased hybrid reaches 98.4% Top-1 at 13.8k tok/s, slightly exceeding the Transformer baseline's 98.2% while providing 1.48× its throughput. These results suggest that architecture is primarily an efficiency lever and that packet-relative bias can recover the hybrid's accuracy.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-26",
+        "authors": [
+          "Swadhin Pradhan",
+          "Shazal Irshad",
+          "Jerome Henry"
+        ]
+      },
+      {
+        "title": "Demo: A Propagation-Theory and Knowledge-Enhanced Intent-Driven Platform for 6G Network Twinning",
+        "slug": "demo-a-propagation-theory-and-knowledge-enhanced-intent",
+        "url": "https://www.semanticscholar.org/paper/9c321e098bb2906579b04dc141b4fead2ecff927",
+        "abstract": "For sixth-generation (6G) communication systems, network digital twins have become a cornerstone for planning, design, and optimization across terrestrial, low-altitude, and non-terrestrial domains. To enable rapid large-area network planning and twinning from multisource heterogeneous data, this demo proposes a propagation-theory and knowledge-enhanced intent-driven platform (PKIP), in which a wireless propagation knowledge-enhanced radio foundation model and large language model-driven intent understanding are jointly incorporated. The proposed PKIP reconstructs the radio propagation environment and visualizes natural-language intent as dynamically evolving trends of communication key performance indicators in response to variations of the real network. Two demos are showcased: intent-driven regional coverage twinning and intent-driven low-altitude route twinning. PKIP supports 6G network planning, design validation, and optimization-parameter acquisition, achieving errors below 5 dB and a 91.3% latency reduction.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-26",
+        "authors": [
+          "Zhi-Cheng Bai",
+          "Rui Ban",
+          "Zhi-Yuan You",
+          "Yu-Tong Sun",
+          "Jia-Lin Wang",
+          "Hao Guo",
+          "Xin-Miao Chen",
+          "Zhi-Gang Zhong"
+        ]
+      },
+      {
+        "title": "Demo: ChannelAgent: Agent-Driven One-Click Digital Twin Channel Generation for AI-Native 6G",
+        "slug": "demo-channelagent-agent-driven-one-click-digital-twin",
+        "url": "https://www.semanticscholar.org/paper/9c02baf35d1a8e5f6a90fea5434d43b5100ab0fa",
+        "abstract": "Digital twin is emerging as a key enabler for the intelligent design, analysis, and operation of artificial intelligence (AI)-native sixth-generation (6G) networks. Digital twin channel (DTC) extends this paradigm to wireless communication by providing high-fidelity, real-time representations of the physical wireless channels. However, DTC generation faces key challenges in channel task parsing, ubiquitous environment construction, and real-time channel twinning. This demo presents ChannelAgent, the first agent-driven platform for one-click DTC generation. By combining agent-driven task orchestration, an environment generation large language model (EnvGen LLM), and high-performance electromagnetic computation, ChannelAgent forms an end-to-end workflow of task parsing, intelligent scheduling, environment reconstruction, and channel twinning. The prototype completes each electromagnetic propagation computation within 50 ms with a mean absolute path loss error below 5 dB, enabling high-fidelity and real-time DTC generation across diverse 6G environments.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-26",
+        "authors": [
+          "Ming-Yu Li",
+          "Li Yu",
+          "Tao Wu",
+          "Yu-Xiang Zhang",
+          "Yao-Hua Wu",
+          "Yi-Zhu Zhao",
+          "Guang-Yi Liu",
+          "Jian-Hua Zhang"
+        ]
+      },
+      {
+        "title": "Poster: Exploiting Side-Channel Leakage in AI Glasses",
+        "slug": "poster-exploiting-side-channel-leakage-in-ai-glasses",
+        "url": "https://www.semanticscholar.org/paper/9a43e25ad7bb01e8b74cf8f6a854bd666867be37",
+        "abstract": "AI glasses increasingly connect first-person perception with cloud-based LLMs and VLMs, enabling real-time context-aware assistance. However, this cloud-connected design may expose privacy-sensitive information through encrypted network traffic metadata. In this work, we present AISeeU, a preliminary study of network side channels in LLM-powered AI glasses. We consider a passive observer who monitors packet timing, size, direction, and burst patterns without decrypting traffic or compromising the device. Using network traces collected from Ray-Ban Meta glasses, we show that traffic metadata contains structured patterns that can reveal sensitive information about user prompts and model responses. Our findings highlight a new privacy risk in wearable AI systems.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-26",
+        "authors": [
+          "Zi-Xun Xiong",
+          "Cheng-Tai Gu",
+          "Xin'an Zhou",
+          "Ya-Nan Guo",
+          "Yi-Cheng Zhang"
+        ]
+      },
+      {
+        "title": "Can Language Models Diagnose Sepsis? A Head-to-Head Evaluation Against 353 Physicians",
+        "slug": "can-language-models-diagnose-sepsis-a-head-to-head",
+        "url": "https://www.semanticscholar.org/paper/996abde9971b786e1bc047f16af8c927e502562a",
+        "abstract": "Can Language Models Diagnose Sepsis? A Head-to-Head Evaluation Against 353 Physicians. medRxiv",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-26",
+        "authors": [
+          "E. Macias-Fassio",
+          "D. Betancur",
+          "C. Pruenza",
+          "A. Giglio",
+          "G. Gallano",
+          "M. Borges-Sa",
+          "A. Morales",
+          "J. Fierrez"
+        ]
+      },
+      {
+        "title": "Experience: Agentic Security Analysis of 5G Protocol Interactions",
+        "slug": "experience-agentic-security-analysis-of-5g-protocol",
+        "url": "https://www.semanticscholar.org/paper/98e3521e4736a393db9e769fff9ca1f94606dca7",
+        "abstract": "This paper reports our three-year experience building 5GAudit, an LLM-based agentic framework for discovering vulnerabilities in 5G protocol interactions. We review the evolution of 5GAudit through successive redesigns, each driven by fundamental deficiencies uncovered in real deployment. We refine 5GAudit to enable it to conduct agentic cross-protocol/domain/system analysis, perform automatic verifier-in-the-loop validations of vulnerabilities, and go beyond predefined threat models by leveraging CWE (Common Weakness Enumeration) theory to enumerate new vulnerability patterns. Our system successfully discovers 42 0-day vulnerabilities of 5G protocol interactions in open-source 5G software, 20 of which have been assigned CVE numbers to date. We demonstrate 5GAudit as an example to share our lessons learned on applying LLM-based agents to 5G-specific security analysis with the community.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-26",
+        "authors": [
+          "Ming Tang",
+          "Yuan-Jie Li",
+          "He-Wu Li",
+          "Jia-Le Liu",
+          "X. Long",
+          "Jia-Hao Li",
+          "Yi-Mei Chen",
+          "Wei Liu",
+          "Qian Wu",
+          "Ze-Qi Lai",
+          "Jun Liu"
+        ]
+      },
+      {
+        "title": "Text-level effects of artificial intelligence-mediated language refinement on author–reader alignment and comprehension in Chinese non-academic and academic texts",
+        "slug": "text-level-effects-of-artificial-intelligence-mediated",
+        "url": "https://www.semanticscholar.org/paper/92555bfec34fe30808d984a252912c6fc9176f58",
+        "abstract": "Text-level effects of artificial intelligence-mediated language refinement on author–reader alignment and comprehension in Chinese non-academic and academic texts. Discover Artificial Intelligence",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-26",
+        "authors": [
+          "Bryce P. Towne"
+        ]
+      },
+      {
+        "title": "Thai-English target-based stock sentiment dataset for financial news with ICL-based evaluation",
+        "slug": "thai-english-target-based-stock-sentiment-dataset-for",
+        "url": "https://www.semanticscholar.org/paper/902496e214a392d1def87fbee3b5d0a6bcc650dd",
+        "abstract": "Thai-English target-based stock sentiment dataset for financial news with ICL-based evaluation. Language Resources and Evaluation",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-26",
+        "authors": [
+          "Chayapat Uthayopas",
+          "C. Mai-On",
+          "Wannaphong Phatthiyaphaibun",
+          "Weerayut Buaphet",
+          "Jitkapat Sawatphol",
+          "Sitiporn Sae Lim",
+          "Jayakorn Vongkulbhisal",
+          "Jasarin Vorawathanabuncha",
+          "S. Nutanong",
+          "Can Udomcharoenchaikit"
+        ]
+      },
+      {
+        "title": "Valorization of Brassica juncea waste into iron oxide nanoparticles for efficient hexavalent chromium [Cr(VI)] remediation: characterization, experimental kinetics, isotherms, and machine learning optimization",
+        "slug": "valorization-of-brassica-juncea-waste-into-iron-oxide",
+        "url": "https://www.semanticscholar.org/paper/87b2b16f53120eac1fba237d074fb395b04af35c",
+        "abstract": "Valorization of Brassica juncea waste into iron oxide nanoparticles for efficient hexavalent chromium [Cr(VI)] remediation: characterization, experimental kinetics, isotherms, and machine learning optimization. Biodegradation",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-10-26",
+        "authors": [
+          "Aditi Raj",
+          "P. Gauba",
+          "Ekta Bhatt"
+        ]
+      }
+    ]
+  }
+}

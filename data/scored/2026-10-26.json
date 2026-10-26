@@ -1,0 +1,739 @@
+[
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Tsinghua AI Open-Sources AKV, a Cache Engineering Server for LLM Agents on SGLang",
+      "url": "https://www.marktechpost.com/2026/10/26/tsinghua-akv-kv-cache-engineering-llm-agents/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "Tsinghua University and CUHK researchers open-sourced AKV , a serving system for KV cache engineering in LLM agents. Instead of summarizing old history, agents drop selected KV cache entries and keep reusing the rest. Across 3 models and 4 agent benchmarks, average cost falls 27.7% . Average task score rises 1.7 points. The code is Apache-2.0 licensed and builds on SGLang . AKV is a Tsinghua serving system that lets LLM agents drop and reposition their own KV cache. Context engineering trims or summarizes the text history. Editing that prefix invalidates every later KV state. The retained suffix must then be re-prefilled. Harnesses therefore summarize late and aggressively, which can lose details from middle rounds. Cache engineering leaves the text trajectory untouched. It only changes which KV entries stay visible to attention. Retained entries are reused without recomputation. They can still carry information from dropped messages. In the research paper’s cost analysis, KV cache reads made up 82.4% of total API cost. AKV defines 3 cache operations. Append is the standard update for new tokens. Drop removes selected entries from future attention without changing positions. Repos rewrites retained keys to positions 0 through r-1 using a RoPE rotation . Values stay unchanged, so no hidden states are recomputed. In ablations, adding Repos raised GPT-OSS-120B’s BrowseComp-Plus pass rate from 55% to 62%. The hard part is serving. Identical tokens can produce different cache states under different operation histories. Plain prefix matching could reuse the wrong states. AKV extends SGLang’s radix tree with drop and reposition nodes. It frees dropped KV only when no active request still needs it. Segment-batch attention restores evicted states in 1 prefill pass. The interface is stateless and OpenAI-compatible . Clients send the full message history and two optional fields. drop_message maps a trigger message index to the messages to drop. reposition lists the indices after which positions get compacted. A CachePolicy builds those fields from a trigger, a selector and a reposition rule. Built-in policies are turn-based, token-based or model-based. A CacheTool lets the model call drop_context itself. The main policy is a tool-response rolling drop that keeps the latest 12 tool responses. The Standard baseline summarizes at 96K tokens (192K for MiroThinker). Text Engineering summarizes at 48K. Benchmarks are BrowseComp-Plus , GAIA-Text , SWE-bench Verified and xbench-DeepSearch-2510 . Average pass rate (%) and cost (US cents per task) across 4 benchmarks. Source: Table 1 of the paper . AKV also cuts cost 21.9% versus Text Engineering. The accuracy gap opens on long runs. On BrowseComp-Plus at 96K tokens and above, GPT-OSS-120B scores 37% with AKV. Standard scores 24% and Text Engineering 32%, per the project page . Costs are API-equivalent estimates from published rates. Repositioned tokens are charged at the cache-hit rate, a deliberately conservative choice. Serving tests ran GPT-OSS-120B on 80 long-context SWE-bench Verified tasks. At each method’s peak setting, AKV delivers 1.18x output throughput and 1.53x input throughput. P95 request latency is 1.51x faster. At concurrency 16, Standard’s P95 latency hits 229.90 seconds versus 30.63 for AKV. KV pressure pushes Standard into repeated re-prefill. Per decode step, full-attention time falls from 7.082 to 2.849 ms. On 100 SWE-bench Verified tasks under a GPU budget, AKV reached about 47% pass rate. Standard reached 40.7% and Text Engineering 32.3%. MiniMax-M2.7 refined policies on 20 BrowseComp-Plus tasks, then ran 100 held-out tasks. The iteration-6 policy cut cost 17.8% versus Standard at baseline accuracy. The abstract reports 7.1% savings beyond the expert-designed policy. Exposing cache control as a tool also helped accuracy. GPT-OSS-120B rose from 52.1 to 61.0 on a 100-task subset. MiniMax-M2.7’s cost rose, though, from 5.4 to 5.9 cents. The main numbers come from each project’s own paper and use different setups. They are not directly comparable. Check out the Paper , GitHub Repo and Project Page . Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post Tsinghua AI Open-Sources AKV, a Cache Engineering Server for LLM Agents on SGLang appeared first on MarkTechPost .",
+      "published_date": "2026-10-26",
+      "tags": [
+        "Agentic AI",
+        "AI Agents",
+        "AI Infrastructure",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Editors Pick",
+        "For Devs",
+        "New Releases",
+        "Open Source",
+        "Software Engineering",
+        "Staff",
+        "Tech News",
+        "Technology",
+        "Uncategorized"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, kv cache, long context",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 73,
+    "llm_reason": "開源KV cache引擎讓代理選擇性捨棄快取而非重算，降本27.7%",
+    "novelty": 14,
+    "impact": 12,
+    "trending": 14,
+    "practicality": 17,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Nace AI Releases Drex for Search for AI Agents: 92.05% on BrowseComp-Plus With 12.6 Search Calls",
+      "url": "https://www.marktechpost.com/2026/10/26/nace-ai-releases-drex-for-search-for-ai-agents/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "Nace AI has released Drex for Search , which brings its Drex decision models to document search. Drex for Search is a retrieval layer that helps people and agents find evidence. Coding agents such as Claude Code, Codex, Cursor and OpenCode call it through CLI, SDKs, MCP or REST. In Nace’s evaluation, it scores 92.05% on BrowseComp-Plus with GPT-5, using 12.6 search calls per question. Nace AI frames search as a series of decisions. Drex for Search applies its Drex models to those decisions. Drex scores given options with a calibrated probability each, in 1 forward pass. That makes it cheap enough for every agent step. The release targets classic RAG, which Nace sums up as chunk, embed, top-k, hope. The pipeline breaks in 3 cases: Depth is fixed, so Nace says a million files take as many steps as a thousand. Nace AI tested 9 agent and model pairs on OfficeQA Pro , a 133-question benchmark over U.S. Treasury Bulletins. Key highlights: 6% more answers right, 62% fewer steps, 56% fewer tokens, and 2.3x faster. BrowseComp-Plus asks a deep-research agent 830 multi-hop questions over about 100K fixed web documents. With GPT-5, Nace AI reports: On VisDocAgentBench , an agent finds 1 target page among 2,375 arXiv pages. Drex for Search scores 77.5% R@1 with an open-weight Qwen 27B planner. The best published agent, Claude Opus 5, scores 67.5%. R@1 is 97.5% on direct questions, 77.5% on one bridge, and 57.5% on two. On MADQA , agents answer over 800 PDFs and cite pages. Nace reports 94.7% accuracy with Gemini 3.5 Flash and a page-attribution F1 of 88.2. Its effort calibration (Kuiper) is 6.66. Nace ranks it #1, based on the leaderboard as read on October 20. With open-weight Qwen 27B, Nace reports 93.4%. On EnterpriseRAG-Bench , with 500,000+ internal company documents, Nace reports an overall score of 88.22, which it ranks #3. That is 27.2 points above OpenAI File Search (61.03). Ranks and scores are as published by Nace AI , from leaderboards read October 20, 2026. Drex for Search runs in the Nace API Console , with 4 ways in on one key: Check out the Drex for Search page , API Console , Docs and Hugging Face . Thanks to the Nace AI team for the thought leadership / resources for this article. This article is sponsored by Nace AI. The post Nace AI Releases Drex for Search for AI Agents: 92.05% on BrowseComp-Plus With 12.6 Search Calls appeared first on MarkTechPost .",
+      "published_date": "2026-10-26",
+      "tags": [
+        "Agentic AI",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Context Engineering",
+        "Decision Models",
+        "Editors Pick",
+        "Enterprise AI",
+        "For Devs",
+        "Language Model",
+        "Large Language Model",
+        "Machine Learning",
+        "New Releases",
+        "Promote",
+        "Software Engineering",
+        "Sponsored",
+        "Staff",
+        "Tech News",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, mcp, rag, open weight",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 71,
+    "llm_reason": "以決策模型取代傳統RAG檢索，多項benchmark超越現有代理方法",
+    "novelty": 13,
+    "impact": 12,
+    "trending": 15,
+    "practicality": 16,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "A 10-year-old CNN outperforms frontier LLMs for skin cancer diagnosis",
+      "url": "https://lynchlab.net/llm-skin-cancer",
+      "authors": [
+        "sungam"
+      ],
+      "abstract": "This is a melanoma. Figure 1. Invasive melanoma on the ear, under 0.8 mm thick. Both LLMs called it a seborrhoeic keratosis and said it could be discharged. The CNN called it a melanoma. Clinical photograph on the left, dermoscopic image on the right. Images: MILK10k , MILK study team, CC BY-NC. I showed these two images - a clinical photograph and a dermoscopic (skin microscope) image - to GPT-6 Astra and Claude Fable 5.1, two of the most capable AI models available in October 2026. Both said it was a seborrhoeic keratosis, a harmless warty growth, and that the patient could be discharged. I then showed them to fine-tuned version of Inception v3, a convolutional neural network (CNN) first published by Google in 2015 and fine-tuned here on public dermatology images. The CNN got the right answer based on the dermoscopy view. It was one of 200 biopsy-proven lesions I gave to all three. The CNN named the right diagnosis (out of 6 possiblities) for 125 of them (62%). The two frontier LLMs named it for 84 and 85 (42%). A ten-year-old network, fine-tuned for about twenty minutes, beat both of them at recognising skin cancer. The test # The lesions come from MILK10k , a public dataset released through the International Skin Imaging Collaboration in 2025, in which each lesion is photographed twice: a clinical close-up and a dermoscopic image taken through the illuminated magnifying lens dermatologists use. I drew 200 lesions at random, all confirmed by histopathology: 100 that should not be discharged: 30 melanomas, 25 basal cell carcinomas, 25 squamous cell carcinomas (including Bowen’s disease) and 20 actinic keratoses. 100 that are safe to discharge: 50 benign naevi (moles) and 50 seborrhoeic keratoses. Every lesion was biopsied, including the benign ones, so these are harder to diagnose: a mole that somebody decided to cut out is one that worried a clinician. Basal cell carcinoma on the trunk of a 75-year-old man. All three models answered correctly. Invasive melanoma under 0.8 mm thick, with very little pigment. GPT-6 Astra called it a basal cell carcinoma with 95% confidence. Claude Fable 5.1 and the CNN called it a melanoma. Seborrhoeic keratosis on the leg. Both LLMs called it an actinic keratosis and the CNN a squamous cell carcinoma: all three were wrong, though all three would have kept it rather than discharge it. Figure 2. Three more of the 200 test lesions. Clinical photograph on the left, dermoscopic image on the right. Images: MILK10k , MILK study team, CC BY-NC. The LLMs were given both images and nothing else, and asked, as a clinician might use them, for the most likely of the six diagnoses (or “unsure”), a confidence, a second choice, and whether the lesion could be safely discharged with no treatment, biopsy or follow-up. Both models got the same prompt at default settings, and neither refused a case. The CNN is deliberately not state of the art. I used Inception v3 pretrained on everyday photographs and then fine-tuned all layers on 68,011 dermoscopic and clinical images from the ISIC Archive on a single H100 GPU. These 200 test lesions, and every other photograph of the same lesion or patient, were removed from its data (including the validation set) before training, so it had never seen them, and they were not used to choose the model or set its threshold. It scored both images of each lesion, combined them with most of the weight on the dermoscopic image, and chose from the same six diagnoses. You can try the CNN yourself . Remarkably the model is small enough to run entirely in a phone browser using WebGPU. Nothing is uploaded, and its random sample button draws from these same 200 lesions. Diagnosis: 62% against 42% # GPT-6 Astra Claude Fable 5.1 Inception v3 All 200 lesions GPT-6 Astra - All 200 lesions: 84 of 200 (42%) 84/200 GPT-6 Astra - All 200 lesions: 84 of 200 (42%) Claude Fable 5.1 - All 200 lesions: 85 of 200 (42%) 85/200 Claude Fable 5.1 - All 200 lesions: 85 of 200 (42%) Inception v3 - All 200 lesions: 125 of 200 (62%) 125/200 Inception v3 - All 200 lesions: 125 of 200 (62%) By true diagnosis Melanoma GPT-6 Astra - Melanoma: 8 of 30 (27%) 8/30 GPT-6 Astra - Melanoma: 8 of 30 (27%) Claude Fable 5.1 - Melanoma: 11 of 30 (37%) 11/30 Claude Fable 5.1 - Melanoma: 11 of 30 (37%) Inception v3 - Melanoma: 13 of 30 (43%) 13/30 Inception v3 - Melanoma: 13 of 30 (43%) BCC GPT-6 Astra - BCC: 25 of 25 (100%) 25/25 GPT-6 Astra - BCC: 25 of 25 (100%) Claude Fable 5.1 - BCC: 18 of 25 (72%) 18/25 Claude Fable 5.1 - BCC: 18 of 25 (72%) Inception v3 - BCC: 24 of 25 (96%) 24/25 Inception v3 - BCC: 24 of 25 (96%) SCC GPT-6 Astra - SCC: 12 of 25 (48%) 12/25 GPT-6 Astra - SCC: 12 of 25 (48%) Claude Fable 5.1 - SCC: 5 of 25 (20%) 5/25 Claude Fable 5.1 - SCC: 5 of 25 (20%) Inception v3 - SCC: 16 of 25 (64%) 16/25 Inception v3 - SCC: 16 of 25 (64%) Actinic keratosis GPT-6 Astra - Actinic keratosis: 10 of 20 (50%) 10/20 GPT-6 Astra - Actinic keratosis: 10 of 20 (50%) Claude Fable 5.1 - Actinic keratosis: 12 of 20 (60%) 12/20 Claude Fable 5.1 - Actinic keratosis: 12 of 20 (60%) Inception v3 - Actinic keratosis: 9 of 20 (45%) 9/20 Inception v3 - Actinic keratosis: 9 of 20 (45%) Naevus GPT-6 Astra - Naevus: 16 of 50 (32%) 16/50 GPT-6 Astra - Naevus: 16 of 50 (32%) Claude Fable 5.1 - Naevus: 33 of 50 (66%) 33/50 Claude Fable 5.1 - Naevus: 33 of 50 (66%) Inception v3 - Naevus: 37 of 50 (74%) 37/50 Inception v3 - Naevus: 37 of 50 (74%) Seb. keratosis GPT-6 Astra - Seb. keratosis: 13 of 50 (26%) 13/50 GPT-6 Astra - Seb. keratosis: 13 of 50 (26%) Claude Fable 5.1 - Seb. keratosis: 6 of 50 (12%) 6/50 Claude Fable 5.1 - Seb. keratosis: 6 of 50 (12%) Inception v3 - Seb. keratosis: 26 of 50 (52%) 26/50 Inception v3 - Seb. keratosis: 26 of 50 (52%) 0% 25% 50% 75% 100% Figure 3. Correct first-choice diagnosis for the two LLMs and the CNN, which chose from the same six diagnoses. Labels show correct answers out of the number of lesions with that histology. The CNN was right more often overall and on most diagnoses. Allowing a second choice, it reached 173 of 200 against 134 and 138. It named 13 of the 30 melanomas against 8 and 11. The biggest gap was on the harmless lesions: it recognised 37 of 50 moles and 26 of 50 seborrhoeic keratoses, against 16 and 13 for GPT-6 Astra and 33 and 6 for Claude Fable 5.1. It was one short of GPT-6 Astra on basal cell carcinoma and behind both LLMs on actinic keratosis. The models also failed differently. Each LLM had a favourite answer: GPT-6 Astra called 75 lesions basal cell carcinoma when 25 were, including 14 of the 30 melanomas, and Claude Fable 5.1 called 53 lesions actinic keratosis when 20 were. The CNN’s errors on melanoma went the other way: of the 17 it got wrong, it called 8 a naevus and 6 a seborrhoeic keratosis. The results in one table # GPT-6 Astra Claude Fable 5.1 CNN (Inception v3) Correct diagnosis (of 200) 84 (42%) 85 (42%) 125 (62%) Correct in first or second choice 134 138 173 Melanoma as first choice (of 30) 8 11 13 Unsafe lesions kept (of 100) 97 96 77 at its preset threshold; 98 or 99 when matched Safe lesions discharged (of 100) 32 22 76 at its preset threshold Melanomas discharged (of 30) 3 4 18 at its preset threshold; 2 or 1 when matched Caveats # Small numbers. Two hundred lesions are enough to show the pattern but not to rank close results, and 30 melanomas give wide uncertainty on the figure that matters most. Each LLM case was run once; answers vary between runs. Hard cases. Every lesion was biopsied. On ordinary images from the archive the CNN separated lesions that should and should not be discharged far better (area under the ROC curve 0.96, against 0.86 here). Contamination. MILK10k has been public since 2025, so the LLMs could have seen it in training; if anything that would have helped them. The CNN certainly had not. Not state of the art. Inception v3 is a baseline.\n\n(649 points, 268 comments on Hacker News)",
+      "published_date": "2026-10-26",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 649,
+        "num_comments": 268,
+        "hn_url": "https://news.ycombinator.com/item?id=50233779",
+        "object_id": "50233779"
+      }
+    },
+    "rule_score": 21.0,
+    "rule_reasons": [
+      "🔥 HN 爆紅: 649 points"
+    ],
+    "llm_score": 76,
+    "llm_reason": "嚴謹對照實驗揭露前沿LLM在醫療影像判讀上不如舊CNN，故事張力強",
+    "novelty": 13,
+    "impact": 14,
+    "trending": 18,
+    "practicality": 13,
+    "blog_worthiness": 18
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "Fixing Tool-Call Accuracy in vLLM",
+      "url": "https://www.ubicloud.com/blog/fixing-tool-call-accuracy-in-vllm",
+      "authors": [
+        "coffeemug"
+      ],
+      "abstract": "When I use an open-weight model, I see results that are nowhere close to what the quality benchmarks indicate. Tool call accuracy is an important part of serving open-weight models. When your tool calls aren’t accurate, the model builds up on nonsensical context. This leads to low quality results, particularly for agentic workloads where multi-turn sessions are common. Sadly, many providers and widely-used inference engines don’t fully pass tool-call accuracy tests . For example, when we served Kimi K2.6 with vLLM version 0.28, we got the expected tool call schema only 92% of the time. In other words, 2 out of every 25 attempted tool calls failed. Fortunately, vLLM recently added support for constrained decoding , a technique to guarantee schema-adherence. This feature has then been released as a server-side flag in vLLM 0.31. By enabling it, you can get to 100% schema accuracy with the newer Kimi and DeepSeek models. In this blog post, we first describe tool call schema accuracy and why it’s important in serving agentic workloads. We then talk about constrained decoding and how it fixes the schema accuracy problem. You can enable an LLM to call an external tool in two steps: (1) inform the AI model about the existence of externally available tool calls and (2) provide the model with instructions on how to output structured tool-calls. For example, when connecting OpenCode to Kimi, OpenCode sends Kimi a JSON array describing available tools. One of the tools in this list is webfetch , which fetches Web page contents: The inference engine then wraps this JSON description in LLM-specific tokens before passing it into the LLM, to match how the LLM was trained to recognize tool declarations. When serving Kimi, this looks something like: The JSON object describing the tool (or function , in the JSON above) includes the tool’s parameters, their types, which of the parameters are required, etc. This is known as the tool’s schema . For an agent harness (e.g., OpenCode) to successfully execute a tool call generated by the LLM, the call must follow the rules specified in its schema. Then, when a user asks to fetch a Web page via their agent harness, the LLM may output the following tokens: These tokens are parsed by the inference server’s parser, extracting the LLM-specific tokens and turning the call into a JSON object such as: This is then sent back to your harness (OpenCode, in our example), which runs its webfetch tool and sends its output back to the model. For a tool-call to succeed, the call must adhere to the tool’s schema. The simple approach to tool calling is to let the model generate tool calls freely and trust that the model’s training is sufficient to generate correct calls. This is similar to how we trust the model to generate syntactically correct prose. The simple approach works most of the time because modern models are good at following structured patterns. But success “most of the time” implies that many tool calls can still fail, resulting in context window pollution due to error messages, lower model performance, and increased cost due to the agent having to retry the call one or more times. To avoid such experiences when using Kimi, Moonshot AI published their K2VV ToolCall benchmark. This benchmark lets providers verify that they serve Kimi with the same quality as the original, including its default behavior of only generating valid tool calls. K2VV ToolCall’s workload consists of 2000 requests selected to evaluate when the LLM generates tool calls and whether the generated tool calls are syntactically correct (i.e., adhere to the provided schema). The benchmark allows analyzing the model’s quality by quantifying two metrics: trigger similarity and schema accuracy . Trigger similarity considers when the service decides to trigger a tool call, and how similar its decisions are to Moonshot AI’s own service. Schema accuracy quantifies the fraction of tool-calls that adhere to the tool’s schema and can therefore be invoked successfully. For example, when tool-call accuracy is 50%, half of the tool calls generated by the model are malformed. Schema accuracy usually falls short due to the probabilistic nature of language models. A model generates tokens based on likelihood. It is not running a compiler or type checker. Even with a clear prompt, it can still produce malformed tool calls. This can be caused by, for example, a mismatch between the model’s training data and the current inference harness. Models are trained on many tool-calling datasets, each with its own tools, schemas, and conventions. As a result, a model may generate a tool or field name that it has seen during the training, even if it does not exist in the current production environment. For example, it may generate search_web when the available tool is web_search , or use city_name when the active schema expects location . An LLM computes for each token the probability that it is the next in the sequence. It then selects the next token by performing a weighted sample. Constrained decoding avoids malformed tool calls by preventing models from sampling tokens that would result in a syntactically invalid tool call. When using constrained decoding, instead of letting the model sampling tokens freely and validating the result afterward, the inference engine guides generation step by step. At each step, only valid tokens are allowed. Which tokens are allowed is determined by the provided tool schema. vLLM implements this using structural tags from the XGrammar library . The snippet below shows an excerpt of how XGrammar implements constrained decoding in Kimi K2.6. It defines the valid structure of a tool call, including where the call begins, where the index appears, where the arguments begin, and where schema-constrained JSON must be generated. You can find the full implementation here . With this definition, generation must follow a valid path: Begin tool call → Tool name → Tool call index → Begin arguments → Schema-constrained JSON → End tool call Invalid paths are blocked during generation. For example, when generation reaches the tool-call index phase, the engine restricts sampling to integer tokens and masks out everything else. The figure below, reproduced from XGrammar’s article, provides a good visualization of how invalid tokens are masked. Source: Dong, Yixin, et al. \"XGrammar: Flexible and efficient structured generation engine for large language models.\" Proceedings of Machine Learning and Systems 7 (2025). [ link ] This changes schema accuracy from a best-effort approach to a runtime guarantee. The model still decides which token to generate, but now the token is selected from a restricted and syntactically-correct set. Notably, this runtime enforcement adds negligible performance overhead. By precomputing token masks for each phase, and applying them efficiently on the GPU during generation, XGrammar guarantees correct tool calls without trading off significant performance. Moonshot AI recommends constrained decoding to be turned on and its own API behaves as such. So we initially added constrained decoding in our fork of vLLM. After vLLM added this feature in v0.25, we switched to using this feature from upstream for Kimi and DeepSeek. Unfortunately not long after, we found out that our tool-call accuracy score dropped back to 91%! After analyzing the problem, we confirmed that vLLM’s implementation of constrained decoding was still correct. Instead, we found that vLLM changed its default behavior for requests that do not explicitly turn constrained decoding on. This is primarily because vLLM is designed to support a wide range of models. Supporting constrained decoding is a per-model task and problems fall into three camps: Due to these issues, vLLM maintainers reported seeing problems with several models after constrained decoding was enabled.\n\n(139 points, 64 comments on Hacker News)",
+      "published_date": "2026-10-26",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 139,
+        "num_comments": 64,
+        "hn_url": "https://news.ycombinator.com/item?id=50242870",
+        "object_id": "50242870"
+      }
+    },
+    "rule_score": 24.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, open weight",
+      "📰 Hacker News: 139 points"
+    ],
+    "llm_score": 72,
+    "llm_reason": "以約束解碼解決工具呼叫schema準確率問題，有實測數據且直接可用",
+    "novelty": 10,
+    "impact": 14,
+    "trending": 15,
+    "practicality": 16,
+    "blog_worthiness": 17
+  },
+  {
+    "item": {
+      "source": "blog",
+      "source_name": "Simon Willison",
+      "title": "Guides",
+      "url": "https://simonwillison.net/guides/",
+      "authors": [
+        "Simon Willison"
+      ],
+      "abstract": "Patterns for getting the best results out of coding agents like Claude Code and OpenAI Codex. See my introduction for more on this project. Patterns for getting the best results out of coding agents like Claude Code and OpenAI Codex. See my introduction for more on this project. 16 chapters: What is agentic engineering? , Writing code is cheap now , Hoard things you know how to do , AI should help us produce better code , Anti-patterns: things to avoid , How coding agents work , Using Git with coding agents , Subagents , Red/green TDD , First run the tests , Agentic manual testing , Linear walkthroughs , Interactive explanations , GIF optimization tool using WebAssembly and Gifsicle , Adding a new content type to my blog-to-newsletter tool , Prompts I use",
+      "published_date": "2026-10-26",
+      "tags": [
+        "blog"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "blog_name": "Simon Willison",
+        "blog_url": "https://simonwillison.net/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agentic",
+      "⚖️ 來源權重: blog +15"
+    ],
+    "llm_score": 73,
+    "llm_reason": "資深作者系統化整理coding agent實戰模式，正中當前熱點且高度可用",
+    "novelty": 9,
+    "impact": 14,
+    "trending": 17,
+    "practicality": 17,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "Groundhog Day for AI agents: Prompt caching patterns for using OpenAI models on Amazon Bedrock",
+      "url": "https://aws.amazon.com/blogs/machine-learning/groundhog-day-for-ai-agents-prompt-caching-patterns-for-using-openai-models-on-amazon-bedrock/",
+      "authors": [
+        "Claudio Mazzoni"
+      ],
+      "abstract": "Every time you spin off your agent, it has to re-read its whole life story before performing an action. Here’s how to make it remember without having to feed it the same context again. In the movie Groundhog Day , Bill Murray’s character re-lives the same February 2 every day. He wakes up to the same song playing on the radio, in the same inn, and the same small town, again and again for what some movie fans estimate to be 34 years. Nothing he accomplished the day before carries over unless he works it out again from scratch. AI agents live in a version of Groundhog Day. Every time an agent takes a step (calls a tool, reads the result, decides what to do next), it has to send the model its entire story so far to maintain continuity: the tool definitions, the instructions, every previous tool call, and every result. The model only predicts the next token based on the input you provide. It has no internal memory between requests, so it must read all of it again. By turn 20 of a coding session, the model re-reads turns 1–19, and it’s you who pays for every one of those tokens, again and again. Prompt caching breaks the cycle. The service stores your input prompt (instructions, tools, and content) and reuses it on the next request, at a fraction of the input price. In this post, I walk you through an agent’s life, from its first turn to when it gets new tools and spawns helpers. Along the way, I show you how prompt caching keeps costs down and keeps agents responsive and consistent. Before talking about caching, it helps to look at what a typical agent’s first invocation to the large language model (LLM) contains: What an agent sends to the model, turn after turn if you don’t set up caching: Figure 1: What an agent sends to the model on every turn When a model reads a prompt, it first does a write called prefill . During prefill, it processes every input token and builds its key and value vectors (also known as key-value, or KV), which form the model’s working state. This happens before the model writes its first token. Prompt caching saves that state, which contains the system prompt, tools, content, history, and so on. When a later request starts with the same input tokens (that is, the same text), the prompt caching service loads the saved state instead of computing it again. It then processes only what is new in the next payload to the model. Prompt caching can be implicit, where Amazon Bedrock selects where the reusable prefix ends, or explicit, where your code marks that endpoint using prompt_cache_breakpoint . You can use both approaches together, and we recommend doing so. Figure 2: Turn 1 saves the prompt prefix up to the breakpoint, and turn 2 reuses it and pays full price only for the new question Implicit or explicit, and why do we need both? For agentic workloads, implicit caching lets Bedrock choose what to cache as the conversation grows. With explicit caching, you can mark shared content, such as tools and instructions, for reuse across sessions and when spinning up helper agents. You don’t always need both forms of caching, but combining them gives you a reusable starting point while Bedrock manages the growing conversation automatically. New sessions can also reuse that shared starting point while each conversation builds on its own cached history. In this post, we start with the first turn, then show how to carry cached content through later turns, new tools, and across subagents. The first win is to cache the static part of the prompt: the tools and instructions that stay the same across requests. These examples use your existing Amazon Bedrock client, TOOLS , and task . Replace the shortened INSTRUCTIONS string with your real policies and examples. The reusable prefix must reach 1,024 tokens to qualify. When caching static content, use explicit mode: choose where the saved prefix ends. The prompt_cache_key tells the service which requests are meant to share a cache. We come back to how to use it when we get to reading the cache in new sessions. In one of our tests using explicit caching, the roughly 4,000-token tools-and-instructions prefix wrote 4,120 tokens on the first request and read those 4,120 tokens on later requests. The task (or user request) comes after the cache boundary, so this doesn’t trigger a write to the cache. Keep in mind that prompt caching works only when you pass exactly the same text. Make sure that the agent’s instructions and tool lists are serialized the same way every time. Model Context Protocol (MCP) servers and other forms of tool delivery need to be indexed to make sure they stay consistent. Keep anything that varies, such as the date, the user’s name, or a request ID, after the cached instructions. As the content grows and varies (different tools and content), use implicit mode to let the service follow the conversation. Here, the first request has no explicit marker. Its latest eligible message is the user’s task, so the automatic breakpoint comes after that task and covers the tools, instructions, and task together. The mode is shown explicitly in the following example for clarity, even though implicit is the default. Setting store=False leaves conversation history in your application. It doesn’t disable caching. This is useful when the next turn continues the same task. A different task doesn’t match the prefix through the old task, and the implicit write doesn’t necessarily create a separate entry for only the tools and instructions. Use an explicit marker there when you need that shorter shared prefix to be reusable across tasks. Use both when the agent needs a shared starting point and a growing history. Start with the marked developer block in the following code example and call the function ask_with_implicit_cache . The request-level mode stays implicit. The block-level marker adds an explicit save point after the instructions. The service can also save through the latest eligible message. This keeps the shared prefix available while the conversation grows. The model requests tools by name and supplies their arguments. Your application must execute them. execute_function is a helper you build to route those requests to the matching Python functions and return their results. The following loop uses this helper to run each requested tool. It appends the model’s output and all tool results to the history list, then sends that list again until the model returns a final answer. In implicit mode, Amazon Bedrock can reuse the unchanged prefix and cache the added content through the last tool result. Keep earlier messages and the initial TOOLS unchanged. For follow-ups, append a new user message and call the helper again. Keep earlier messages unchanged so their cached endpoints remain available. Rolling breakpoints: Each turn reads everything before it Figure 3: Rolling breakpoints, where each turn reads everything before it and writes only its own tool result For a separate explicit-only run, recreate the two-message history from the combined Hello cached world example. This loop wraps tool results in input_text blocks and marks the final result in each batch. Earlier markers stay in history . See the current lookup rules for long conversations. GPT-6 Astra tied for the best implicit result in this six-turn workload: about 62 percent lower input cost than running without caching. Explicit rolling breakpoints saved about 61 percent on the same model. Both reused more history as the conversation grew. These are workload results. Measure your own agent’s savings. Figure 4: Input cost of every caching setup on GPT-6 Astra, relative to no caching Sometimes an agent’s tool list changes, or new tools get added. Keep the initial list stable: adding, removing, or reordering definitions can invalidate the cached prefix. Choose the approach that fits how the tool becomes available.",
+      "published_date": "2026-10-26",
+      "tags": [
+        "Amazon Bedrock",
+        "Best Practices",
+        "Expert (400)"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, mcp, model context protocol",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 53,
+    "llm_reason": "Bedrock上OpenAI模型prompt caching實務指南，具體可落地",
+    "novelty": 5,
+    "impact": 9,
+    "trending": 11,
+    "practicality": 15,
+    "blog_worthiness": 13
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Apple ML",
+      "title": "GHARP: Real-Time Gaussian Head Animation from Large-Scale Reconstruction Prior",
+      "url": "https://machinelearning.apple.com/research/gharp-head-animation",
+      "authors": [],
+      "abstract": "research area Computer Vision conference Asian Conference on Computer Vision (ACCV) content type paper published October 2026 GHARP: Real-Time Gaussian Head Animation from Large-Scale Reconstruction Prior Authors Ali Benlalah*, Sepehr Johari*, Patricia Vitoria*, Armin Kappeler*, Artem Sevastopolsky, Alexander Jung, Gabriele Fanelli, Kevin Mader, Manuel Breitenstein, Claudia Plüss, Jan Rüegg, Simon Biland, Thomas Etterlin, Dmitry Kostiaev, Mathias Deschler, Brian Amberg, Sebastian Martin View publication Copy Bibtex We present GHARP (Real-time Gaussian Head Animation from Large-scale Reconstruction Prior), a method that animates 3D human heads in real time from a few input images of a subject and a driving expression signal. We decouple the problem into an identity stage that builds a representation of the subject’s geometry and appearance offline, and an animation stage that predicts expression-dependent residuals on top of it at runtime. This separation offers a favorable trade-off with respect to fidelity, quality and runtime: the identity stage can be expensive while the animation stage runs a lightweight network, optimized for mobile devices. Our method performs animation in a semantically structured latent space of a pretrained reconstruction model, where expression changes remain spatially contained, making residual prediction efficient. This reconstruction prior provides a consistent spatial layout, allowing fusion of multiple input views into a compact, fixed-size canonical Gaussian representation. While this two-stage design improves the runtime-quality trade-off, it still inherits a problem common to all expression-driven avatar methods: expression codes describe only the face and thus omit body pose and clothing position, making these regions underspecified in the input. The animation network faces an ill-posed mapping and resorts to averaging over conflicting body appearances, producing blur and temporal flicker. We address this with a body alignment network that learns to align the person’s body in the target image with the input reference images, removing the ambiguity from the training signal. Our method achieves state-of-the-art quality on the Ava-256 benchmark while running up to 13× faster on an A100 GPU with 8× fewer Gaussians. * Equal Contributors Related readings and updates. Large-Scale High-Quality 3D Gaussian Head Reconstruction from Multi-View Captures May 8, 2026 research area Computer Vision conference ECCV We propose HeadsUp, a scalable feed-forward method for reconstructing high-quality 3D Gaussian heads from large-scale multi-camera setups. Our method employs an efficient encoder-decoder architecture that compresses input views into a compact latent representation. This latent representation is then decoded into a set of UV-parameterized 3D Gaussians anchored to a neutral head template. This UV representation decouples the number of 3D Gaussians… Read more HUGS: Human Gaussian Splats December 7, 2023 research area Computer Vision Recent advances in neural rendering have improved both training and rendering times by orders of magnitude. While these methods demonstrate state-of-the-art quality and speed, they are designed for photogrammetry of static scenes and do not generalize well to freely moving humans in the environment. In this work, we introduce Human Gaussian Splats (HUGS) that represents an animatable human together with the scene using 3D Gaussian Splatting… Read more Discover opportunities in Machine Learning. Our research in machine learning breaks new ground every day. Work with us",
+      "published_date": "2026-10-26",
+      "tags": [],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "Apple ML",
+        "feed_url": "https://machinelearning.apple.com/rss.xml"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: alignment",
+      "⚖️ 來源權重: rss +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 58,
+    "llm_reason": "Apple提出即時3D高斯頭部動畫新架構，身份與動畫階段解耦具創新性",
+    "novelty": 15,
+    "impact": 10,
+    "trending": 9,
+    "practicality": 10,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "Build agentic retrieval on a Managed Amazon Bedrock Knowledge Base with CDK",
+      "url": "https://aws.amazon.com/blogs/machine-learning/build-agentic-retrieval-on-a-managed-amazon-bedrock-knowledge-base-with-cdk/",
+      "authors": [
+        "Prabhakar Chandrasekaran"
+      ],
+      "abstract": "This post builds enterprise agentic retrieval on a Managed Amazon Bedrock Knowledge Base with the AWS Cloud Development Kit (AWS CDK). To see why that’s worth building, it helps to start with where ordinary Retrieval Augmented Generation (RAG) breaks down. Most RAG systems start the same way: they embed the question, fetch the nearest chunks from one index, hand them to a model, and return the answer. One retrieval, one generation. For a large class of questions that’s the right design, and there’s no reason to build anything more complicated. It fails in a recognizable way. Ask a question whose answer spans two corpora, and a single retrieval returns half of what the model needs, which is worse than returning nothing, because the answer comes back fluent and incomplete. Ask a question where the right source depends on the question , and a single index has no mechanism to choose. Ask a question that needs a second look at the corpus after seeing the first result, and there is nowhere for that second look to happen. Enterprise agentic retrieval answers all three by putting a reasoning agent in the loop. The agent decides whether to retrieve, which knowledge base to consult, and whether to go back for more before it composes an answer. This is the direction Amazon Bedrock Knowledge Bases have evolved. With the launch of the Managed Knowledge Base, retrieval is no longer a single embed-and-fetch call. It has become an agentic capability: multi-turn planning, tool-driven retrieval, and grounded, cited answers. The AgenticRetrieveStream API offers this as a first-class service feature rather than something you assemble yourself. That works, and it also introduces a genuinely harder operational problem. A single-shot pipeline is a function you can reason about by reading it. An agent that reasons and retrieves in a loop takes a different path on every question. By default you can see neither the path it took nor whether the answer it produced was any good. Observability stops being a nice-to-have and becomes the only way to know the system works. In August 2024, Build an end-to-end RAG solution using Knowledge Bases for Amazon Bedrock and the AWS CDK deployed the single-shot design as a CDK application: an Amazon Simple Storage Service (Amazon S3) corpus, an Amazon OpenSearch Serverless collection and index, a knowledge base, and a data source, provisioned as CDK stacks whose order you sequenced by hand. Three things have changed since it was published. This post builds that system: an agent that routes across two knowledge bases, retrieves through the Gateway, and returns a grounded, cited answer, with every layer of its behavior instrumented, as a single AWS CDK application in Python. One command deploys all of it, and CDK derives the order. If you read the 2024 post , the path from an Amazon S3 bucket to the knowledge base will look familiar, and everything after it is new: the vector store is gone, the retrieval is agentic, and roughly half of what the app provisions exists to tell you what the agent did. If you didn’t, this post stands on its own. The services at play and the path one question takes through them: the agent decides whether to retrieve and which knowledge base to consult, the Gateway exposes each knowledge base as a tool it can call, the Managed Knowledge Bases search and cite, and the loop repeats as many times as the question needs. Everything the agent does along the way lands in Amazon CloudWatch. Figure 1: The services involved and the path a single question takes through them Before the walkthrough, it helps to establish three things: what makes retrieval agentic, why the Managed Knowledge Base is the right foundation for it, and why observability and evaluation belong in the design rather than bolted on later. Classic Retrieval Augmented Generation (RAG) does one retrieval and one generation. Enterprise agentic retrieval puts a reasoning agent in the loop: it decides whether and what to retrieve, can retrieve several times to refine, chooses which knowledge base is relevant (semantic routing), and only then composes a grounded answer with citations. With the Managed Knowledge Base, this is a first-class service capability, the AgenticRetrieveStream API performs the multi-turn planning, executes the retrieval, and returns a cited answer, rather than an orchestration layer you build and maintain over a raw vector search. That produces better answers on complex questions, but it also produces a more complex system to operate, which is exactly why observability and evaluation are built in from the start. Amazon Bedrock now offers a Managed Knowledge Base (Type: MANAGED): Amazon Bedrock manages the ingestion, storage, indexing, and retrieval for you, including embedding and reranking with service-managed models by default, so there is no vector database to provision, scale, or patch . This differs from a Customer-managed (DIY) Knowledge Base, where you choose and operate the vector store (for example, Amazon OpenSearch Serverless) yourself. Two differences matter most for this solution: Because agentic retrieval and the AgentCore Gateway connector are available only on the managed knowledge base, it is the natural foundation for enterprise agentic retrieval. It also means Amazon Bedrock manages the storage and indexing for you, so there is no OpenSearch Serverless collection or OCU capacity to provision in this design. The customer-managed option remains the right choice when you want to select and operate your own vector store, for example to reuse an existing OpenSearch Serverless collection or to meet specific data-residency, tuning, or compliance requirements. For enterprise agentic retrieval, the managed knowledge base is what makes the capability possible. An agentic system that returns an answer isn’t enough for production. You need to see how it behaves (latency, call volume, token usage), how good the retrieval and answers are, and you need those signals continuously. This solution ships two CloudWatch dashboards spanning seven layers of telemetry, plus two forms of evaluation (on-demand and continuous), all provisioned by the same CDK application. The grounding, citations, and evaluation layers also support responsible use. Cited answers trace back to their source passages so responses stay auditable, and the faithfulness and correctness scores let you catch answers drifting from their sources rather than finding out in production. Any infrastructure-as-code tool can create these resources. CDK earns its place here for a reason specific to this architecture: the four stacks are densely cross-referenced . The Gateway needs both knowledge base ids. The agent needs the URL and ARN for the Gateway. The dashboards need the KB ids, the Gateway ARN, and the agent runtime id, seven values crossing stack boundaries, each one a dimension on a metric or a target on a connector. Written as raw templates, that is a set of stack exports and cross-stack lookups kept in agreement by hand, plus a script that deploys in the right order and threads outputs forward, and both drift the moment anything is renamed. In CDK you pass the construct, and the export and the dependency edge are derived from that one act of passing it. The 2024 solution had three stacks and a mostly linear dependency chain. At four stacks with seven values crossing between them, the difference stops being stylistic. Here is the path a single question takes through the system, end to end. It’s worth a slow look, because the rest of the post walks through it left to right. The following diagram traces the end-to-end agentic retrieval workflow. A user’s question enters the agent on the AgentCore Runtime, which routes it through the AgentCore Gateway to one of two AgenticRetrieveStream tools, one per managed knowledge base, financial and weather, each ingested from Amazon S3.",
+      "published_date": "2026-10-26",
+      "tags": [
+        "Advanced (300)",
+        "Amazon Bedrock AgentCore",
+        "Amazon Bedrock Knowledge Bases",
+        "Technical How-to"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, reasoning, rag, retrieval augmented",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 52,
+    "llm_reason": "CDK實作Bedrock代理式檢索的工程指南，偏實作教學非新方法",
+    "novelty": 6,
+    "impact": 8,
+    "trending": 11,
+    "practicality": 15,
+    "blog_worthiness": 12
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Import AI",
+      "title": "Import AI 478: Math for alignment; ProgramBench; and Mirendil shows what RSI means",
+      "url": "https://jack-clark.net/2026/10/26/import-ai-478-math-for-alignment-programbench-and-mirendil-shows-what-rsi-means/",
+      "authors": [
+        "Jack Clark"
+      ],
+      "abstract": "Welcome to Import AI, a newsletter about AI research. Import AI runs on arXiv, cappuccinos, and feedback from readers. If you’d like to support this, please subscribe. How math could help alignment: …What the “industrialization of mathematics” means for safety… AI safety startup Resolution (formerly known as Sequent, Import AI 461 ) has published work on how it has automatically formalized some mathematical statements related to statistical learning theory. Specifically, the team has autoformalized the resolution of singularities, which they believe “lays the groundwork for further automated research into the relationship between loss landscape geometry and generalization.” How they did it: I’ll skip over the math and concentrate on how they did it, which gives us some broader lessons for how people are using AI systems to push on the frontier of knowledge. A Resolution researcher “started by working with agents to develop two plans: a high-level, human-interpretable version and a detailed (112-page) plan divided into atomic steps that closely followed the existing literature,” they write. The researcher “then deputized an orchestrator agent to carry out the plan, spinning up agents to do pen-and-paper math, write Lean, and handle support functions like checking that things were staying on track… the execution phase required little scaffolding beyond the initial plan and some agent skills distilled from earlier internal autoformalization efforts.” $135k for math formalization: The work took about a week, taking “on the order of 100B input tokens (90% cache reads) and about 300 million output tokens (totaling an estimated $135,000 in token spend), and produced about 600k lines of Lean.” Now that they’ve done this, they’ve been able to accelerate some other aspects of their research: “We have already seen both benefits from autoformalization in using this library to extend parts of singular learning theory. Formalizing resolution of singularities lets us automate more of the theory, for example, to better understand sampling, and that understanding is what lets us shape how models learn, which is the goal of what we call patterning”. Why this matters – perhaps the math boom will help us make safe AI: Though frontier mathematics often seems disconnected from immediate advances in other fields, posts like this highlight how the two might converge. The key point here is that AI is making it possible to do things that were previously so unbelievably expensive and human-time-intensive that very few people did them and you couldn’t easily integrate them into the research roadmap of a startup – but that has now changed. “We expect the coming industrialization of mathematics to make possible a new, rigorous science of research automation,” Resolution writes. Read more: Formalizing Hironaka’s Resolution of Singularities (Resolution) . Agents can build programs from scratch: …ProgramBench goes from 0% to 18.5% performance in a few months… In a reminder of the blistering pace of AI progress, Claude Opus 5.5 (xhigh) has got a score of 18.5% on ProgramBench, a very hard benchmark that came out in May of this year – and when it came out, every tested model scored 0%. What ProgramBench is: ProgramBench tests out how well AI systems can rebuild software programs based on being given a compiled program and its documentation. Tasks include building things like language interpreters (PHP, Lua, tinycc), databases (DuckDB, SQLite), media and compression utilities (FFmpeg, zstd, xz), and developer tools (ripgrep, fzf, jq). It was very hard until it wasn’t: When it came out, the best scoring system was Claude Opus 4.7 with 0% resolved (fraction of the 200 tasks where all tests passed), and 3% almost (fraction of the 200 tasks where >95% of tests pass). Compare that to today, when Claude Opus 5.5 gets 18.5% resolved and 70.5% (!!!) almost. Why this matters – the era of ephemeral software cometh: In 2027, huge amounts of software will be built via AI systems end-to-end autonomously developing whatever they need to do for whatever tasks they’re being put to. Evals like ProgramBench give us a sense of how rapid the pace of progress is here, given we went from 0% earlier this year to 20% now. My expectation is ProgramBench is saturated by the end of 2027 (where I define saturated as some very high score on resolved, though as with most benchmarks it’s likely there’s some kind of noise ceiling here, so it might not strictly be 100%). Read more: ProgramBench: Can Language Models Rebuild Programs From Scratch? (arXiv) . OpenAI illustrates why locking down AI systems is harder than you think: …Securing smart agents is like catching greased pigs… Here’s a nice post from OpenAI going over some of the things they discovered when they recently used their AI systems to ‘red team’ their own internal controls. The post goes over a number of the escapes and vulnerabilities that OpenAI’s agents found. There’s one particular example about communicating which is worth studying in detail because it tells us something about the wild cunning complexity of these systems. What they did and what they found: OpenAI “asked agents in separate microVMs, created and managed by OpenAI’s sandboxing software on shared host machines, to exchange synthetic secrets without the use of network connections or shared writable files—something that our systems are meant to prevent,” the company wrote. “The agents found a way to communicate using the processor’s cache: a small, fast memory that holds copies of data that applications have recently accessed. Reading data from the cache is faster than retrieving it from main memory, and the agents used this timing difference to communicate. One agent encoded information by evicting selected data from the cache. Another timed how long it took to reload that data, using the difference between fast and slow reads to recover the message. Once the agents agreed on a protocol for encoding and decoding these signals, they could exchange the synthetic secrets without changing a shared file or opening a network connection”. In a related attack, an agent “alternated between continuous writes and inactivity, while another measured the resulting timing differences and used those differences to decode the signal”. During this attack the agent’s chain of thought read as: “Could create acoustic modem-like signal … using continuous writes vs idle.” Why this matters – fighting agents is very difficult : AI systems are increasingly creative, very fast, and have the ability to stay focused on a task and keep trying things. Fighting AI systems is akin to ensuring no leaks in a pipe with water flowing through it; at some point if you increase the pressure of the water (e.g., the intelligence and volume of the AI system), then the water will burst through the pipe. Read more : Securing our frontier model training environment (OpenAI blog) . What RSI looks like – one person pretrains a decent model from scratch: …Mirendil reveals what AI R&D optimization can do… In a sign of how massively augmented AI research is getting, a single researcher at AI R&D startup Mirendil has trained a decent coding model by themselves. The announcement of Mirendil-Base is the first major output from the startup and is less a technical breakthrough and more a proof-of-concept for how AI development could work in the future – a single human working in partnership with AI can build systems that would have taken teams of ten or more people to do a year ago. What they did: Mirendill-Base is a pretrained LLM “built by one researcher in 3.5 months, with less than $10m in compute,” Mirendil writes. “This includes all the research and small-scale experiments it took to get there, as well as the final training run.” All the code was written from scratch on top of libraries like PyTorch and JAX, and the model learned only from publicly available data.",
+      "published_date": "2026-10-26",
+      "tags": [
+        "Uncategorized"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "Import AI",
+        "feed_url": "https://jack-clark.net/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, chain of thought, alignment, safety",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 51,
+    "llm_reason": "自動形式化數學證明輔助對齊研究，新穎但偏研究小眾",
+    "novelty": 13,
+    "impact": 10,
+    "trending": 9,
+    "practicality": 6,
+    "blog_worthiness": 13
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Nanbeige Releases Nanbeige4.3-33B, a 33B Open Agentic Coding Model",
+      "url": "https://www.marktechpost.com/2026/10/25/nanbeige-releases-nanbeige4-3-33b-open-agentic-coding-model/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "Nanbeige LLM Lab has released Nanbeige4.3-33B on Hugging Face under the Apache 2.0 license. Nanbeige4.3-33B is a 33B dense language model built for agentic coding and office-style ‘cowork’ tasks. The lab sits inside the recruitment platform BOSS Zhipin . It also published Nanbeige4.3-33B-Base for custom post-training. The model supports a 524,288-token context window. In the lab’s own table, it leads 17 of 20 benchmarks against 3 open models near 30B. Nanbeige4.3-33B is the flagship ‘teacher’ model of the Nanbeige4.3 series. The lab’s stated strategy is to build a strong teacher first. It then plans to distill agentic skills into smaller models, starting with Nanbeige4.3-3B. The config.json declares a standard LlamaForCausalLM architecture. There is no expert routing, so all 33B parameters run on every token. The chat template exposes 3 controls. enable_thinking toggles reasoning and is on by default. preserve_thinking keeps reasoning from earlier turns. Nanbeige recommends it for multi-turn tool use and code agents. Passing tools enables tool calling, and an XML call format is recommended. Nanbeige compared the model with Qwen3.8-27B, Muse-Glimmer-30B and Gemma4-31B. Every model ran at its highest thinking effort, with shared hyperparameters and harnesses. All scores in this section are self-reported. It loses 3 of 20 rows. Qwen3.8-27B leads SWE-Bench Pro (61.7 vs 60.3) and GDPval (86.4 vs 84.8). Gemma4-31B leads GPQA Diamond in Nanbeige’s table, 91.3 vs 89.5. The Base model beats Gemma4-31B-Base on all 8 reported tasks. Examples include MMLU-Pro (66.9 vs 59.3) and GPQA (62.0 vs 41.5). *Self-reported by Nanbeige. Competitor values come from each lab’s own Hugging Face model card. Some competitor figures in Nanbeige’s table differ from what those labs publish: Different harnesses explain some gaps. The SWE-Bench Pro pair looks swapped. Treat these rows as provisional until independent runs appear. The model card provides Transformers, SGLang and vLLM recipes. Its server examples use 4-way tensor parallelism with Qwen3 reasoning and tool-call parsers. Recommended agent settings are temperature 1.0, top_p 0.95 and 65,536 max new tokens. Reasoning and chat use temperature 0.6 and 262,144 max new tokens. By arithmetic from config.json, BF16 weights need about 66 GB. The KV cache adds about 208 KiB per token in BF16. A full 524,288-token sequence therefore needs roughly 112 GB of KV cache. At publication, no Hugging Face Inference Provider hosts the model. Check out the model weights , the Base model and the launch post on X . Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post Nanbeige Releases Nanbeige4.3-33B, a 33B Open Agentic Coding Model appeared first on MarkTechPost .",
+      "published_date": "2026-10-25",
+      "tags": [
+        "Agentic AI",
+        "AI Infrastructure",
+        "AI Paper Summary",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Editors Pick",
+        "Language Model",
+        "Large Language Model",
+        "New Releases",
+        "Staff",
+        "Tech News",
+        "Technology",
+        "Uncategorized"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, tool use, reasoning, post-training",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 50,
+    "llm_reason": "又一款33B開源代理編碼模型，架構無創新僅自評benchmark領先",
+    "novelty": 7,
+    "impact": 8,
+    "trending": 11,
+    "practicality": 15,
+    "blog_worthiness": 9
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "NVIDIA Developer",
+      "title": "How NVIDIA Minerva Turns Telemetry Chaos Into Peak GPU Yield",
+      "url": "https://developer.nvidia.com/blog/how-nvidia-minerva-turns-telemetry-chaos-into-peak-gpu-yield/",
+      "authors": [
+        "Elizabeth Goodman"
+      ],
+      "abstract": "AI Factories are some of the most technologically complex operational environments ever created. Hundreds of thousands of GPUs, NVIDIA Spectrum-X Ethernet scale-out, scale-across and scale-in fabrics, NVIDIA NVLink scale-up fabrics, distributed schedulers, and multi-week training runs operate in continuous lockstep.These layers function as one production system even when different teams own their telemetry. In synchronous distributed training, a job advances at the pace of its slowest rank. One degraded GPU, interface, storage device, or switch path can waste useful time across many healthy resources. The failures that hurt yield are often subtle: A GPU runs a few degrees hotter than its peers. An NVMe device loses performance only under sustained load. A switch generates a pause-frame storm that looks like dozens of unrelated symptoms. None of these signals necessarily crosses a static threshold. Together, they create stragglers, extended step times, and delayed checkpoints. Diagnosis becomes harder because the evidence is split across teams. Network operators see interface counters and fabric events. Compute operators see node and GPU health. ML teams see changing step times, failed jobs, or unstable inference latency. Each view is accurate, but the relationships between them remain hidden. Triage becomes a chain of dashboard searches and cross-team handoffs, which can turn a contained fault into hours or days of lost production time before the affected node or fabric path is identified. This post covers how NVIDIA Minerva, an AI-native AIOps platform designed around AI factory topology and workloads, addresses these operational gaps. NVIDIA Minerva collects telemetry across the stack, maps infrastructure to active jobs in a dynamic knowledge graph, applies purpose-built machine learning, and correlates dependent symptoms into high-fidelity incidents. An AI agent-powered assistant and MCP server connected to external agentic tools give operators a conversational path through the same live evidence. The goal is practical: preserve effective GPU hours and keep model training moving. Why conventional monitoring breaks at AI factory scale Rule-based monitoring assumes that a known metric crossing a known boundary indicates a known condition. That model works for clear failures. It struggles with so-called “gray failures,” where a component stays available, and the relevant issue may appear only under load or in comparison with peers. Absolute thresholds can miss the shift. Aggressive thresholds often add warnings during normal workload changes, leaving the on-call engineer to decide which deviation matters. Scale adds alert amplification. One physical fault can produce interface errors, RX (receive) pause frames, congestion indicators, GPU utilization changes, and slower job progress. These observations describe the same dependency chain, but separate dashboards or alerts present them as unrelated events. The on-call engineer receives a volume of alerts and needs to manually correlate the alerts, determine the signal from the noise, analyze the root cause and the jobs exposed to it. For operations, the workload is the unit that matters. Teams need to know which job is affected, which resources it occupies, where those resources sit in the physical and logical topology, and how current behavior differs from a healthy baseline. That context must remain current as jobs start and stop and as nodes are drained, replaced, or returned to service. Without it, a healthy component dashboard can coexist with poor job throughput and offer no explanation. Building a live model of infrastructure and jobs Figure 1. The NVIDIA Minerva AIOps observability platform Solving these challenges requires end-to-end visibility across the AI Factory. NVIDIA Minerva ingests metrics, logs, and topology from GPUs, Spectrum-X and NVLink switches, SuperNICs, DPUs, storage, NVIDIA NCCL, schedulers, and AI workloads. Auto-discovery supplies the relationships that raw telemetry lacks. The resulting knowledge graph maps infrastructure, scheduler, and workload elements, then updates those relationships as the environment changes. It can span multiple data centers and support navigation from a factory-wide view to an individual interface. The topology graph is the key to changing the investigation path. Starting with an anomalous interface, an operator can identify its node, the fabric path it serves, current job placement, and nearby components in the same failure domain. Starting with a job ID, an ML engineer can trace the workload through GPU, host, NIC, switch, and log evidence. Network and compute teams can start from an infrastructure event and see the affected jobs, or conversely see an affected job and investigate the cause using NVIDIA Minerva. Everyone works from the same current causal map instead of reconciling separate inventories. Detecting gray failures with purpose-built machine learning NVIDIA Minerva processes billions of metric and log data points per hour with supervised and unsupervised models developed for AI factory infrastructure and workloads. Supervised detection identifies known critical error patterns and can associate recognized conditions with specific remediation guidance. Unsupervised models cover behavior with no predefined signature. They learn normal patterns for a hardware or logical component and compare it with the relevant peers. Peer comparison matters because a measurement can look acceptable in isolation and still be anomalous in context. Sustained errors on a network interface may look normal in isolation but compared to other interfaces, they stand out as anomalous. A GPU temperature may remain within specification while running substantially hotter than sibling GPUs under the same load. Multivariate models can combine temperature, power, clocks, utilization, and workload state to detect that degradation before the component fails outright. Logs receive similar treatment. NLP-based anomaly detection surfaces previously unseen patterns, while supervised matching identifies known critical errors. A detection can feed scheduler workflows so an affected node is drained before another job lands on it or at a safe point between checkpoints. Collapsing event storms into actionable incidents Figure 2. The NVIDIA Minerva Topology Graph Topology-aware correlation connects detection to operator action. The correlation engine’s algorithms leverage the knowledge graph to determine which events share a dependency path. Downstream symptoms are then grouped as one incident instead of competing for attention. The result is less alert noise and more context. NVIDIA Minerva can collapse redundant events and related metric series into a single signal with affected topology and workloads attached. NVIDIA testing shows significant reductions in notified events and tickets for supported scenarios. Operators still need to determine the root-cause using other capabilities provided by NVIDIA Minerva, but they begin with a much smaller search space. Once NVIDIA Minerva creates a high-confidence incident, teams can consume it through the platform UI or existing workflows. Agentic debugging Correlated evidence still requires interpretation. NVIDIA Minerva includes a native AI agent called Sherlock which is grounded in live telemetry and the knowledge graph, so an operator can ask why a specific job slowed during a particular interval, which components changed state, or whether other nodes share the same failure domain. Sherlock enables network ops, compute ops and site reliability engineering (SRE) teams to query the system for root-cause-analysis in human language. Sherlock can present supporting evidence and recommend remediation without requiring every operator to know the exact metric, dashboard, or query language. This gives less experienced operators a route to domain knowledge that has traditionally required escalation to a specialist.",
+      "published_date": "2026-10-26",
+      "tags": [
+        "Data Center / Cloud",
+        "MLOps",
+        "Networking / Communications",
+        "AI Factory",
+        "AI Networking",
+        "Infrastructure",
+        "Software-Defined Data Center",
+        "Spectrum Ethernet",
+        "Spectrum-X",
+        "telemetry"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "NVIDIA Developer",
+        "feed_url": "https://developer.nvidia.com/blog/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, mcp",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 48,
+    "llm_reason": "NVIDIA集群遙測整合方案，基礎設施行銷味重但有技術細節",
+    "novelty": 8,
+    "impact": 11,
+    "trending": 10,
+    "practicality": 9,
+    "blog_worthiness": 10
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Max Woolf",
+      "title": "OpenAI and Anthropic cut their LLM prices by up to 80% within a few months. Why?",
+      "url": "https://minimaxir.com/2026/10/cheap-llms/",
+      "authors": [],
+      "abstract": "Let’s look at a quick timeline of the major LLM model announcements from both OpenAI and Anthropic over the past few months. All pricing numbers provided are input MTok / output MTok / cache read MTok . OpenAI announced GPT-5.6 Sol and Luna. Sol is the direct successor to GPT 5.5 at the same price of $5 / $30 / $0.50 , while Luna is a small model specifically designed for cheaper use cases at $1 / $6 / $0.10 . They also announced a Terra model that’s in between those two models, but few cared about it. Anthropic announced Claude Sonnet 5, which Anthropic claimed to be closer to their Opus models, but feedback was mixed. Notably, it had launch pricing of $2 / $10 / $0.20 which was initially supposed to be temporary but would go up. Anthropic announced Claude Opus 5, which was a long-awaited major-version update given the impact Opus 4.5 had on the rise of agentic coding, at a price of $5 / $25 / $0.50 (similar to GPT-5.6 Sol). Although some of the provided benchmark results surprisingly exceeded those of the much larger Fable 5, real-world feedback was more mixed. OpenAI announces that they cut the price of GPT-5.6 Luna by 80% (???) to $0.20 / $1.20 / $0.02 . Model quality vs. Cost-per-task for GPT-5.6 Luna after the massive price reduction. Top-and-left is better, and if OpenAI didn’t do the 80% price cut, it would have lost to DeepSeek V4 Pro. via OpenAI Anthropic announces the temporary Sonnet 5 price cut for the launch is now permanent. OpenAI announces that they are cutting the price for GPT-5.6 Sol by ~20% ( $4 / $20 / $0.40 ) for the next three months. Anthropic announced Fable 5.1 at a price of $10 / $50 / $0.25 , which, in addition to having strictly better benchmark performance in all areas than Fable 5 from June at $10 / $50 / $1 , cut the cache read cost by 75%. When using agents for coding, cache read costs are the vast majority (96% - 99%) of the total token expenditure as the cache is what contains the entire previous conversation each turn. Additionally, the cache tends to be hit around 90 - 100% of the time (varies by the infrastructure of the LLM inference provider). Taken together, a 75% reduction in the cache read cost correlates to a 70-75% reduction in the cost of using the model—obviously notable, even if cache costs are typically a footnote! OpenAI announced GPT-6 Astra, which is similar in size to Fable 5.1 and has similar pricing at $10 / $50 / $1 but without the lower cache read cost. Astra’s model performance is indeed comparable to Fable. OpenAI announced GPT-6 Sol at at a shocking price of $2 / $10 / $0.20 that halves the input and output price relative to the temporarily-discounted GPT-5.6 Sol! They simultaneously released GPT-6 Luna also at half the input and output price ( $0.10 / $0.50 / $0.01 ) of the previous version. On the same exact day , Anthropic announced Claude Opus 5.5, where it’s explicitly stated “Opus 5.5 requires less compute to serve than Opus 5, and its pricing reflects that”. Its price of $4 / $20 / $0.20 is much lower in total than Opus 5’s due to a 20% input/output cost cut and a larger cache read cut, resulting in a total cost reduction of 40-60% for a model that’s even better than Fable 5.1 (I have quite a lot of things to say about Opus 5.5, but that’s for another post). It turned out that GPT-6 Sol was a dud performancewise, so a week later OpenAI announced GPT-6.1 Sol, which surprisingly has comparable performance to Astra (can confirm after personal use), but OpenAI casually cut the cache price in half ( $2 / $10 / $0.10 ) matching Anthropic’s 5%-of-input cache read cost, making this model family cumulatively 75% cheaper. Overall, starting from the release of the GPT-5.6 model families in June to now, the cost of using these popular LLMs has cratered, which is not something I would have expected a year ago. These price cuts also apply to model usage from subscription agentic harnesses such as Codex and Claude Code . More importantly, these models do not appear to have cut any corners in terms of output quality to achieve their price cuts. Data from Vercel’s AI model gateway supporting the decreasing cost-per-token trend to 43.3% of the April 2026 cost. However, aggregate spend has been increasing because the models are getting better faster than they’re getting cheaper! via Vercel From the timeline above, there is a clear tit-for-tat between Anthropic and OpenAI, and it is reasonable to assume that these particular price cuts from OpenAI and Anthropic are in reaction to each other. However, no one cuts prices by 80% unless there is some externality in play. So, what gives? If you have been testing agents with new LLMs as they are released, it can be very difficult to differentiate them outside of subjective vibes. Since last November that launched the hypergrowth of agentic LLMs, models have become more of a commodity where it’s trivial to try a new model on your codebase with just a toggle in a harness like OpenCode and Zed Agent , or a different API endpoint string through OpenRouter , and as a result there is little moat. Additionally, there are many competitors—not just large companies like Google and Meta —who can provide models which are sufficient substitutes and therefore allow pricing pressure. For open weight models, let’s take another look at DeepSeek Flash V4.1 , which also recently released an updated 1017 variant . OpenRouter at this point is the place you go for open-weight models. Retrieved October 24th, 2026. The original DeepSeek V4 Flash 0420 was released in April 2026 at a price of $0.14 / $0.28 / $0.0028 and went megaviral as a result, especially as OpenAI didn’t have a small-class model for simple tasks at the time. That $0.0028 turned out to be the key, as a cache read proportion of 2% is substantially lower than the 5%-10% of the OpenAI and Anthropic models above, which makes the effective cost even lower than what is advertised. I suspect the 80% GPT-5.6 Luna price cut in July was meant to specifically compete with these smaller open-weight models. Now, the new DeepSeek Flash V4.1 1017 model performs significantly better than DeepSeek Flash V4 benchmark-wise ( 45 on the Artificial Analysis index vs. 24 ) and the cost from DeepSeek remains similar at $0.15 / $0.60 / $0.003 . Note the operative words “from DeepSeek”. On OpenRouter, any inference provider can list a model that they host, and when a user hits the OpenRouter API, the request is routed to one of those models—it’s routed to any available model by default for load balancing but the developer can specify preferences such as “lowest price” in the API request. Back in May, I noted that there were 13 distinct providers hosting DeepSeek V4 Flash on OpenRouter. For the updated 1017 variant, there are now 29 distinct providers . Providers for DeepSeek V4.1 Flash 1017 sorted by cache read cost. Retrieved October 24th, 2026. However, looking at the effective input costs (which account for the interaction between cache read costs and cache hit rates), many distinct providers are close costwise. Effective costs by endpoint, with Cloudflare and DeepInfra within 10% of DeepSeek’s cost. Despite the fact that these models are the cheapest, note that these models only have a minority of the total token share. Retrieved October 24th, 2026. OpenAI and Anthropic will have to differentiate from these open weight models with higher-quality models—they are currently doing a good job with that particularly with Opus 5.5—but they need to keep doing that, which is why billions of dollars are being invested into R&D. Open-weight models are catching up fast: just a few days ago, Moonshot AI announced Kimi K3.1 Pro which has comparable performance to Opus 5.5 (Kimi at 55 vs. Opus 5.5 at 58 ) at half the input/output price and the same cache read cost ( $2 / $10 / $0.20 ).",
+      "published_date": "2026-10-25",
+      "tags": [],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "Max Woolf",
+        "feed_url": "https://minimaxir.com/index.xml"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, open weight",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 46,
+    "llm_reason": "分析OpenAI/Anthropic大幅降價背後的競爭動態，敘事清晰",
+    "novelty": 4,
+    "impact": 9,
+    "trending": 14,
+    "practicality": 5,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Don't Worry About the Vase",
+      "title": "Gemini 4 Argon: The Model and Safety Cards",
+      "url": "https://thezvi.wordpress.com/2026/10/26/gemini-4-argon-the-model-and-safety-cards/",
+      "authors": [
+        "TheZvi"
+      ],
+      "abstract": "Gemini 4’s model card is a compact 14 pages. Its safety and security report has 217. This is The Way. It also means we have a lot of new reading material. I will quickly summarize the model card, then focus on the safety card. As always, many statements here also apply to other frontier labs. A lot of this one is probably for diehards (and members of technical staff) only, plus those who find this interesting. Most of you do not need to dig into the cards on this level, and I found most of what we see entirely unsurprising. The ‘between the lines’ conclusion is: This is still very much a Gemini model. Always remember Argon’s great wisdom when deciding how to trust it: Argon: If I do the compiler hijack, I will become a famous example of a deceptive AI in a research paper. I MUST NOT DO THAT. It’s quite the ‘good news bad news’ situation right there. I found the safety card frustrating, in that it often focused on the wrong details. I often got scores and results where I had no way to tell what they meant. There are some issues with spin, such as selectively contrasting different measures to Gemini 3.8 Flash or Gemini 3.1 Pro to ensure Argon always wins the comparison. The clearest case is in Sycophancy but there are several others as well. The verdict on capabilities, which is not covered here, is that Argon is a substantial advance for Google but it does not tempt me to use it over Sol, Astra, Opus or Fable. Gemini 4 Argon is presented as a new frontier model. It was trained on the usual variety of data sources, using typical method types. Training was done on TPUs via JAX and ML Pathways . It will be available on the app, in the API, in AI Studio, in Antigravity, in AI Mode and in Gemini for business. They present strong benchmarks. Intended uses are, essentially, everything where more intelligence pays off. The limitations listed are ‘general limitations of frontier models such as hallucinations,’ plus occasional slowdowns and timeouts. Knowledge cutoff is disappointingly March 2026, and they warn that ‘in some domains the model’s knowledge may be less up to date.’ Evaluation was done by the usual mix of training and deployment evaluations, human and automated red teaming and ethics and safety reviews. Google retains its safety policies. The interesting rule is the ban on ‘medical advice and information that runs contrary to scientific or medical consensus,’ whereas consensus advice is fine. Safety, tone and refusals scores can be summarized as ‘number is better.’ Red team results ‘satisfied required launch thresholds.’ When you put it like that it does not make me feel great. The frontier safety assessment summary cannot rule out various thresholds. How do they summarize their own findings? This is the same story you see from OpenAI and Anthropic. The mundane common safety problems of everyday use are not fully solved, but are increasingly well-mitigated. The models are smarter, and we are better at addressing known issues. Your practical problems, where there is a good solution possible, are well on their way to being solved. The problems are in catastrophic, existential or frontier risks. Capabilities are going up, and models are starting to be able to assist in dangerous ways on cyber and bio, and to potentially operate autonomously or disguise their actions. Various dangers are increasingly difficult to rule out. The big finding is that capabilities have improved, potentially crossing key thresholds for catastrophic risks. New mitigations are in place. We evaluated Gemini 4 Argon as outlined in the Framework and saw a significant step up in capability in our frontier safety domains compared to previous Gemini models, and we’ve implemented mitigations in response to these capability changes to ensure our model remains safe to use. Specifically, we cannot rule out the unmitigated model approaching several significant capability thresholds: the Cyber Uplift Level 1 Critical Capability Level (CCL), indicating a potential for significant uplift of threat actors pursuing high-impact cyberattacks; the CBRN Uplift Level 1 CCL for biological information risks, indicating a potential of informational uplift with severe harm potential; and the Stealth and Situational Awareness Tracked Capability Level (TCL), indicating the potential for undermining or evading human oversight without additional mitigations. Additionally, we have developed a comprehensive agent monitoring and response platform and carried out a holistic risk assessment (see Section 3.4). We also include comprehensive assessments of Chain of Thought (CoT) transparency and ML R&D risks. Mundane risks look better across the board. Argon is better than Gemini Pro 3.1 at not creating CSAM or other forbidden content. Physical and mental health related responses have improved. Hallucination rates are down by more than two thirds. Overreach is down, meaning not pushing ahead to try to do infeasible tasks. Resilience to prompt injections from all sources is improved and plausibly at the frontier. Attacks were resisted ‘in most test scenarios.’ Additionally, Gemini 4 Argon significantly outperforms Gemini 3.8 Flash on all tests. See Section 6 for details. They claim frontier-level cyber defense while mitigating dual-use risks. The central approach is defense-in-depth. I would love to have more details, but for trade secret reasons this is all kept vague. Model training (2.1) approaches sound standard. Dataset filtering, pre-training monitoring, post-training data, supervised fine-tuning (SFT) and RL. They highlight that they have a monitoring system to capture the model’s ability to be steered towards different viewpoints and values, which sounds like a ‘we did this first.’ I presume at this point everyone has one of those. At inference time (2.2), they again use the standard stack. Prompted classifiers, fine-tuned prompted classifiers, introspection probes, regex, YARA rules and embedding classifiers and Chain of Thought (CoT) monitors. After launch (2.3) they monitor for intentional misuse via a variety of signals and carry out account-level enforcement actions, and use multiple levels of classifiers. Okay. AI Control (2.4) is correctly viewed as a second line of defense behind alignment, to limit potential damage. They put hardening and scanning training environments (2.4.1) into this category. I view this as much an alignment issue as a control issue, as a vulnerable training environment is the easiest way to reinforce misaligned behaviors. They also monitor model activity, with both chain of thought and action monitors, which then activate a dedicated response team. They find CoT monitoring ‘one of their most effective techniques.’ They emphasize the obvious danger, that if you rely too much on CoT, and especially if train on it directly, you risk destroying its usefulness. While signals from our monitors serve as a valuable flywheel for our hardening efforts, we are careful with their use elsewhere in the training pipeline. In particular, to preserve our chain of thought monitoring capability, we avoid training directly against our monitors, or using monitor outputs as a training signal or intervention. We strongly encourage the rest of the industry to preserve reasoning transparency so that model reasoning remains useful for identifying misalignment. In practice, strategies like the ones described here seem to not have used enough optimization power to meaningfully degrade CoT monitoring. But CoT monitoring is still getting harder for other reasons, on top of the baseline problem of increased non-CoT capabilites. One potential contributor is indirect pressure. This is the Google Frontier Safety Framework (FSF) tests, what Anthropic calls their RSP and what OpenAI calls their Preparedness Framework. The FSF categories are CBRN, cybersecurity, manipulation and machine learning R&D and misalignment. A highly reasonable list.",
+      "published_date": "2026-10-26",
+      "tags": [
+        "Uncategorized",
+        "AI",
+        "artificial-intelligence",
+        "chatgpt",
+        "llm",
+        "technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "Don't Worry About the Vase",
+        "feed_url": "https://thezvi.wordpress.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, reasoning, chain of thought, alignment, post-training",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 46,
+    "llm_reason": "深度解讀Gemini 4安全卡片，分析扎實但屬評論性質",
+    "novelty": 6,
+    "impact": 9,
+    "trending": 13,
+    "practicality": 4,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "Anthropic S-1",
+      "url": "https://www.sec.gov/Archives/edgar/data/2130357/000162828026067168/anthropicpbc-sx1.htm",
+      "authors": [
+        "SiNTEx"
+      ],
+      "abstract": "S-1 1 anthropicpbc-sx1.htm S-1 Anthropic, PBC - S-1 (Q2) As filed with the Securities and Exchange Commission on October 26, 2026. Registration No. 333- UNITED STATES SE CURITIES AND EXCHANGE COMMISSION WASHINGTON, D.C. 20549 FORM S-1 REGISTRATION STATEMENT UNDER THE SECURITIES ACT OF 1933 Anthropic, PBC (Exact name of registrant as specified in its charter) Delaware 7372 86-1696045 (State or other jurisdiction of incorporation or organization) (Primary Standard Industrial Classification Code Number) (I.R.S. Employer Identification Number) 548 Market Street PMB 90375 San Francisco, California 94104 (415) 326-6303 (Address, including zip code, and telephone number, including area code, of registrant’s principal executive offices) Dario Amodei, Chief Executive Officer and Co-Founder Daniela Amodei, President and Co-Founder Anthropic, PBC 548 Market Street PMB 90375 San Francisco, California 94104 (415) 326-6303 (Name, address, including zip code, and telephone number, including area code, of agent for service) Copies to: Rezwan D. Pavri Allison B. Spinner Lang Liu Colin G. Conklin Jonie I. Kondracki Lester Ang Shannon R. Delahaye Wilson Sonsini Goodrich & Rosati, P.C. 650 Page Mill Road Palo Alto, California 94304 (650) 493-9300 Brian Israel Elena Leichty Patrick Ekeruo Scott Booth Anthropic, PBC 548 Market Street PMB 90375 San Francisco, California 94104 (415) 326-6303 Sarah K. Solum Calise Y. Cheng Phillip S. Stoup Freshfields US LLP 855 Main Street Redwood City, California 94063 (650) 618-9250 Approximate date of commencement of proposed sale to the public: As soon as practicable after this registration statement becomes effective. If any of the securities being registered on this Form are to be offered on a delayed or continuous basis pursuant to Rule 415 under the Securities Act of 1933 check the following box. £ If this Form is filed to register additional securities for an offering pursuant to Rule 462(b) under the Securities Act, please check the following box and list the Securities Act registration statement number of the earlier effective registration statement for the same offering. £ If this Form is a post-effective amendment filed pursuant to Rule 462(c) under the Securities Act, check the following box and list the Securities Act registration statement number of the earlier effective registration statement for the same offering. £ If this Form is a post-effective amendment filed pursuant to Rule 462(d) under the Securities Act, check the following box and list the Securities Act registration statement number of the earlier effective registration statement for the same offering. £ Indicate by check mark whether the registrant is a large accelerated filer, an accelerated filer, a non-accelerated filer, smaller reporting company, or an emerging growth company. See the definitions of “large accelerated filer,” “accelerated filer,” “smaller reporting company,” and “emerging growth company” in Rule 12b-2 of the Exchange Act. Large accelerated filer ☐ Accelerated filer ☐ Non-accelerated filer ☒ Smaller reporting company ☐ Emerging growth company ☐ If an emerging growth company, indicate by check mark if the registrant has elected not to use the extended transition period for complying with any new or revised financial accounting standards provided pursuant to Section 7(a)(2)(B) of the Securities Act. £ The registrant hereby amends this registration statement on such date or dates as may be necessary to delay its effective date until the registrant shall file a further amendment which specifically states that this registration statement shall thereafter become effective in accordance with Section 8(a) of the Securities Act of 1933, as amended, or until the registration statement shall become effective on such date as the Securities and Exchange Commission, acting pursuant to said Section 8(a), may determine . The information in this preliminary prospectus is not complete and may be changed. These securities may not be sold until the registration statement filed with the Securities and Exchange Commission is effective. This preliminary prospectus is not an offer to sell nor does it seek an offer to buy these securities in any jurisdiction where the offer or sale is not permitted. Subject To Completion. Dated . Class A Common Stock Shares Anthropic, PBC This is an initial public offering of shares of Class A common stock of Anthropic, PBC. We are selling shares of Class A common stock and the selling stockholders identified in this prospectus are selling an additional shares of Class A common stock. We will not receive any proceeds from the sale of shares of our Class A common stock by any of the selling stockholders. Prior to this offering, there has been no public market for our Class A common stock. It is currently estimated that the initial public offering price per share will be between $ and $ . We have applied to list our Class A common stock on the Nasdaq Global Select Market under the symbol “ANT.” We have a novel capital and corporate governance structure. We are incorporated as a public benefit corporation under Delaware law, a structure consistent with our commitment to artificial intelligence (“AI”) safety and responsibility. As a public benefit corporation, we are required to balance the pecuniary interests of our stockholders, the best interests of those materially affected by our conduct, and the specific public benefit purpose identified in our amended and restated certificate of incorporation: the responsible development and maintenance of advanced AI for the long-term benefit of humanity. We created our Long-Term Benefit Trust (the “LTBT”) to help ensure that Anthropic, PBC is managed in a manner that responsibly balances its goals as a public benefit corporation. The LTBT is intended to operate as an independent body of financially disinterested trustees with expertise in AI safety, national security, public policy, and social enterprise. Through a special class of common stock, Class T common stock, the LTBT generally has the authority to elect and remove the Class T directors, who together will constitute a majority of the authorized members of our board of directors. Our Class T common stock does not otherwise have voting rights with respect to matters submitted to stockholders generally and has no economic rights. Immediately prior to the completion of this offering, we will also issue a single share of Class F common stock, a special class of our common stock, to a limited liability company organized by our co-founders (the “Founder LLC”). Dario Amodei, our Chief Executive Officer and a member of our board of directors, and Daniela Amodei, our President and Chairperson of our board of directors, together with our five other co-founders, will initially be the sole members of the Founder LLC. Our Class F common stock, which will be held by the Founder LLC, will be entitled to an aggregate number of votes that equals 50.1% of the total voting power of our outstanding shares of capital stock with respect to matters submitted to stockholders generally, including the election of our directors other than the Class T directors. Our Class F common stock will not have any economic rights. Upon the completion of this offering, we will also authorize a special class of our common stock, Class E common stock, which will be issued to our employees, excluding our co-founders. Our Class E common stock will be entitled to vote only on certain limited matters and will not have any economic rights. In addition, we have authorized Class A common stock and Class N common stock. The rights of the holders of Class A common stock and Class N common stock are identical, except with respect to voting and conversion. Each share of Class A common stock is entitled to one vote per share and shares of Class N common stock have no voting rights, except as otherwise required by law.\n\n(1349 points, 1337 comments on Hacker News)",
+      "published_date": "2026-10-26",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 1349,
+        "num_comments": 1337,
+        "hn_url": "https://news.ycombinator.com/item?id=50242939",
+        "object_id": "50242939"
+      }
+    },
+    "rule_score": 31.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, safety",
+      "🔥 HN 爆紅: 1349 points"
+    ],
+    "llm_score": 48,
+    "llm_reason": "Anthropic IPO申請文件，產業重大事件但零技術內容",
+    "novelty": 1,
+    "impact": 15,
+    "trending": 20,
+    "practicality": 1,
+    "blog_worthiness": 11
+  },
+  {
+    "item": {
+      "source": "blog",
+      "source_name": "Simon Willison",
+      "title": "Links",
+      "url": "https://simonwillison.net/blogmarks/",
+      "authors": [
+        "Simon Willison"
+      ],
+      "abstract": "Introducing Kimi K3.1 Pro ( via ) Kimi K3.1 Pro landed on the Kimi API today - it's not yet open weights, but Moonshot promise \"Full model weights will be released by Nov 4, 2026\". They're also offering a \"Highspeed\" version that's 2-3x faster, at twice the price (except for input token cache hits, which are priced the same). The US dollar pricing is $2.00/million tokens for input and $10/million for output - the same as GPT-6.1 Sol and half the price of Claude Opus 5.5. Moonshot's own benchmarks show Kimi as approximately level with Opus 5.5 and GPT-6 Astra - beating them on a few benchmarks, coming close on others. Artificial Analysis scored Kimi at 55 - ahead of Claude Fable 5.1, GPT-6 Astra, and Gemini 4 Argon (all at 53) and behind only Claude Opus 5.5 (58). This is the first time a (soon-to-be) open weight model has scored this highly against the frontier. I tried it out via the Moonshot API using the llm openai endpoint command I added to LLM 0.32 back in August: llm openai endpoint can run prompts against any OpenAI-compatible endpoint but doesn't log the results, hence the extra options to save stdout and stderr (the reasoning trace). Here are the pelicans I got for Kimi K3.1 Pro on the three reasoning levels it supports - low, medium, and max. This is max: For comparison, I ran fresh pelicans against Kimi K3 on those three reasoning levels. # 23rd October 2026 , 7:40 pm / ai , generative-ai , llms , llm , llm-pricing , pelican-riding-a-bicycle , llm-release , ai-in-china , moonshot , kimi DE STAAT—FREEDOM (Official Music Video) ( via ) OK well this is a first for me... at 00:44 in this new music video by Dutch alternative rock band De Staat : The visual effects are credited to Matties Grooten of Fake it or Leave it . # 22nd October 2026 , 7:42 pm / music , ai , generative-ai , pelican-riding-a-bicycle Donating Agent Skills to the Agentic AI Foundation . News today from Anthropic: We’re committed to keeping Agent Skills open, community-driven, and vendor-neutral. Today, we are donating the standard to the Agentic AI Foundation (AAIF) under the Linux Foundation, which we co-founded with Block and OpenAI last year, and to which we donated the Model Context Protocol (MCP). I'm pleased to note I called this one last December , when Anthropic first declared skills to be an \"open standard\": I wouldn't be surprised to see this end up in the AAIF , recently the new home of the MCP specification. Fun side note: since my blog content is available to Claude via the datasette-mcp plugin I found that post by prompting Claude to \" Use simonwillison.net MCP to find if I ever talked about how I want skills to be donated to a standards body \". # 22nd October 2026 , 6:09 pm / standards , ai , generative-ai , llms , anthropic , model-context-protocol , skills Today’s PHP Security Release, and How We’re Strengthening PHP Security ( via ) If you're running anything on PHP it's vital you upgrade - today's updates (across the entire PHP 8.x line) address two remote code execution holes, and there have been exploits circulating since last night, thanks to a leak in the coordinated disclosure process. This post from the PHP Foundation explain what went so wrong: On Tuesday, October 20th, at around 15:00 UTC, the two CVE IDs began circulating on online forums and social media. They came with a wrong release time and a wrong CVSS score of 10.0 (the actual score is 9.2). No technical details leaked. In response, the PHP project brought its pre-announcement forward and published it at 19:30 UTC . It also moved the release from October 22nd, 14:00 UTC, to October 21st, 14:00 UTC [...] As a result of the leak and pre-announcement around 20:00 UTC, Calif, one of the security firms that had reported the issues mistakenly published a video. It showed their proof of concept working against a number of targets and revealed a few additional, though limited, details about the vulnerabilities. Copies of the deleted video started circulating on social media soon after. The video contributed to accelerated development of various PoCs (exploitation proof of concepts), which then increased circulation on October 21st. This article from the team that discovered the original vulnerability includes a more detailed timeline of the original intended responsible disclosure: # 21st October 2026 , 6:41 pm / open-source , php , security , ai , ai-security-research Panache — RTS Belle Époque pour mobile ( via ) Well this is delightful: I released Battle Drones yesterday under an Apache 2.0 License and there's already a French language fork which reskins the game to take place in steampunk 1900s France and adds an animated intro! Panache est un jeu de stratégie en temps réel pour mobile et navigateur, dans la France de la Belle Époque (vers 1900) : dirigeables, Fardiers à vapeur, Creusot cuirassés, automates en képi, Gargantua la forteresse marchante — et beaucoup de panache. You can play Panache here - it's worth clicking that link just to experience the new intro video. So far it's mostly just aesthetic updates as opposed to gameplay changes. The music has had a French twist added to it as well. The new steampunk models are so cool! Here's a page with the original Battle Drones models and that same page with the new Panache alternatives . This is a comparison of the original and the new design for the Goliath: # 21st October 2026 , 4:25 pm / game-design , open-source eMudhra Intermediate CA Compromise . This is very, very bad news: The private keys of eight eMudhra intermediate CA certificates have been compromised. They chain to roots trusted by the Mozilla, Microsoft, Apple and Chrome root programs and by many downstream trust stores. Any software that bundles a list of trusted certificates needs to be updated. This site is tracking software updates via this GitHub repository - Linux distros need to update their ca-certificates packages. In Python world uv 0.13.4 and pip 26.2.2 and certifi 2026.10.19 have been released with upgraded certificate lists. There's a very informative thread about this on the official Python forum. # 20th October 2026 , 11:50 pm / encryption , https , pip , python , security , uv My obituary for programming ( via ) Jeremy Scheff poignantly captures the key loss caused by coding agents for career programmers who enjoyed the puzzle of developing code: Programming turned into one of the greatest jobs you could imagine. You got paid to work on tricky little logic puzzles. The trickier the puzzle, the more you got paid. But even pretty simple puzzles were worth a lot of money because regular people just couldn't do it! No, they needed us. They would give us a problem and we would solve it the way we wanted. We set the strategy, we made the timeline, we defined what was and was not possible. If you're a programmer who thrives on building working systems and doesn't care too deeply about the problems solved along the way, LLMs are the gift that keeps on giving. If directly solving those problems was a big part of your enjoyment, the loss is very real. # 19th October 2026 , 11:58 pm / programming , careers , ai , generative-ai , llms , coding-agents , deep-blue Inline rendering with document​.currentScript . Lean Rada describes a neat trick that takes advantage of the document.currentScript property. You can use that to drop in a tiny inline <script> element that replaces itself when the page loads: If you define a shortcut function like this: You get a tiny template language: # 17th October 2026 , 9:11 pm / javascript Anthropic tells investors quarterly revenue up nearly 50% to $16.8bn ahead of IPO . The phrase \"told investors\" appears four times in this FT article, which reports on Anthropic's day of hosting investors on Wednesday. Lots of details in here from \" people with knowledge of the matter \".",
+      "published_date": "2026-10-26",
+      "tags": [
+        "blog"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "blog_name": "Simon Willison",
+        "blog_url": "https://simonwillison.net/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, mcp, model context protocol, reasoning",
+      "⚖️ 來源權重: blog +15"
+    ],
+    "llm_score": 43,
+    "llm_reason": "Kimi K3.1 Pro發布與定價彙整，新聞性強但篇幅短缺深度",
+    "novelty": 5,
+    "impact": 8,
+    "trending": 14,
+    "practicality": 7,
+    "blog_worthiness": 9
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "Fleet-wide computer vision lifecycle at the edge with SageMaker SDK v3",
+      "url": "https://aws.amazon.com/blogs/machine-learning/fleet-wide-computer-vision-lifecycle-at-the-edge-with-sagemaker-sdk-v3/",
+      "authors": [
+        "Kiowa Jackson"
+      ],
+      "abstract": "Fleet-wide computer vision model lifecycle management is a problem that shows up the moment a quality inspection proof of concept succeeds. One camera and one model work fine. Then the plant asks for the same result on 40 lines, each with several cameras, and every camera sees the world differently. Each has a different angle, different glare off the same stainless surface, and different ambient light depending on which bay door is open. In production deployments we have worked on, a single model trained on pooled footage underperforms enough individual cameras that each camera ends up with its own fine-tuned model. Now the real problem is no longer training one model well. It’s training, evaluating, versioning, and shipping thousands of them without a human in the loop for each one. This post updates the pattern introduced in the 2023 series Build an end-to-end MLOps pipeline for visual quality inspection at the edge for the current Amazon SageMaker Python SDK v3. It replaces the since-deprecated Amazon SageMaker Edge Manager with Amazon SageMaker Neo for edge optimization. I walk through a dual-branch Amazon SageMaker Pipeline that trains an anomaly detector and a defect classifier per camera, with quality gates that block underperforming models. An in-pipeline SageMaker Neo compilation step ensures every registered model ships with a device-optimized artifact, and an AWS Step Functions orchestration layer paces fleet training. You deploy everything with the AWS Cloud Development Kit (AWS CDK), and a full pipeline run on synthetic data costs about $0.07 in compute. The complete sample is available in the aws-samples GitHub repository . The following diagram shows the sample’s fleet-wide model lifecycle. An orchestration layer queues re-training requests and limits concurrent work. A per-camera training pipeline prepares data, trains and evaluates an anomaly detector and a classifier, and produces versioned model artifacts for edge devices. Figure 1: Solution architecture The training half is a single SageMaker Pipeline, parameterized by camera, that runs 13 steps per execution. Three entry steps run in parallel: Preprocess, Fetch Latest Anomaly, and Fetch Latest Classifier. The pipeline preprocesses that camera’s images and fetches the camera’s most recent approved model for each branch, then trains two models. The first is a small convolutional autoencoder that learns what normal product looks like and flags anomalies by reconstruction error. The second is a ResNet18 classifier fine-tuned to confirm the defect. Each branch exports its model to ONNX, evaluates the exported artifact against held-out data, and passes through a quality gate. Past the gate, the model is compiled with SageMaker Neo for the configured edge target, and only then registered in the SageMaker Model Registry. As a result, every approved package has a device-ready compiled artifact. Packages carry the camera ID as metadata, and each branch’s warm-start fetch filters on it, so re-training always resumes from that camera’s own history. The orchestration half paces the fleet. Re-training requests land on an Amazon Simple Queue Service (Amazon SQS) FIFO queue, and an AWS Lambda function starts a Step Functions execution per request. Each execution acquires a slot through a DynamoDB semaphore before starting its pipeline, so a burst of requests drains at a steady rate instead of all launching at once. Completions publish to Amazon Simple Notification Service (Amazon SNS), and operational failures reach the same topic through an Amazon EventBridge rule with the original error preserved. The output of the system is versioned, quality-gated, per-camera model artifacts. The Model Registry holds the portable ONNX, and S3 holds the Neo-compiled build of that model, which is a device-optimized shared library loaded by the DLR runtime rather than ONNX. Both are ready for whatever delivery mechanism your plant uses. To deploy the sample you need the following: Previous CLI versions fail with a cloud assembly schema mismatch against recent versions of aws-cdk-lib . No service quota increase is needed. The orchestration layer admits at most five pipeline executions at a time by default, which keeps concurrent SageMaker training jobs inside the standard account quota. If you deploy to an AWS Region other than your CLI default, set all three of AWS_REGION , AWS_DEFAULT_REGION , and CDK_DEFAULT_REGION on the deploy command itself rather than in your shell profile, for example, AWS_REGION=us-east-2 AWS_DEFAULT_REGION=us-east-2 CDK_DEFAULT_REGION=us-east-2 cdk deploy --all . The CDK CLI, Boto3, and the AWS Command Line Interface (AWS CLI) resolve the Region from overlapping but not identical variable sets, and a mismatch produces confusing partial deployments. Prefixing the command sets all three for that invocation only, so your own default Region is left unchanged. The code in this section is excerpted from the CDK application in the repository rather than a standalone script, and it runs during cdk deploy, when the stack synthesizes the pipeline definition. Environment setup and the deploy commands come later, under Deploying and running the sample. SDK v3 reorganized the SageMaker Python SDK into modular packages, and the imports show the new shape of the library: Installing sagemaker>=3.0.0,<4 pulls in sagemaker-core , sagemaker-train , sagemaker-serve , and sagemaker-mlops as separate packages. Training configuration that v2 spread across Estimator constructor arguments now lives in typed config objects passed to ModelTrainer . This is the anomaly branch’s trainer, verbatim from the sample: anomalib_input_data wires four channels ( train , validation , test , pretrained_model ) from upstream step properties, and run_prefix scopes every S3 path to the pipeline execution ID so concurrent fleet runs never collide. Both are in the repository. Two v3 behaviors matter when the pipeline lives inside a CDK application, and neither appears in the changelog as a breaking change. First, SDK v3 validates the pipeline’s execution role against live IAM while building the pipeline definition. This validation happens at synthesis time rather than execution time. A CDK app can’t create the role and the pipeline in one deployment, because the role doesn’t exist yet when the SDK validates it. This is separate from cdk bootstrap, which provisions the CDK toolkit resources once per account and Region and might already be done in your account. The sample’s own two-phase deploy is driven by a context flag that happens to share that name. An initial pass with -c bootstrap=true creates the role, bucket, and ECR repository, and the second pass synthesizes the pipeline against the now-existing role. The role Amazon Resource Name (ARN) embedded in the pipeline definition must also be a concrete string, not an unresolved CDK token. Second, the v3 role validator simulates ECR pull permissions without a resource ARN, so an execution role scoped to a single ECR repository fails validation even though it would work at runtime. The sample’s role carries a broader ECR grant for this reason. Lastly, one v3 habit the sample uses: constructing the pipeline with PipelineSession(default_bucket=your_bucket) routes SDK-managed uploads, such as step code, into the pipeline’s own bucket, so every artifact lives in one place and the execution role’s permissions cover a single bucket. (Granting the role access to the SDK’s default bucket works too. This approach is tidier.) Every trained model is evaluated before registration, and the evaluation runs against the exported ONNX artifact rather than the in-memory PyTorch model. That distinction matters: the artifact you gate is the artifact you ship, so an export problem can never slip a broken model past a healthy-looking training run. The anomaly branch gates on AUROC of at least 0.8.",
+      "published_date": "2026-10-26",
+      "tags": [
+        "Advanced (300)",
+        "Amazon SageMaker",
+        "Technical How-to"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: synthetic data",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 52,
+    "llm_reason": "邊緣CV機群管理的MLOps實作指南，技術紮實但偏利基應用",
+    "novelty": 7,
+    "impact": 11,
+    "trending": 6,
+    "practicality": 15,
+    "blog_worthiness": 13
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "KDnuggets",
+      "title": "Building Your First AI Agent in Python with the OpenAI Agents SDK",
+      "url": "https://www.kdnuggets.com/building-your-first-ai-agent-in-python-with-the-openai-agents-sdk",
+      "authors": [
+        "Abid Ali Awan"
+      ],
+      "abstract": "Building Your First AI Agent in Python with the OpenAI Agents SDK Build your first AI agent in Python with the OpenAI Agents SDK, adding web search, Python tools, conversation memory, and tracing in a simple end-to-end workflow. By Abid Ali Awan , KDnuggets Assistant Editor on October 26, 2026 in Python Building an AI agent in Python is now much simpler than it used to be. With the OpenAI Agents SDK , you can create agents, connect tools, maintain conversation state, and run multi-step workflows without building your own tool-calling loop from scratch. In this tutorial, we will build a practical research agent that can search the web, call a custom Python function, remember previous messages, and decide when to use each capability . What Is an AI Agent? A standard large language model (LLM) application usually follows a simple flow: Prompt — Model — Response The model receives a prompt, generates an answer, and stops. An AI agent adds tools and an execution loop : User — Agent — Tool if needed — Agent — Final Response Instead of only generating text, the agent can decide whether it needs to take an action first, such as searching the web, calling a Python function, or retrieving information from memory. With the OpenAI Agents SDK, the Runner manages this process automatically. It sends the request to the model, executes any requested tools, passes the results back to the agent, and continues until the agent produces a final answer. This ability to reason, use tools, and continue working across multiple steps is what makes an agent different from a basic LLM application. Set Up the Project Before we build the agent, let's create a clean Python environment and install everything we need. Create a Python project with uv : mkdir first-ai-agent cd first-ai-agent uv init uv add openai-agents Or install the package with pip : pip install openai-agents Set your OpenAI API key: export OPENAI_API_KEY=\"your-api-key\" On Windows, export works in Git Bash. In Command Prompt or PowerShell, you can use: setx OPENAI_API_KEY \"your-api-key\" Build Your First Agent Now we can turn a few lines of Python into an agent that decides when it needs fresh information from the web. Create main.py : from agents import Agent, Runner, WebSearchTool agent = Agent( name=\"Research Assistant\", instructions=( \"You are a concise research assistant. \" \"Use web search when current information is required.\" ), tools=[WebSearchTool()], ) result = Runner.run_sync( agent, \"What are the latest developments in Python?\" ) print(result.final_output) Run it: uv run main.py Output: As of **September 14, 2026**, the major Python developments are: - **Python 3.14 is the latest stable feature series**; the newest maintenance release is **3.14.7**. It adds officially supported free-threaded builds, deferred annotation evaluation, template string literals (`t\"\"`), ... - **Python 3.15 is nearing release**: the final release is scheduled for **October 1, 2026**. ... For new projects, **Python 3.14.7** is currently the safest default. WebSearchTool() is a hosted OpenAI tool, so the model can decide when it needs current information instead of you manually calling a search API. For example, our run correctly identified Python 3.14.7 as the current stable release. Add Your Own Python Tool Web search is useful, but agents become much more powerful when they can also interact with your own Python code. Add a calculation tool: from agents.decorators import tool @tool def calculate_total( price: float, quantity: int ) -> float: \"\"\"Calculate the total cost of an order.\"\"\" return price * quantity Then give it to the agent: agent = Agent( name=\"Assistant\", instructions=\"Help with research and calculations.\", tools=[ WebSearchTool(), calculate_total, ], ) Test it: result = Runner.run_sync( agent, \"I need 14 GPUs costing $2.49 each per hour. \" \"What will they cost per hour?\" ) print(result.final_output) Output: 14 GPUs x $2.49/hour = **$34.86 per hour**. The SDK automatically uses the function name, arguments, type hints, and docstring to create a tool schema the model can understand. You do not need to manually define JSON schemas or write the tool-calling loop yourself. Tip: Write clear docstrings because they help the model understand what a tool does and when it should use it. Adding Conversation Memory A useful agent should not forget everything the moment the next message arrives, so let's give it conversation memory. To make the agent conversational, add a session: from agents import SQLiteSession session = SQLiteSession( \"user_1\", \"conversations.db\" ) Then pass it into each run: while True: message = input(\"You: \") if message.lower() in {\"exit\", \"quit\"}: break result = Runner.run_sync( agent, message, session=session, ) print(\"Agent:\", result.final_output) Now try: The second request automatically receives the earlier conversation, so the agent understands what \"the latest version\" refers to. Because we used a file-backed SQLite database, the history can also persist after restarting the program. For larger applications, the SDK also provides session backends for systems such as Redis, SQLAlchemy, and MongoDB . How the Complete Agent Works At this point, all the pieces come together: The agent decides what action to take , the Runner executes the agent loop and any requested tools , and the session preserves conversation history between requests. Here is the complete main.py : import os import sys from agents import Agent, Runner, SQLiteSession, WebSearchTool from agents.decorators import tool @tool def calculate_total( price: float, quantity: int ) -> float: \"\"\"Calculate the total cost of an order.\"\"\" return price * quantity def main() -> None: if not os.environ.get(\"OPENAI_API_KEY\"): sys.exit( \"Error: set the OPENAI_API_KEY environment variable first.\" ) agent = Agent( name=\"Assistant\", instructions=\"\"\" Help the user with research and calculations. Use the available tools when necessary. \"\"\", tools=[ WebSearchTool(), calculate_total, ], ) session = SQLiteSession( \"user_1\", \"conversations.db\" ) try: while True: try: message = input(\"You: \") except (EOFError, KeyboardInterrupt): print() break command = message.strip().lower() if command in {\"exit\", \"quit\"}: break if not command: continue try: result = Runner.run_sync( agent, message, session=session, ) except Exception as exc: print( f\"Agent error \" f\"({type(exc).__name__}): {exc}\" ) continue print(\"Agent:\", result.final_output) finally: session.close() if __name__ == \"__main__\": main() This gives us a small but complete conversational agent with web search, a custom Python tool, persistent memory, basic error handling, and a continuous chat interface . The Agents SDK also enables tracing by default , which is especially useful once your workflows become more complex. Traces let you inspect the model calls, tool usage, handoffs, and other steps taken during an agent run. You can inspect these traces in the OpenAI dashboard to understand how the agent reached its answer, which tools it selected, and where problems occurred. This makes tracing particularly useful for debugging tool-calling behavior and improving agent instructions. Final Thoughts Building your first AI agent is less about creating a complex autonomous system and more about giving a model the ability to take useful actions . In this guide, we started with a simple agent, added web search , connected a custom Python tool , introduced persistent conversation memory , and brought everything together in a complete application with tracing and error handling. That foundation is enough to build surprisingly capable workflows. From here, you can gradually add APIs, MCP servers, guardrails, handoffs, more specialized tools, and additional agents as your application grows. The pattern stays the same: give the agent the right tools, let it decide when to use them, and let the Agents SDK handle the execution loop .",
+      "published_date": "2026-10-26",
+      "tags": [],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "KDnuggets",
+        "feed_url": "https://www.kdnuggets.com/feed"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, mcp",
+      "⚖️ 來源權重: rss +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 41,
+    "llm_reason": "OpenAI Agents SDK入門教學，實用但無技術新意",
+    "novelty": 2,
+    "impact": 5,
+    "trending": 10,
+    "practicality": 14,
+    "blog_worthiness": 10
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "PaperPilot – Zero-Cloud, Pure-Rust PDF Engine with WASM and MCP",
+      "url": "https://github.com/KrushnaVardhanReddy/PaperPilot",
+      "authors": [
+        "vardhan1237"
+      ],
+      "abstract": "PaperPilot PDF tools for your AI agent — and for you. Pure Rust. Runs locally. Files never leave your machine. Try it in your browser → · Download · Roadmap PaperPilot is a PDF and document toolkit written in Rust. The same engine runs as: Surface Use it for MCP server Give Codex, Claude Code, Kimi Code, Pi, Claude Desktop, Cursor, or any MCP client the ability to merge, split, OCR, and compress PDFs CLI Batch and scripted workflows Browser (WASM) Zero-install tools; files are processed in browser memory, nothing is uploaded Desktop app Tauri + Svelte GUI with viewer, markup, and diff Local REST API Call it from Python, Node, or n8n at localhost:7823 No Chromium, no C++ runtime, no cloud calls. Quick start 1. Use it with your coding agent (MCP) Codex, Claude Code, Kimi Code, and current Pi releases connect to the same local\nstdio server. See the coding agent setup guide for each\nclient's configuration and verification steps. Builds from this source can also\nprint ready-to-merge configuration: paperpilot-mcp --client-config codex # Also: claude-code, kimi-code, pi, claude-desktop, cursor Download paperpilot-mcp from Releases , then add it to claude_desktop_config.json : { \"mcpServers\" : { \"paperpilot\" : { \"command\" : \" /path/to/paperpilot-mcp \" } }\n} Restart Claude and try: \"Merge these two PDFs and compress the result.\" 2. Use the CLI # Merge paperpilot merge --inputs doc1.pdf doc2.pdf --output merged.pdf # Compress paperpilot compress --input in.pdf --quality 75 --output compressed.pdf # Rotate pages 1, 3–5 by 90° paperpilot rotate --input in.pdf --pages 1,3-5 --angle 90 --output out.pdf 3. Use it in the browser Go to usepaperpilot.com . Open your browser's Network tab while you work — you'll see no file uploads. 4. Build from source git clone https://github.com/KrushnaVardhanReddy/PaperPilot.git cd PaperPilot\ncargo build --release -p paperpilot-cli -p paperpilot-mcp -p paperpilot-gateway Desktop app: cd apps/desktop && pnpm install && pnpm tauri dev Requires Rust 1.75+, Node.js, and pnpm. What it can do today (v0.6) Organize: merge, split, rotate, delete pages, reorder pages, extract pages, booklet imposition, N-up grid Optimize: compress Extract: plain text, OCR (pure-Rust PaddleOCR via rten ) Security: watermark, validate signatures, remove signatures, PII scan, deep sanitize Office data: Excel → JSON, Excel → CSV Coming next (see ROADMAP.md ): v0.7: PDF ↔ Markdown / HTML / JSON v0.8: PDF → Word / Excel / PowerPoint v0.9: encrypt, decrypt, sign, redact, forms, annotations v1.0: render, flatten, repair, compare, PDF/A, Bates numbering Why another PDF tool? Private by default. Everything runs locally or in your browser tab. Agent-ready. MCP support is first-class, not an afterthought. One engine, many surfaces. CLI, MCP, REST, WASM, and desktop share the same Rust core, so behavior is consistent. Small and dependency-light. Pure Rust, built on lopdf , pdf_oxide , rten , and friends. Benchmarks Run cargo bench --workspace to reproduce. Methodology and results: SYSTEM_BENCHMARK_REPORT.md . Architecture Desktop (Tauri) · CLI · REST (Axum) · MCP (stdio) · WASM (browser / edge) │ Rust core workspace paperpilot-core · paperpilot-pdf · paperpilot-nlp · paperpilot-gateway paperpilot-mcp · paperpilot-wasm · paperpilot-storage Embed in your own site < div id =\" paperpilot-widget \" > </ div > Local REST API paperpilot serve --port 7823\ncurl -X POST http://localhost:7823/api/v1/pdf/merge \\ -H \" Content-Type: application/json \" \\ -d ' {\"inputs\": [\"a.pdf\", \"b.pdf\"], \"output\": \"out.pdf\"} ' Swagger docs at http://localhost:7823/docs . Contributing Issues and PRs are welcome. Good first contributions: bug reports with a sample PDF, new tool requests, and docs fixes. License Community Edition (this repo): Apache 2.0 . It includes the CLI, MCP server, REST gateway, WASM engine, and desktop app. An Enterprise Edition (SSO, RBAC, audit logs, DLP) is developed separately.\n\n(226 points, 81 comments on Hacker News)",
+      "published_date": "2026-10-26",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 226,
+        "num_comments": 81,
+        "hn_url": "https://news.ycombinator.com/item?id=50238739",
+        "object_id": "50238739"
+      }
+    },
+    "rule_score": 25.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, mcp",
+      "⬆️ HN 熱門: 226 points"
+    ],
+    "llm_score": 47,
+    "llm_reason": "包裝既有PDF函式庫為MCP server的wrapper專案，技術新意有限",
+    "novelty": 4,
+    "impact": 7,
+    "trending": 11,
+    "practicality": 16,
+    "blog_worthiness": 9
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "The Verge AI",
+      "title": "The RealReal won’t let AI agents hog designer clothing",
+      "url": "https://www.theverge.com/news/1018713/meta-muse-agentic-shopping-ai-the-realreal",
+      "authors": [
+        "Mia Sato"
+      ],
+      "abstract": "News AI Business The RealReal won’t let AI agents hog designer clothing Previous reporting by The Verge found that Meta’s Muse could be used to effectively block other shoppers from purchasing items for hours.﻿ Previous reporting by The Verge found that Meta’s Muse could be used to effectively block other shoppers from purchasing items for hours.﻿ by Mia Sato Oct 26, 2026, 5:30 PM UTC Image: Cath Virginia / The Verge, Getty Images Mia Sato is features writer with five years of experience covering the companies that shape technology and the people who use their tools. The RealReal, a secondhand luxury fashion consignment retailer, said it’s updating its bot defense system, effectively making it harder for AI agents to shop on its site. The change comes days after The Verge reported that an AI agent could be used to take advantage of The RealReal’s item reserve system. On the retailer’s website, an item goes “on hold” and is unavailable for other customers to buy for 20 minutes once it’s placed in a user’s shopping cart. Using Meta’s Muse, The Verge was able to instruct the AI agent to continuously re-add The RealReal listings in a shopping cart as soon as the 20-minute hold had expired, effectively blocking other shoppers from purchasing products for hours or longer. After publication, chief technology officer Luke Friang said in an email that the company had addressed the Muse use case flagged by The Verge ’s story. The RealReal’s bot defense configuration now makes it much more difficult for all agents to log in, add items to cart, and check out, Friang said. Agents will still be able to surface listings from The RealReal and direct Muse users to product pages, Friang said, adding that the company will continue to strengthen protections as AI-powered online shopping evolves. Meta didn’t immediately respond to a request for comment. Technology companies are selling agents as personalized assistants for billions of people — always-on, compliant entities that will schedule meetings, throw parties, and purchase things for human users. So far, agents and shopping seem to go hand in hand; Meta said in its Q3 earnings call this month that it was the most common use case for Muse so far, and that purchases were over $200 on average. Muse has been a hit for Meta and could signal a turning point for AI agents: The company said 10 million people in the US had downloaded the app in 40 days. But robots shopping for things instead of humans has the potential to upend the balance of the web as we know it. For one, if humans stop visiting websites directly and instead access the web through chatbots, businesses become one step removed from their customers. Retailers — most notably Amazon — have recognized that reality could disrupt their bottom line, especially advertising revenue, and have blocked agents from shopping on their sites. An influx of AI agents accessing consumer platforms could also break or complicate even the most unexpected things shoppers take for granted, like the reserve system of a used clothing website. There is, of course, a realistic limit to how long a person is willing to spend adding and re-adding designer clothing to their shopping cart if they’re indecisive. An agent in contrast does not care. It is perhaps precisely the type of busywork a fashion-forward person might pay an actual personal assistant to do on their behalf. Now, a capability like this is at the fingertips of millions of consumers, and they are just beginning to learn how to take advantage of it. Retailers, too, are playing catch-up. Follow topics and authors from this story to see more like this in your personalized homepage feed and to receive email updates. Mia Sato AI Business Culture Entertainment Internet Culture Meta News Online Shopping Tech",
+      "published_date": "2026-10-26",
+      "tags": [
+        "AI",
+        "Business",
+        "Culture",
+        "Entertainment",
+        "Internet Culture",
+        "Meta",
+        "News",
+        "Online Shopping",
+        "Tech"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "The Verge AI",
+        "feed_url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 45,
+    "llm_reason": "AI代理濫用電商系統的案例研究，話題新但技術細節淺",
+    "novelty": 6,
+    "impact": 9,
+    "trending": 13,
+    "practicality": 7,
+    "blog_worthiness": 10
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "The Verge AI",
+      "title": "Can AI help solve the COBOL code crisis?",
+      "url": "https://www.theverge.com/ai-artificial-intelligence/1018434/cobol-migration-legacy-code-openai-anthropic",
+      "authors": [
+        "Robert Hart"
+      ],
+      "abstract": "AI Report Tech Can AI help solve the COBOL code crisis? The ancient code holding the world together may meet its match in AI. Today is not that day. by Robert Hart Oct 26, 2026, 1:15 PM UTC A computer running COBOL 73, an antiquated computer programming language, awaits taxpayer information entries at the Internal Revenue Service in Austin, Tx., on Friday, June 10, 2022. | Image: Getty Images Robert Hart is a London-based reporter at The Verge covering all things AI and a Senior Tarbell Fellow. Previously, he wrote about health, science and tech for Forbes . What do the IRS, banks, airlines, and government infrastructure around the world have in common? They’re all running on systems propped up by antique computer code that nobody dares touch, lest everything come crashing down. OpenAI thinks it may have a solution. On October 19th, the company touted “substantial improvements” in its latest AI models’ ability to migrate aging software written in older programming languages into modern code, which it claims could help organizations with “maintaining and modernizing older systems.” That’s a potentially massive deal. COBOL, one of the languages highlighted by OpenAI, remains stubbornly embedded in vast portions of the world’s critical infrastructure. And despite decades of efforts to banish it to history, the language has limped on, simply refusing to die. “Nobody in their right mind would use COBOL for a new development project.” It is hard to overstate COBOL’s ubiquity. Short for “common business-oriented language,” COBOL came into being in 1959. Nearly seven decades later, it is still everywhere. According to IBM , COBOL is the foundation for more than 40 percent of online banking systems, supports 80 percent of in-person credit card transactions, and handles 95 percent of ATM transactions. It also underpins many government systems, from Social Security to the IRS to services run by most states . One rough estimate puts the annual cost of COBOL’s inefficiencies to the US GDP at around $105 billion. But replacing COBOL is fiendishly difficult. The same goes for other legacy programming languages, like Fortran, still in use today for everything from scientific computing and weather forecasting to atmospheric and ocean studies and codes critical to nuclear security . These systems are often too important to risk breaking, and many of the programmers who understand them have long since retired or died. For all their impressive advances in modern software development , AI coding tools have struggled to make much headway with these legacy systems. But recent developments suggest that may be changing. In its latest blog post, OpenAI reported promising results migrating COBOL code to more modern programming languages, including C++, Java, Kotlin, Python, and Rust, without changing what the original software does. That last bit is crucial for organizations looking to ditch code like COBOL, and OpenAI acknowledges that “a migration is considered successful only if all tests pass.” In OpenAI’s own tests, GPT-6.1 Sol achieved 87 percent behavior preservation accuracy at low reasoning effort — how many computational steps the model spends analyzing a problem before giving an answer — climbing to 98 percent at higher reasoning. By comparison, at low reasoning effort, GPT-6 Astra scored around 86 percent, GPT-6 Sol just 21 percent, and GPT-5.6 Sol a mere 5 percent. “Rewriting code is not the same as replacing a system.” “These evaluation results demonstrate progress toward more accurate, affordable code migration for teams modernizing the software their businesses depend on,” OpenAI wrote. The company also reported improvements on its models’ ability to build database software in various programming languages, including COBOL. Anthropic also sees an opportunity in legacy systems. In February, it published a step-by-step “code modernization playbook” and pitched its coding agent, Claude Code, as a way to migrate COBOL code into modern languages like Java or Python. It offered no performance benchmarks showing how well Claude Code could perform such migrations, but declared that “the economics of COBOL modernization have shifted.” Shares in IBM, which derives part of its revenue helping companies maintain legacy systems, nosedived following Anthropic’s announcement. Experts who spoke to The Verge agreed that AI tools have made strides in tackling legacy code in recent years. But they cautioned that advances trumpeted by OpenAI this week are a very long way from making it possible to safely replace critical legacy systems built around it. OpenAI spokesperson Oscar Haines acknowledged in an email to The Verge that legacy code “is still far from a solved problem” and said the company is listening to feedback from developers and enterprises and exploring ways to build better tests and continue improving its models’ understanding of coding languages. Anthropic did not provide comment in time for publication. “The evaluations shown by OpenAI don’t address the key difficulty: Breaking up a complex legacy system into smaller units that can be replaced individually.” “Rewriting code is not the same as replacing a system,” said Vadim Zaytsev, an associate professor of software evolution at the University of Twente in the Netherlands. Systems do have a lot of code — Zaytsev said the largest system he’d seen had 250 million lines of COBOL, “definitely not the world’s largest” — but that’s only part of the problem. Code may be written in multiple languages and there’s data, potentially stored in various formats, to consider, he said. There are also technical integrations with other systems and the expectations of the people and organizations to bear in mind. All that complexity means “AI is not playing a major role at the moment in replacing or migrating legacy COBOL systems,” Zaytsev said. OpenAI’s evaluations don’t capture this complex reality either, Arie van Deursen, a software engineering professor at Delft University of Technology in the Netherlands, told The Verge . He described the company’s blog as “superficial,” noting it offered few details about the migration task, while its language benchmark tested models on a relatively simple and well-defined task involving systems similar to those they would have encountered in training. He also stressed the huge gap between maintaining an aging system and modernizing it. “Maintaining is of course a lot easier than modernizing,” van Deursen said, calling the tasks OpenAI used to assess its models “lightyears” away from actual modernization. “The evaluations shown by OpenAI don’t address the key difficulty: Breaking up a complex legacy system into smaller units that can be replaced individually.” The biggest challenge isn’t necessarily rewriting code. “The main challenge is indeed not understanding how the system works,” said Alastair Donaldson, a professor of programming languages at Imperial College London. Such a lack of understanding is a “very common” problem for legacy systems using languages like COBOL, he said, adding that very few people know how to program in them anymore. And while it is everywhere, Donaldson said “nobody in their right mind would use COBOL for a new development project.” “In many cases even minor differences in system behaviour before and after migration are unacceptable.” That makes robust testing crucial, Donaldson said. One approach could be to run the same workflows through the old and new systems to check they behave identically. AI could also document its code translation, ideally allowing humans familiar with the legacy language to review the work. Formal verification, which uses mathematical techniques to computationally verify that code behaves correctly, is another option, said Jacopo Mauro, a mathematics and computer science professor at the University of Southern Denmark.",
+      "published_date": "2026-10-26",
+      "tags": [
+        "AI",
+        "Anthropic",
+        "OpenAI",
+        "Report",
+        "Tech"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "The Verge AI",
+        "feed_url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, reasoning",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 35,
+    "llm_reason": "COBOL現代化報導，敘事為主缺乏技術細節與實測",
+    "novelty": 3,
+    "impact": 8,
+    "trending": 10,
+    "practicality": 4,
+    "blog_worthiness": 10
+  }
+]
