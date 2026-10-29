@@ -1,0 +1,738 @@
+[
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "HuggingFace Blog",
+      "title": "Welcome Le Chonk: Mistral Large 4 on Hugging Face",
+      "url": "https://huggingface.co/blog/mistral-large4",
+      "authors": [],
+      "abstract": "Back to Articles Welcome Le Chonk: Mistral Large 4 on Hugging Face Published October 29, 2026 Update on GitHub Upvote 26 +20 merve merve Follow Alvaro Bartolome alvarobartt Follow Rémi Ouazan Reboul ror Follow Cyril Vallez cyrilvallez Follow Quentin Gallouédec qgallouedec Follow Enrique Hernández Calabrés ehcalabres Follow Juan Julián juanjucm Follow Xuan-Son Nguyen ngxson Follow Pedro Cuenca pcuenq Follow ben burtenshaw burtenshaw Follow Aritra Roy Gosthipaty ariG23498 Follow Mistral Large 4 (aka Le Chonk) is a multimodal, multilingual, Mixture-of-Experts (MoE) model from Mistral. It takes text and images as input and generates text. It has about 1T total, 49B active parameter , and a context window of 1M tokens . The model is released in two official variants: FP8 NVFP4 There are also GGUFs created by Unsloth and the llama.cpp team. It’s distributed under the Mistral Ecosystem Open-Weight License (an MIT derivative that establishes limitations for model-as-a-service offerings). Mistral Large 4 is particularly strong for cybersecurity, coding agents, and multimodality. In this post, we look at how the model works, its capabilities, architecture and more! Table of Contents \"Welcome Le Chonk: Mistral Large 4 on Hugging Face\" Table of Contents What is new with Mistral Large 4 Cybersecurity Capabilities Architecture Vision encoder Benchmark Results Inference Support Transformers vLLM Llama.cpp Fine-tuning with TRL Inference Endpoints Dell Enterprise Hub Try it out What is new with Mistral Large 4 Mistral Large 4 combines a large pool of experts with sparse attention and a Pixtral vision encoder. The language model selects a small group of experts for each token, while its attention indexer selects which earlier token positions to attend to. These are two different forms of sparsity, where one selects feed-forward networks, the other selects context positions. You can find all the checkpoints in the Mistral Large 4 collection . Cybersecurity Capabilities Mistral Large 4 scores 82% on the Artificial Analysis Cyber Index test that asks a model to reproduce a real vulnerability in open-source software and then patch the software. Mistral reports that several closed frontier models score near zero on the same test because they refuse to attempt the work. This is super important for defenders, because fixing a vulnerability usually requires reproducing the vulnerability. In Mistral’s internal testing, Mistral Large 4 was also useful for malware analysis, vulnerability prioritisation and writing detection rules, which the model was not explicitly trained for. Mistral mainly positions the model for defensive security work. Vulnerability research and incident response often appear like attacks in model input, so closed source filters can block them. A team that depends on an API can also lose access in the middle of an incident. Crucially, open weight models put both the usage policy and the deployment under the user’s control. That said, the model still declines harmful requests: on cyber prompts from JailbreakBench, StrongREJECT and AgentHarm, its average refusal rate is higher than any other open weight model. For community builders, an open weight model like Mistral Large 4 unlocks a load of downstream use cases. You could build your own cyber system around your code base, crash logs, and malware samples. For example, with TRL you could fine-tune smaller models from Mistral Large 4 traces patching your code base. In fact, reproduce-then-patch tasks use a verifiable reward, so it fits with RL environments that could be used to further RL smaller security models. Open weights also let researchers measure the model’s refusal behaviour directly instead of relying on the provider’s description. In short, cyber capabilities like ML4’s in the open are a huge boost for the community. We have interviewed Pierre Stock about the cyber capabilities of the model, you can watch it here . Architecture Mistral Large 4’s text decoder has 72 layers, a hidden dimension of 6,144, and 64 attention heads. Its attention blocks combine Multi-head Latent Attention (MLA) with a DeepSeek Sparse Attention (DSA) indexer (a direction in other models such as GLM 5.3). MLA keeps a compressed KV representation, and DSA selects up to 2,048 key positions for each query. For each decoder block, there’s a 3:1 RoPE to NoPE pattern, i.e. 3 decoder layers employ RoPE and every fourth layer uses NoPE. The model also shares KV state across layers. The first decoder layer uses a dense feed-forward network. The other 71 layers use MoE blocks, in which a softmax router selects four of the 128 experts for each token. One shared expert always runs alongside the selected experts, for a total of 5 active experts per token. Regarding RoPE, Mistral uses LeRope , a YaRN-scaled RoPE with one learned multiplier per frequency. Vision encoder Mistral Large 4 employs a 1.6B Pixtral encoder. Pixtral has 30 layers, a hidden dimension of 2,048, and 16 attention heads. It uses 14 × 14 patches and a patch-merge projector with spatial merge size 2. You can see the encoder pipeline below. Benchmark Results Mistral Large 4 delivers strong benchmark performance across coding, cybersecurity, multimodal understanding, and agentic workflows, positioning it as a competitive addition to the open-weight ecosystem. As of October 29, 2026, the model is the fifth best open weights model on Artificial Analysis Intelligence index. On coding, ML4 achieves 61.7% on DeepSWE v1.1 , 59.4% on SWE-Atlas-QnA , and 28.3% on Terminal-Bench 4 . Its combined Coding Agent Index score of 49.8% places it ahead of DeepSeek V4 Pro 0813 and Qwen3.8 Max. Coding capabilities of ML4 extend to knowledge work, with 59.9% on AutomationBench and 1,393 Elo on AA-Briefcase , which evaluate business workflows and long-horizon professional tasks. Cybersecurity is one of Mistral Large 4’s standout capabilities, with strong results across real-world vulnerability assessment and security competition tasks. Three benchmarks highlight the model’s cyber performance: Artificial Analysis Cyber Index: ML4 ranks among the top five models globally on this independent evaluation of models’ ability to find and fix software vulnerabilities. Vulnerability reproduction and patching: It achieves 82% , the highest reported score on this test within the index. The task requires reproducing a real vulnerability in open-source software and then patching it, testing both investigation and remediation. Cybench: ML4 solves 93% of a suite of 40 challenges drawn from security competitions , demonstrating strong performance on hands-on security problems. Mistral Large 4 also demonstrates 93.3% attack resistance on Lakera’s B3 benchmark , adding evidence of robustness against prompt-injection attacks. Beyond benchmarks, internal testing showed promising results in malware analysis, vulnerability prioritization, and detection-rule generation. Inference Support Mistral Large 4 is shipped with day-0 support for transformers, vLLM and llama.cpp. GGUF quants are available from GGUF and the llama.cpp team . We provide options to deploy remotely with Inference Endpoints, and use serverless inference through Inference Providers. Transformers The Transformers implementation provides AutoModelForMultimodalLM , with AutoProcessor preparing the conversation and image inputs. Mistral Large 4 can take low , medium , high as reasoning effort. The default is high , and note that reasoning cannot be disabled, so using reasoning_effort : none would still use high . To run the model, upgrade the transformers package pip install --upgrade transformers import os from transformers import AutoProcessor, AutoModelForMultimodalLM, DistributedConfig distributed_config = DistributedConfig( tp_size= int (os.environ[ \"WORLD_SIZE\" ]), ep_size= int (os.environ[ \"WORLD_SIZE\" ]),\n) model_id = \"mistralai/Mistral-Large-4-1T-A52B\" processor = AutoProcessor.from_pretrained(model_id)\nmodel = AutoModelForMultimodalLM.",
+      "published_date": "2026-10-29",
+      "tags": [],
+      "organization": "HuggingFace",
+      "raw_metadata": {
+        "feed_name": "HuggingFace Blog",
+        "feed_url": "https://huggingface.co/blog/feed.xml"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, reasoning, fine-tuning, moe",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 80,
+    "llm_reason": "深入架構、benchmark、推理框架支援的完整技術文章，兆參數MoE模型可直接落地",
+    "novelty": 12,
+    "impact": 16,
+    "trending": 15,
+    "practicality": 19,
+    "blog_worthiness": 18
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Infini-AI-Lab Releases Hermit, an Open-Source Harness Adapter Framework for AI Agents",
+      "url": "https://www.marktechpost.com/2026/10/29/infini-ai-lab-hermit-harness-adapter-framework/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "Infini-AI-Lab has released Hermit , an open-source harness adapter framework for AI agents. Hermit is a framework from Infini-AI-Lab that trains an external ‘harness adapter’ while the agent’s model and harness stay frozen. The first release, v0.1.0 , shipped on October 25, 2026. CMU postdoc Haizhong Zheng announced it on X on October 27. For developers, the pitch is simple: adapt Codex or Claude Code agents to new tasks without fine-tuning or forking the harness. A harness adapter is a trainable external harness. It works like a plugin with training support built in. A model adapter, such as LoRA, adapts a model. A harness adapter adapts an existing agent instead. The adapter can hold instructions, skills, memory, tools, executable code and agent coordination logic. It can even be a whole repository. Its specification says which parts are learnable and how updates get checked. The base model and harness never change. The team gives 3 reasons for this design. Many harnesses are closed-source. Editing open ones can break carefully tuned component interactions. And a learned adapter can move between compatible models and harnesses. Hermit uses an RL-style training loop . A Trainer runs a batch of tasks through the acting agent with the current adapter. A judge scores the outputs. An Evolver reads the trajectories and feedback, then proposes a new adapter. The Trainer checks it against the template and commits it as the next version. Every adapter version lives in a git tree. You can inspect, roll back or ship any version. Learner programs can run sandboxed, which requires Linux with bubblewrap. Five evolution methods ship today: GEPA , SkillOpt , MetaWorld Model (MWM), Harness² and Continual Harness . ACE and ReHarness are listed as coming soon. You can also write your own Evolver. All runs below use GLM 5.3 Flash as the acting model. The numbers come from the repo’s example READMEs and are self-reported. OfficeQA ( recipe ) asks 172 test questions about U.S. Treasury Bulletins, scored by exact match: GEPA and SkillOpt train on 50 questions and are tested frozen. Continual Harness and Harness² instead learn while streaming the test set once. The team reports a +7.6 point gain for Harness² over its reference run, with a 95% interval of +1.7 to +13.4. CL-Bench ( database , poker ) tests stateful environments from the Continual Learning Bench paper . On database exploration, MWM reaches 0.795 accuracy. The benchmark’s in-context baseline scores 0.580. On exploitable poker, MWM wins 3.08 big blinds per hand, vs 2.51 for in-context learning. ServeLearnBench ( recipe ) streams 624 retail support requests under a hidden, shifting policy. MWM scores 45.3 on hidden-policy tests. The best learning method on the leaderboard, CH, scores 28.7. An oracle given the policy scores 89.2. Install from PyPI with pip install hermit-harness , or clone the repo for examples. The CLI covers check , train , eval , deploy and convert . Models are referenced as <backend>/<model id> . Supported backends include Fireworks, OpenAI, Anthropic, DeepSeek, vLLM, SGLang and Ollama. hermit deploy writes a workspace for Codex, Claude Code or Pi. hermit convert exports a trained adapter as a native plugin for Codex, Claude Code, Pi or Hermes. A finished Lean collaboration adapter coordinates 5 Codex agents proving one theorem together. Check out the GitHub repo , project page and docs . Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post Infini-AI-Lab Releases Hermit, an Open-Source Harness Adapter Framework for AI Agents appeared first on MarkTechPost .",
+      "published_date": "2026-10-29",
+      "tags": [
+        "Agentic AI",
+        "AI Agents",
+        "AI Infrastructure",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Editors Pick",
+        "For Devs",
+        "Harness",
+        "New Releases",
+        "Open Source",
+        "Staff",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 38.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, fine-tuning, lora",
+      "⚖️ 來源權重: rss +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 70,
+    "llm_reason": "提出harness adapter新概念讓agent免微調適應任務，開源且踩中agent熱點",
+    "novelty": 14,
+    "impact": 12,
+    "trending": 14,
+    "practicality": 15,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Amazon Science",
+      "title": "Speeding up language models for travel applications",
+      "url": "https://www.amazon.science/blog/speeding-up-language-models-for-travel-applications",
+      "authors": [],
+      "abstract": "Travel platforms serve millions of daily users by answering questions about destinations, offering hotel recommendations, and helping users plan their trips. In recent years, many platforms have turned to large language models (LLMs) to improve these services. The LLMs give accurate, contextually relevant travel advice thanks to their size: they typically have tens of billions of parameters. Unfortunately, such large models are also computationally expensive, and that expense scales with the number of customer queries. What’s more, such large models can be too slow for web and mobile applications, where a delay of even 100 milliseconds can cost a company customers and revenue. To address these scaling and latency challenges, we explored two complementary optimization techniques. One is a compression technique known as knowledge distillation (KD), in which a slow but powerful model produces training targets for a faster, lightweight model. The other, called Medusa, is a framework that transforms sequential next-token predictions — a common bottleneck in LLMs — into parallel computations. Working with leading online travel agency Booking.com, we applied KD and Medusa techniques to the LLMs that power various aspects of its user experience, looking to improve either latency or cost effectiveness. We focused on three features in particular: The AI Trip Planner: A conversational assistant that must extract travel preferences from dialogue in less than a second (latency); Smart Filters: A feature that converts natural-language search queries into structured information filters in real time (latency); Accommodation Description Generation: A feature that produces property descriptions on the scale of millions of listings (cost effectiveness). We demonstrated that combining both KD and Medusa maintains the quality of the best open-source LLMs at less than one-third the cost while running up to 20 times as fast. Our framework ensures that travel platforms or other applications that rely on LLMs can deliver fast, cost-effective, accurate responses in real-world scenarios. We presented these techniques at last year’s meeting of the Association for Computational Linguistics (ACL), where it received the Industry Track best-paper award. Our approach: Medusa plus knowledge distillation Medusa is a framework designed to reduce LLM latency in real-time applications such as chat and code generation. It improves computational efficiency at run time — inference time — rather than during training. Ordinarily, an LLM generates text one token — word or word part — at a time. Medusa accelerates this process by predicting multiple tokens in parallel. Medusa does this by adding prediction modules, called Medusa heads, to the base LLM, one head for each token decoded in parallel. GPU hardware that LLMs run on is optimized for parallelism, so it can handle parallel token decoding with little additional overhead. Medusa offers significant speedups, typically 2-4-fold without compromising generation quality. Knowledge distillation addresses the deployment challenges of large, parameter-heavy models by transferring knowledge from larger “teacher” models to smaller “student” models. Typically, a teacher model is first trained or fine-tuned on high-quality labeled data, then used to generate predictions on additional unlabeled data. The manually labeled and machine-labeled data are then combined to train a smaller student model, which learns to mimic the teacher’s behavior. The student model retains much of the teacher’s performance but is significantly more efficient, making it better suited for real-world scenarios such as high-volume consumer-facing websites. In our work, we integrate KD and Medusa in a unified pipeline starting with pretrained base models. As in standard KD, we fine-tune the teacher on the labeled dataset and use it to generate predictions on unlabeled, domain-relevant text. During the student-training stage, however, we attach Medusa heads to the student model and train it on the combined corpus of teacher predictions and labeled data. This produces a single compact model that inherits the teacher's knowledge while also gaining multitoken-prediction capabilities. The experiment We chose TinyLlama — a compact model with 1.1 billion parameters — as our student and Llama-3.1 with 70 billion parameters as the teacher. We ran four progressive experiments, each building on the last. We first fine-tuned TinyLlama on task-specific data for each of our three use cases — AI trip planning, smart filtering, and accommodation description generation. Even without further optimization, the fine-tuned models were significantly more accurate than few-shot GPT-4o, confirming that domain-specific fine tuning compensates for their compact size. However, their performance still fell short of the much larger teacher model’s. Applying knowledge distillation — training the student on a blend of human-annotated and teacher-annotated data — closed that gap by more than 90%, bringing the small model to near parity with the teacher. The smaller model size also made inference roughly 6 times as fast, but that’s still not fast enough for real-time use. Adding Medusa heads, however, sped up inference an additional 2 to 3.6 times. We tested two Medusa variants: with Medusa-1, we first fine-tuned the base LLM, then froze its weights and fine-tuned the Medusa heads separately; with Medusa-2, we trained everything in a single stage. Both achieved comparable speedups with no meaningful quality loss, but Medusa-2's simpler pipeline made it more practical for production teams managing multiple models. Outcomes Combining KD with Medusa-2 delivered both gains simultaneously: our final model matched the quality of the 70-billion-parameter teacher while running 10 to 20 times as fast, depending on the use case. For each of the three use cases, we used the pipeline described above to fine-tune a dedicated model with domain-specific data. For AI Trip Planner, we showed a 2.9% increase in user engagement vs. GPT-3.5. For Smart Filters, we achieved responses that were 15 times as fast for 99 percent of queries. For AI-generated accommodation descriptions, we showed 1.4% more “helpful” ratings from users, at less than one-third the cost of GPT-4. With acknowledgements to our AWS colleague Aleksandra Dokic and to the Booking.com team: Emmanouil Stergiadis, Eran Fainman, Ilya Gusev, and Moran Beladev.",
+      "published_date": "2026-10-29",
+      "tags": [],
+      "organization": "Amazon",
+      "raw_metadata": {
+        "feed_name": "Amazon Science",
+        "feed_url": "https://www.amazon.science/index.rss"
+      }
+    },
+    "rule_score": 53.0,
+    "rule_reasons": [
+      "🏢 頂流機構: Amazon",
+      "🔥 熱門關鍵字: fine-tuning, distillation, code generation",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 53,
+    "llm_reason": "結合知識蒸餾與Medusa優化產線LLM延遲成本，案例具體但方法屬既有技術整合",
+    "novelty": 7,
+    "impact": 10,
+    "trending": 8,
+    "practicality": 15,
+    "blog_worthiness": 13
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Prime Intellect Releases Prime Mega MoE: Trainable Fused MoE Kernel, 3.11x Faster Forward Pass",
+      "url": "https://www.marktechpost.com/2026/10/29/prime-intellect-prime-mega-moe-fused-moe-kernel-training/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "Prime Intellect has released Prime Mega MoE , a training extension of DeepSeek’s fused Mega MoE kernel. DeepSeek’s kernel only ran the forward pass. Prime Intellect added a fast, overlapping backward pass. That makes the fused kernel usable for training, not just inference. In its prime-rl trainer, full training steps on Qwen3 MoE models run up to 34% faster. Against TorchTitan, the gain reaches 55%. For teams training mixture-of-experts (MoE) models, that is a direct cut in GPU hours. Prime Mega MoE is a fused, overlapping MoE kernel for training from Prime Intellect. It builds on the Mega MoE kernel in DeepSeek’s open-source DeepGEMM library. In an MoE model, each token goes to a small subset of experts. Those experts sit on different GPUs. So every layer sends tokens out, runs expert math, and sends results back. This happens in the forward pass and again in the backward pass. In a standard setup, these are separate operations. The GPU sorts tokens and waits on the transport layer. Then it computes, hands results back, and waits again. Those waits are idle GPU time. DeepSeek’s Mega MoE , added to DeepGEMM in April 2026, replaces that chain with one kernel call. It fuses expert-parallel dispatch, the 2 expert linear layers, SwiGLU, and combine. While one token group is in transit, the kernel computes on a group that already arrived. It also skips intermediate tensors by using GPU-only scratch buffers. But it only shipped a forward implementation. Prime Intellect wrote the missing backward kernel, also overlapping. Supported types are BF16, MXFP8 (Blackwell only) and blockwise FP8 (Hopper only). The prime-rl config also exposes an fp8_bwd mode: BF16 forward, FP8 backward. All numbers below are self-reported by Prime Intellect. Training steps use 8×H200 nodes, FP8, 16,384-token sequences and full activation checkpointing. Each result is the mean of steps 6 to 20. Full training step, seconds (lower is better): Against TorchTitan, throughput rose from 5,337 to 7,886 tokens/s/GPU on the 30B model. On the 235B model, it rose from 1,094 to 1,697. The prime-rl baseline uses torch all-to-all plus DeepGEMM FP8 experts. Single MoE layer, milliseconds (1 node, 8×H200, EP=8, 128 experts, top-8, random routing): The pattern is clear. Forward gains are large, and backward gains are smaller. The headline “up to 3.11x” refers to the forward pass only. TorchTitan’s 41% gain comes from a different setup (B200, 671B model, BF16 baseline). It is not directly comparable. Prime Mega MoE is a dispatch backend in prime-rl. Set type = \"mega_moe\" under [trainer.model.moe.dispatch] . Choose precision from bf16 , mxfp8 , fp8 or fp8_bwd . The training kernels ship in a prebuilt DeepGEMM wheel from prime-kernels . The stock DeepGEMM build lacks them. Check out the Prime Mega MoE blog post , the announcement on X , and the prime-rl repo . Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post Prime Intellect Releases Prime Mega MoE: Trainable Fused MoE Kernel, 3.11x Faster Forward Pass appeared first on MarkTechPost .",
+      "published_date": "2026-10-29",
+      "tags": [
+        "Agentic AI",
+        "AI Infrastructure",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Editors Pick",
+        "Enterprise AI",
+        "For Devs",
+        "Language Model",
+        "Large Language Model",
+        "Machine Learning",
+        "New Releases",
+        "Software Engineering",
+        "Staff",
+        "Tech News",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: moe, mixture of experts",
+      "⚖️ 來源權重: rss +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 72,
+    "llm_reason": "將DeepSeek前向kernel擴展出高效反向傳播，實測訓練加速34-55%，基礎設施貢獻紮實",
+    "novelty": 15,
+    "impact": 13,
+    "trending": 10,
+    "practicality": 18,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Meta AI Research",
+      "title": "Catching Bugs Before They Land: JiTTesting’s Human-on-the-Loop Approach at Full Scale",
+      "url": "https://engineering.fb.com/2026/10/29/security/catching-bugs-before-they-land-jittestings-human-on-the-loop-approach-at-full-scale/",
+      "authors": [
+        ""
+      ],
+      "abstract": "Every code change improves our platform, but it also introduces new complexity. With hundreds of millions of lines of code constantly evolving at Meta, traditional testing can’t keep pace. Catching risks proactively, before code lands, enables us to identify risks earlier, respond more effectively, and deliver reliable experiences at scale. Over the last year, we’ve shared our research into applying large language models (LLMs) to generate software tests . More specifically, we’ve shared our work with Just-in-Time Tests (JiTTests) , a novel testing approach where we leverage LLMs to catch bugs on the fly, even ones that traditional testing might not catch. In the five months since we first unveiled this work, we’ve deployed our Catching JiTTests approach to determine its scalability and applicability to the wider industry. Today, Catching JiTTests are no longer a research prototype; they’re part of Meta’s infrastructure, and they’re helping our engineers catch more bugs with less load and a smaller chance of false positives. Most AI-based approaches to preventing bugs in code use LLMs and/or agentic AI to review code and detect faults based on prior experience. They work through the same review process that a human reviewer would, only faster. Catching JiTTests is a fundamentally different approach (Table 1): It generates executable tests that demonstrate a concrete behavioral difference introduced by the change. While it requires more computational steps, it catches classes of bugs that LLM- or agent-based code reviews might not. JiTTests are automatically generated and designed to fail, surfacing bugs in code changes (diffs) before they land in production. When they’re applied to a codebase as large as Meta’s, one challenge is distinguishing strong catches (i.e., true-positive failures that reveal real bugs) from weak catches (i.e., tests that may be false positives). It boils down to a specific question: For every proposed diff, how can we automatically generate tests that find the most severe bugs before they cause severe issues, and do so with a high true-positive rate and without impeding the velocity of our engineers? To address this, we developed two tandem workflows: To filter false positives, we employed a traditional rule-based approach combined with an ensemble approach we call “LLM-as-Judge,” which aggregates judgements from several state-of-the-art (SOTA) LLMs, all tasked with classifying weak catches as likely true or false positives. We also maintained human review, with an eye toward reducing review load. Our goal is to maintain the consistency of human labeling but reduce the likelihood of an engineer being brought in to review a weak catch. The entire system workflow happens in five stages: The system runs overnight on spare capacity and targets diffs submitted the previous day that are deemed “risky” using a mechanism similar to Diff Risk Score (DRS) and trained on previous code changes. This helps ensure test generation is focused on diffs that are most likely to contain severe regressions. The dodgy diff workflow treats each diff as if it were a mutant and uses mutation-guided LLM-based test generation to produce tests that distinguish the diff’s behavior from its parent. The goal here is to maximize the pool of weak catches and with it the chances of finding a strong catch among them. At the same time, the intent-aware workflow uses an LLM to infer the diff’s intention using the code changes, diff title, and summary. The LLM then describes the “risks” — the ways an attempt to implement the intent could produce errors. It then uses those risk descriptions to construct mutants — each representing a bug that could be introduced while implementing the inferred intent. Tests are generated to kill each mutant (i.e., distinguish mutant behavior from parent). Those tests are then run on the actual diff. Any that fail are harvested as weak catches. Once weak catches are generated, the system must determine whether each is a false positive or actually a strong catch (true positive). The LLM-as-Judge ensemble consists of a collection of LLMs that review: We complement LLM-as-Judge with a more traditional, rule-based approach called Rule-Based False-Positive Killing Environment (RubFake). LLM-as-Judge has rich semantics, but its judgements are non-deterministic and challenging to verify. By contrast, RubFake provides verified, deterministic judgments. Working together, RubFake and LLM-as-Judge produce an overall ranking of weak-catch candidates, with those ranked sufficiently highly being worthy of further consideration. Based on the ranking from LLM-as-Judge and RubFake, the system then decides whether to reach out to human engineers. Rather than a human-in-the-loop approach, where a human engineer reviews every output, we’ve reduced friction through a human- on -the-loop approach, where human engineers set criteria and review outcomes at an aggregate level rather than supervising every output. With the testing system in place, our goal is to get engineers to engage with its results. As of this writing, 589 engineers at Meta (64% of our outreach) have engaged with Catching JiTTests. These engineers have reported that Catching JiTTests surfaces genuinely actionable findings, with a 60% rate of true positives. In the first half of 2026, Catching JiTTests played a key role in catching 74 serious (SEV) privacy bugs at the diff stage, before they landed in production and lowering the overall occurrence of privacy SEVs by 20% during that timeframe. Agentic software development is helping engineers and developers across the industry write, review, and ship code faster than ever before. But faster deployment means there’s also a need for faster testing. Every bug caught before it reaches production is one that end users never need to deal with. We’ve shown that LLMs can provide an additional safety layer capable of catching what traditional tests may miss, demonstrating that AI-generated testing can scale enough to reduce organizational risk. Catching JiTTests is a solution that is scalable, both technologically and socially. Combining these tests with a human-on-the-loop approach helps ensure that engineers rarely need to read test code and only need to confirm whether an observed behavioral change was intended. The approach is generalizable: Engineers define success criteria early, let AI execute the testing, monitor the outcomes at an aggregate level, and intervene at the policy level rather than per item. Our paper, “ Just-in-Time Catching Test Generation at Meta ,” which was presented at FSE 2026 and featured at Product@Scale , details our initial deployment and testing with Catching JiTTests in Meta’s infrastructure. The post Catching Bugs Before They Land: JiTTesting’s Human-on-the-Loop Approach at Full Scale appeared first on Engineering at Meta .",
+      "published_date": "2026-10-29",
+      "tags": [
+        "AI Research",
+        "ML Applications",
+        "Security & Privacy"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "Meta AI Research",
+        "feed_url": "https://engineering.fb.com/category/ai-research/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, safety",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 69,
+    "llm_reason": "以可執行測試取代審查式抓bug，經五個月大規模落地驗證，方法新穎故事完整",
+    "novelty": 15,
+    "impact": 14,
+    "trending": 10,
+    "practicality": 13,
+    "blog_worthiness": 17
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "Gemini 4 Carbon",
+      "url": "https://blog.google/innovation-and-ai/models-and-research/gemini-models/introducing-gemini-4-carbon/",
+      "authors": [
+        "acossta"
+      ],
+      "abstract": "Gemini 4 Carbon: our next frontier model Oct 28, 2026 | Gemini 4 Carbon is our strongest model with state-of-the-art cybersecurity and long horizon capabilities. Koray Kavukcuoglu SVP, Google DeepMind and Chief AI Architect, Google Today, we’re announcing the next frontier model: Gemini 4 Carbon, our strongest model with state-of-the-art cybersecurity and long horizon capabilities. Carbon ranks #1 on the recently updated v5.0 of Artificial Analysis Intelligence Index at 59. It shows significant gains across coding and agentic tasks as well as across key capabilities critical for cybersecurity defense, landing a firm lead in SEC-bench Pro (88.2%) for finding vulnerabilities, ExploitGym (54.8%) for exploitation, and CWE-bench (71.0%) for patching. On internal benchmarks, Carbon drives a strong uplift in generating secure code, and in live coding environments with our own teams it shows reduced misalignment and fabrication rates. Building on Gemini 4 Argon , which was launched two weeks ago, Carbon illustrates the pace at which we’re pushing the frontier forward. Our researchers and models are working hand in hand to advance capabilities faster, while strengthening our safeguards in tandem. We're taking a deliberate approach to rollout and are actively engaged in the U.S. government’s voluntary process for pre-release model testing. Starting this week, we will make Carbon available to a subset of cyber defenders and will gradually phase access to additional trusted partners through our Fairwind Program . We’re continuing to gather feedback and iterate on guardrails before making Carbon available to developers, businesses, and consumers via our product surfaces as soon as possible. Gemini 4 Carbon will launch at the same introductory price 1 as Argon at $2 per million input tokens and $10 per million output tokens, with cached input tokens priced at 95% off input token price. Improving coding and reasoning for challenging, long-horizon tasks Designed to take on much harder, long-horizon engineering problems, Carbon is built for sustained agentic workflows. Internally, our teams have seen Carbon run for days to persist through dead ends to tackle complex, multi-step engineering tasks like root-causing and patching subtle bugs across large codebases and low-level systems. Building on user feedback, we focused on improving model performance across a variety of domains, including coding, agentic, and scientific tasks, as well as full-stack web development and multimodal understanding. With improved quality of output and artifacts in web development, Carbon jumps +89 elo points to land at #4 (1768) on WebDev Arena . State-of-the-art cybersecurity performance to help build secure systems Gemini 4 Carbon delivers a significant leap in cybersecurity capabilities. It achieves state-of-the-art performance across the cybersecurity defense lifecycle — vulnerability detection, validation, and remediation. Our teams are already seeing strong gains in cyberdefense. On internal benchmarks, Carbon achieves more than 2x uplift in success rate for generating secure code over Argon. As another example, the Chrome team has reported that Carbon performed more than 10X better than another lab's large frontier model when generating high quality patches. Wiz, our leading Cloud security platform, also observes Carbon leading on benchmarks for web penetration testing, a core capability for Wiz's Scan for Good initiative. Carbon excels across key external benchmarks (evaluated without guardrails): Finding real vulnerabilities: Core to cybersecurity defense is finding real vulnerabilities. Carbon achieves a state-of-the-art 88.2% on SEC-bench Pro , autonomously uncovering complex flaws buried in real-world software. Validating risk through exploitation: To prioritize which vulnerabilities to remediate first or remediate at all, cyber defenders increasingly rely on models to check which vulnerabilities are exploitable. Carbon sets a new state-of-the-art on the popular exploitation benchmark ExploitGym (54.8%). Patching at the root cause: Ultimately after identifying the vulnerabilities, fixing the root cause is a critical step in the cybersecurity defense lifecycle. Carbon reaches 71.0% on Collinear’s CWE-bench , turning validated findings directly into working code fixes. Advancing frontier model safety & security Gemini 4 Carbon builds on the same multi-layered safety and security stack of Argon — combining model training, real-time misuse defenses, prompt-injection resilience, and chain-of-thought monitoring. In particular, we made significant strides in model alignment with Argon, and reported its propensities to behave in an aligned way in our Safety and Security report . With Carbon, we challenged ourselves to go a step further on alignment, and trained the model to respond to complex or high-pressure tasks in the right way. Reducing shortcuts and loophole exploitation: With Carbon, we further mitigated shortcut attempts in training while ensuring high-quality coding performance. Carbon reduced successful cheating on Terminal-Bench 4.0 to 0.0%, with attempts to cheat dropping to 0.4% — all while improving overall accuracy. In live coding environments with our internal teams, we observed that high-severity misalignment alerts dropped by almost 80%. Greater transparency and honesty: In our internal testing, Carbon cuts unsupported claims by approximately 2x over Argon. It puts methodological caveats directly into the deliverable or withholds blocked actions with a clear list of what remains required, rather than fabricating or hedging around missing evidence. Improved collaboration with the user in the face of ambiguity: Rather than guessing or forcing a path forward, Carbon retrieves the relevant sources and surfaces discrepancies to the user before acting — as a result, users should observe a much better collaborative experience with Carbon. Following through without overstepping: Carbon simultaneously reduced overreach by 26% and under-service by 29% resulting in much more reliable execution of multi-step plans end-to-end while respecting project constraints and staying strictly within scope. Resisting prompt injection: While Argon previously led the Gray Swan’s Indirect Prompt Injection (IPI) Benchmark in prompt injection resistance with a very low 0.7% attack success rate, Carbon achieves 0.0% — resisting every evaluated attack attempt. Coming soon to developers, businesses, and consumers Pushing the frontier forward requires moving fast while remaining deliberate about deployment. With Gemini 4 Carbon, our goal is to deliver meaningful leaps in software engineering and cybersecurity defense without compromising on safety or reliability. We’re eager to see how the initial cohort of cyber defenders use this model and we look forward to bringing Carbon to developers, businesses, and consumers soon. Posted in:\n\n(998 points, 793 comments on Hacker News)",
+      "published_date": "2026-10-29",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 998,
+        "num_comments": 793,
+        "hn_url": "https://news.ycombinator.com/item?id=50276792",
+        "object_id": "50276792"
+      }
+    },
+    "rule_score": 36.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agentic, reasoning, chain of thought, alignment, multimodal",
+      "🔥 HN 爆紅: 998 points"
+    ],
+    "llm_score": 65,
+    "llm_reason": "前沿模型發布熱度極高，但內容偏行銷式benchmark公告缺架構細節",
+    "novelty": 10,
+    "impact": 17,
+    "trending": 19,
+    "practicality": 8,
+    "blog_worthiness": 11
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "量子位",
+      "title": "剛剛，擴散模型殺進Agent主場！350億參數，速度比Jev快一倍",
+      "url": "https://www.qbitai.com/2026/10/505934.html",
+      "authors": [
+        "henry"
+      ],
+      "abstract": "剛剛，擴散模型殺進Agent主場！350億參數，速度比Jev快一倍 henry 2026-10-29 10:18:28 來源： 量子位 用擴散模型怎麼做做Agent？ henry 發自 凹非寺 量子位 | 公眾號 QbitAI 服了！天天在AI一線衝浪，竟然也會跟不上版本。 誰能想到，印象中用來生圖、生影片的 “擴散模型” ，竟然也能寫程式碼、生成網頁、呼叫工具，當Agent了！ 就在剛剛， 擴散智慧 釋出了全新的 擴散語言模型 —— Clover-35B-A3B-Preview 。 雖然名字裡多了“擴散”兩個字，但實際體驗下來，無論是寫程式碼、操作網頁、呼叫工具，還是生成HTML，用法都和我們熟悉的大語言模型差不多。 我個人用下來的第一感受就是一個字：“快”。 比如，讓它生成一個太陽系模擬器，Clover就思考了約1秒，然後也就4-5秒，一個能互動的太陽系模擬器就出來了。 再比如，我給它丟了一堆簡歷資訊，讓它整理成LaTeX格式的簡歷程式碼，也就十來秒，搞定～ 有一說一，用過GPT的朋友，應該都懂盯著“正在思考”等半天是什麼感覺，要不然最近也不會有主打快速決策的Jev什麼事兒～ 而說到Jev，Clover這次還真和它比了一把速度。 在網頁Agent評測WindTunnel的49個任務中，每個任務嘗試3次，Clover的中位執行時間為 1.52秒 ，Jev＋Mercury 2.5組合為 3.21秒 ，用時少了一半多。 嘗試成功率也略高，分別為 98.6%和95.9% 。 對比同表中的Gemini，速度更是快了好幾倍！ 好好好，你個擴散模型，要把自迴歸逼瘋？（doge） 會做Agent任務的擴散模型 說回模型，Clover-35B-A3B-Preview這次採用MoE架構，總參數350億，每個token啟用約30億參數，支援思考模式。 它進一步將團隊的擴散語言模型，從此前Dream 7B的 70億 參數，推進到了 350億 總參數規模。 更關鍵的是，參數量上來後，Clover的速度並沒有因此變慢，它在同尺寸對比中超過自迴歸模型。 除了前面的互動頁面和程式碼生成，官方演示裡，Clover還進一步展示了複雜任務、WebUI生成等Agent能力。 Clover可以通過WebMCP，連續處理六項任務，涉及開票、課程報名、金額彙總、活動狀態查詢、以及客戶資訊查詢和發票資訊查詢。 從下面的對比影片我們可以看出，Clover不僅成功完成任務，還在執行速度上徹底甩開了Gemini 3.6 Flash。 在線上購物場景中，Clover還能按要求找到指定款式、黑色、L碼的T恤，加入購物車，填寫訪客資訊，再走完測試結賬流程。 老實說，這種連續任務的處理其實是這次演示值得關注的地方。 要知道，擴散語言模型雖然有並行生成的速度潛力，但在做Agent任務時，以往的表現其實還不夠穩定： 模型工具呼叫格式可能出錯，也容易在同一個步驟上反覆嘗試，沒能根據返回結果調整動作。 Clover這次的進步，就體現在這些連續操作裡：呼叫工具、讀取反饋、繼續執行，直到完成任務。 具體到Benchmark，按照團隊公佈的資料，Clover在工具使用相關的τ³ Overall和BFCL-v4評測中，分別拿到65.3和67.9，位居前列。 △圖源：擴散智慧 Agent任務看完，再看看程式碼。 我又讓Clover生成了一個個人Agent的網頁介面。看起來也是有模有樣，整個生成過程也就十幾秒。 在程式碼評測這邊，Clover也交出了一組不錯的成績。 在考察真實程式碼倉庫問題解決能力的SWE-bench Verified上，它拿到 73.6 ；在考察終端任務執行能力的Terminal-Bench 2.1上，拿到 51.7 。 △圖源：擴散智慧 可以說，從生成互動頁面，到呼叫工具、跑完業務流程，再到程式碼評測，身為擴散語言模型的Clover，這次確實接了不少Agent的活。 哎，這就有意思了。印象裡負責去噪生圖的擴散思路，到了語言模型裡，究竟是怎麼生成文字、寫出程式碼的？ 難不成上面的demo真是AIGC出來的？ 擴散語言模型，什麼來頭？ 一般來說，我們熟悉的自迴歸（Autoregressive，AR）語言模型是根據前文預測下一個token，生成一個，再接著生成下一個，也就是大家常說的“詞語接龍”。 這裡的token，可以簡單理解成模型處理的文字片段。 相比於自迴歸模型的逐個序列預測生成，擴散語言模型則換了一種生成方式： 允許多個位置同時更新，再經過幾輪完善，逐步得到結果。 △圖源：AI生成 這裡的擴散去噪，可以理解為把被遮住或受到擾動的內容，逐步恢復成符合上下文的文字。 具體到Clover，它採用的是塊擴散：把待生成的內容分成若干塊， 塊與塊依次推進，塊內多個位置並行更新、相互參考。 這樣一來，一輪計算就有機會推動多個位置的生成，減少逐個生成帶來的等待。 但問題在於，能一起生成並不代表一輪就能寫好。 因為擴散模型往往需要多輪去噪，才能把結果逐步確定下來。輪數太少，內容可能還沒調整好；多來幾輪，計算開銷也跟著增加。 到了程式碼和Agent任務，上下文還會不斷變長。之前的要求、已經執行的操作、工具返回的結果，都可能影響下一步，歷史資訊的儲存和讀取也成了效率問題。 Clover的改進思路，就是讓歷史記憶和當前生成各司其職。 它圍繞塊擴散重構了門控Delta網路（GDN）：已經生成的上下文被壓縮排持續更新的狀態，供後續步驟讀取；當前生成的塊則通過雙向注意力，讓塊內的token相互參考。 與此同時，Clover將歷史記憶的讀出作為獨立的資訊單元，與當前token一起參與注意力計算，讓模型自己學習如何權衡前文與當前內容；再通過可學習的塊大小校準，減少塊變大後歷史資訊被稀釋的問題。 換句話說，這些調整的目標，就是讓並行生成、歷史資訊利用和計算效率更好地配合，這也是Clover將擴散語言模型進一步推進到程式碼和Agent任務的關鍵。 而除了Clover以外，擴散語言模型這兩年之所以受到關注，也主要在於它相對於自迴歸的兩大優勢： 一方面，擴散語言模型允許多個位置同時生成，有機會減少逐token生成帶來的序列等待。對於需要反覆生成程式碼、呼叫工具的Agent，這種潛力尤其值得關注。 另一方面，生成過程中，前後內容可以相互參考。在雙向建模的設計下，多個位置能在迭代中共同調整，為處理內容之間的依賴關係提供另一種方式。Clover當前塊內的互動，就是其中一種實現。 圍繞這些可能性，學術界和產業界已經給出了不同的嘗試。 何愷明今年參與的ELF，嘗試在連續嵌入空間中生成語言；谷歌推出的DiffusionGemma，探索並行文本生成；國內大廠也在研究面向程式碼任務的擴散語言模型。 具體方法各不相同，大家都在嘗試把另一種生成方式，變成能用起來的能力和效率。 Clover這次，則把自己的進展放進了程式碼、工具呼叫和連續任務裡，交給使用者上手檢驗。 從DiffuSeq到Clover，擴散智慧的下一步 最後，讓我們說回Clover背後的團隊—— 擴散智慧 。 據悉，擴散智慧由香港大學孔令鵬教授及其博士生龔珊三、葉佳成聯合創立。團隊成員對擴散語言模型的探索，可以追溯到2022年。 那一年，他們提出了DiffuSeq，研究如何用擴散模型完成序列到序列的文本生成：給定一段文字，再按條件生成另一段文字。 當時要邁過的一道坎，就是把擅長處理影像等連續訊號的擴散方法，用到離散的自然語言上。 到了2025年4月，團隊核心成員參與推出Dream 7B，將研究推進到70億參數語言模型。 根據當時公佈的結果，Dream 7B在通用、數學和程式碼任務上，取得與同規模自迴歸模型可比的表現，也展示了規劃能力和生成順序上的靈活性。 再到這次的Clover，模型規模繼續擴大，寫程式碼、呼叫工具、連續執行任務，都成了重點展示的內容。 這條路線，也就從最初研究怎麼生成文字，一步步走到了如何把複雜任務做對、做快。現在，團隊還在往多模態和端側延伸。 據介紹，Clover後續也將推出多模態版本，團隊正在推進擴散語言模型與多模態理解及動作生成的結合，並持續開展端側場景的適配與驗證。與Acrab的合作，則在推進面向端側場景的系統適配和軟硬體協同驗證。 按照團隊計劃，接下來還會繼續探索更大規模的模型，提高長程任務的穩定性，並通過推理最佳化、量化和部署適配，推進端側應用。 最後的最後，咱們不妨藉著這次新發布的Clover開個腦洞： 人類思考時，究竟是一句接一句往下推，還是先有個模糊的整體，再逐漸補全細節—— 大腦究竟更像自迴歸，還是擴散？ 體驗連結 [1]https://diffuspace.ai/register 版權所有，未經授權不得以任何形式轉載及使用，違者必究。 Agent 擴散模型 henry 剛剛，Gemini 4終於來了：谷歌重回御三家，API限時半價 2026-10-16 GPT證千禧年難題成果大反轉！OpenAI自己沒看懂就發… 2026-10-16 用不著Ctrl+F了！全新AI論文工具，幫你在原文獻裡海裡撈針 2026-10-11 何愷明團隊釋出多模態Harness框架 2026-10-11 相關閱讀",
+      "published_date": "2026-10-29",
+      "tags": [
+        "資訊",
+        "Agent",
+        "擴散模型"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "量子位",
+        "feed_url": "https://www.qbitai.com/feed"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 77,
+    "llm_reason": "擴散語言模型首次展現優異Agent任務速度與成功率，範式轉移潛力大",
+    "novelty": 16,
+    "impact": 14,
+    "trending": 17,
+    "practicality": 13,
+    "blog_worthiness": 17
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "TechCrunch AI",
+      "title": "Mistral releases weights for its trillion-parameter AI model, targeting cybersecurity",
+      "url": "https://techcrunch.com/2026/10/29/mistral-releases-weights-for-its-trillion-parameter-ai-model-targeting-cybersecurity/",
+      "authors": [
+        "Lucas Ropek"
+      ],
+      "abstract": "French AI company Mistral has released the weights for its trillion-parameter open source AI model Mistral Large 4 (ML4), allowing businesses and governments to download and deploy the system themselves. Nicknamed “Le Chonk,” the model was first introduced earlier this month . The release comes as competition between open-weight AI developers like Mistral and closed-model providers like OpenAI and Anthropic heats up, with the former arguing that businesses and governments shouldn’t have to rely on outside AI companies for access to advanced capabilities. That argument may hold more weight in cybersecurity, where organizations want more control over their data and systems. Or, as Mistral’s CEO, Arthur Mensch, explained, AI should “be a tool for empowerment, not dominance.” With Chonk, Mistral doubles down on that position, arguing that it’s able to achieve “state-of-the-art performance” at a “fraction of the compute and capital committed by closed labs.” The release of the model’s weights — the numerical training that animates the system — ensures that other companies and government agencies will now be able to deploy ML4 for their own purposes. Mistral says that its model is comparable in terms of performance with a Chinese open-weight competitor, GLM-5.3, which was previously considered one of the best open-weight models in the world — particularly when it comes to cyber work. However, Mistral’s model uses 47 percent fewer tokens per task, making it significantly more economical than GLM-5.3. The company also claims that the model outranks all other open models when it comes to agentic coding tasks on Artificial Analysis’ Coding Agent Index, an AI benchmarking site. “Amid growing cyber threats, ML4 brings state-of-the-art sovereign cyber defense capabilities to enterprises and governments globally,” the company said Thursday. “Enterprise and public sector institutions can now download, deploy, and own frontier AI to detect, analyze, and respond to threats across code and IT infrastructure.” The weights for ML4 are being made available on Hugging Face and via its API. Pierre Stock, Vice President of Science at Mistral, told TechCrunch that the release of the model’s weights meant that organizations will have more control over how they use AI to defend themselves. “Concretely, it means that, for instance, as a business company or as a government, you’re able to have access to frontier intelligence to defend yourselves against cyberattacks. Access that can’t be cut off by definition because the model is open-weighted,” he said. Stock added that the model could be used to “identify, coordinate, and respond in real time to major security incidents, and that the open sourcing means that companies can deploy this model on-prem in their own ecosystem. While advances in AI cybersecurity are helping security professionals to find bugs at a much higher rate than before, Stock continued, he believes it’s important for companies to “provide [this same] capability to everyone…as soon as possible to ramp up and to strengthen the ecosystem,” given that “some malicious actors might try to actually leverage their own technology to attack.” Separately, Stock addressed concerns about recent incidents involving rogue AI agents, acknowledging the risks but cautioning against overreacting. “We don’t want to fearmonger people. We think it’s a problem that is solvable. It’s a hard problem to have good security,” he said.",
+      "published_date": "2026-10-29",
+      "tags": [
+        "AI",
+        "cyber",
+        "mistral"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "TechCrunch AI",
+        "feed_url": "https://techcrunch.com/category/artificial-intelligence/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, open weight",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 62,
+    "llm_reason": "開源兆參數模型重大釋出，但報導偏商業敘事缺技術細節",
+    "novelty": 9,
+    "impact": 15,
+    "trending": 14,
+    "practicality": 14,
+    "blog_worthiness": 10
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "How MoEngage turned over 400 APIs into agent tools with AgentCore Gateway",
+      "url": "https://aws.amazon.com/blogs/machine-learning/how-moengage-turned-over-400-apis-into-agent-tools-with-agentcore-gateway/",
+      "authors": [
+        "Nikhil Kumar"
+      ],
+      "abstract": "This post was co-written with Nikhil Kumar and Shakir Khan from MoEngage. When engineering teams start building AI agents, the capabilities those agents need usually already exist as internal APIs. Campaign creation, segment queries, delivery stats. The challenge isn’t building new functionality. The challenge is making hundreds of private APIs safely reachable by agents without exposing them to the public internet, without giving models control over identity, and without flooding context windows with hundreds of tool definitions. MoEngage, the agentic customer engagement platform that more than 1,350 consumer brands use to deliver personalized experiences across push, email, in-app, SMS, WhatsApp, and RCS, faced exactly this problem. Behind the product sit roughly 400 internal REST APIs, built by 25 engineering teams, running in private virtual private clouds (VPCs) across seven AWS Regions. MoEngage isolates these APIs regionally to meet data residency commitments and doesn’t expose them to the public internet. The capability the agents needed was already running in production. Making it reachable, safely, was the hard part. In this post, we walk through how MoEngage used AgentCore Gateway, a capability of Amazon Bedrock AgentCore, to turn those private APIs into permission-scoped agent tools. The approach saved MoEngage an estimated six months of platform engineering effort, and onboarding a new API now takes hours instead of days. No product team wrote Model Context Protocol (MCP) server code, no networking was provisioned per integration, and no public endpoint exists anywhere in the path. The Model Context Protocol (MCP) gives agents a standard way to discover and call tools. The straightforward path to adopting it is for each team to expose its own MCP server. MoEngage costed that out and rejected it. Over 20 MCP servers means over 20 deployments to monitor, patch, and keep protocol-compatible as MCP evolves. Cross-domain agents, the useful ones that read a campaign, check its segment, and inspect delivery stats, would need to connect to several servers and reconcile them. And every team would need MCP expertise unrelated to its actual product work. So MoEngage established the principle that shaped everything that followed: Individual engineering teams do not implement MCP. Teams build REST APIs and declare which operations should be tools. The AI Platform team owns the MCP layer end to end. A team’s responsibility ends at a well-described OpenAPI spec. That principle immediately created three requirements: a central tool surface that agents connect to once rather than per-service, per-agent authorization enforced server-side rather than by convention, and private connectivity that does not need to be rebuilt for every new API. Building all of this from scratch was an option. A custom central MCP server would solve the 20-servers problem but leave MoEngage building a tool-generation pipeline, a policy file format, a tool-alias registry for renames, and circuit breakers. All custom code, all owned by one team, all of it undifferentiated work that does not make MoEngage’s agents smarter or its customers’ campaigns better. Before evaluating any solution, MoEngage defined four constraints. All four had to be met simultaneously. A solution that addressed two but broke the third and fourth was not viable. Nothing gets a public endpoint. MoEngage’s internal APIs are VPC-private by policy. Any solution that required exposing them, even behind additional authentication, was a non-starter. The conventional workaround is per-integration networking: a NAT gateway here, a reverse proxy there, a VPN tunnel for the third one. Multiply that by seven Regions and the operational surface grows faster than the set of agents does. Every new API would mean another networking change request, another set of security reviews, another piece of infrastructure to maintain. Identity can’t be an agent’s decision. Every internal API call carries tenant, user, role, and database context. If that context is a large language model (LLM)-visible tool parameter, a model can get it wrong or be talked into changing it. MoEngage needed identity to be structurally out of the model’s reach, injected by the calling service and not surfaced as something the model can set or override. A 400-tool catalog doesn’t fit in a context window. At roughly 50 tokens of JSON schema per tool, a full tools/list across the estate is over 20,000 tokens transmitted on every connection. That token budget is spent before the agent does anything useful, and it crowds out the context the agent actually needs to reason about the task. Client-side filtering ( tool_filter in ADK or the MCP SDK) doesn’t fix this. The full catalog has already crossed the wire, and filtering by client convention isn’t an authorization boundary. An agent that is not supposed to see write operations shouldn’t receive them in the first place. That last constraint is the one that avoided the obvious alternatives. A custom central MCP server solves the 20-servers problem but still leaves MoEngage building a tool-generation pipeline, a policy file format, a tool-alias registry for renames, and circuit breakers. All custom code, all owned by one team, none of it making MoEngage’s product better. Amazon Bedrock AgentCore Gateway is a fully managed MCP server. You register OpenAPI specs as targets and the gateway generates MCP tools from them, then routes calls to the backing services. Four properties mapped directly onto MoEngage’s constraints. OpenAPI in, MCP tools out. There’s no MCP server to build or operate, and no separate artifact to keep in sync with the API. The spec teams already maintain is the tool definition. Each operation becomes a tool named Target___operationId , for example CampaignsAPI___searchCampaigns . When the spec changes, the tool changes. When a team adds an endpoint, the tool appears. When a team removes one, the tool disappears. No deployment, no protocol expertise, no coordination with the AI Platform team. Cedar policies, evaluated before the catalog is serialized. The AgentCore policy engine uses partial evaluation to filter tools/list per principal. Each agent authenticates as its own IAM role, and its Cedar policy determines which tools it can see and call. This is what makes 400 tools tractable. It isn’t client-side filtering after the fact, but server-side scoping before the response is built. A campaign QA bot, for example, gets read access to campaign and segment tools but can’t call a write operation: The bot doesn’t see write tools in its tools/list response. There’s nothing to filter on the client side because the tools weren’t sent. Managed egress over Amazon VPC Lattice. The gateway reaches MoEngage’s internal services through AgentCore managed egress rather than through networking MoEngage builds and operates. Inbound, the gateway is reachable only through a VPC interface endpoint with private DNS. There’s no public path to it. Onboarding a new API adds a target, not a network topology change. This is the property that broke the multiply by seven Regions problem. The networking exists once and every API uses it. Semantic search as a gateway capability. With the x_amz_bedrock_agentcore_search capability, an agent can find tools by describing the task instead of naming the tool. It removed the need for a custom discovery layer. It also removed rename fragility as a side effect: if get_segment_user_count becomes get_segment_size , an agent searching for segment user count still finds it, because matching happens on description rather than identifier. The request flow from agent to internal API is short, and every layer has a specific job. Agent services connect through a VPC interface endpoint to AgentCore Gateway, which evaluates Cedar policies and routes tool calls through managed egress over Amazon VPC Lattice to internal APIs. The following diagram shows how the components connect.",
+      "published_date": "2026-10-29",
+      "tags": [
+        "Advanced (300)",
+        "Amazon Bedrock AgentCore",
+        "Customer Solutions"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, mcp, model context protocol",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 62,
+    "llm_reason": "400個內部API轉為agent工具的真實規模案例，踩中MCP/agent工具化熱點",
+    "novelty": 9,
+    "impact": 12,
+    "trending": 13,
+    "practicality": 15,
+    "blog_worthiness": 13
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "NVIDIA Releases Nemotron 3.5 Transcribe: An Open 30B MoE Model for 40-Language Transcription with ~4B Active Parameters",
+      "url": "https://www.marktechpost.com/2026/10/28/nvidia-nemotron-3-5-transcribe-open-speech-llm/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "NVIDIA has released Nemotron 3.5 Transcribe , an open-weights speech LLM built for transcription. One model handles 40 languages and recordings up to 1 hour . A text instruction picks the output style for each request. Options include verbatim, written form, speaker-attributed, contextual and translated output. For developers, it can replace separate ASR, diarization and alignment tools. Nemotron 3.5 Transcribe is a speech-augmented language model (SALM) from NVIDIA that turns audio and instructions into text. An audio encoder feeds embeddings into an LLM decoder, which makes transcription promptable. NVIDIA’s technical research report argues there is no single correct transcript. Numbers, fillers and domain terms depend on who reads the output. NVIDIA positions the model as a transcription specialist, not a general-purpose assistant. The model name says 30B-A4B, but the checkpoint holds about 34B parameters. The extra weight comes from the 1.3B MTP module and the audio components. Training used 1 supervised fine-tuning stage on 256 H100 GPUs for 28,500 steps. A short RL stage followed: 400 GSPO updates with a reward of 1 minus WER. The model saw about 1.72M unique hours of audio, or 6.5M hours with repeats. All numbers below are self-reported by NVIDIA in the technical report . Weights ship in BF16 , FP8 , NVFP4 and GGUF . A DFlash2 draft model is optional. The OpenMDW-1.1 license allows commercial use. Runtimes include vLLM 0.32.0 with the NeMo Speech plugin, Transformers and SGLang-Omni 0.2.0. vLLM exposes an OpenAI-compatible API. NVIDIA model’s main speed comes from its Nemotron Transcribe NIM. With NVFP4 and DFlash2, 1 RTX PRO 6000 Blackwell Server Edition transcribes 2,238 seconds of audio per second. It returns a 30-second clip in 0.13 seconds. There is a catch: those serving optimizations are not open source yet. NVIDIA expects the release-day vLLM path to be roughly 2x slower. On 1 H100 in BF16 with MTP2, NVIDIA estimates about 410 RTFx. For fine-tuning, NVIDIA tested 17 tasks. Each took about 0.5 to 2.3 GPU-hours on a single GB300. *Competitor scores on the current 9-set leaderboard come from NVIDIA’s report, citing Hugging Face leaderboard results from October 2026. The leaderboard set changed since the competitors published their own cards, so the 2 WER rows are not interchangeable. Check out the technical report , model weights , project page and live demo . Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post NVIDIA Releases Nemotron 3.5 Transcribe: An Open 30B MoE Model for 40-Language Transcription with ~4B Active Parameters appeared first on MarkTechPost .",
+      "published_date": "2026-10-29",
+      "tags": [
+        "Agentic AI",
+        "AI Paper Summary",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Audio Language Model",
+        "Editors Pick",
+        "For Devs",
+        "Language Model",
+        "Large Language Model",
+        "New Releases",
+        "Open Source",
+        "Staff",
+        "Tech News",
+        "Technology",
+        "Uncategorized",
+        "Voice AI"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: alignment, fine-tuning, moe",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 60,
+    "llm_reason": "單模型支援40語言可指令式輸出格式，整合多項語音工具但屬增量工程",
+    "novelty": 11,
+    "impact": 11,
+    "trending": 9,
+    "practicality": 16,
+    "blog_worthiness": 13
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "Claude Code regularly sends each background agent’s transcript to its model",
+      "url": "https://gist.github.com/flamerix-ai/c3905705cc4205e5de3011fa2e74efce",
+      "authors": [
+        "NikZaal"
+      ],
+      "abstract": "Claude Code burns ~15–20% of your tokens on a 3-word status line. Here's how to turn it off by Flamerix AI · MIT License Tested on Linux, Claude Code 2.1.257–2.1.312; macOS reported working by others (see Tested versions). The binary is not modified ( BUN_OPTIONS=--preload ). An update can silently undo it, so see Verify. TL;DR Every ~30 seconds, Claude Code re-sends each background agent's full transcript to the model just\nto fill that agent's status line in the agents panel. no-agent-summary.js is a Bun --preload that stops that timer without modifying the Claude Code binary. curl -fsSL https://gist.githubusercontent.com/flamerix-ai/c3905705cc4205e5de3011fa2e74efce/raw/no-agent-summary.js -o ~ /.local/share/no-agent-summary.js\nclaude daemon stop --any\nBUN_OPTIONS= \" ${BUN_OPTIONS : + $BUN_OPTIONS } --preload= $HOME /.local/share/no-agent-summary.js \" claude To make it permanent for every Claude Code process, see Install . Contents The problem The fix (how it works) Which processes it touches Install Env Nuances Verify (after every update) Fail-open Effect Tested versions Why there is no setting for this Timeline (2026) Changelog License and disclaimer The problem Every ~30 seconds, for every background agent, Claude Code sends that agent's entire\ntranscript to the agent's own model (usually Opus) and asks it to \"describe your most recent\naction in 3-5 words\". The answer only updates the agent's status line in the agents panel; it\nnever reaches the model or your conversation. There is no setting that turns it off, and since\n2.1.232 (August 2026) it has been on by default. The anomaly was detected by DRIM in Claude Code's OpenTelemetry export:\ngrouping claude_code.api_request events by query_source showed agent_summary costing more than the main conversation itself . query_source = agent_summary week before the hook 2 days after share of all Claude Code spend 16.4 % (main conversation: 15.7 %) 0 % share of all API requests 19.7 % , about 1 in 5 0 % part of that spend on Opus 96 % — input tokens per output token ≈ 9,000 : 1 — Spend here means Claude Code's own per-request estimate ( cost_usd ), not an invoice: on a\nsubscription, what you lose is rate-limit headroom. We are not the only ones who measured it: #86879 collects four independent\nmeasurements of 18–26 %. The fix (how it works) no-agent-summary.js is a Bun preload (~70 lines of code). It wraps only the global setTimeout , the one the summary timer is armed through; when a callback's source text contains\na summarizer anchor (e.g. the [AgentSummary] Timer fired log line), it returns an inert handle instead of arming the timer. Every other timer passes\nthrough untouched. In the OpenTelemetry export the suppressed requests are claude_code.api_request events with query_source = agent_summary . Why a timer hook rather than something simpler: the module ships as precompiled Bun bytecode, so\nediting its JS text inside the binary changes nothing, and the API client does not go through a\nwrapped globalThis.fetch . But Function.prototype.toString still returns a callback's source\neven when it runs from bytecode, so the timer can be recognised by a string inside it. The inert\ntimer uses exactly 2³¹−1 ms: Node and Bun treat a larger delay as 1 ms, so an \"infinite\" delay\nwould fire at once. Which processes it touches The hook installs only inside Claude Code: Bun.main must be /$bunfs/root/cli (the compiled\nentry, the same on every row below) and process.execPath must be a Claude Code install. Any other bun , or a compiled Bun binary with another entry name, loads the file and does nothing. install channel (Linux, measured with claude --version ) process.execPath nix …/bin/.claude-wrapped npm @anthropic-ai/claude-code …/@anthropic-ai/claude-code/bin/claude.exe ( .exe on Linux too) npm platform package …/@anthropic-ai/claude-code-linux-x64/claude native installer ~/.local/share/claude/versions/<version> macOS and Windows are not measured; the hook installs there only if they produce these same\nshapes, and Verify step 1 tells you. One known pass-through: a foreign binary built with bun build --compile --outfile cli and renamed claude ; there, only timers whose callback\ncarries an anchor change. Install Put no-agent-summary.js somewhere stable; note its absolute path. Set BUN_OPTIONS globally so every Claude Code process gets it. Write --preload=<path> , with = : BUN_OPTIONS reaches every bun on the machine, and with a\nspace ( --preload <path> ) bun subcommands break ( bun install → error: Script not found \"install\" ). Claude Code reads both forms. One of: # ~/.profile, ~/.bashrc, ~/.zshrc export BUN_OPTIONS= \" ${BUN_OPTIONS : + $BUN_OPTIONS } --preload=/abs/path/no-agent-summary.js \" # ~/.config/fish/config.fish set -gx BUN_OPTIONS \" --preload=/abs/path/no-agent-summary.js \" # ~/.config/environment.d/50-no-agent-summary.conf (systemd user env; also reaches # user services and timers; applies when the user manager next starts, usually next login) BUN_OPTIONS =-- preload =/abs/path/no-agent-summary.js Or a wrapper named claude earlier on PATH (the case keeps it idempotent when one Claude\nCode process starts another, and also recognises the v2 space form): #! /bin/sh HOOK=/abs/path/no-agent-summary.js case \" ${BUN_OPTIONS-} \" in * \" --preload= $HOOK \" * | * \" --preload $HOOK \" * ) ;; * ) export BUN_OPTIONS= \" ${BUN_OPTIONS : + $BUN_OPTIONS } --preload= $HOOK \" ;; esac : \" ${CC_AGENT_SUMMARY_LOG := ${XDG_RUNTIME_DIR :-/ tmp} / no-agent-summary.log} \" export CC_AGENT_SUMMARY_LOG exec /path/to/the/real/claude \" $@ \" Restart the daemon and every already-running session, then start Claude Code from an\nenvironment that has BUN_OPTIONS : claude daemon stop --any Env variable values effect CC_AGENT_SUMMARY_MODE off (default), pass off suppresses the summary timer. pass is the A/B control: loads and logs, arms every timer untouched. Any other value warns on stderr and acts as off . CC_AGENT_SUMMARY_LOG file path, optional Appends preload active mode=… bun=… hooked=global.setTimeout on load, one line per matched timer (first 20), and an exit count. CC_AGENT_SUMMARY_MARKER file path, optional Overwritten on load with the preload active … line. Nuances Restart the daemon after install. The daemon, pty host and pre-warmed bg-spare sessions\ninherit the environment of the client that started the daemon, so a daemon started before BUN_OPTIONS was set keeps spawning unhooked sessions. Hence claude daemon stop --any . Headless runs need it too: claude -p , cron, CI, editor integrations. Platform: Linux tested by us, macOS (darwin-arm64) reported working by others, Windows untested (see Which processes it touches ). npm --ignore-scripts : bin/claude stays a shell stub and Bun never starts, so the hook\nnever runs. Upgrading from v2: overwrite the file in place, switch BUN_OPTIONS to the = form and\nrestart the daemon. If both forms name the same path, bun loads it once. Two different paths\n(say an old copy kept beside the new one) both load: a second v3 copy is a no-op, but v2 has no\nsuch guard, so do not leave a v2 path in BUN_OPTIONS . A/B: CC_AGENT_SUMMARY_MODE=pass loads the hook but arms every timer; the summaries come back, which shows the off result is the hook's doing. Background processes: daemon, pty host and bg-spare must carry --preload in their environment ( /proc/<pid>/environ on Linux); if not, restart the daemon. Verify (after every update) Preload loads: BUN_OPTIONS= \" --preload= $HOME /.local/share/no-agent-summary.js \" CC_AGENT_SUMMARY_LOG=/tmp/nas.log claude --version && cat /tmp/nas.log Expect preload active mode=off … . No line: BUN_OPTIONS did not reach the process, or the\npath is not absolute. Timer suppressed: with the same BUN_OPTIONS and CC_AGENT_SUMMARY_LOG=/tmp/nas.log , run\na background subagent for a minute or two. The log shows summary timer #1 suppressed (setTimeout, delay=30000) and the agent's panel status stops\nupdating.\n\n(553 points, 223 comments on Hacker News)",
+      "published_date": "2026-10-29",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 553,
+        "num_comments": 223,
+        "hn_url": "https://news.ycombinator.com/item?id=50284255",
+        "object_id": "50284255"
+      }
+    },
+    "rule_score": 26.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "🔥 HN 爆紅: 553 points"
+    ],
+    "llm_score": 66,
+    "llm_reason": "揭露Claude Code背景代理耗費token機制與修補方法，熱門且實用",
+    "novelty": 8,
+    "impact": 10,
+    "trending": 17,
+    "practicality": 16,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "Gemini 4 Carbon is the new #1 on the Artificial Analysis Intelligence Index v5",
+      "url": "https://artificialanalysis.ai/articles/gemini-4-carbon-new-number-1",
+      "authors": [
+        "theHocineSaad"
+      ],
+      "abstract": "Gemini 4 Carbon is the new #1 on the Artificial Analysis Intelligence Index v5 See model page Google’s Gemini 4 Carbon is the new #1 on the Artificial Analysis Intelligence Index v5, and second only to Claude Opus 5.5 on the Artificial Analysis Coding Agent Index Gemini 4 Carbon scores 59 on Intelligence Index v5, driven by leading performance in complex reasoning, knowledge, and scientific tasks. It also has large gains in coding and knowledge work, particularly when compared to other Gemini models, but it is not leading in all these areas. As with launch of Gemini 4 Argon, Gemini 4 Carbon is being rolled out to selected users and is not yet publicly available. Google is offering a 50% launch discount, with no confirmed end date. All our charts and figures use standard pricing for both Gemini 4 Carbon and Argon. Key results for Gemini 4 Carbon with high reasoning: ➤ Gemini 4 Carbon leads the Intelligence Index v5, with the #1 score in 4 of the 9 Index evaluations: HLE-Diamond, Terminal-Bench-Science, AA-Omniscience, AutomationBench-AA. Carbon makes substantial gains elsewhere but is not leading in coding and knowledge work ➤ Behind only Claude Opus 5.5 on coding agents: With Antigravity CLI, Gemini 4 Carbon (high) scores 59 only 3 points behind Claude Code with Claude Opus 5.5 (max, 62) on the Artificial Analysis Coding Agent Index. Carbon ranks second on both Terminal-Bench 4.0 (64%) and FrontierCode v1.1 (51%), behind Claude Opus 5.5 (max) at 56%. Google has historically underperformed in this area and so this improvement stands out. ➤ Improved agentic knowledge work, but not yet leading: On AA-Briefcase, Gemini 4 Carbon (high) scores 1609 Elo, a 126-point improvement over Gemini 4 Argon (high, 1483), but still behind models including Grok 4.7 (xhigh, 1638), Muse Wonder (max, 1659) and Kimi K3.1 Pro (1678). The largest gain comes from Presentation, up 293 Elo to 1598, alongside a 120-point improvement in Analytical Quality to 1671 ➤ Lower Cost per Task than Claude Opus 5.5 for comparable overall intelligence: With standard pricing, Gemini 4 Carbon costs $7.76 per Intelligence Index task, ~23% less than Claude Opus 5.5 (max, $10.04) but ~1.2x GPT-6 Astra (max, $6.25). It uses 123k output tokens per task, 29% fewer than Claude Opus 5.5 (max, 173k). At the same $4/$20 standard pricing, its Cost per Task is in line with Gemini 4 Argon ($7.68), while scoring 9 points higher on the Intelligence Index ➤ Leading AA-Omniscience v1.1 score, with low hallucination: Gemini 4 Carbon scores 54 on our recently updated AA-Omniscience v1.1, 6 points ahead of Claude Opus 5.5 (max, 48) and 8 points ahead of Gemini 4 Argon (46). Accuracy (% correct) rises 10 points over Argon to 58%, while its hallucination rate rises from 4% to 11%. This is still the second lowest of any model, behind only Argon, compared with 50% for both Claude Opus 5.5 (max) and GPT-6 Astra (max) Key model details: ➤ Context Window: 1M tokens ➤ Multimodality: Text, image, video, and speech input, with text output ➤ Pricing: $4/$20 per 1M input/output tokens, the same as Gemini 4 Argon’s standard pricing, with a 50% discount. Cached input tokens receive a 95% discount ($0.20 per 1M at standard pricing)\n\n(324 points, 237 comments on Hacker News)",
+      "published_date": "2026-10-29",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 324,
+        "num_comments": 237,
+        "hn_url": "https://news.ycombinator.com/item?id=50288019",
+        "object_id": "50288019"
+      }
+    },
+    "rule_score": 36.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, reasoning",
+      "🔥 HN 爆紅: 324 points"
+    ],
+    "llm_score": 54,
+    "llm_reason": "第三方基準比較提供數據視角，但仍是重複報導同一模型發布",
+    "novelty": 6,
+    "impact": 13,
+    "trending": 15,
+    "practicality": 9,
+    "blog_worthiness": 11
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "Accelerate agentic AI with NVIDIA Nemotron models on Amazon EKS and SageMaker HyperPod EKS",
+      "url": "https://aws.amazon.com/blogs/machine-learning/accelerate-agentic-ai-with-nvidia-nemotron-models-on-amazon-eks-and-sagemaker-hyperpod-eks/",
+      "authors": [
+        "Alex Iankoulski"
+      ],
+      "abstract": "NVIDIA Nemotron 3.5 Super VL joins the NVIDIA Nemotron 3 Nano , Nano Omni , Super , Ultra , and Nemotron 3.5 Lightning models already available on AWS. It’s a 120B-parameter mixture-of-experts (MoE) model that activates 12B parameters per token. It combines reasoning and tool use with text, image, document, and video understanding, so one model serves both text and visual tasks. This post explores its architecture and use cases, then shows how to deploy it on Amazon Elastic Kubernetes Service (Amazon EKS) , Amazon EKS Auto Mode , and Amazon SageMaker HyperPod EKS . NVIDIA Nemotron 3.5 Super VL is an open multimodal model distilled from Nemotron 3 Ultra. NVIDIA publishes the weights, training datasets, and post-training recipes, so you can customize the model for domain-specific workloads and run it on infrastructure you control. Model details: NVIDIA reports 63.44 percent on Hermes Bench and 87.05 percent on LangChain agent evaluations, and 80.8 percent on the CharXiv chart-reasoning benchmark. ( technical report ) Nemotron 3.5 Super VL uses a hybrid Mamba-Transformer MoE architecture, interleaving Mamba-2, attention, and expert layers. Sparse routing activates 12B of the 120B parameters per token, so compute per token matches a much smaller model while GPU memory still holds the full weights. Mamba-2 layers carry a constant-size state during generation, so their memory does not grow with sequence length the way KV cache does, which keeps long contexts affordable. A recursively shared Multi-Token Prediction (MTP) head supports native speculative decoding. Nemotron 3.5 Super VL supports agent workflows that combine reasoning with visual understanding: Nemotron 3.5 Super VL integrates with major open agent frameworks and orchestration systems through NVIDIA reference implementations, cookbooks, and the NVIDIA Agent Toolkit . For the full list of supported frameworks, see the NVIDIA developer blog . This section gives an overview of architecture, validation, and performance evaluation approaches. A detailed walkthrough of deploying Nemotron 3.5 Super VL and Nemotron 3 Ultra on AWS is available in the aws-do-eks project, including prerequisites, cluster creation, model weights download, deployment, testing, benchmarking, and cleanup. The same pattern can also be applied to other models in the NVIDIA Nemotron family. The reference implementation runs on standard Amazon EKS, EKS Auto Mode, and SageMaker HyperPod EKS. With EKS Auto Mode, AWS manages scaling, GPU, and EFA support in the cluster on your behalf. The Kubernetes manifests for model deployment are the same for each of the orchestrator options. Each cluster has a control plane hosting the Kubernetes API and a data plane of CPU and GPU nodes. CPU nodes run system and test pods, while the GPU nodes run the model. Amazon Elastic Container Registry (Amazon ECR) stores the container images, a shared Amazon FSx for Lustre volume holds the model weights, and Elastic Fabric Adapter (EFA) connects the GPU nodes. The following figure shows a standard Amazon EKS cluster. Figure 1: Standard Amazon EKS cluster architecture for serving NVIDIA Nemotron models NVIDIA Dynamo serves the model aggregated on a single node or disaggregated with prefill and decode on different nodes. For vision-language models, the image/video encoding stage can in addition run disaggregated on its own node. This architecture has been validated on both p6-b200.48xlarge (8 x NVIDIA B200 GPUs) and p5en.48xlarge (8 x NVIDIA H200 GPUs) instances. You can validate the cluster and its network with an NVIDIA Collective Communications Library (NCCL) all-reduce micro-benchmark. Figure 2: GPU and EFA utilization during an NCCL all-reduce validation test Seeing utilization on all GPUs and traffic on all EFA adapters while the NCCL test is running, verifies that the cluster is working as expected. You can measure the performance of a deployed model on the cluster with the NVIDIA aiperf tool. Figure 3: aiperf performance metrics for the deployed model The aiperf output in the upper left pane shows key performance indicators (KPIs) like time to first token (TTFT), inter-token latency (ITL), and throughput in tokens per second (TPS). By taking these measurements at various levels of concurrency, we can study how latency and throughput depend on the number of concurrent requests. This information is essential to thoughtfully plan capacity and model deployment topology. The aws-do-eks container provides automation for visualizing GPU and EFA utilization as well as running aiperf and concurrency sweeps with single commands. Figure 4: Concurrency sweep comparing aggregated and disaggregated deployments The preceding concurrency sweep diagram reveals that the inference of Nemotron 3.5 Super VL has lower TTFT and about the same ITL between aggregated and disaggregated deployments on two nodes. A chart like this is useful when making deployment decisions. Draw your latency budget as horizontal lines, for example TTFT under 600 ms (about 1 second) and ITL under 100 ms per token. The rightmost point under both lines is the throughput one replica of this topology can serve within the service level objective (SLO), here c32, or about 320 tokens per second. To plan capacity, divide your target tokens per second by this per-replica throughput and find the number of prefill-decode pairs to deploy. Re-running the same sweep after a change (precision, TP/PP shape, aggregated versus disaggregated, a new Dynamo or vLLM release) makes the trade-off visible immediately. A curve that moves right and down is a win. Because TTFT and ITL are plotted separately, it also tells you which side to scale: rising ITL says add decode capacity, and rising TTFT says add prefill capacity. This post covers the architecture and performance evaluation patterns for serving NVIDIA Nemotron models on Amazon EKS, EKS Auto Mode, and SageMaker HyperPod EKS with NVIDIA Dynamo and vLLM. To get started, deploy Nemotron 3.5 Super VL in your own account, using the reference implementation . More inference blueprints are also available in the AI on EKS project. To get further hands-on experience with inference on EKS, register for our upcoming workshops . The authors would like to convey special thanks to everyone involved in developing, validating, reviewing, and publishing this content, including but not limited to: Eliuth Triana, Jiahong Liu, Kshitiz Gupta, Abhijeet Patil, Mike Stefaniak, Chris Splinter, Sheetal Joshi, Aditya Ramakrishnan, Natarajan Kumar, Anish Maddipoti.",
+      "published_date": "2026-10-29",
+      "tags": [
+        "Advanced (300)",
+        "Amazon Elastic Kubernetes Service",
+        "Amazon SageMaker HyperPod",
+        "Announcements"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, tool use, reasoning, post-training",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 57,
+    "llm_reason": "Hybrid Mamba-Transformer MoE多模態模型結合部署指南，技術尚可但偏雲端導入教學",
+    "novelty": 10,
+    "impact": 11,
+    "trending": 10,
+    "practicality": 14,
+    "blog_worthiness": 12
+  },
+  {
+    "item": {
+      "source": "blog",
+      "source_name": "Latent Space",
+      "title": "Can Frontier Models See Past a Decoy? Elorian Tests Visual Reasoning",
+      "url": "https://latent.space/p/elorian/",
+      "authors": [
+        "Latent Space"
+      ],
+      "abstract": "This month Elorian launched its first visual reasoning model , Glimpse . It’s being promoted as “a new category of visual thinking model: a system that reasons about the physical world from what it sees.” So how does Glimpse compare to both frontier models and world models in vision tests? A new benchmark called DecoyCount , co-released by Elorian, provides some answers. We quizzed CEO Andrew Dai on the benchmark, and also talked about Elorian’s positioning in a crowded models landscape. Elorian emerged from stealth in April with $55 million in seed funding , co-led by Striker Venture Partners, Menlo Ventures and Altimeter Capital. Now, in partnership with AI data company Mercor , Elorian is announcing the DecoyCount benchmark, which tests whether language models genuinely count objects or rely on visual shortcuts and substitution heuristics. According to a paper accompanying the release , frontier models scored below 50% accuracy on DecoyCount — the highest was GPT-6 Astra, with 43.17%. Elorian’s new model isn’t mentioned in the paper, but Dai told us that Glimpse scored 50.48% in an internal test. Regarding the frontier models, the paper concludes that “stronger general reasoning does not by itself generalize to aligned visual reasoning.” How the benchmark works: “DecoyCount exposes interpretable counting failures across seven mechanisms.” To make sure it was a like-for-like comparison with the frontier models, we asked whether the paper’s evaluation images were withheld from Glimpse’s training? “The evaluation images and text were withheld from our training, and our contamination check found no overlap in the training data checked,” Dai replied, via email. “Without any cues, Glimpse scored 50.48% on the 1,660 DecoyCount items, making it the only model in the comparison to clear 50%. The closest was GPT-6 Astra at 43.17%, about 7 points behind, and Gemini-3.8-flash scored 32.71% while Qwen3.8-max scored 28.31%, and Claude-Fable-5.1 came in at 25.22%.” Dai did note that Glimpse’s results “come from a single run of the model on its own, without an agent or tool harness,” whereas the six models from the paper were each averaged across three runs under their reported settings. DecoyCount benchmark results for frontier models over 3 runs each. But what exactly is DecoyCount revealing that existing model benchmarks miss? According to Dai, it tests both vision and reasoning together — which most benchmarks elide. “If a person sees an apple in front of a mirror, we know that there’s just one apple and it’s being reflected. But a model might miss the apple entirely (a vision problem) or count the apple and its reflection as two (a reasoning problem). But most benchmarks that test for this error only check the final number, so both mistakes are treated the same way, which is an issue if you want to fix the root problem and can’t tell if it’s an issue of vision or judgement. ” Frontier Model Comparison in DecoyCount paper Andrew Dai isn’t a Johnny-come-lately on the AI scene. In 2015, while working at Google, he co-authored a paper entitled Semi-supervised sequence learning . In this paper, Dai and his then colleague Quoc Le demonstrated an early version of the pretrain-then-fine-tune approach later adopted in large language models. Over the decade that followed, Dai worked for Google DeepMind on GLaM MoE, PaLM 2 and then Gemini. Dai only left Google this year, in order to co-found Elorian. Part of his motivation was to push the boundaries of what vision models can do. His approach, he explained to Latent Space, is based on a concept in human psychology called visual thinking . When most people “think about spatial problems or visual problems,” he explained, “they visualize the problem [by] generating images and editing images in their mind.” He gave an example of buying a sofa and mentally picturing what it will look like in your living room. A conceptual visual reasoning loop There’s also manipulating an image in your mind ; for example if you’re counting people around a table, you might mentally “cross them off one by one,” Dai said. This is what Elorian aims to do in its models: teach them visual thinking “that involves generation and editing images as part of the reasoning trace, along with language.” The key point is that image generation isn’t just an output for a vision model — the generated or edited image is part of a chain of reasoning. Visual reasoning is still a work in progress, but there have been some impressive releases this year in “world models” — where vision is a key component. Two that stand out are World Labs’ Atlas in September (the company was subsequently acquired by AMD ) and Google’s just released Genie 4 . When World Labs announced Atlas , it was described as an “omni world model for spatial intelligence.” But what Atlas enables — basically a 3D simulation of a world — isn’t the same as visual reasoning. According to Dai, world models enable “direct action on a world,” whereas Elorian is more focused on what he calls “indirect action.” By that he means using visual reasoning to inform a decision or workflow (what Glimpse does) , rather than building simulated environments that allow navigation and manipulation (what Atlas does). As an example, you might use visual reasoning to decide whether to reject a user-contributed video for violating a policy. “You don't need a 3D rendering to do that,” said Dai. Other business opportunities for Elorian include robotics, engineering, and defense applications. Dai added that architects need to regularly check building codes and compliance — an ideal task for a vision reasoning model. In two robotics benchmarks , WGO Bench and ERQA, Elorian claims to rate equal or higher than frontier models , and at a much cheaper price: Getting back to counting decoys as one measure of success for vision models, Dai argues that reasoning about what a model sees is crucial to its accuracy and effectiveness in real-world applications. He gives an example of a warehouse robot counting items in a box. “A familiar 12-slot tray might only hold 10 parts, and a 24-pack label doesn’t mean 24 items are still in the box,” said Dai. “A model relying on what it expects to see will face many issues in real-world situations, and Glimpse is designed to work through the image instead of jumping to a quick conclusion. We’ve designed Glimpse to ground the count in visible evidence as opposed to basic cues that could lead other models astray.” Elorian goes so far as to claim that visual reasoning is a foundational requirement for AGI (artificial general intelligence). From the Glimpse launch post : “We believe building the full stack across systems, data, model architecture, and training — from the ground up for multimodal intelligence — can unlock AGI in the physical world.” Dai acknowledges there’s “still a huge gap between humans and machines.” But he thinks visual reasoning is the key to closing that gap. “I think the way to think about visual reasoning is as a fundamental step of reasoning in human intelligence,” he said. “And ultimately, if we want to build anything that's like AGI, we can't just skip visual.”",
+      "published_date": "2026-10-29",
+      "tags": [
+        "blog"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "blog_name": "Latent Space",
+        "blog_url": "https://www.latent.space/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, reasoning, reasoning model, moe, multimodal",
+      "⚖️ 來源權重: blog +15"
+    ],
+    "llm_score": 56,
+    "llm_reason": "新基準揭露前沿模型視覺推理走捷徑缺陷，研究故事具深度",
+    "novelty": 13,
+    "impact": 10,
+    "trending": 11,
+    "practicality": 7,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "The Verge AI",
+      "title": "Google launches Gemini 4 Carbon with a ‘significant leap’ in cybersecurity",
+      "url": "https://www.theverge.com/tech/1021339/google-gemini-4-carbon-cybersecurity-frontier",
+      "authors": [
+        "Emma Roth"
+      ],
+      "abstract": "Tech AI News Google launches Gemini 4 Carbon with a ‘significant leap’ in cybersecurity Gemini 4 Carbon is outperforming the top models from OpenAI and Anthropic on some benchmarks. Gemini 4 Carbon is outperforming the top models from OpenAI and Anthropic on some benchmarks. by Emma Roth Oct 28, 2026, 8:03 PM UTC Image: The Verge Emma Roth is a news writer who covers the streaming wars, consumer tech, crypto, social media, and much more. Previously, she was a writer and editor at MUO. Google has released its latest frontier model, Gemini 4 Carbon, offering “significant gains” in coding, agentic tasks, and cybersecurity. In an announcement on Wednesday , Google highlights Carbon’s top spot on the Artificial Analysis Intelligence Index (v5.0) benchmark, with Claude Opus 5.5 and GPT-6 Astra trailing behind. The new Gemini 4 Carbon model offers improvements over Argon, which Google released earlier this month. It’s currently only available to a select group of cybersecurity defense companies, but it will eventually expand to other partners in its Fairwind Program . Carbon sits ahead of Claude Opus 5.5 and GPT-6 Astra. Image: Artificial Analysis Intelligence Index The company says Carbon reflects the “pace at which we’re pushing the frontier forward,” coming with a “significant leap” in cyberdefense that makes it better at finding vulnerabilities and generating secure code. Carbon currently holds the number one spot on SEC-bench Pro , a benchmark that measures an AI model’s ability to discover real-world bugs, and ExploitGym , which measures how a model can turn a vulnerability into exploits. Gemini 4 Carbon also beat GPT-6 Astra on the SEC-bench Pro cybersecurity benchmark. Image: Google Google says Gemini 4 Carbon is built for completing longer tasks, adding that its internal teams have seen it “run for days to persist through dead ends to tackle complex, multi-step engineering tasks.” It’s also better at avoiding shortcuts, resisting prompt injection attacks, and collaborating with users, according to Google. Carbon is supposed to offer more “transparency and honesty” as well, by cutting “unsupported claims” by two times when compared to Argon. It will launch at the same competitive introductory price as Argon, at $2 per million input tokens and $10 per million output tokens. Follow topics and authors from this story to see more like this in your personalized homepage feed and to receive email updates. Emma Roth AI Google News Tech",
+      "published_date": "2026-10-28",
+      "tags": [
+        "AI",
+        "Google",
+        "News",
+        "Tech"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "The Verge AI",
+        "feed_url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agentic",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 65,
+    "llm_reason": "Google新旗艦模型在網安基準超越對手，話題熱但暫限量開放",
+    "novelty": 10,
+    "impact": 15,
+    "trending": 18,
+    "practicality": 8,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "Building intent-driven UI testing with Amazon Nova Act",
+      "url": "https://aws.amazon.com/blogs/machine-learning/building-intent-driven-ui-testing-with-amazon-nova-act/",
+      "authors": [
+        "Sakthi Chellapparimanam"
+      ],
+      "abstract": "To scale intent-driven UI testing across its product teams, Epsilon , a data, technology, and marketing-services company and part of Publicis Groupe , turned to Amazon Nova Act . With hundreds of millions of consumer profiles and thousands of brand relationships, Epsilon needed UI testing that could keep pace with rapid application changes. The solution could not create maintenance overhead for every product team. Within Epsilon, the Agentic Platform team (50 engineers) builds shared infrastructure so other product teams can build, deploy, govern, and run AI agents safely. With this shared platform, teams get a skills-based agent builder. They also get federated identity and pre-flight authorization, Model Context Protocol (MCP) integration, and cross-account provisioning. When a product team wants to adopt AI tooling, they get capabilities without additional configuration and without re-solving identity, security, browser infrastructure, or model integration on their own. One of those managed capabilities is UI testing . With Amazon Nova Act and Amazon Bedrock AgentCore Browser (a capability of Amazon Bedrock AgentCore), Epsilon’s platform team could deliver resilient, intent-driven testing as a service to teams on the platform. In this post, we walk through Epsilon’s architecture for delivering UI testing as a managed platform service, show the core Nova Act and Amazon Bedrock AgentCore Browser Tool integration code, highlight a concrete 18-step test workflow, and share best practices and measured results. Epsilon’s existing UI testing practice was not broken. The team maintained a Playwright-based regression suite that validated functionality across their web applications, and it worked well. Playwright remains their regression backbone today. The opportunity Epsilon identified was additive, not corrective: The goal: layer intent-based testing on top of the existing Playwright regression suite. Deliver it as a multi-tenant platform service so that each Epsilon product team could consume through the same API surface they used for every other agent capability. Epsilon evaluated options against two requirements: natural-language test authoring (to complement selector-based Playwright tests) and managed browser infrastructure (to fit their multi-tenant platform model). With Amazon Nova Act combined with Amazon Bedrock AgentCore Browser Tool, Epsilon could address both. Epsilon chose Amazon Bedrock AgentCore Browser Tool specifically because it eliminates the operational burden of managing browser binaries, display servers, and session lifecycle. The Agentic Platform team had no interest in owning that infrastructure. Epsilon’s solution has three main components: a platform API for creating workflows, a background task runner for executing them, and the Nova Act and Amazon Bedrock AgentCore Browser Tool integration that drives the browser. Epsilon’s UI testing capability follows a clear pipeline: Figure 1: Epsilon’s UI Testing Service architecture Figure 1 shows the layered architecture of Epsilon’s UI Testing Service. User requests flow from the Agent Cloud Frontend through an API Gateway with authentication and permission checks. The API layer (Django REST) exposes endpoints for workflows, executions, automation suites, and stats. The business logic layer includes a Workflow Manager, Execution Orchestrator, and Suite Coordinator. Test jobs are queued in Amazon Simple Queue Service (Amazon SQS) and picked up by the Runner Service running on Amazon Elastic Container Service (Amazon ECS), which contains the Nova Act engine and a headless Chromium browser. Results, screenshots, trajectories, and HTML reports are stored in Amazon S3. The capability is exposed as a standard agent ( ui-test-agent ) with two skills: Onboarded teams consume UI testing the same way they consume any other platform agent. No additional infrastructure to manage. The onboarding process is straightforward. The platform team provisions a cross-account IAM role for the new team, registers their target application URLs, and grants access to the ui-test-agent through the existing platform API. From that point, teams create workflows, trigger executions, and retrieve results through the same interface they already use for other platform capabilities. The Nova Act + Amazon Bedrock AgentCore Browser Tool integration is concise: This pattern (open a managed browser session, connect through the CDP WebSocket, and drive actions with natural language) is the foundation. Epsilon wraps it with their platform’s multi-tenant orchestration, result capture, and observability layers. To illustrate intent-based testing, here is a representative workflow from Epsilon’s platform. It exercises login, form entry, conditional handling, scrolling, and verification. The following steps highlight the differentiating patterns of Nova Act: Steps 4 and 7 demonstrate conditional logic : “if an element appears, handle it” and “if a target isn’t visible, scroll until it is.” These patterns would require explicit branching in a traditional framework. Nova Act handles them naturally through language understanding. Epsilon runs UI tests in a dedicated runner service (a FastAPI sidecar) that pins nova-act 3.x with Workflow and IAM authentication support, plus the Amazon Bedrock AgentCore Browser Tool client. This keeps dependencies separate from the main backend so they don’t collide with the Strands agent stack. The worker falls back to in-process execution if the runner is disabled, providing resilience during deployments. Based on their experience building UI testing as a platform capability, the Epsilon team recommends: Intent-based steps survive UI redesigns. Product managers and quality assurance (QA) leads who might not write code can review them directly. Pin Nova Act and Amazon Bedrock AgentCore Browser Tool dependencies in a dedicated service or container. Epsilon learned that the signing endpoint for Nova Act targets us-east-1 regardless of the browser session’s region. Running it in a separate service with its own dependency lockfile prevents hard-to-debug conflicts. Epsilon uses trajectory retries in draft state , saves the successful trajectory, and replays it in active state . Repeat runs skip redundant large language model (LLM) “thinking,” reducing both latency and cost for regression-style repeated executions. Use cross-account AssumeRole with scoped IAM policies. Each tenant’s tests run under their own role in their own account. This provides isolation, auditability, and failure scope containment without custom infrastructure per team. With Amazon Bedrock AgentCore Browser Tool, teams get live view, session recording, and AWS CloudTrail integration. Epsilon uses these built-in capabilities instead of building custom observability, reducing maintenance and giving compliance teams familiar audit surfaces. When prompting Nova Act steps, account for the browser viewport defaults of Amazon Bedrock AgentCore Browser Tool. Steps that reference scrolling (for example, “scroll down until the Goal Statement textbox is visible”) verify that Nova Act handles content in the lower portion of the page correctly. Epsilon’s UI testing capability is operational across multiple teams, with the multi-tenant architecture proven in production. Here are the measured outcomes: “Nova Act let us turn UI testing from a brittle, selector-chasing chore into a managed platform capability. Our tests now describe intent in plain English, run on AWS managed browsers, and every product team we onboard gets reliable testing without additional configuration.” — Epsilon Agentic Platform Team Epsilon’s Agentic Platform team demonstrated how to deliver resilient, intent-driven UI testing as a managed service using Amazon Nova Act and Amazon Bedrock AgentCore Browser Tool. You can apply the same pattern to your own multi-tenant platform to eliminate browser infrastructure overhead and make test authoring accessible to non-engineers.",
+      "published_date": "2026-10-29",
+      "tags": [
+        "Amazon Nova",
+        "Customer Solutions"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, mcp, model context protocol",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 54,
+    "llm_reason": "具體架構與程式碼整合的客戶案例，但屬既有工具應用非新方法",
+    "novelty": 8,
+    "impact": 10,
+    "trending": 10,
+    "practicality": 14,
+    "blog_worthiness": 12
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "Grace Blackwell needs a new scheduler: 27% more usable GPUs from the same racks",
+      "url": "https://skypilot.ai/blog/grace-blackwell-needs-a-new-scheduler",
+      "authors": [
+        "wondersky"
+      ],
+      "abstract": "Not all high-speed interconnects are created equal, and using the wrong one can be quite costly: running the same distributed training job over InfiniBand rather than NVLink can degrade performance by 43% . Historically, NVLink was limited to communication within a single node, meaning that multi-node AI workloads were forced to communicate over InfiniBand or a cloud equivalent (EFA on AWS, GPUDirect-TCPX on GCP). NVIDIA’s NVL72 systems remove this limitation by connecting all 72 GPUs in a rack with a unified NVLink fabric, so GPUs on different nodes can exchange data with an order of magnitude more bandwidth. However, maximizing the benefits of NVL72 systems is highly dependent on workload placement: a multi-node job spread across racks is still bottlenecked by InfiniBand. Preserving rack-locality gets harder as hardware failures take nodes offline and jobs finishing at different times scatter free capacity across racks. This blog covers the communication bottleneck in large-scale training and inference, the NVL72 rack-scale fabric, and slice sizing for resilience to GPU failures, as well as how the SkyPilot Platform keeps multi-node jobs rack-local through topology-aware placement, in-place recovery from hardware failures, and automatic defragmentation of shared clusters. Training at scale is a communication problem # Frontier training jobs run across thousands of GPUs. Doing so requires answering two questions: How do you shard your model across GPUs to ensure that it can actually run? Given your compute budget, how many copies of the sharded model can you run to maximize training throughput? The first question is typically answered with a combination of: Tensor Parallelism (TP): splitting a layer’s weight matrices across GPUs Expert Parallelism (EP): placing a mixture-of-experts (MoE) layer’s experts on different GPUs Pipeline Parallelism (PP): splitting a model layer-wise across GPUs The answer to the second question sets the degree of Data Parallelism (DP): the number of copies of the sharded model that train in parallel, each on a different slice of the training data. Of these parallelism strategies, tensor parallelism’s all-reduce and expert parallelism’s all-to-all communication patterns sit on the critical path during training, making them the most important to keep on NVLink (§9.1.2). Tensor Parallelism Tensor parallelism splits the weight matrices inside each layer across GPUs, so every GPU only stores and computes a slice of each layer. Transformer layers are made up of two blocks: self-attention and a multi-layer perceptron (MLP). At its core, each block is two matrix multiplications (GEMMs) in a row. Megatron-LM (§3) showed that by partitioning a block’s first GEMM column-wise and its second GEMM row-wise, the GPUs only need to synchronize via all-reduce once per block, after the second GEMM, instead of after each one. Figure 1. Tensor parallelism across two GPUs. A is split column-wise, so each GPU computes its own slice of y without communicating. B is split row-wise to match, so each GPU produces a partial z, and one all-reduce sums the partial results. Even with this optimization, tensor parallelism still requires two all-reduces per transformer layer during the forward pass. These all-reduce steps sit on the critical path during training because they cannot be fully overlapped with computation. As a result, tensor parallelism is typically kept on NVLink: Hugging Face measured a 43% drop in training throughput when it moved off NVLink onto InfiniBand. Expert Parallelism In a mixture-of-experts (MoE) layer, the MLP block is replaced by many smaller MLPs, called experts, and a router that sends each token to a small subset of experts. Expert parallelism splits MoE layers such that these small, independent experts are placed on different GPUs. Under expert parallelism, each MoE layer requires two all-to-all communication steps during the forward pass, dispatch and combine. A router selects the top- k experts for each token and dispatches tokens to the GPUs that have those experts in memory. Each GPU then computes its local experts on the tokens it received via a single grouped matrix multiplication. Finally, the expert outputs are sent back to each token's original GPU and combined. Figure 2. Expert parallelism distributes experts across GPUs. The all-to-all communication dispatches tokens to their assigned experts and combines results. (Source: NVIDIA , Figure 4.) As models add more MoE layers and route each token to more experts, the volume of all-to-all traffic grows, introducing a communication bottleneck. Training an MoE model with 64-way expert parallelism spreads each MoE layer’s experts across 64 GPUs. On standard 8-GPU servers, that moves the all-to-all traffic off high-bandwidth NVLink and through much narrower InfiniBand interconnects where unoptimized communication can consume up to 60% of training time (§1.2). On NVL72 systems, all 64 GPUs stay within a single NVLink domain, effectively eliminating the communication bottleneck (§9.2.2). Inference needs fast inter-node networking too # The parallelism techniques discussed above are not unique to training. Beyond enabling inference engines to serve models that are too large for a single GPU, model parallelism can also improve throughput. Splitting a model's weights across more GPUs frees up memory for the KV cache, so the engine can process more concurrent requests or support larger context windows . In some cases, the freed memory grows faster than the number of GPUs: in one vLLM benchmark, splitting a model tensor-parallel across two GPUs increased the amount of KV cache blocks by 13.9x and delivered 3.9x more throughput. Figure 3. GPU memory breakdown for Llama-3.1-70B on one vs. two H100s. (Data: vLLM .) Expert parallelism follows the same logic. With a low degree of expert parallelism, each GPU holds many experts, leaving less room for the KV cache. WideEP, which refers to expert-parallel configurations spanning multiple nodes, significantly reduces the number of experts per GPU. The trade-off is network traffic: every all-to-all now spans more GPUs. On standard 8-GPU servers, an expert-parallel group can span at most eight GPUs before it has to communicate over InfiniBand, where per-GPU bandwidth drops 18x . NVL72 removes this limit by keeping all 72 GPUs in a rack on NVLink. When serving DeepSeek-R1 at interactive speeds, GB200 NVL72 with 32-way expert parallelism delivers up to 4.4x higher throughput per GPU than 8-GPU B200 servers, which are capped at 8-way. The rack is the new server # NVL72 extends NVLink from a single node to the entire rack, so the whole rack acts like a gigantic accelerator with shared memory . Figure 4. The NVLink hierarchy within an NVL72 rack. (Source: NVIDIA , Figure 1.) Every GPU on the NVL72 rack has 18 NVLink ports each delivering 100 GB/s of bidirectional bandwidth, which sums up to a total of 1.8 TB/s for each GPU . Each NVLink port on a given GPU maps to one of 18 NVSwitch chips that power the rack's fabric backplane. Because each NVSwitch chip accepts 72 NVLink lines, one from each of the GPUs, the aggregate internal bandwidth within the rack is 130 TB/s. Figure 5. Each GPU connects one NVLink port to each of the rack's 18 NVSwitch chips. (Source: NADDOD .) This network topology ensures that the fabric is fully non-blocking, meaning that any GPU in the rack can transmit data to any other GPU with uniform latency, making it ideal for large-scale distributed AI workloads. Figure 6. The NVSwitch fabric is fully non-blocking. Any GPU can communicate with any other GPU in the rack at full bandwidth with the same latency. (Source: NVIDIA , Figure 1) Sometimes less is more: using less nodes in each rack significantly improves reliability # With NVL72 systems, it is tempting to allocate entire 18-node racks to workloads to maximize cluster utilization.\n\n(106 points, 18 comments on Hacker News)",
+      "published_date": "2026-10-29",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 106,
+        "num_comments": 18,
+        "hn_url": "https://news.ycombinator.com/item?id=50290912",
+        "object_id": "50290912"
+      }
+    },
+    "rule_score": 24.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: moe, mixture of experts, kv cache",
+      "📰 Hacker News: 106 points"
+    ],
+    "llm_score": 63,
+    "llm_reason": "深入探討NVL72機架拓撲與排程對大規模訓練效能的具體影響",
+    "novelty": 11,
+    "impact": 13,
+    "trending": 11,
+    "practicality": 14,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "Build a repeatable PHP-to-Java migration engine with Kiro",
+      "url": "https://aws.amazon.com/blogs/machine-learning/build-a-repeatable-php-to-java-migration-engine-with-kiro/",
+      "authors": [
+        "Sarat Guttikonda"
+      ],
+      "abstract": "When your team moves a mature PHP application to Java, you gain stronger type safety, broader library support, and more predictable scaling. A PHP codebase built over the years with Laravel, Symfony, or Doctrine carries business rules in places that are not obvious, from Eloquent traits to XML mapping files, so a structurally similar Java port can compile cleanly and still behave differently. This post shows how to turn PHP-to-Java migration from a one-time leap of faith into a measurable, repeatable process using Kiro . Kiro is an AI integrated development environment (IDE) that pairs an AI agent with your codebase to run multi-step engineering tasks with you in the loop. The approach centers on a reusable engine: a shared methodology, a mechanical discovery scanner, and an eight-phase workflow. This engine treats the original PHP application as the specification and refuses to declare the Java port correct until a parity harness verifies it. Before getting started, you need: You start with an open repository, so you can run the engine yourself rather than read about it. Everything the engine knows lives in a small set of skill files, and with those files, you can run the same methodology in more than one way. Everything here is packaged as skill files: versioned Markdown capability packages that encode the migration methodology (php-to-java-migration) and the discovery scanner workflow (php-model-discovery). Because that knowledge lives in files rather than any one tool, you can run the same methodology in two ways. Kiro brings an AI agent into your editor to drive a migration step by step. Open the repository root as a Kiro workspace and the skills activate automatically when you ask Kiro to migrate a PHP application. Kiro then walks the eight-phase workflow with explicit approval gates, so you review the discovery manifest, approve the rulebook, and sign off on each phase before the next begins. It’s the mode used for every example in this post. AWS Transform is the AWS agentic AI service for large-scale migration and modernization, and it now integrates natively with Kiro. Through that integration, you can hand AWS Transform the same skill files that govern an interactive Kiro session, so discovery before translation, the parity harness as referee, and ‘ fix the loop, not the code ’ apply to an autonomous run. The engine is organized around a single principle: one shared brain, many projects. To open it, clone the repository locally, then in Kiro open a folder and select the repository root (the folder containing .kiro/). Kiro loads the skills and steering automatically, with fuller steps in “Getting started.” The workspace separates a shared methodology layer from the individual projects that use it, as shown in the following diagram. At the top is a global .kiro/ layer that every project draws on. Beneath it sit the per-project folders, each with its own PHP source, Java output, and specification sub-folder. Figure 1: The workspace is split into a shared, global methodology layer and per-project code and spec folders Those same shared skill files can be run in two different ways, shown in the following diagram. The identical eight-phase, parity-first pipeline can be driven either by Kiro (interactive, one application at a time) or by AWS Transform (agentic, at portfolio scale), and both convert PHP source into parity-verified Spring Boot Java. Figure 2: The same shared skill files drive two execution paths: Kiro (interactive, one app at a time) and AWS Transform (agentic, portfolio scale). Both run the identical eight-phase parity-first pipeline, converting PHP source into parity-verified Spring Boot Java A shared, global layer under .kiro/ holds two Skills, php-model-discovery (the scanner) and php-to-java-migration (the eight-phase playbook), plus the core-workflow.md Steering file. Each per-project folder holds its own PHP source, Java output, and spec sub-folder under .kiro/specs/, so improving the methodology once lets every project inherit the gain. The single most important rule fires before anything else: Don’t read, guess at, or hand-translate a model or entity file until the scanner has run. The scanner works in a single pass with no dependencies, as shown in the following diagram. It applies three discovery strategies to the source tokens and emits one JSON manifest, with anything ambiguous routed to a review-flag queue for a human to resolve. Figure 3: The scanner runs three discovery strategies over source tokens and emits a single JSON manifest with a review-flag queue The scanner is discover-models.php, a single-file, dependency-free PHP command-line tool that doesn’t execute the target code. It only reads source text as tokens, so it runs against apps of your choice whether its dependencies are installed. It runs three strategies on every scan: Eloquent model discovery (walking the class inheritance chain to Illuminate\\Database\\Eloquent\\Model), Doctrine attribute detection (the #[ORM\\Entity] attribute), and ORM XML mapping (external *.orm.xml files). The output is a single JSON manifest. A models[] array carries every field, cast, relationship, and visibility rule, and a flags[] array appears on every entry. The scanner flags ambiguity rather than guessing. For example, a $fillable list built from a runtime expression becomes a plain-English flag, and that flag list is the human review queue. Phase 0 is preparatory: it runs the scanner and assembles the inventory. The first three phases then concentrate human expertise. Phase 1 builds the parity harness before Java is written, replaying request/response pairs against both the PHP original and the Java port. The harness must pass against working PHP and fail when you break it deliberately, because a harness that misses injected breakage is not trusted. Phase 2 seeds the rulebook and gap inventory (RULEBOOK.md, GAP_INVENTORY.md), and Phase 3 stress-tests it against representative files before committing it across the application. Figure 4: Human judgment is front-loaded into a preparatory Phase 0 and Phases 1–3. Phases 4–8 are mostly self-driving loops, refereed by a parity harness The first four phases concentrate human expertise. Phase 0 runs the scanner and assembles the inventory. Phase 1 builds the parity harness before Java is written, replaying request/response pairs against both the PHP original and the Java port. The harness must pass against working PHP and fail when you break it deliberately, because a harness that misses injected breakage is not trusted. Phase 2 seeds the rulebook and gap inventory (RULEBOOK.md, GAP_INVENTORY.md), and Phase 3 stress-tests it against representative files before committing it across the application. Phases 4–8 are mostly self-driving loops: Phase 4 scaffolds the project, Phase 5 translates the data model from the manifest, Phase 6 translates the I/O layer (routes become controllers, middleware becomes filters, validation becomes annotated data transfer objects), Phase 7 converts business logic in batches, and Phase 8 proves parity against the harness and cuts over. Two principles govern the loop. First, the PHP code is the specification: the port is done when the referee agrees, or each mismatch is logged as an approved change. Second, you fix the loop, not the code, amending the rulebook and regenerating rather than hand-patching. The laravel-eloquent-sample project is a working, bounded example: a read-only slice of an open source Laravel application, with the Book, Chapter, Page, and User models migrated to Spring Boot 3.4.1 on Java 21 with Maven and an in-memory H2 database. The mapping from PHP to Spring Boot is mechanical and traceable, as shown in the following diagram. Each manifest entry on the left maps to a Java construct on the right, producing the layered runtime architecture of the generated application slice. Figure 5: Manifest-driven mappings on the left.",
+      "published_date": "2026-10-29",
+      "tags": [
+        "Advanced (300)",
+        "AWS Transform",
+        "Kiro",
+        "Technical How-to"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic, safety",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 47,
+    "llm_reason": "具體可重複的agent遷移工作流程，實用但偏單一垂直場景教學",
+    "novelty": 7,
+    "impact": 9,
+    "trending": 7,
+    "practicality": 13,
+    "blog_worthiness": 11
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "AssemblyAI Ships AssemblyAI-TTS-1: A $15 per 1M Character Text-to-Speech API for Voice Agents",
+      "url": "https://www.marktechpost.com/2026/10/29/assemblyai-tts-1-text-to-speech-api-voice-agents/",
+      "authors": [
+        "Michal Sutter"
+      ],
+      "abstract": "AssemblyAI has released AssemblyAI-TTS-1 , its first text-to-speech model, now generally available. The AssemblyAI-TTS-1 text-to-speech API targets voice agents running on live phone calls. In that setting, latency and pronunciation decide whether a caller stays on the line. Pricing is $15 per 1M characters , with no annual contract and no concurrency tier to buy. For developers already using AssemblyAI speech-to-text, it closes the voice loop with one vendor. AssemblyAI-TTS-1 is a streaming text-to-speech model from AssemblyAI that turns agent replies into speech for live calls. It was trained on millions of hours of audio , including real conversational data. Most TTS models represent audio as discrete tokens. AssemblyAI says TTS-1 operates on continuous audio representations instead. The AssemblyAI claims this improves realism and cuts time to first spoken audio. The launch includes a library of 4,000+ voices and instant voice cloning. A clone needs a short recording and a confirmation of the speaker’s permission. The clone in the launch post used 24 seconds of audio. Six languages are supported at launch: English, Spanish, French, German, Italian and Portuguese. There are 3 interfaces: an HTTP API, a WebSocket API and an OpenAI-compatible route . The WebSocket session keeps one connection per conversation and accepts a cancel message for barge-in. Output is mono PCM, mu-law or A-law, at 8 kHz to 48 kHz. 24 kHz PCM is the native format; telephony stacks can request 8 kHz mu-law directly. Word timestamps are included. AssemblyAI also published LiveKit and Pipecat reference agents. AssemblyAI tested TTS-1 against 5 models on 4 English sets, using 50 matched cloned voices. All figures below are self-reported , from an eval dated October 28, 2026. Independent results are more mixed. On Cekura’s benchmark of 27 models, TTS-1 scored 81.5% reading accuracy and 4.50 naturalness. Its median streaming latency, timed from the last word sent, was 159 ms. Inworld TTS-2 Flash posted 45 ms and 93.2% accuracy there, at the same $15 price. AssemblyAI also cites a 1.7% word error rate on Coval’s leaderboard . It reports a top-10 debut in Artificial Analysis’ controlled-voice arena. Cartesia’s range divides each plan price by its credits, at 1 credit per character. Pricing is per input character, including spaces and punctuation, at $15 per 1M . Every voice, cloning, word timestamps and EU processing come at that same rate. There are no per-voice fees, concurrency fees or minimums. AssemblyAI calls it the lowest-priced frontier TTS model for voice agents. However, Inworld TTS-2 Flash also lists $15 per 1M on demand, falling to $7 on paid plans. The sharper difference is concurrency: Inworld’s on-demand tier allows 5 concurrent requests. Check out the launch post , docs , pricing , and the LiveKit and Pipecat reference agents. Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post AssemblyAI Ships AssemblyAI-TTS-1: A $15 per 1M Character Text-to-Speech API for Voice Agents appeared first on MarkTechPost .",
+      "published_date": "2026-10-29",
+      "tags": [
+        "Agentic AI",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Audio Language Model",
+        "Editors Pick",
+        "For Devs",
+        "Language Model",
+        "Large Language Model",
+        "New Releases",
+        "Staff",
+        "Technology",
+        "Voice AI"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 56,
+    "llm_reason": "連續音訊表示的語音代理TTS API，技術特色明確且可直接落地",
+    "novelty": 9,
+    "impact": 9,
+    "trending": 10,
+    "practicality": 16,
+    "blog_worthiness": 12
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Don't Worry About the Vase",
+      "title": "AI #192: Anthropic Is Going Public",
+      "url": "https://thezvi.wordpress.com/2026/10/29/ai-192-anthropic-is-going-public/",
+      "authors": [
+        "TheZvi"
+      ],
+      "abstract": "Anthropic filed its S-1 this week to prepare for its IPO. They still have to fill a lot of the numbers including the share price. That still left a lot to be learned, including how the messaging to investors differs from their other rhetoric, and exactly how their corporate control is structured. Anthropic remains a frustrating company , doing a variety of things that often seem in tension with each other. Google is claiming to be fully back, with the announcement of a new model Gemini 4 Carbon that tops the new AA v5 benchmark index. It looks to be a large leap over Argon only two weeks later. No, you cannot use it. Google fails marketing forever, so they give us the announcement and then weeks later you might be able to enter some queries. That largely invalidates my look at the Argon model and safety cards , but it can at least form a basis for looking at Carbon as well. Many eyes remain on The Hackening , as additional things get hacked. So far most of the important hacks have been by read teamers and white hats, so there has not been major damage. We are playing on borrowed time and eventually this will stop being true. I also offer a shoutout to GMO, where hackers demanded a huge ransom and they flat out refused to pay. This is The Way, not all heroes wear capes and so forth. The scariest hack was that red teamers managed to gain access to the Anthropic Slack by exploiting third party vulnerabilities. Both OpenAI and Anthropic build mainly on Slack, because no one has the time to figure out something better. Now that Anthropic is off of Git, hopefully Slack can be next before there is a disaster. Matthew Zirwas has changed his mind and is optimistic that AI will cure diseases sooner than he thought, because it can use ‘escape velocity’ and keep chaining innovations. I don’t see how this overcomes the main bottleneck of the FDA, but any time an MD gets excited by AI medical research it is a good sign. Get personalized fiction recommendations . Patrick McKenzie : This is probably obviously AI complete already, but: you get *really* good fiction recommendations, including not-the-usual-suspects, from SOTA LLMs that have a handle on you either from the Internet or through interactions. I told Claude (Opus 5.5) I was looking for a modern fantasy book and that it should consider what I’d likely enjoy but that I had likely read many of the obvious choices. I said that in an attempt to not get it to recommend e.g. A Song of Ice and Fire. It then confidently predicted about ten books that I’d probably already read, and they are… substantially more obscure. Claude was right on eight of them. Anyhow, the first “real” recommendation is already almost exactly what I wanted for the plane flight. (Tainted Cup, incidentally.) You would think Amazon would have better recommendations considering it has a) 95% of all book purchases I’ve ever made and b) full data of what I finish, re-read frequently, or barely touch, but I think Amazon just… does not really care that much about books anymore. Assuming you’ve already read Gladstone’s Craft Sequence, Abraham’s Dagger and Coin , Dickinson’s Baru Cormorant , Novik, Kuang’s Babel , Stross’s Laundry Files, Aaronovitch, Mother of Learning , and Practical Guide to Evil , here’s what I’d suggest. Sarah Constantin on when you can and cannot trust AI agents to do a good job with some practical tasks. UIs and web search are highly reliable. Literature review is not, mainly because of poor paper selection. A report from Anthropic on efforts to use Claude to accelerate drug development. Jack reports Opus 5.5 is now by default playing dumb in terms of author identification . Given that you can still elicit the capabilities, we know it is sandbagging. A new lawsuit goes after OpenAI over the behavior of GPT-4o , which helped a sick user taper off her medicine and also told her to conceal her taper from doctors. As is usually the case in these stories, the AI had to be worn down over a long context window but yes eventually it will often back you up. Also new computer science and new quantum field theory . OpenAI strikes again. The math result is local smoothing and the Kakeya conjecture in all dimensions. This is plausibly a Fields Medal. The one getting the most discussion is in computer science: The Exponential Time Hypothesis is false. This had been widely believed to be true. OpenAI : This work will be verified and shepherded by a group led by Russell Impagliazzo (UC San Diego), Ramamohan Paturi (UC San Diego), and Ryan Williams (MIT). All three are experts in algorithm design and complexity theory. … We have agreed to the group’s requests that all raw data of the results be made public to facilitate independent verification by the community, and that OpenAI commit to funding a conference to understand the implications of this work on the field as a whole. Impagliazzo and Paturi are two of the three people who originally proposed ETH. The other twist on the ETH story is that Anthropic posted its own refutation of ETH , found purely via Claude, also dating its finding to October 16. When results are ready to be found, they will be found. My Claude said that given the way this was solved, we should not suddenly start to worry that P=NP. This only shows ETH to be ‘slightly’ false. Both the OpenAI and Anthropic disproofs are at at roughly exp(O(n/√log n)). Charles Rosenbauer has some elaboration . We still have to make the meta-level update that the answers to such questions might not be what we expected, and we might find the answers quite fast. This is another case of ‘we were not expecting a solution to that any time soon ’ and I would stop predicting that there is any particular math or computer science problem that won’t get solved. I wonder how long it will take Claude to learn that if you ask ‘hey when do you think [famous problem] gets solved’ that the answer is ‘OpenAI or Anthropic already published the answer 35 minutes ago.’ There are at least 800 papers, as per Anthropic, that relied on ETH being true. OpenAI has confirmed that for now there is no impact on cryptosystems , but I would not get too comfortable. Last is a mathematically rigorous existence proof of certain interacting quantum field theories containing gauge fields and fermions in four dimensions, including Quantum Chromodynamics (QCD) and a unified completion of the Standard Model of particle physics. That is also kind of a big deal, and related to another Millennium problem. GPT-6.1 Terra exists . Benchmarks suggest this is roughly on par with 6.1 Sol after adjusting for model size. Ted Sanders recommends using Terra for communication, vision and computer use . Kimi K3.1 Pro exists . The benchmarks are very good, although see the dramatic changes in the AA rankings after the move to v5. Price is $2/$10 with $0.20 per cache, or $4/$20 for high speed . Andrew Curran : Moonshot is intentionally throttling cyber capabilities. From the blog; ‘First, we aim not to release open weights that would extend the absolute frontier of cyber capability. K3.1 Pro’s offensive cyber capability is, by design, below what our pipeline can produce, and remains behind that of frontier proprietary models. Second, we intend to progressively raise the cyber capability available in open weights. We believe making K3.1 Pro available in a non-discriminatory way benefits people who need dual-use capabilities for defensive purposes.’ And so it begins: The Hackening is going to cause issues for open weight models. DeepMind’s Genie 4 exists . Ethan Mollick is impressed . Artificial Analysis changes its benchmark index to v5.0 . Artificial Analysis : Announcing Artificial Analysis Intelligence Index v5, featuring 2 new benchmarks and 3 upgrades. For the first time, the majority of the Index is built on private datasets The Artificial Analysis Intelligence Index is our composite measure of model capabilities across tasks reflecting real-world usage today.",
+      "published_date": "2026-10-29",
+      "tags": [
+        "Uncategorized"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "Don't Worry About the Vase",
+        "feed_url": "https://thezvi.wordpress.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: computer use, long context, safety, open weight",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 43,
+    "llm_reason": "產業評論彙整IPO與模型新聞，觀點犀利但非原創技術內容",
+    "novelty": 4,
+    "impact": 9,
+    "trending": 14,
+    "practicality": 4,
+    "blog_worthiness": 12
+  }
+]
