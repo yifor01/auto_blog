@@ -14,8 +14,12 @@ const recent = all
   .sort(
     (a, b) =>
       idDate(b.id).getTime() - idDate(a.id).getTime() ||
-      Number(b.data.pinned) - Number(a.data.pinned)
+      Number(b.data.pinned) - Number(a.data.pinned) ||
+      (b.data.score ?? 0) - (a.data.score ?? 0)
   );
+
+// 每天先顯示幾篇；其餘標 data-extra，由「再顯示 N 篇」展開
+const DAY_PREVIEW = 5;
 
 const items = recent.map((p) => {
   const source = p.data.source ?? '其他';
@@ -56,6 +60,23 @@ for (const item of items) {
   else dayGroups.push({ day: item.day, date: item.date, items: [item] });
 }
 const weekdayFmt = new Intl.DateTimeFormat('zh-TW', { weekday: 'short', timeZone: 'UTC' });
+
+// 日期跳轉月曆：最舊到最新每天一格，依星期對齊（UTC，與 idDate 一致）
+const dayCount = new Map(dayGroups.map((g) => [g.day, g.items.length]));
+const calCells: ({ day: string; num: number; count: number } | null)[] = [];
+if (dayGroups.length) {
+  const first = dayGroups[dayGroups.length - 1].date;
+  const last = dayGroups[0].date;
+  for (let i = 0; i < first.getUTCDay(); i++) calCells.push(null);
+  for (let t = first.getTime(); t <= last.getTime(); t += 86400_000) {
+    const d = new Date(t);
+    const day = d.toISOString().slice(0, 10);
+    calCells.push({ day, num: d.getUTCDate(), count: dayCount.get(day) ?? 0 });
+  }
+}
+const calRange = dayGroups.length
+  ? `${dayGroups[dayGroups.length - 1].day.slice(5)} – ${dayGroups[0].day.slice(5)}`
+  : '';
 
 // facets
 const sourceCounts = new Map<string, number>();
@@ -126,6 +147,37 @@ const latestAvg = latest
         </div>
 
         <button id="reset" class="reset" hidden>✕ 清除篩選</button>
+
+        {
+          calCells.length > 0 && (
+            <section class="facet day-jump">
+              <h3 class="facet-title">
+                日期 <span class="count">{calRange}</span>
+              </h3>
+              <div class="cal">
+                {['日', '一', '二', '三', '四', '五', '六'].map((w) => (
+                  <span class="cal-wd">{w}</span>
+                ))}
+                {calCells.map((c) =>
+                  c ? (
+                    <button
+                      class="day-cell"
+                      data-jump={c.day}
+                      disabled={!c.count}
+                      title={`${c.day} · ${c.count} 篇`}
+                      aria-label={`跳到 ${c.day}，${c.count} 篇`}
+                    >
+                      <span class="cal-num">{c.num}</span>
+                      <span class="cal-count">{c.count || ''}</span>
+                    </button>
+                  ) : (
+                    <span />
+                  )
+                )}
+              </div>
+            </section>
+          )
+        }
 
         <section class="facet">
           <h3 class="facet-title">月份</h3>
@@ -200,7 +252,7 @@ const latestAvg = latest
                 <span class="day-count">{g.items.length} 篇</span>
                 <span class="day-line" />
               </li>
-              {g.items.map((post) => (
+              {g.items.map((post, i) => (
                 <li
                   class="post-item"
                   data-id={post.id}
@@ -210,6 +262,7 @@ const latestAvg = latest
                   data-tags={post.tags.map((t) => t.toLowerCase()).join('|')}
                   data-score={post.score ?? 0}
                   data-search={post.search}
+                  data-extra={i >= DAY_PREVIEW ? '' : undefined}
                 >
                   <a href={`/daily/${post.id}`} class="post-link">
                     <div class="post-meta">
@@ -247,6 +300,13 @@ const latestAvg = latest
                   <button class="bm-btn" title="收藏 (b)" aria-label="收藏">★</button>
                 </li>
               ))}
+              {g.items.length > DAY_PREVIEW && (
+                <li class="day-more" data-day={g.day}>
+                  <button class="more-btn">
+                    <span class="more-label">再顯示 {g.items.length - DAY_PREVIEW} 篇 ▾</span>
+                  </button>
+                </li>
+              )}
             </>
           ))
         }
@@ -509,6 +569,93 @@ const latestAvg = latest
     font-size: 0.78rem;
     color: var(--faint);
     margin-top: 0.9rem;
+    /* 捲動時黏在頂端，隨時知道正在看哪一天。
+       所有日期標題同屬一個 .post-list（分數排序靠 flex order，不能拆組），
+       捲過的標題會全部疊在頂端，靠 DOM 後面的蓋住前面的。底色必須接近不透明，
+       半透明會透出下面幾層的字。 */
+    position: sticky;
+    top: 2px; /* 讓出 .topbar 的 2px */
+    z-index: 5;
+    padding: 0.45rem 0;
+    background: rgba(10, 12, 16, 0.97);
+    backdrop-filter: blur(12px) saturate(140%);
+    -webkit-backdrop-filter: blur(12px) saturate(140%);
+  }
+  .post-item {
+    /* 日期跳轉 / j/k 捲到卡片時，不要被黏住的日期標題蓋住 */
+    scroll-margin-top: 3.2rem;
+  }
+  .day-more[hidden] {
+    display: none;
+  }
+  .day-more {
+    display: flex;
+    justify-content: center;
+  }
+  .more-btn {
+    width: 100%;
+    min-height: 44px;
+    background: transparent;
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--radius);
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition:
+      border-color 0.15s ease,
+      color 0.15s ease,
+      background 0.15s ease;
+  }
+  .more-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--surface);
+  }
+  .cal {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+  }
+  .cal-wd {
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 0.66rem;
+    color: var(--faint);
+  }
+  .day-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 1;
+    padding: 0;
+    background: var(--surface);
+    border: 1px solid transparent;
+    border-radius: 7px;
+    color: var(--text);
+    font-family: var(--mono);
+    line-height: 1.1;
+    cursor: pointer;
+    transition:
+      border-color 0.13s ease,
+      background 0.13s ease;
+  }
+  .day-cell:hover:not(:disabled) {
+    border-color: var(--accent);
+    background: var(--surface-hover);
+  }
+  .day-cell:disabled {
+    background: transparent;
+    color: var(--faint);
+    cursor: default;
+  }
+  .cal-num {
+    font-size: 0.74rem;
+  }
+  .cal-count {
+    font-size: 0.6rem;
+    color: var(--accent-cyan);
   }
   .day-header:first-child {
     margin-top: 0;
@@ -749,6 +896,10 @@ const latestAvg = latest
       overflow: visible;
     }
     .kbd-hint {
+      display: none;
+    }
+    /* 手機上側欄整塊在清單上方，月曆會再把文章往下推一屏，先不放 */
+    .day-jump {
       display: none;
     }
   }

@@ -14,6 +14,9 @@
  *   - read state     localStorage `apb-read` (detail pages mark on visit)
  *   - density toggle `#density` — body.compact hides summaries
  *   - keyboard: `/` focus search, j/k move, Enter open, b bookmark
+ *   - daily collapse `.post-item[data-extra]` hidden until its day's
+ *     `.day-more .more-btn` is clicked; only in date sort with no filter
+ *   - day jump      `.day-cell[data-jump=YYYY-MM-DD]` scrolls to that day
  *   - filter state mirrored into location.hash (shareable)
  *
  * The search input is debounced (150 ms); facet clicks apply immediately.
@@ -86,6 +89,10 @@ export function initFilter(): void {
   const toggleBtns = [...document.querySelectorAll<HTMLButtonElement>('.toggle-btn')];
   const dayHeaders = [...document.querySelectorAll<HTMLElement>('.day-header')];
   const densityBtn = document.getElementById('density');
+  const moreRows = [...document.querySelectorAll<HTMLElement>('.day-more')];
+  const dayCells = [...document.querySelectorAll<HTMLButtonElement>('.day-cell')];
+  // 已展開的日子：只存記憶體，重新整理就回到收合
+  const expanded = new Set<string>();
 
   const read = loadSet(LS_READ);
   const bm = loadSet(LS_BM);
@@ -124,21 +131,31 @@ export function initFilter(): void {
     return item.dataset[dim] === val;
   }
 
+  function hasFilter(): boolean {
+    return !!(state.q || state.month || state.source || state.tag || state.unread || state.bm);
+  }
+
   function apply(): void {
     let visible = 0;
     const dayVisible = new Map<string, number>();
+    const dayCollapsed = new Map<string, number>();
+    // 有篩選時範圍已經縮小，再藏一層會讓人以為沒結果；分數排序是看全排名
+    const collapsing = state.sort === 'date' && !hasFilter();
     for (const item of items) {
       const okSearch = !state.q || (item.dataset.search ?? '').includes(state.q);
       const okDims = DIMS.every((d) => checkDim(item, d));
       const okUnread = !state.unread || !read.has(item.dataset.id ?? '');
       const okBm = !state.bm || bm.has(item.dataset.id ?? '');
-      const show = okSearch && okDims && okUnread && okBm;
-      item.hidden = !show;
-      if (show) {
+      const match = okSearch && okDims && okUnread && okBm;
+      const day = item.dataset.day ?? '';
+      const extra = item.dataset.extra !== undefined;
+      const folded = match && collapsing && extra && !expanded.has(day);
+      item.hidden = !match || folded;
+      if (match) {
         visible++;
-        const day = item.dataset.day ?? '';
         dayVisible.set(day, (dayVisible.get(day) ?? 0) + 1);
       }
+      if (collapsing && extra) dayCollapsed.set(day, (dayCollapsed.get(day) ?? 0) + 1);
       // score 排序：用 flex order 重排，免動 DOM
       item.style.order =
         state.sort === 'score' ? String(-Math.round(Number(item.dataset.score ?? 0))) : '';
@@ -147,6 +164,18 @@ export function initFilter(): void {
     // 日期標頭：score 模式全部隱藏；date 模式隱藏該日 0 篇的
     for (const h of dayHeaders) {
       h.hidden = state.sort === 'score' || !(dayVisible.get(h.dataset.day ?? '') ?? 0);
+    }
+
+    for (const row of moreRows) {
+      const day = row.dataset.day ?? '';
+      const n = dayCollapsed.get(day) ?? 0;
+      row.hidden = !n;
+      const label = row.querySelector<HTMLElement>('.more-label');
+      if (label) label.textContent = expanded.has(day) ? '收合 ▴' : `再顯示 ${n} 篇 ▾`;
+    }
+
+    for (const cell of dayCells) {
+      cell.disabled = !(dayVisible.get(cell.dataset.jump ?? '') ?? 0);
     }
 
     if (resultCountEl) resultCountEl.textContent = String(visible);
@@ -231,6 +260,25 @@ export function initFilter(): void {
       const key = btn.dataset.toggle ?? '';
       state[key] = state[key] ? '' : '1';
       apply();
+    });
+  }
+
+  for (const row of moreRows) {
+    row.querySelector('.more-btn')?.addEventListener('click', () => {
+      const day = row.dataset.day ?? '';
+      if (expanded.has(day)) expanded.delete(day);
+      else expanded.add(day);
+      apply();
+    });
+  }
+
+  // 捲到該日第一篇看得到的文章，而不是日期標題：標題是 sticky，
+  // 黏住時它的位置就是畫面頂端，scrollIntoView 會原地不動
+  for (const cell of dayCells) {
+    cell.addEventListener('click', () => {
+      const day = cell.dataset.jump ?? '';
+      const first = items.find((i) => !i.hidden && i.dataset.day === day);
+      first?.scrollIntoView({ block: 'start', behavior: 'smooth' });
     });
   }
 
