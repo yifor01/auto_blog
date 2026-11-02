@@ -61,12 +61,19 @@ for (const item of items) {
 }
 const weekdayFmt = new Intl.DateTimeFormat('zh-TW', { weekday: 'short', timeZone: 'UTC' });
 
-// 日期跳轉月曆：最舊到最新每天一格，依星期對齊（UTC，與 idDate 一致）
+// 日期跳轉月曆：只放最新一天往回 CAL_DAYS 天（列表仍是近 RECENT_DAYS 天），
+// 每天一格，依星期對齊（UTC，與 idDate 一致）
+const CAL_DAYS = 7;
 const dayCount = new Map(dayGroups.map((g) => [g.day, g.items.length]));
 const calCells: ({ day: string; num: number; count: number } | null)[] = [];
+let calRange = '';
 if (dayGroups.length) {
-  const first = dayGroups[dayGroups.length - 1].date;
   const last = dayGroups[0].date;
+  const oldest = dayGroups[dayGroups.length - 1].date;
+  const first = new Date(
+    Math.max(oldest.getTime(), last.getTime() - (CAL_DAYS - 1) * 86400_000)
+  );
+  calRange = `${first.toISOString().slice(5, 10)} – ${dayGroups[0].day.slice(5)}`;
   for (let i = 0; i < first.getUTCDay(); i++) calCells.push(null);
   for (let t = first.getTime(); t <= last.getTime(); t += 86400_000) {
     const d = new Date(t);
@@ -74,9 +81,6 @@ if (dayGroups.length) {
     calCells.push({ day, num: d.getUTCDate(), count: dayCount.get(day) ?? 0 });
   }
 }
-const calRange = dayGroups.length
-  ? `${dayGroups[dayGroups.length - 1].day.slice(5)} – ${dayGroups[0].day.slice(5)}`
-  : '';
 
 // facets
 const sourceCounts = new Map<string, number>();
