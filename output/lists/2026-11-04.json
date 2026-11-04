@@ -1,0 +1,672 @@
+{
+  "date": "2026-11-04",
+  "github": [
+    {
+      "title": "NVIDIA/auto-ontology",
+      "slug": "nvidia-auto-ontology",
+      "url": "https://github.com/NVIDIA/auto-ontology",
+      "abstract": "Auto Ontology Agents can retrieve documents and query databases, but reliability gates agentic analytics: a revenue metric answered faster is worth nothing if the number is wrong. Agents need a context layer that tells them where data lives, what it means, whether to use it, how to use it, where it came from, and what is similar. NVIDIA Auto Ontology is an open library that builds that layer from enterprise metadata, reconciles definitions across systems, and exposes it to any agent harness through MCP, CLI, and API. It complements the semantic models customers already own. It enables developers to: Discover: generate enterprise ontologies from metadata; connect existing ontologies and semantic models; build AI-ready knowledge graphs. Ground: give agents trusted business meaning for metrics, entities, and relationships; reconcile inconsistent definitions across systems. Validate: check generated queries against certified definitions and lineage; return provenance with every answer. Expose: serve context to any agent harness through MCP, CLI, and API.\nLearn: fold certified corrections and usage back into the ontology, so shared context improves with every question. Benchmarks To run a text-to-SQL benchmark such as BIRD, refer to the ontology SQL evaluation repository . Licensing & contributions. Auto Ontology is distributed under the Apache License 2.0 . Third-party open-source components\nbundled, linked, or otherwise used by this project are listed in THIRD_PARTY_NOTICES.md . This project\nis currently not accepting external contributions. Key Features Natural-language querying of structured data — questions are translated to\nSQL and executed against connected databases, powered by NVIDIA NIM. Semantic catalog / ontology layer over relational sources, stored in\nPostgres alongside the catalog it describes. Authentication & RBAC —using Better Auth . Web UI for chat, analysis, data catalog, analytics, and settings. Flexible deployment — Helm chart for Kubernetes or Docker Compose for a\nlocal stack. Software Components Component Technology Role Default port Frontend Next.js 16 (React 19, TypeScript, Tailwind CSS 4), Better Auth, Prisma Web UI, authentication, API gateway 3000 Backend FastAPI (Python 3.12+), LangChain Chat / NL-to-SQL, catalog, datasource APIs 3001 Ingestion worker FastAPI (Python 3.12+) Ingests tabular data and writes embeddings 3002 Postgres + pgvector Relational Database App metadata, the catalog and ontology, vector store 5432 HashiCorp Vault Optional Secure storage of connection credentials — NVIDIA NIM Auto Ontology uses NVIDIA NIM endpoints for inference — either the hosted NVIDIA API catalog ( integrate.api.nvidia.com ) or\nself-hosted NIMs. The defaults in .env.example are: LLM: nvidia/nemotron-3.5-lightning-30b-a3b Embeddings: nvidia/nemotron-3-embed-1b Reranking: nvidia/llama-nemotron-rerank-vl-1b-v2 The endpoints and models are configured via the DEFAULT_MODELS_ENDPOINT , DEFAULT_MODELS_MODEL , EMBED_ENDPOINT , and EMBED_MODEL environment variables and require a DEFAULT_MODELS_API_KEY . Model triplets Each model role is configured by a triplet of environment variables — <PREFIX>_ENDPOINT (URL), <PREFIX>_API_KEY , and <PREFIX>_MODEL : Prefix Role DEFAULT_MODELS Shared default; every field below falls back to it. REASONING Main chat / NL-to-SQL model. NON_REASONING Lighter model used for entity extraction. EMBED Text-embedding model (must match between ingest and query). RERANK Reranker used by the retrieval flow. You can set a full triplet, only some of its fields, or none at all — any field\nleft unset falls back to the matching DEFAULT_MODELS_<FIELD> . So the simplest\nsetup is to fill in DEFAULT_MODELS_* and override per-triplet fields only where\nthey differ (e.g. EMBED_MODEL , NON_REASONING_MODEL ). *_API_KEY also falls\nback to the legacy NVIDIA_API_KEY for backward compatibility. Quickstart This runs Auto-Ontology with Docker Compose against Wide World Importers,\nMicrosoft's sample sales database. You need Docker with Compose v2, uv , and an NVIDIA API key ( nvapi-... ) from build.nvidia.com . Clone the repository and create .env : git clone https://github.com/NVIDIA/auto-ontology.git && cd auto-ontology\ncp .env.example .env Then set these values in .env : DEFAULT_MODELS_API_KEY = nvapi-... AUTH_SECRET = <a long random string, e.g. from openssl rand -base64 32> APP_URL = http://localhost:3000 POSTGRES_PASSWORD = <a new password> CONNECTION_STRINGS = postgresql://postgres:<the same password>@postgres:5432/wideworldimporters AUTO_ONTOLOGY_ADMIN_PASSWORD = <a new password> PGADMIN_PASSWORD = <a new password> Compose publishes Postgres, pgAdmin, and the web app on the host, so replace\neach default password before you start it. .env.example also sets an API\nkey per model role: replace each nvapi-your-api-key-here with your key, or\ndelete those lines so they fall back to DEFAULT_MODELS_API_KEY . Start Postgres and load the sample database. The seed script lives in\nauto-ontology-eval; pass it the Postgres password you set: docker compose up -d --wait postgres\ngit clone https://github.com/NVIDIA/auto-ontology-eval.git ../auto-ontology-eval\n(cd ../auto-ontology-eval && uv sync && cp .env.example .env && \\\n  POSTGRES_PASSWORD= ' <the same password> ' \\\n  uv run python scripts/seed/seed_wwi.py --database-name wideworldimporters --drop) Build and start the rest of the stack: docker compose up -d --build Open http://localhost:3000 and sign in with AUTO_ONTOLOGY_ADMIN_EMAIL and AUTO_ONTOLOGY_ADMIN_PASSWORD from .env . Go to Settings → Semantic\nCompilation and turn it on. Ingestion runs at startup; compilation starts\nimmediately and reports Semantic compilation is ready when it finishes. Ask a question in Chat : What was revenue for the USB food flash drive - sushi roll in Pennsylvania\nin June 2015? The agent resolves revenue , product , and state to terms in the\nontology, follows their relationships to the joins it needs, and runs the\nquery. The answer comes back with its SQL and the steps that produced it,\nso you can check the result against the source: Answer:  Revenue for USB food flash drive - sushi roll in Pennsylvania in\n         June 2015 was $588.80, from 3 invoice lines.\n\nSQL:     SELECT SUM(il.extendedprice) AS revenue, COUNT(*) AS invoice_lines\n         FROM sales.invoicelines il\n         JOIN sales.invoices i             ON il.invoiceid = i.invoiceid\n         JOIN warehouse.stockitems si      ON il.stockitemid = si.stockitemid\n         JOIN sales.customers c            ON i.customerid = c.customerid\n         JOIN application.cities ct        ON c.deliverycityid = ct.cityid\n         JOIN application.stateprovinces sp ON ct.stateprovinceid = sp.stateprovinceid\n         WHERE si.stockitemname = 'USB food flash drive - sushi roll'\n           AND sp.stateprovincename = 'Pennsylvania'\n           AND i.invoicedate >= '2015-06-01' AND i.invoicedate < '2015-07-01'\n\nSteps:   Resolved terms: Invoice Line (revenue), Stock Item, State Province, Invoice\n         Joined: invoice line -> invoice -> customer -> city -> state province\n         Validated the filter values against the data, then executed Ask something the data can't answer. Wide World Importers has no\nadvertising data, so a question about ad spend has nothing to resolve\nagainst. An agent connected through MCP checks answerability\nfirst and asks you to clarify: You:    What was return on ad spend for the sushi roll flash drive in June 2015?\nAgent:  check_answerable -> coverage 0.5; no term covers \"ad spend\"\nAgent:  I can find revenue for that product, but this data has no\n        advertising spend, so I can't compute return on ad spend. Do you\n        want June 2015 revenue instead, or is ad spend tracked in another\n        source I should connect? If the UI loads without its left navigation after a restart, the browser is\nholding a stale session cookie. Clear site data for localhost:3000 and sign in\nagain. For other setup failures, see the setup skill's troubleshooting guide .",
+      "stars_today": 2053,
+      "language": "Python"
+    },
+    {
+      "title": "harry0703/MoneyPrinterTurbo",
+      "slug": "harry0703-moneyprinterturbo",
+      "url": "https://github.com/harry0703/MoneyPrinterTurbo",
+      "abstract": "MoneyPrinterTurbo 💸 一站式 AI 短影片生成工具 只需提供影片 主題 或 關鍵詞 ，即可自動生成影片指令碼、匹配素材、生成字幕和背景音樂，併合成高畫質短影片。 簡體中文 | English | 日本語 | 版本釋出 | 問題反饋 介面預覽 🖥️ WebUI API 特別感謝 ❤️ 感謝 Kimi 贊助本專案！ Kimi K3.1 Pro 是 Moonshot AI 迄今能力最強的 3T 級開放權重模型，擁有原生視覺能力與 100 萬 Token 上下文，在知識工作、推理和長週期任務中展現前沿效能。在 MoneyPrinterTurbo 中，K3.1 Pro 能直接驅動影片創作，不僅撰寫影片文案，還會提煉素材搜尋關鍵詞、決定成片畫面；對內容理解越準確，匹配到的素材就越貼題。 MoneyPrinterTurbo 使用者專屬優惠：新使用者通過專屬連結註冊，首次成功充值可獲充值金額 10% 的 API 額度。活動截至 2026 年 12 月 31 日。前往 Kimi 開放平臺（ 中文站 ｜ Global ）體驗 API。 火山引擎 感謝位元組火山引擎贊助本專案！火山方舟 Agent/Coding Plan 國模套餐 首購 9.9 ，支援 GLM-5.3、Kimi-K3、DeepSeek、MiniMax、Doubao 等，註冊免費領 2500w Token ，統一 API，適配編碼與智慧體開發。 立即前往 感謝 APIMart 贊助了本專案！APIMart 是專注 AI 圖片/影片生成的低價 API 平臺， GPT-Image-2 低至 $0.006/張，1 美元可出圖 160+ 張 。 圖片、影片一套非同步 API 通吃，換模型不改程式碼 ；提交任務拿 ID，通過輪詢或回撥獲取結果，支援萬張級批次生成。按量付費、無月費，通過 此註冊連結 註冊即可開用。 秘塔科技 MiniMax H3 影片生成 API｜秘塔科技 秘塔科技提供高性價比的 MiniMax H3 影片生成服務： 768P 僅 0.09 元/秒，2K 僅 0.15 元/秒 。支援原生 2K、音畫同步，API 相容 OpenAI 協議 ，同時支援 ComfyUI ，無需自行部署 GPU。 🎁 通過 MoneyPrinterTurbo專屬連結註冊 ，即可領取贈送額度及專屬優惠。 Infistar.cc 無限星河 感謝 Infistar.cc 無限星河 贊助本專案！Infistar.cc 提供高性價比的大模型 API 服務：大模型低至 官方 0.1 折 ，AI 生圖低至 ¥0.06/張 。 一個 API Key，覆蓋文案、圖片與影片創作 ，支援 GPT、Claude、Gemini、DeepSeek、通義千問、可靈等主流模型，無需分組。 全模型支援驗真 ，價格透明，正規備案，人民幣即時計費， 支援對公發票 。 🎁 MPT 專屬福利：通過 專屬連結註冊 即送 $5 體驗額度 ，並享首充特惠。 感謝 OfoxAI 贊助本專案！MoneyPrinterTurbo 已整合 Ofox 多模型文生影片，配置 API Key 即可使用。Seedance、MiniMax H3、Wan 生成影片素材，GPT Image 2.5、Seedream 製作封面配圖，GPT、Claude、Gemini、DeepSeek 打磨指令碼、輔助開發。 一個 Key，文本、影像、影片共用餘額 ；提供 OpenAI 相容介面及 Anthropic、Gemini 原生介面。 按量付費、價格公開、官方渠道接入，穩定高速不限量 ，前往 OfoxAI 檢視模型與價格 。 勝算雲 感謝 勝算雲 對本專案的贊助！勝算雲是面向 AI 原生團隊的模型 API 聚合平臺，彙集 Claude、ChatGPT、Gemini 等海內外大語言模型及多媒體模型，支援統一接入與按量呼叫。 平臺堅持合規 API 服務，杜絕逆向工程和資源稀釋。此外平臺提供企業級定製閘道器，包括團隊成本與許可權管理、智慧路由、安全防護及 BYOK 金鑰託管，並提供發票服務。 🎁新使用者通過 此連結 註冊，即可領取 10 元 Token 體驗額度。 星圖 AstraFlow 感謝 星圖 AstraFlow 贊助本專案！ 點選領取 50 元算力金 🎬 影片模型一站式呼叫 ：聚合 MiniMax-H3，Seedance-2.5 等主流影片生成模型，文案生成 + 影片生成一個平臺全搞定，無需多端註冊、多處對接 🚀 200+ 大模型一鍵呼叫，新模型當日上架 ：聚合 DeepSeek V4.1、Kimi K3、Qwen 3.8 Max、GLM 5.3 等 200+ 主流大模型，新模型上線當天即可接入 💰 UCloud 上市公司出品，呼叫計費透明可控 ：按 Key 級別計費，呼叫明細全程可查 🎁 MoneyPrinterTurbo 使用者專屬福利 ：通過 專屬推廣連結 註冊，即享新使用者贈送額度，開箱即用！ RunningHub API 感謝 RunningHub API 贊助本專案！ • Seedance 滿血版 API 接入 全網骨折價 ，線上工具低至 0.21元/秒 ，節省 60%-80%成本 ！ • 超穩定高併發高 折扣 ，隨用隨充按需彈性付費，不捆綁不排隊不抽卡 • 無限畫布、ComfyUI、Agent 等線上工具從劇本到成片全鏈路製作 • 一站式接入LLM API、多模態API、工作流API、Al應用 • 400+ 主流模型（ 支援國際版許可權 ）8000+版本 任選 • 數千家企業信賴， 500萬C端月活 驗證 折扣與免費測試可聯絡 zhenyuedong@haima.me ，或 檢視模型與介面 。 Jalapeno Cloud 感謝 Jalapeno Cloud 贊助本專案！ 一站式接入多種 AI 模型，相容 OpenAI 與 Anthropic API，滿足 AI 應用開發與內容創作需求。 新使用者註冊領免費額度，充值 額外贈送最高 20% ；DeepSeek-V4.1-flash、GLM-5.3-flash 等模型 低至 5 折 ，Doubao-Seedance-2.5 長期 9 折 。官方源頭，品質保證。 👉 立即註冊，領取專屬體驗金 錄咖 AI 感謝 錄咖（AI 智慧多媒體服務平臺） 基於本專案提供免費的 AI 影片生成器 ，無需部署，線上即可使用，對新手更加友好。 佐糖 感謝 佐糖 對本專案的支援與贊助！佐糖提供豐富的 線上影像處理工具 ，操作簡單，幫助使用者輕鬆完成各類圖片處理。 作者的另一個開源專案：MangoDisk ⭐ 面向 macOS 和 Windows 的開源磁碟清理、空間分析與系統最佳化工具 一站式清理快取、大檔案、重複檔案和應用殘留，並提供磁碟空間分析、應用卸載、啟動項管理、系統最佳化與維護 訪問 MangoDisk 官網 · 檢視 GitHub 開源專案 功能特性 🎯 創作入口與工作流 提供 AI Agent、WebUI、API 和 CLI 四種使用方式，既能快速上手，也能接入自動化流程 從主題自動完成指令碼、配音、素材、字幕、配樂和剪輯，也支援在每個環節使用自定義內容 支援 批次生成多條成片 、任務歷史記錄，以及生成設定與 API Key 的匯入、匯出和恢復 指令碼與模型服務 支援 AI 自動生成或改寫 多語言影片指令碼 ，也可以直接使用自定義指令碼 支援 Kimi / Moonshot AI 、 OpenAI 、 Anthropic Claude 、 Google Gemini 、 DeepSeek 、 阿里雲通義千問 、 Microsoft Azure OpenAI 、 火山引擎方舟 、 xAI Grok 、 MiniMax 和 小米 MiMo 等主流模型服務 相容 勝算雲 、 APIMart 、 Cloudflare AI Gateway 、 魔搭 ModelScope 、 AIHubMix 、 AIML API 、 EvoLink 、 OpenRouter 、 API Route 、 Ollama 、 Claude Code 訂閱 、 OneAPI 、 LiteLLM 、 Groq 和 Pollinations AI 等統一閘道器、聚合平臺和本地執行環境 影片與圖片素材 支援上傳自己的 本地圖片和影片 ，也可從 Pexels（免費） 、 Pixabay（免費） 和 Coverr 獲取高畫質庫存素材 支援 秘塔 MiniMax H3 文生影片，可生成 768P / 2K 、4～15 秒的原始素材，並適配 9:16 、 16:9 和 1:1 三種畫幅 支援 勝算雲 AI 影片 ，可生成多段 AI 影片素材，並沿用專案的配音、字幕和剪輯流程合成成片 原生接入 火山引擎方舟 Seedance ，可根據指令碼片段生成連貫的影片畫面 支援 WaveSpeed AI 文生影片，可根據指令碼關鍵詞快速生成原創素材 支援 OFox 多模型文生影片，一個 API Key 即可呼叫 Seedance、Wan 等模型 通過非同步 MuAPI 文生影片介面生成 3～12 秒 AI 影片素材，並支援配置 Endpoint、畫幅、解析度和輪詢參數 支援 OpenAI 相容文生圖 ，可連線雲端服務或自定義圖片閘道器，並將生成圖片轉換為動態影片片段 支援調整片段時長、畫面適配方式和素材匹配順序，以適配不同畫幅和敘事節奏 配音、字幕與配樂 支援自動配音、上傳配音和無配音三種方式，並提供音色試聽與完整配音預覽 整合 Edge TTS（免費、無需 API Key） 、Azure Speech、SiliconFlow、Google Gemini、小米 MiMo、MiniMax、ElevenLabs、Chatterbox、Kokoro、Fish Audio 和 ModelBest VoxCPM 等配音服務 支援自動生成字幕，可調整字型、位置、顏色、大小、描邊和背景樣式 支援隨機、本地及 AI 生成背景音樂，並可獨立控制音量 成片與釋出 支援豎屏 9:16（1080×1920） 、橫屏 16:9（1920×1080） 和方形 1:1（1080×1080） 支援一鍵 跨平臺釋出 ，生成完成後可自動上傳至 TikTok、Instagram 和 YouTube Shorts 作品展示 🎬 以下示例均由 MoneyPrinterTurbo 實際生成。 豎屏 9:16 城市醒來的時刻 中文 · 14 秒 清潔能源的未來 中文 · 24 秒 為什麼我們仍要探索太空 中文 · 27 秒 一粒種子的旅程 中文 · 44 秒 The Future of Everyday Robotics English · 21 sec Small Habits, Lasting Change English · 19 sec Making Space for Creative Work English · 20 sec The Science Inside Coffee English · 23 sec 橫屏 16:9 深海里的微光 中文 · 23 秒 閱讀如何塑造我們 中文 · 23 秒 一杯手衝咖啡的細節 中文 · 23 秒 春天適合出發 中文 · 14 秒 Why Ocean Conservation Matters English · 25 sec Designing More Sustainable Cities English · 27 sec What Mountains Teach Us English · 18 sec A Brief History of Human Flight English · 59 sec 配置要求 📦 建議系統：Windows 10、macOS 11.0 或更高版本，以及主流 Linux 發行版 本地部署需要 Python 3.11 或更高版本，推薦使用 Python 3.11 GPU 不是必需項，但如果你希望本地轉錄、更快的影片處理或更順暢的批次生成體驗，建議使用帶視訊記憶體的獨立顯示卡 專案 最低配置 推薦配置 理想配置 CPU 4 核 6 到 8 核 8 核及以上 RAM 4 GB 8 GB 16 GB 及以上 GPU 非必須 4 GB 視訊記憶體及以上 8 GB 視訊記憶體及以上 如果你主要依賴雲端 LLM、雲端 TTS 和線上素材源，CPU 與記憶體比 GPU 更重要 如果你啟用 faster-whisper 、批次生成或更重的本地處理鏈路，GPU 會明顯提升速度 快速開始 🚀 推薦使用方式 不想手動安裝和配置：直接使用 AI Agent 生成影片 已有 Python 環境，想直接安裝使用： 通過 pip 安裝官方包 Windows 使用者：優先使用一鍵啟動包，適合快速體驗 需要原始碼部署或二次開發：使用 uv 管理環境和依賴 想要隔離執行環境：優先使用 Docker 部署 使用 AI Agent 生成影片 如果你的 AI Agent 支援讀取 Skill 文件並操作本地終端，可以直接傳送下面這段話。Agent 會自動完成安裝、配置和影片生成；只有缺少必要的 API Key 時才會向你詢問，完成後會返回生成的影片檔案路徑。目前支援 macOS 和 Windows。 使用這個 Skill：https://raw.githubusercontent.com/harry0703/MoneyPrinterTurbo/main/docs/skill/SKILL.md\n幫我生成一個主題為“人工智慧如何改變普通人的日常生活”的影片。 在 Google Colab 中執行 免去本地環境配置，點選直接在 Google Colab 中快速體驗 MoneyPrinterTurbo Windows 一鍵啟動包 下載一鍵啟動包，解壓直接使用（路徑不要有 中文 、 特殊字元 、 空格 ） 下載最新 Windows 一鍵啟動包 請在頁面下方的 Assets 區域下載 .7z 壓縮包。GitHub 自動生成的 Source code (zip) / Source code (tar.gz) 只是原始碼，解壓後只有 webui.bat ，\n不含 start.bat 和 update.bat 。 下載後，建議先 雙擊執行 update.bat 更新到 最新程式碼 ，然後雙擊 start.bat 啟動 啟動後，會自動開啟瀏覽器（如果開啟是空白，建議換成 Chrome 或者 Edge 開啟） 安裝部署 📥 通過 pip 安裝官方包 官方 PyPI 包名為 mpt ，由 harry0703 維護。\nPyPI 上名為 MoneyPrinterTurbo 的包由第三方維護。 無需克隆倉庫，需要 Python 3.11 或更高版本，推薦使用 Python 3.11。 ① 建立並激活虛擬環境 macOS / Linux： python3 -m venv .venv source .venv/bin/activate Windows PowerShell： python - m venv .venv\n.venv\\Scripts\\Activate.ps1 ② 安裝並啟動 python -m pip install mpt\nmpt webui WebUI 會自動開啟瀏覽器。指定埠且不自動開啟瀏覽器時，執行 mpt webui --port 8503 --headless ；使用 CLI 生成影片前，可檢視 mpt cli --help 。 ③ 配置服務與管理檔案 首次啟動會自動建立 config.toml 。使用線上模型、素材或語音服務前，請在 WebUI\n基礎設定中填寫相應的 API Key。安裝版預設將配置和生成檔案儲存在： 系統 資料目錄 macOS ~/Library/Application Support/MoneyPrinterTurbo Windows %LOCALAPPDATA%\\MoneyPrinterTurbo Linux ~/.local/share/MoneyPrinterTurbo ，或 $XDG_DATA_HOME/MoneyPrinterTurbo 可在啟動前設定 MPT_HOME 更改目錄，生成的影片位於其中的 storage/tasks 下。\n後續升級時，在已啟用的虛擬環境中執行 python -m pip install --upgrade mpt 。 原始碼部署前提條件 本地部署需要 Python 3.11 或更高版本 Windows 使用者建議避免使用包含中文、特殊字元或空格的專案路徑 ① 克隆程式碼 git clone https://github.com/harry0703/MoneyPrinterTurbo.git ② 首次配置 首次啟動時，專案會根據 config.example.toml 自動建立 config.toml ，無需手動建立配置檔案。使用雲端大模型、線上素材或 AI 影片等服務前，請在 WebUI 的基礎設定中填寫對應的 API Key。 Docker 部署 🐳 ① 啟動 Docker 如果尚未安裝 Docker，請先 下載並安裝 Docker Desktop 。 Windows 使用者可以參考微軟的文件： 安裝 WSL 在 WSL 中使用 Docker 容器 cd MoneyPrinterTurbo\ndocker compose -f docker-compose.release.yml up 預設推薦使用 docker-compose.release.yml ，它會直接拉取 GitHub Container Registry 上的預構建映象： ghcr.io/harry0703/moneyprinterturbo:latest 。\n如果你需要本地重新構建映象，可以繼續使用 docker compose up 。\n首次啟動前，請將 config.example.toml 複製為 config.toml ，供容器掛載使用。 ② 訪問 WebUI 開啟瀏覽器，訪問 http://127.0.0.1:8501 ③ 訪問 API 文件 開啟瀏覽器，訪問 http://127.0.0.1:8080/docs 或者 http://127.0.0.1:8080/redoc API 預設僅允許同源網頁訪問。只有獨立網頁前端需要從其他來源直接呼叫 API 時，才應通過環境變數 CORS_ALLOWED_ORIGINS 配置可信來源，例如 http://localhost:3000,https://frontend.example.com 。curl、Postman、n8n 和其他服務端呼叫不受 CORS 限制。 手動部署 📦 影片教程 完整的使用演示 如何在 Windows 上部署 ① 建立虛擬環境 推薦使用 uv 管理 Python 環境和依賴。專案支援 Python 3.11 或更高版本，以下示例使用 Python 3.11。 git clone https://github.com/harry0703/MoneyPrinterTurbo.git cd MoneyPrinterTurbo\nuv python install 3.",
+      "stars_today": 615,
+      "language": "Python"
+    },
+    {
+      "title": "Thysrael/Horizon",
+      "slug": "thysrael-horizon",
+      "url": "https://github.com/Thysrael/Horizon",
+      "abstract": "🌅 Horizon Enjoy the News itself. Leave others to Horizon 📡 Your own AI-powered news radar. Generates daily briefings in English & Chinese. | 構建你專屬的 AI 新聞雷達 📖 Live Demo · 📋 Configuration Guide · 💬 QQ Group · 簡體中文 · 日本語 Screenshots Ranked Daily Briefing Context, Summary & Discussion More Screenshots Terminal Output Feishu Notification Email Delivery WeChat Delivery Why Horizon? Good reads are scattered across feeds, forums, and timelines. Your attention isn't unlimited. Horizon collects, filters, and deduplicates them, then brings the worthwhile ones to you with context and community discussion. Your taste shapes what you read—and what you want from it. A news story calls for “why it matters”; an engineering deep dive calls for “what I can use.” Horizon's profiles give each kind of content its own scoring criteria and output, for a briefing that feels handpicked. Features 📡 Bring Your Sources Together — Follow RSS, Hacker News, Reddit, Telegram, X, GitHub, financial news, and more. 🎯 Decide What's Worth Reading — Define scoring rubrics with profiles, set individual thresholds, and merge repeated stories within each profile. 🧩 Give Every Read the Right Treatment — Choose summaries, context, solutions, or takeaways with Markdown prompts and JSON block definitions. 💬 Go Beyond the Headline — Add web-researched background and community discussion where they help explain the story. ⚖️ Make Room for All Your Interests — Cap the briefing's length and each category's share so one busy topic doesn't crowd out the rest. 📬 Read Where You Already Are — Generate English and Chinese briefings as Markdown, publish to Pages, or deliver by email and webhook. One Briefing, Different Ways to Read A profile is a reusable set of editorial rules: what belongs, what's worth keeping, and what to write. Built-in examples: What you follow Profile What you get Technology news tech-news Events and context, with impact and community discussion when useful Engineering deep dives tech-blog Background, solution, and practical takeaways AI creator material ai-creator A summary, with timely hooks and content angles when useful Assign a profile to a source, or let AI choose. Want a different take? Adapt an existing profile—usually without changing Python. Make a profile your own → How It Works Editable OmniGraffle source Profiles define the treatment; runtime settings reflect your reading preferences. Each item routes to one profile. Analysis, filtering, and deduplication happen before enrichment, then the selected items become a briefing grouped by profile. Run the full pipeline through the CLI, or let an AI assistant call its stages through MCP . Agent Skill Let your AI assistant configure sources, customize Profiles, and run Horizon: npx skills add Thysrael/Horizon --skill horizon -g Setup and usage · Download Skill ZIP The command requires Node.js 22.20+. Then ask your assistant to install and configure Horizon, or follow the Quick Start below. Quick Start 1. Install Option A: Local Installation git clone https://github.com/Thysrael/Horizon.git cd Horizon # Install with uv (recommended) uv sync # Install test/development extras when needed uv sync --extra dev # Or with pip pip install -e . dev is currently defined as an optional extra in pyproject.toml , so use uv sync --extra dev for pytest and other development dependencies. If you want the optional OpenBB financial-news source, install its extra too: uv sync --extra openbb If openbb pulls packages without wheels on your machine, install the SDK manually with binaries only: uv pip install --only-binary=:all: openbb openbb-benzinga Option B: Docker git clone https://github.com/Thysrael/Horizon.git cd Horizon # Optional: build with comma-separated extras before the first run docker compose build --build-arg EXTRAS=openbb horizon Full-text extraction with trafilatura is included in the base install. The twitter extra also requires a Playwright browser and system packages, which the current Dockerfile does not install. 2. Configure Option A: Interactive wizard (recommended) uv run horizon-wizard The wizard asks about your interests (e.g. \"LLM inference\", \"嵌入式\", \"web security\") and auto-generates data/config.json . See Interactive Wizard for CLI options. Eligible ChatGPT subscribers can choose openai-chatgpt to use their plan through Sign in with ChatGPT , without an OpenAI API key. Option B: Manual configuration cp .env.example .env # Add your API keys cp data/config.example.json data/config.json # Customize your sources Minimal manual configuration: { \"ai\" : { \"provider\" : \" openai \" , \"model\" : \" gpt-4 \" , \"api_key_env\" : \" OPENAI_API_KEY \" }, \"sources\" : { \"rss\" : [\n      { \"name\" : \" Simon Willison \" , \"url\" : \" https://simonwillison.net/atom/everything/ \" , \"profile\" : \" tech-news \" }\n    ]\n  }, \"processing\" : { \"profiles_dir\" : \" profiles \" , \"default_profile\" : \" tech-news \" , \"profile_settings\" : { \"tech-news\" : { \"threshold\" : 7.0 , \"topic_dedup\" : true }\n    }\n  }\n} An explicit source profile uses that profile directly. Omit it or set it to \"auto\" to let AI match the item against all available profiles. Set it to an\narray such as [\"tech-news\", \"finance-news\"] to restrict AI matching to those\nprofiles. See Processing Profiles for profile structure and behavior.\nPer-profile user preferences such as score thresholds and topic deduplication\nbelong in processing.profile_settings , not in the profile files. Balanced digest (optional) Limit the final digest size and prevent one category from dominating the\nresults. Categories come from source configuration such as sources.rss[].category . { \"digest\" : { \"max_items\" : 20 , \"category_groups\" : { \"ai\" : { \"limit\" : 5 , \"categories\" : [ \" ai-news \" , \" ai-tools \" , \" machine-learning \" ]\n      }, \"finance\" : { \"limit\" : 5 , \"categories\" : [ \" finance \" , \" business \" , \" equities \" ]\n      }\n    }, \"default_group\" : \" other \" , \"default_group_limit\" : 3 }\n} Group limits are applied after profile filtering and before enrichment. If category_groups , max_items , and default_group_limit are omitted, no balanced\ndigest limits apply. api_key_env must be the name of an environment variable, not the API key\nitself. Put the real secret in .env : OPENAI_API_KEY=sk-your-key For Gemini, use GOOGLE_API_KEY : { \"ai\" : { \"provider\" : \" gemini \" , \"model\" : \" gemini-2.0-flash \" , \"api_key_env\" : \" GOOGLE_API_KEY \" }\n} Any string value in data/config.json can reference environment variables with ${VAR_NAME} . This is useful for values such as ai.base_url , private RSS feed URLs, webhook endpoints, or custom header templates. For the full reference, see the Configuration Guide . 3. Run A. Local installation uv run horizon [OPTIONS] B. Docker docker compose run --rm horizon [OPTIONS] Option Default Description --hours N 24 Fetch from last N hours -d , --data-dir PATH data Path to the data directory -c , --config PATH <data-dir>/config.json Path to config file -l , --log-level LEVEL WARNING Logging level (DEBUG/INFO/WARNING/ERROR/CRITICAL) --data-dir changes the state directory, including summaries, subscribers, and the default config location; --config changes only the config file. The generated report is saved to data/summaries/ (or <data-dir>/summaries/ if --data-dir is set). See Configuration Paths for combining both flags and initializing a custom config location. 4. Automate (Optional) Schedule Horizon with GitHub Actions using the daily workflow template . The template is disabled in this repository; configure it for your deployment and rename it to daily-summary.yml to enable it.",
+      "stars_today": 121,
+      "language": "Python"
+    },
+    {
+      "title": "Anil-matcha/open-duet",
+      "slug": "anil-matcha-open-duet",
+      "url": "https://github.com/Anil-matcha/open-duet",
+      "abstract": "Open Duet Build a team of AI coworkers and choose where they run. Open Duet is an open-source workspace for creating named AI agents, giving\nthem jobs and workspaces, and bringing them together to complete tasks. Keep\nuseful context between conversations, run routines, and review actions before\nthey make changes. Use the desktop app, run your own server, or visit the\nseparate hosted service. Open Duet does not include an AI model or model subscription. You choose the\nengine and provider account used for your work. Project links GitHub repository Desktop downloads Hosted app Watch the demo Quick start Guides Discord support Status: Open Duet is in active development. Desktop releases, self-hosting,\nagent computers, and newer team features are still evolving. Review known limitations before relying on them for important work. Contents What you can do Ways to run Open Duet Hosted plans Engines, data, and costs Known limitations Support Contributing License What you can do Create agents and teams. Give agents a name, role, engine, workspace,\nmemory, and approval settings. A lead can delegate work to specialists or\ncoordinate agents in shared rooms. Team leads can use Claude or Codex. See teams and delegated work . Keep useful context. Agents can save notes, recall relevant notes and\nconversations, and search their history. You can review and edit what they\nremember. See memory . Run work on a schedule. Create routines for scheduled, webhook, or manual\nruns. Review each result and answer requests for approval; a routine never\napproves an action by itself. See routines . Choose how much freedom agents have. Use Ask first, Accept edits, Approve\nfor me (Claude, Codex, and Cursor), or Plan only. Review tool activity and approval\ndecisions in the app. Connect tools and apps. Connect services such as GitHub, Gmail, and Google\nCalendar through your own Composio key, then grant access to selected Claude\nor Codex agents. Changes wait for your approval. Add individual tools from\nthe MCP Marketplace. See connected apps . See what needs your attention. The Today view gathers approvals,\nquestions, routine outcomes, engine failures, and due tasks. It can show\nread-only Gmail and calendar items. See everyday features . Plan and follow work. Use a task board and calendar to assign work,\nschedule one-time runs, and review conversations and attempts. See tasks and calendar . Reuse instructions. Save skills and start agents from templates. Skills\nare instructions you choose for a message. See skills and templates . Use it from your phone. Pair the phone app with your own server to chat,\nstop an answer, allow or deny a tool call, or create and edit agents and rooms.\nSee the phone app guide . Work with files and history. Search conversations, attach text and\nimages, import audio for transcription with your consent and credentials,\nbrowse or download workspace files, and export your history. Ways to run Open Duet Desktop app Self-hosted server Hosted web app Development checkout Best for A personal workspace on your computer Keeping your agents and routines available on a server you control Using the separately operated Suparagent service Contributing or changing Open Duet Where workspace data lives Your computer Your server An account-specific hosted workspace Your development machine or configured database Start here Quick start Self-hosting guide suparagent.ai Development setup Main requirements Node.js 22+, uv, and an engine Linux server, HTTPS, Docker or Node.js and uv, and an engine An account and an AI provider account Node.js, uv, and Docker if you use PostgreSQL Status Experimental Experimental; single owner Separate hosted product — The hosted service is separate from the open-source desktop and self-hosted\ncore. Hosted account, workspace, and billing data are handled by Suparagent;\nsee the hosted service's Privacy Policy and Terms . Hosted plans The hosted preview lets you use your own Boat key for sandbox compute. Paid\nplans use compute operated by Suparagent, so you do not need to supply a Boat\nkey. In both cases, you bring your AI provider account and pay that provider\nfor model usage. Plan Monthly Suparagent price Included running compute Machine disk capacity Free preview $0 Billed to your Boat account Small profile Starter $15 100 hours per billing period 51 GB Standard $49 300 hours per billing period 51 GB Pro $99 720 hours per billing period 111 GB Paid-plan compute hours count while the sandbox is running, including idle\ntime. At the limit, it stops until the next billing period or a plan change;\ncompute overages are not charged. The disk value is the selected machine's\ncapacity, not a separate storage quota. A stopped sandbox's disk is subject to\nthe provider's retention period, so export important files before a paid plan\nends. Paid checkout is enabled for hosted accounts; see the Suparagent pricing page for current plans. Engines, data, and costs Connect an engine you already use: Claude Code or Codex CLI, Gemini CLI,\nGoogle Gemini through Antigravity, Cursor, another command-line agent using\nthe Agent Client Protocol (ACP), OpenRouter, or an OpenAI-compatible API such\nas Ollama or LM Studio. Available tools vary by engine; image input and agent\ncomputers, for example, are not supported by every engine. See engine setup and capabilities . For desktop and self-hosted use, conversations, agent notes, routines, and\nsettings are stored in that instance's local data folder or server database.\nWorkspace files stay in the folders you assign to agents. API keys saved\nthrough Open Duet are encrypted there; command-line sign-ins remain with the\nengine installed on that machine. When an agent answers, the selected engine receives the prompt and the context\nneeded for that turn. This can include text you attach, relevant notes, and\nworkspace content the engine reads. If the engine is a hosted service, that\ninformation is handled under that provider's terms. You bring the provider\naccount, CLI sign-in, or API key; model usage may cost money. Quick start The desktop app runs from a source checkout. It needs Node.js 22 or newer, uv , and at least one engine available on the\nsame computer. For a CLI engine, install it and sign in before opening Open\nDuet. You can also configure an API-based engine in Settings → Engines .\nDocker is only needed for the optional isolated agent computers. git clone https://github.com/Anil-matcha/open-duet.git cd open-duet/desktop\nnpm run app On first launch, choose an engine, workspace, and approval mode. Then: Open Settings → Engines and confirm an engine is ready. Create an agent with a name, a clear job, and a workspace. Start a chat. Choose Ask first to pause for approval before actions that\nneed it. Add teammates or create a routine when you want to split up or repeat work. See the Releases page for\ncurrent desktop installers and the changelog for changes.\nInstallers are experimental and unsigned. The assisted update flow offers a\nSHA-256-verified installer for you to open; it does not install updates\nautomatically. The release-to-release update path has not been verified end to\nend. Example: prepare a weekly project briefing Create a lead agent and specialists, such as a researcher and an editor. Give\nthem the same project workspace, and set the lead's engine to Claude or\nCodex. Ask the lead to prepare a briefing from the notes and reports in that\nfolder. The lead can split the request into smaller tasks and hand them to the\nspecialists. Their work runs in separate conversations, then returns to the\nlead to assemble. Follow along in chat and approve actions when the settings\nrequire it. Once the process works well, make it a weekly routine and review\neach run in the app. Scheduling tasks Routines run prompts on local agents on a schedule, by webhook, or on demand.\nThey run in the backend, so the backend must stay running. The original\nTelegram bot and Boat sandbox task flow are\noptional and separate from the agent workspace.",
+      "stars_today": 105,
+      "language": "Python"
+    },
+    {
+      "title": "martin-olivier/airgorah",
+      "slug": "martin-olivier-airgorah",
+      "url": "https://github.com/martin-olivier/airgorah",
+      "abstract": "Airgorah A WiFi security auditing software Installation | Usage | Credits Airgorah is a WiFi security auditing software that can capture nearby WiFi traffic, discover clients connected to access points, perform deauthentication attacks, capture handshakes and PMKIDs, and crack the password of access points. It is written in Rust and uses GTK4 for the graphical part. ⭐ Don't forget to put a star if you like the project! Legal ⚠️ Airgorah is designed to be used in testing and discovering flaws in networks you are owner of. Performing attacks on WiFi networks you are not owner of is illegal in almost all countries. I am not responsible for whatever damage you may cause by using this software. Requirements This software only works on linux . The graphical interface runs as a normal\nuser (so it works under both X11 and Wayland ). When a privileged operation is\nneeded, it launches a small privileged agent ( airgorah-agent ) via polkit ,\nwhich will prompt for authentication once. You will also need a wireless network card that supports monitor mode and packet injection . Installation The installation instructions are available here . Usage The documentation about the usage of the application is available here . License This project is released under MIT license. Contributing If you have any question about the usage of the application, do not hesitate to open a discussion If you want to report a bug or provide a feature, do not hesitate to open an issue or submit a pull request",
+      "stars_today": 34,
+      "language": "Rust"
+    },
+    {
+      "title": "mermaid-js/mermaid",
+      "slug": "mermaid-js-mermaid",
+      "url": "https://github.com/mermaid-js/mermaid",
+      "abstract": "Mermaid Generate diagrams from Markdown-like text. Live Editor! 📖 Documentation | 🚀 Getting Started | 🌐 CDN | 🙌 Join Us 簡體中文 Try Live Editor previews of future releases: Develop | Next 🏆 Mermaid was nominated and won the JS Open Source Awards (2019) in the category \"The most exciting use of technology\"!!! Thanks to all involved, people committing pull requests, people answering questions! 🙏 Table of content Expand contents About Examples Release Related projects Contributors Security and safe diagrams Reporting vulnerabilities Appreciation About Mermaid is a JavaScript-based diagramming and charting tool that uses Markdown-inspired text definitions and a renderer to create and modify complex diagrams. The main purpose of Mermaid is to help documentation catch up with development. Doc-Rot is a Catch-22 that Mermaid helps to solve. Diagramming and documentation costs precious developer time and gets outdated quickly.\nBut not having diagrams or docs ruins productivity and hurts organizational learning. Mermaid addresses this problem by enabling users to create easily modifiable diagrams. It can also be made part of production scripts (and other pieces of code). Mermaid allows even non-programmers to easily create detailed diagrams through the Mermaid Live Editor . For video tutorials, visit our Tutorials page.\nUse Mermaid with your favorite applications, check out the list of Integrations and Usages of Mermaid . You can also use Mermaid within GitHub as well many of your other favorite applications—check out the list of Integrations and Usages of Mermaid . For a more detailed introduction to Mermaid and some of its more basic uses, look to the Beginner's Guide , Usage and Tutorials . Our PR Visual Regression Testing is powered by Argos with their generous Open Source plan. It makes the process of reviewing PRs with visual changes a breeze. In our release process we rely heavily on visual regression tests using applitools . Applitools is a great service which has been easy to use and integrate with our tests. Features 20+ Diagram Types – Flowchart, Sequence, Class, State, ER, Gantt, Pie, Git Graph, Mindmap, Timeline, Sankey, and more Markdown-Inspired Syntax – Write diagrams as text, no drag-and-drop required No Design Tool Needed – Generate professional diagrams straight from code Live Editor – Prototype instantly at mermaid.live Version-Control Friendly – Diagrams live as text, so diffs and reviews just work Native GitHub Rendering – Mermaid code blocks render directly in Markdown on GitHub Highly Customizable – Themes, colors, fonts, and layout directions Security First – Built-in sanitization plus a sandboxed rendering mode Lightweight – Small footprint, no heavy dependencies Active Community – Frequent releases and thousands of contributors Open Source – MIT licensed Examples The following are some examples of the diagrams, charts and graphs that can be made using Mermaid. Click here to jump into the text syntax . Flowchart [ docs - live editor ] flowchart LR\n\nA[Hard] -->|Text| B(Round)\nB --> C{Decision}\nC -->|One| D[Result 1]\nC -->|Two| E[Result 2] flowchart LR\n\nA[Hard] -->|Text| B(Round)\nB --> C{Decision}\nC -->|One| D[Result 1]\nC -->|Two| E[Result 2] Loading Sequence diagram [ docs - live editor ] sequenceDiagram\nAlice->>John: Hello John, how are you?\nloop HealthCheck\n    John->>John: Fight against hypochondria\nend\nNote right of John: Rational thoughts!\nJohn-->>Alice: Great!\nJohn->>Bob: How about you?\nBob-->>John: Jolly good! sequenceDiagram\nAlice->>John: Hello John, how are you?\nloop HealthCheck\n    John->>John: Fight against hypochondria\nend\nNote right of John: Rational thoughts!\nJohn-->>Alice: Great!\nJohn->>Bob: How about you?\nBob-->>John: Jolly good! Loading Gantt chart [ docs - live editor ] gantt\n    section Section\n    Completed :done,    des1, 2014-01-06,2014-01-08\n    Active        :active,  des2, 2014-01-07, 3d\n    Parallel 1   :         des3, after des1, 1d\n    Parallel 2   :         des4, after des1, 1d\n    Parallel 3   :         des5, after des3, 1d\n    Parallel 4   :         des6, after des4, 1d gantt\n    section Section\n    Completed :done,    des1, 2014-01-06,2014-01-08\n    Active        :active,  des2, 2014-01-07, 3d\n    Parallel 1   :         des3, after des1, 1d\n    Parallel 2   :         des4, after des1, 1d\n    Parallel 3   :         des5, after des3, 1d\n    Parallel 4   :         des6, after des4, 1d Loading Class diagram [ docs - live editor ] classDiagram\nClass01 <|-- AveryLongClass : Cool\n<<Interface>> Class01\nClass09 --> C2 : Where am I?\nClass09 --* C3\nClass09 --|> Class07\nClass07 : equals()\nClass07 : Object[] elementData\nClass01 : size()\nClass01 : int chimp\nClass01 : int gorilla\nclass Class10 {\n  <<service>>\n  int id\n  size()\n} classDiagram\nClass01 <|-- AveryLongClass : Cool\n<<Interface>> Class01\nClass09 --> C2 : Where am I?\nClass09 --* C3\nClass09 --|> Class07\nClass07 : equals()\nClass07 : Object[] elementData\nClass01 : size()\nClass01 : int chimp\nClass01 : int gorilla\nclass Class10 {\n  <<service>>\n  int id\n  size()\n} Loading State diagram [ docs - live editor ] stateDiagram-v2\n[*] --> Still\nStill --> [*]\nStill --> Moving\nMoving --> Still\nMoving --> Crash\nCrash --> [*] stateDiagram-v2\n[*] --> Still\nStill --> [*]\nStill --> Moving\nMoving --> Still\nMoving --> Crash\nCrash --> [*] Loading Pie chart [ docs - live editor ] pie\n\"Dogs\" : 386\n\"Cats\" : 85.9\n\"Rats\" : 15 pie\n\"Dogs\" : 386\n\"Cats\" : 85.9\n\"Rats\" : 15 Loading Git graph [experimental - live editor ] gitGraph\n  commit\n  commit\n  branch develop\n  checkout develop\n  commit\n  commit\n  checkout main\n  merge develop\n  commit\n  commit gitGraph\n  commit\n  commit\n  branch develop\n  checkout develop\n  commit\n  commit\n  checkout main\n  merge develop\n  commit\n  commit Loading Bar chart (using gantt chart) [ docs - live editor ] gantt\n    title Git Issues - days since last update\n    dateFormat  X\n    axisFormat %s\n\n    section Issue19062\n    71   : 0, 71\n    section Issue19401\n    36   : 0, 36\n    section Issue193\n    34   : 0, 34\n    section Issue7441\n    9    : 0, 9\n    section Issue1300\n    5    : 0, 5 gantt\n    title Git Issues - days since last update\n    dateFormat  X\n    axisFormat %s\n\n    section Issue19062\n    71   : 0, 71\n    section Issue19401\n    36   : 0, 36\n    section Issue193\n    34   : 0, 34\n    section Issue7441\n    9    : 0, 9\n    section Issue1300\n    5    : 0, 5 Loading User Journey diagram [ docs - live editor ] journey\n    title My working day\n    section Go to work\n      Make tea: 5: Me\n      Go upstairs: 3: Me\n      Do work: 1: Me, Cat\n    section Go home\n      Go downstairs: 5: Me\n      Sit down: 3: Me journey\n    title My working day\n    section Go to work\n      Make tea: 5: Me\n      Go upstairs: 3: Me\n      Do work: 1: Me, Cat\n    section Go home\n      Go downstairs: 5: Me\n      Sit down: 3: Me Loading C4 diagram [ docs ] C4Context\ntitle System Context diagram for Internet Banking System\n\nPerson(customerA, \"Banking Customer A\", \"A customer of the bank, with personal bank accounts.\")\nPerson(customerB, \"Banking Customer B\")\nPerson_Ext(customerC, \"Banking Customer C\")\nSystem(SystemAA, \"Internet Banking System\", \"Allows customers to view information about their bank accounts, and make payments.\")\n\nPerson(customerD, \"Banking Customer D\", \"A customer of the bank, <br/> with personal bank accounts.\")\n\nEnterprise_Boundary(b1, \"BankBoundary\") {\n\n  SystemDb_Ext(SystemE, \"Mainframe Banking System\", \"Stores all of the core banking information about customers, accounts, transactions, etc.\")\n\n  System_Boundary(b2, \"BankBoundary2\") {\n    System(SystemA, \"Banking System A\")\n    System(SystemB, \"Banking System B\", \"A system of the bank, with personal bank accounts.\")\n  }\n\n  System_Ext(SystemC, \"E-mail system\", \"The internal Microsoft Exchange e-mail system.\")\n  SystemDb(SystemD, \"Banking System D Database\", \"A system of the bank, with personal bank accounts.",
+      "stars_today": 23,
+      "language": "TypeScript"
+    },
+    {
+      "title": "labmlai/annotated_deep_learning_paper_implementations",
+      "slug": "labmlai-annotated-deep-learning-paper-implementations",
+      "url": "https://github.com/labmlai/annotated_deep_learning_paper_implementations",
+      "abstract": "labml.ai Deep Learning Paper Implementations Note : use the Annotated Implementation Skill with coding\nagents to implement any paper with annotations. This is a collection of simple PyTorch implementations of\nneural networks and related algorithms.\nThese implementations are documented with explanations, The website renders these as side-by-side formatted notes.\nWe believe these would help you understand these algorithms better. We are actively maintaining this repo and adding new\nimplementations almost weekly. for updates. Paper Implementations ✨ Transformers JAX implementation Multi-headed attention Triton Flash Attention Transformer building blocks Transformer XL Relative multi-headed attention Rotary Positional Embeddings Attention with Linear Biases (ALiBi) RETRO Compressive Transformer GPT Architecture GLU Variants kNN-LM: Generalization through Memorization Feedback Transformer Switch Transformer Fast Weights Transformer FNet Attention Free Transformer Masked Language Model MLP-Mixer: An all-MLP Architecture for Vision Pay Attention to MLPs (gMLP) Vision Transformer (ViT) Primer EZ Hourglass ✨ Low-Rank Adaptation (LoRA) ✨ Eleuther GPT-NeoX Generate on a 48GB GPU Finetune on two 48GB GPUs LLM.int8() ✨ Diffusion models Denoising Diffusion Probabilistic Models (DDPM) Denoising Diffusion Implicit Models (DDIM) Latent Diffusion Models Stable Diffusion ✨ Generative Adversarial Networks Original GAN GAN with deep convolutional network Cycle GAN Wasserstein GAN Wasserstein GAN with Gradient Penalty StyleGAN 2 ✨ Recurrent Highway Networks ✨ LSTM ✨ HyperNetworks - HyperLSTM ✨ ResNet ✨ ConvMixer ✨ Capsule Networks ✨ U-Net ✨ Sketch RNN ✨ Graph Neural Networks Graph Attention Networks (GAT) Graph Attention Networks v2 (GATv2) ✨ Counterfactual Regret Minimization (CFR) Solving games with incomplete information such as poker with CFR. Kuhn Poker ✨ Reinforcement Learning Proximal Policy Optimization with Generalized Advantage Estimation Deep Q Networks with\nwith Dueling Network , Prioritized Replay and Double Q Network. ✨ Optimizers Adam AMSGrad Adam Optimizer with warmup Noam Optimizer Rectified Adam Optimizer AdaBelief Optimizer Sophia-G Optimizer ✨ Normalization Layers Batch Normalization Layer Normalization Instance Normalization Group Normalization Weight Standardization Batch-Channel Normalization DeepNorm ✨ Distillation ✨ Adaptive Computation PonderNet ✨ Uncertainty Evidential Deep Learning to Quantify Classification Uncertainty ✨ Activations Fuzzy Tiling Activations ✨ Langauge Model Sampling Techniques Greedy Sampling Temperature Sampling Top-k Sampling Nucleus Sampling ✨ Scalable Training/Inference Zero3 memory optimizations Installation pip install labml-nn",
+      "stars_today": 16,
+      "language": "Python"
+    }
+  ],
+  "papers": {
+    "hf": [
+      {
+        "title": "Route Anything: A Study of Model and Policy Routing for General-Purpose AI Systems",
+        "slug": "route-anything-a-study-of-model-and-policy-routing-for",
+        "url": "https://huggingface.co/papers/2611.05275",
+        "abstract": "Route Anything is a framework for dynamically selecting and coordinating specialized AI models and policies across diverse tasks to improve performance and efficiency.",
+        "upvotes": 84,
+        "arxiv_id": "2611.05275",
+        "authors": []
+      },
+      {
+        "title": "Words Caught in the Heart: Simulating Person-Specific Expression for Self-Opaque Clients in Psychotherapy",
+        "slug": "words-caught-in-the-heart-simulating-person-specific",
+        "url": "https://huggingface.co/papers/2611.00617",
+        "abstract": "Pandora is a psychotherapy client simulation framework that models evolving psychological and relational states to generate more authentic, individually aligned expressions and reduce AI-like responses.",
+        "upvotes": 67,
+        "arxiv_id": "2611.00617",
+        "authors": []
+      },
+      {
+        "title": "Think Less, Locally: Local Preference Learning for Reasoning Compression",
+        "slug": "think-less-locally-local-preference-learning-for-reasoning",
+        "url": "https://huggingface.co/papers/2611.04814",
+        "abstract": "LoCo uses local preference learning to teach reasoning models when to stop deliberating, reducing output length substantially while preserving or improving accuracy across math and code tasks.",
+        "upvotes": 65,
+        "arxiv_id": "2611.04814",
+        "authors": []
+      },
+      {
+        "title": "MoviEdit: Long-form Multi-Shot Video Editing Made Easy",
+        "slug": "moviedit-long-form-multi-shot-video-editing-made-easy",
+        "url": "https://huggingface.co/papers/2611.02737",
+        "abstract": "MoviEdit is an end-to-end framework for long-form multi-shot video editing that uses cascaded bidirectional-autoregressive modeling and a new benchmark to maintain coherence across scenes while reducing manual data annotation.",
+        "upvotes": 61,
+        "arxiv_id": "2611.02737",
+        "authors": []
+      },
+      {
+        "title": "Behind Video Generation: Observations and Insights on Multimodal Understanding from Kling",
+        "slug": "behind-video-generation-observations-and-insights-on",
+        "url": "https://huggingface.co/papers/2611.04916",
+        "abstract": "Kling's multimodal understanding stack links caption density, perceptual text encoding, reward modeling, and evaluation protocols to improve controllable video generation.",
+        "upvotes": 51,
+        "arxiv_id": "2611.04916",
+        "authors": []
+      },
+      {
+        "title": "DreamX: Video Diffusion Model is a Universal Latent Action Learner",
+        "slug": "dreamx-video-diffusion-model-is-a-universal-latent-action",
+        "url": "https://huggingface.co/papers/2611.05377",
+        "abstract": "DreamX leverages a pretrained video diffusion model to learn compact, appearance-invariant latent actions that enable cross-embodiment transfer and efficient policy learning.",
+        "upvotes": 49,
+        "arxiv_id": "2611.05377",
+        "authors": []
+      },
+      {
+        "title": "RoboColosseum: Evaluating Physical Intelligence at Scale In-The-Wild",
+        "slug": "robocolosseum-evaluating-physical-intelligence-at-scale-in",
+        "url": "https://huggingface.co/papers/2611.02497",
+        "abstract": "RoboColosseum evaluates general robot policies across diverse embodiments and environments, revealing weak cross-embodiment agreement, limited open-world reliability, and substantial differences between zero-shot and fine-tuned performance.",
+        "upvotes": 43,
+        "arxiv_id": "2611.02497",
+        "authors": []
+      },
+      {
+        "title": "Factorized MLLM Embeddings for Composed Image Retrieval",
+        "slug": "factorized-mllm-embeddings-for-composed-image-retrieval",
+        "url": "https://huggingface.co/papers/2611.05193",
+        "abstract": "FactEmbed improves composed image retrieval by decoupling query understanding from embedding construction through factorized latents that simulate visual modifications before retrieval.",
+        "upvotes": 42,
+        "arxiv_id": "2611.05193",
+        "authors": []
+      },
+      {
+        "title": "Axion 1.0: Open Agent Foundation Models, Simplified",
+        "slug": "axion-1-0-open-agent-foundation-models-simplified",
+        "url": "https://huggingface.co/papers/2611.03233",
+        "abstract": "Axion 1.0 is an open agent foundation model trained via a concise three-stage pipeline of supervised fine-tuning and reinforcement learning, achieving competitive agentic performance while fully releasing its data and training recipe.",
+        "upvotes": 39,
+        "arxiv_id": "2611.03233",
+        "authors": []
+      },
+      {
+        "title": "ToolSpace: Scaling Tool-Centric Environment Synthesis for Long-Horizon Agents",
+        "slug": "toolspace-scaling-tool-centric-environment-synthesis-for",
+        "url": "https://huggingface.co/papers/2611.05036",
+        "abstract": "ToolSpace constructs realistic multi-environment tool-use benchmarks by mining execution traces, clustering tool compositions, and validating tasks through replayable state-aware random walks.",
+        "upvotes": 34,
+        "arxiv_id": "2611.05036",
+        "authors": []
+      }
+    ],
+    "others": [
+      {
+        "title": "From Computational Literacy to Algorithmic Agency: Re-Envisioning Researcher Preparation in the Era of Generative Artificial Intelligence",
+        "slug": "from-computational-literacy-to-algorithmic-agency-re",
+        "url": "https://www.semanticscholar.org/paper/19b565970e6275a861f00c13eaec5ad29f3b1772",
+        "abstract": "From Computational Literacy to Algorithmic Agency: Re-Envisioning Researcher Preparation in the Era of Generative Artificial Intelligence. Frontiers of Digital Education",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 1,
+        "published_date": "2026-11-04",
+        "authors": [
+          "Dirk Ifenthaler",
+          "David C. Gibson"
+        ]
+      },
+      {
+        "title": "AgentAM: An AI Agent for Spatter- and Defect-Aware Process Optimization in Laser Powder Bed Fusion",
+        "slug": "agentam-an-ai-agent-for-spatter-and-defect-aware-process",
+        "url": "https://arxiv.org/abs/2611.05171",
+        "abstract": "Predictive models for laser powder bed fusion (LPBF) are rarely used on the shop floor because querying them requires programming and model-specific knowledge. We present AgentAM, a large language model (LLM) agent that gives process engineers natural-language access to CFD-trained surrogates of spatter and melt pool geometry for SS316L through the Model Context Protocol (MCP). Polynomial surrogates trained on 279 single-track simulations predict melt pool dimensions ($R^2 \\geq 0.95$) and spatter volume ($R^2 = 0.83$ on test data) at any power-velocity point in the trained range, and geometric criteria assign each point a geometry-derived defect regime (keyhole, lack of fusion, balling or stable) that matches the regime obtained from the simulated geometry in 93.4% of tracks under cross-validation. The agent selects and parameterizes tools for prediction, process-window scans and constrained optimization. Minimum-spatter optima often sat within 10 $\\mu$m of the lack-of-fusion boundary; a margin-aware optimizer moved them away from all thresholds and raised the estimated probability of remaining classified Good from 0.94 to 1.00 under an assumed 2% process drift, and from 0.72 to 0.91 when jointly sampled cross-validated geometry residuals were added. About 40-50 well-spread simulations sufficed to reproduce the defect map. To evaluate the agent layer, we introduce a 145-prompt benchmark scored against direct tool calls, plus eight prompts (40 runs) on margin-aware requests. Over the 725 runs of the main benchmark the agent passed the intended inputs in 98.5% of parsing prompts, reported the scored spatter values and defect classes faithfully and met every stated constraint in the 65 feasible optimization runs, within a median 1.0% of the brute-force optimum.",
+        "source": "chatpaper",
+        "source_name": "ChatPaper/AI",
+        "citation_count": 0,
+        "published_date": "2026-11-04",
+        "authors": [
+          "Olabode T. Ajenifujah",
+          "Amir Barati Farimani"
+        ]
+      },
+      {
+        "title": "Learning Behaviorally Relevant Dynamics in Multimodal Neural Recordings",
+        "slug": "learning-behaviorally-relevant-dynamics-in-multimodal-neural",
+        "url": "https://arxiv.org/abs/2611.05167",
+        "abstract": "Multimodal neural data can enable a more complete understanding of brain dynamics underlying behavior. Modalities such as spiking activity, local field potentials (LFPs), and behavior capture diverse spatiotemporal aspects of brain processes, yet prior neural-behavioral models that separate sources of variability rely on a single neural modality. By leveraging these complementary strengths, multimodal neural fusion can provide a unified, rich representation of brain-behavior processes and address the limitations of single-modality analyses. Here we develop BREM-NET, a nonlinear multimodal dynamical model that integrates behavior with multiple neural modalities having distinct statistical characteristics and temporal resolutions. BREM-NET performs multimodal neural fusion during inference while separating behaviorally relevant and residual neural dynamics via a structured learning framework. In a public multimodal non-human primate dataset with simultaneous spiking and local field potential recordings during a 2D reaching task, BREM-NET separates these two types of dynamics and learns them more accurately, as reflected in better behavior decoding, better neural prediction, and stronger latent alignment with behavior, and it retains these capabilities when neural modalities are asynchronous or suffer dropouts, which are major challenges in real-world recordings. This framework provides a new tool for studying behaviorally relevant neural computations across spatiotemporal scales of brain activity.",
+        "source": "chatpaper",
+        "source_name": "ChatPaper/AI",
+        "citation_count": 0,
+        "published_date": "2026-11-04",
+        "authors": [
+          "Parastoo Azizeddin",
+          "Eray Erturk",
+          "Maryam M. Shanechi"
+        ]
+      },
+      {
+        "title": "Catalyzing Interactive HTML Generation Capabilities via High-Fidelity Reinforcement Learning",
+        "slug": "catalyzing-interactive-html-generation-capabilities-via-high",
+        "url": "https://arxiv.org/abs/2611.05151",
+        "abstract": "Generating HTML from natural-language specifications is an important application of code large language models (LLMs). Despite producing renderable pages, current models often fail to ensure functionality and visual quality during actual interaction. Existing methods typically target task-specific webpage supervision, leaving demanding interactive artifact optimization underexplored. Using mini-games as a challenging testbed, we expose limitations in interaction experience, reward signal, and credit assignment fidelity that are obscured by shallow webpage interactions. We introduce WebCatalyst, a browser-interaction reinforcement learning framework with three complementary components: a game-level GUI assessor for sustained interaction and evaluation, Visual Anchor for mitigating VLM reward hacking, and Action-Trace Credit for grounding token-level credit assignment in runtime execution traces. Trained on fewer than 1K requests, predominantly for games, WebCatalyst raises the Cookie-Bench Mini Games score from 68.8 to 75.3 and also the WebGen-Bench accuracy from 48.8 to 56.9 on Qwen3.6-35B-A3B, outperforming Claude Opus 4.7 in average rank across evaluated metrics. Further analysis shows that Visual Anchor prevents aesthetic degradation, while runtime-grounded credit assignment accelerates functional improvement. Together, our results show that improving feedback fidelity is the key to substantially advancing interactive HTML generation.",
+        "source": "chatpaper",
+        "source_name": "ChatPaper/AI",
+        "citation_count": 0,
+        "published_date": "2026-11-04",
+        "authors": [
+          "Xujia Wang",
+          "Yixuan Liu",
+          "Shaohan Huang",
+          "Furu Wei",
+          "Lei Hou",
+          "Bin Xu",
+          "Juanzi Li"
+        ]
+      },
+      {
+        "title": "Creating Power Flexibility in Datacenters via Query Routing",
+        "slug": "creating-power-flexibility-in-datacenters-via-query-routing",
+        "url": "https://arxiv.org/abs/2611.05148",
+        "abstract": "The growing energy requirements of large language model inference highlight the need for datacenters to support safe grid operation by providing power demand flexibility, while maintaining service for interactive workloads. This work investigates query routing as a mechanism to enable such capability by dynamically allocating queries across different language model instances without deferring requests. We develop a general analytical framework that connects query arrival rates and sequence length distributions to token iteration time, request residence time, serving capacity, and power consumption of model instances. Leveraging this framework, we characterize the feasible query routing allocations and the corresponding power demand flexibilities, enabling the selection of routing strategies to achieve desired power consumption behavior. We validate our framework across four GPU platforms on language models ranging from 1B to 70B parameters, obtaining 2.8% mean absolute percentage error in estimating achievable power flexibility. We evaluate our approach on a real trace-driven simulation of a 10,000 H100 GPUs datacenter, exhibiting flexibility up to 16% of total power consumption, with 90% of the desired power reduction achieved within approximately 10 seconds. These results establish query routing as an effective mechanism for datacenter power demand flexibility and demonstrate the broader applicability of our proposed framework to datacenter level planning and orchestration.",
+        "source": "chatpaper",
+        "source_name": "ChatPaper/AI",
+        "citation_count": 0,
+        "published_date": "2026-11-04",
+        "authors": [
+          "Shivam Patel",
+          "Bingqing Chen",
+          "Jared Fernandez",
+          "Guannan Qu",
+          "Gauri Joshi"
+        ]
+      },
+      {
+        "title": "Meta$^2$: Precomputing Reusable Knowledge for Online Harness Evolution in Long-Horizon Agents",
+        "slug": "meta-2-precomputing-reusable-knowledge-for-online-harness",
+        "url": "https://arxiv.org/abs/2611.05139",
+        "abstract": "Harness optimization improves long-horizon agents by refining the prompts, tools, memory, and hooks around a frozen model. Offline methods can learn from completed trajectories, but deploy one shared harness that may overfit training tasks and cannot react to evidence revealed during a new run. Online evolution can adapt before, during, or after one run through an evolver, but may have to reason about every intervention from scratch or rely on verifier feedback that is usually unavailable at test time. We introduce Meta$^2$, which moves offline optimization one level up: rather than optimizing a shared harness, it learns reusable knowledge for harness evolution and applies it within each task online. Offline, Meta$^2$ learns a textual Meta-Skill $M$ by contrasting training rollouts of the same task agent under three configurations: without an evolver, with an evolver guided by the current version of $M$, and with an evolver given privileged verifier information available only in training. Contrasts in trajectories and outcomes are aggregated across tasks to refine $M$ into reusable guidance on when and how to evolve, when to leave the harness unchanged, and which interventions to avoid. Online, an evolver combines the frozen $M$ with emerging trajectory evidence to decide whether to KEEP the harness unchanged or EVOLVE it through a task-local edit. Each edit applies to the rest of the same run without resetting its environment or progress. Thus, evolution guidance transfers across tasks while harness edits remain task-local, and held-out verifier feedback is never available to the evolver. On two long-horizon benchmarks, Terminal-Bench 2.1 and DeepSWE 1.1, Meta$^2$ achieves the highest performance among evaluated methods with GPT-5.6-Terra, reaching 81.00% and 44.44%, respectively. Ablations support the value of contrastive evolution guidance and keeping online harness edits task-local.",
+        "source": "chatpaper",
+        "source_name": "ChatPaper/AI",
+        "citation_count": 0,
+        "published_date": "2026-11-04",
+        "authors": [
+          "Lingzhi Yuan",
+          "Yiguang Cai",
+          "Weize Liu",
+          "Siqi Yang",
+          "Feijiang Han",
+          "Yongkyun Lee",
+          "Udari Madhushani Sehwag",
+          "Furong Huang"
+        ]
+      },
+      {
+        "title": "From Opinions to Commitments: Unstable Assignments and Silent Choices in AI-Mediated Proposals",
+        "slug": "from-opinions-to-commitments-unstable-assignments-and-silent",
+        "url": "https://arxiv.org/abs/2611.05135",
+        "abstract": "Large language models (LLMs) are increasingly being used to turn citizens' opinions into collective proposals. These proposals can make assignments: who should act, what must be done, how much one should spend and by when. However, if the assignments change when the same opinions are processed again, publishing a single proposal can hide alternatives that participants never get to see. We examined this issue in four LLM mediators (three open-weight and one commercial) using opinions from DeliberationBank and Polis. For each task, a mediator drafted a proposal from thirty opinions five times, varying either the random seed or the order of the opinions. In 17% of five-run sets from the open-weight mediators and 20% from the commercial one, some runs contained assignments while others did not. Reordering the opinions changed the assignments almost as often as replacing them with opinions from different citizens. Three human annotators confirmed that the detected differences between runs were real, although the LLM judge overstated how often they occurred. Substantial variation remained under four safeguards: temperature zero, a commercial mediator, draft selection, and draft merging. The mediator's objective also shaped representation: prompts seeking agreement covered minority positions much less often than prompts asking to describe differences. A single proposal can therefore obscure choices in both the assignments it proposes and the views it excludes. We propose audits that make alternative assignments visible and disclose the objective behind each proposal.",
+        "source": "chatpaper",
+        "source_name": "ChatPaper/AI",
+        "citation_count": 0,
+        "published_date": "2026-11-04",
+        "authors": [
+          "Sachit Mahajan",
+          "Javier Argota S{á}nchez-Vaquerizo",
+          "Arthur Capozzi",
+          "Dirk Helbing"
+        ]
+      },
+      {
+        "title": "From AutoResearch to Continual AutoResearch: Do Agents Learn Across Tasks?",
+        "slug": "from-autoresearch-to-continual-autoresearch-do-agents-learn",
+        "url": "https://arxiv.org/abs/2611.05108",
+        "abstract": "Autoresearch has shown that agents can autonomously write code, run experiments, and iteratively improve machine learning solutions. Yet most evaluations start a new agent session from scratch for each new problem, making them costly and leaving unclear whether agents can retain and apply prior insights when adapting to new tasks. We introduce CONTINUAL AUTORESEARCH, an open-ended environment that compares persistent and reset instances of the same agent under matched task streams, data, and time budget. Continual AutoResearch covers nine task families, spanning synthetic tasks, symbolic regression, time-series forecasting, and tabular AutoML. Across five frontier agents, we measure first-solution quality, research efficiency, and final held-out performance. To distinguish insight transfer from session continuity, we run a memory ablation that vary what information agents retain from prior tasks. We show that persistent state improves research efficiency of all five agents, allowing them to find stronger solutions sooner. However, these gains do not consistently translate into better final solutions. Overall, our findings suggest that retaining experience and utilizing it effectively are distinct capabilities.",
+        "source": "chatpaper",
+        "source_name": "ChatPaper/AI",
+        "citation_count": 0,
+        "published_date": "2026-11-04",
+        "authors": [
+          "Jeremy Qin",
+          "Ruizhi Deng",
+          "Mohamed Osama Ahmed",
+          "Frederick Tung",
+          "Leo Feng"
+        ]
+      },
+      {
+        "title": "The Platonic Brain: Representational Convergence in EEG Foundation Models",
+        "slug": "the-platonic-brain-representational-convergence-in-eeg",
+        "url": "https://arxiv.org/abs/2611.05097",
+        "abstract": "The Platonic Representation Hypothesis (PRH) predicts that artificial neural networks converge on shared representations as scale and performance increase. We test whether these predictions hold for representations of the human brain with EEG foundation models. Using EEG recordings from six participants watching a television series, together with aligned visual and language content, we tested whether EEG foundation-model representations converge within and across modalities as their embeddings become better at decoding an informative set of EEG markers. We found that EEG models with greater decodability showed stronger cross-family alignment in both local neighbourhood similarity and global structure, not consistently increasing with model parameter count. Cross-modal convergence was modality and metric dependent: greater EEG decodability was associated with stronger global alignment to language, but not consistently to vision models, while local alignment showed no consistent association. This dissociation may reflect local sensitivity to low-level sensory features, whereas global geometry may capture weaker shared semantic structure.",
+        "source": "chatpaper",
+        "source_name": "ChatPaper/AI",
+        "citation_count": 0,
+        "published_date": "2026-11-04",
+        "authors": [
+          "Nicolas Waehner",
+          "Enzo Tagliazucchi",
+          "Jacobo Sitt",
+          "Demian Wassermann",
+          "Giovanni Franco Gabriel Marraffini",
+          "Trinidad Borrell"
+        ]
+      },
+      {
+        "title": "LatentTriad: Pre-Action Risk Representations for Malicious Agent Skill Detection",
+        "slug": "latenttriad-pre-action-risk-representations-for-malicious",
+        "url": "https://arxiv.org/abs/2611.05088",
+        "abstract": "Large language model agents are increasingly extended with reusable skills, but untrusted skill content can induce operations outside the user's task. Detecting this contextual risk requires more than suspicious-pattern matching, while dynamic analysis incurs the cost of skill execution. We find that hidden states formed during prefill contain readable information about task-operation consistency, including across held-out expression forms in controlled evaluations. Matched Operation-state interventions also affect later Boundary states and shift fixed risk readouts toward the donor label. Based on these findings, we introduce LatentTriad, which combines contextual Boundary features, group-adjusted Operation directions, and departures from benign state relationships. All branches share one prefill: detection generates no output tokens, invokes no tools, and executes no skill code. Across 5,830 skill packages from five sources and seven backbones, LatentTriad achieves 99.0-99.2% pooled F1 and 93.0-94.6% source-macro F1. A separately measured compact implementation completes prefill and detection in a median of 259-284 ms. These results connect pre-action risk readability and functional influence to execution-free skill screening.",
+        "source": "chatpaper",
+        "source_name": "ChatPaper/AI",
+        "citation_count": 0,
+        "published_date": "2026-11-04",
+        "authors": [
+          "Zhe Yu",
+          "Yi Liu",
+          "Ying Zhang",
+          "Simin Chen"
+        ]
+      },
+      {
+        "title": "ALBI: LLM-Guided Inductive Logic Programming via Iterative Generate-Test-Constrain Refineme",
+        "slug": "albi-llm-guided-inductive-logic-programming-via-iterative",
+        "url": "https://arxiv.org/abs/2611.05039",
+        "abstract": "We introduce ALBI (Agent for Learning By Induction), a neuro-symbolic ILP framework that replaces the ASP-based hypothesis generator in the Learning from Failures (LFF) paradigm with a Large Language Model (LLM), while retaining SWI-Prolog as a formal verifier. ALBI implements an iterative generate-test-constrain loop: the LLM proposes candidate hypotheses from structured prompts; Prolog tests each candidate; and diagnostic feedback drives refinement. We further introduce semantic anonymization, a metamorphic testing methodology, to distinguish structural symbolic induction from surface-level pattern matching on predicate names. Experiments on 30 standard ILP benchmarks show that ALBI achieves 100% success across three frontier LLMs (Gemini 3.1 Pro, GPT 5.4 Pro, Claude Opus 4.6), matching Popper while requiring only 1.4-1.7 iterations on average. Under anonymization, all models maintain 100% success with a moderate iteration increase (1.36-1.67 times), providing evidence of robust symbolic reasoning.",
+        "source": "chatpaper",
+        "source_name": "ChatPaper/AI",
+        "citation_count": 0,
+        "published_date": "2026-11-04",
+        "authors": [
+          "Aboubaker Seddiq Benterki",
+          "Jüri Vain",
+          "Gert Kanter",
+          "Leelo Aino Jürgenstein"
+        ]
+      },
+      {
+        "title": "Artifact-to-Capability: Diagnosing Breaks in Capability Formation of Self-Evolving Agents in a Controlled Environment",
+        "slug": "artifact-to-capability-diagnosing-breaks-in-capability",
+        "url": "https://arxiv.org/abs/2611.04952",
+        "abstract": "Self-evolving agents write interaction experience into artifacts and reuse them in later tasks. Most work supports such methods with three proxy signals: artifacts accumulate, behavior changes once they are loaded, and metrics rise. We call this signal-based evaluation. What these signals are meant to indicate, however, has not been defined. To fill this gap, we define capability formation from artifacts as five sequentially dependent properties, two of which form a checkpoint for capability formation, and introduce three-scale diagnosis, which judges these properties at the state, game, and lineage levels. In freestyle Gomoku, Reflexion, Voyager, and DGM evolve with the same base model and all show the three signals, yet each exhibits a distinct capability-formation break. Reflexion shows a legalization gain: its pass rate rises only because more of its moves are legal. Voyager shows a compositional override: components that are sound on their own combine to miss all 20 available one-move wins. DGM shows loss-only drift: after passing the checkpoint, later versions only lose passing states. These counterexamples show that signal-based evaluation cannot determine whether a capability has formed.",
+        "source": "chatpaper",
+        "source_name": "ChatPaper/AI",
+        "citation_count": 0,
+        "published_date": "2026-11-04",
+        "authors": [
+          "Ziqian Ban",
+          "Haoxiang Yang",
+          "Yanfei Zhang",
+          "Shixin Liang",
+          "Haoran Yu",
+          "Xu Lin",
+          "Shaobin Zhao",
+          "Xuran Li",
+          "Zhiyi Cheng"
+        ]
+      },
+      {
+        "title": "FourSight: Stable FP4 RL Post-Training via Sequence Filtering and Sparse Channel Compensation",
+        "slug": "foursight-stable-fp4-rl-post-training-via-sequence-filtering",
+        "url": "https://arxiv.org/abs/2611.04887",
+        "abstract": "Reinforcement learning (RL) post-training increasingly targets low-bit deployment, with NVFP4 weight-and activation quantization (W4A4) becoming the state-of-the-practice format. However, integrating NVFP4 into RL degrades rollout quality and amplifies cross-engine training-inference mismatch (TIM), destabilizing training. We show that these failures are concentrated rather than uniform - severely mismatched tail tokens concentrate in a few outlier sequences, while policy weights remain largely intact and quantization error concentrates in a few high-variance activation channels. Guided by this, we present FourSight, an algorithm-system co-design with two targeted solutions: TIM-aware sequence filtering that excludes drifted trajectories from policy updates, and sparse precision compensation that keeps only top-variance channels in BF16 while retaining native NVFP4 elsewhere. We further design a fused SpliceGEMM kernel with specialized prefill and decode datapaths to minimize overhead. FourSight sustains near-BF16 accuracy and strong FP4 deployment quality across models and engines, while improving step-to-accuracy by 1.76-2.60x and staying within 2.3% of FP4 step time up to 120B-scale models.",
+        "source": "chatpaper",
+        "source_name": "ChatPaper/AI",
+        "citation_count": 0,
+        "published_date": "2026-11-04",
+        "authors": [
+          "Yining Wei",
+          "Tianyuan Wu",
+          "Gu Gong",
+          "Yuechen Tao",
+          "Yinghao Yu",
+          "Xiaowen Chu",
+          "Wei Wang"
+        ]
+      },
+      {
+        "title": "Modelling lock-in of AI adoption through skill erosion",
+        "slug": "modelling-lock-in-of-ai-adoption-through-skill-erosion",
+        "url": "https://arxiv.org/abs/2611.04886",
+        "abstract": "Generative AI can improve immediate performance but may erode the human skills required for future work. We study a model in which individuals tend to imitate successful peers, while their independent skills grow with practice and erode with reliance on AI. Because each agent's skill reflects their history, non-users and AI users develop different skill distributions, which we derive exactly. Skill erosion can produce bistability and hysteresis between a low-adoption, high-skill state and a high-adoption, low-skill state. When agents rarely change behaviour at random, the two transitions are asymmetric. A single AI user spreads through a population of experts only if AI-assisted work earns more than expert work, whatever the timescale of skill adaptation. A single non-user, by contrast, can lead an AI-dependent population back to independent work only if they regain enough skill before returning to AI, which becomes easier the more persistent behaviours are. As AI improves, adoption can jump abruptly, and a sufficiently long increase in its benefit, such as a period of low prices, can leave a population relying on AI after the benefit has returned to its initial value. Skill erosion thus creates a history-dependent switching cost that can make widespread AI adoption difficult to reverse.",
+        "source": "chatpaper",
+        "source_name": "ChatPaper/AI",
+        "citation_count": 0,
+        "published_date": "2026-11-04",
+        "authors": [
+          "Renaud Lambiotte"
+        ]
+      },
+      {
+        "title": "ScamWorld: An Interactive Environment for Evaluating Web Agents Against Online Fraud",
+        "slug": "scamworld-an-interactive-environment-for-evaluating-web",
+        "url": "https://arxiv.org/abs/2611.04879",
+        "abstract": "Web agents increasingly browse, shop, and manage accounts on behalf of their users. Prior work has shown that they can be misled by adversarial content, including prompt injections and deceptive interfaces. Beyond such attacks, agents operating on the open web also encounter online fraud designed to deceive humans, including fraudulent online stores, fake investment platforms, and advance-fee schemes. How web agents respond to such fraud during task execution remains underexplored, in part because scam websites are short-lived, making systematic evaluation difficult. To address this gap, we introduce ScamWorld, an interactive environment that reconstructs reported scam websites across diverse scenarios, fraud mechanisms, and languages. Each reconstructed website reproduces documented fraud mechanisms, making relevant signs of fraud observable before the agent's final action and enabling controlled, repeatable evaluation. Through an extensive study of web agents powered by six frontier LLMs, we find that baseline deception rates range from 11% to 35% across models. Agents proceed more readily with payments than with requests for credentials or wallet information. A closer analysis of agent trajectories shows that some agents acknowledge suspicious conditions yet proceed, at times treating the user's instructions as authorisation to accept additional terms imposed by the website. ScamWorld provides a reusable testbed for systematically evaluating and stress-testing web agents against real-world online fraud.",
+        "source": "chatpaper",
+        "source_name": "ChatPaper/AI",
+        "citation_count": 0,
+        "published_date": "2026-11-04",
+        "authors": [
+          "Yutao Wu",
+          "Xiao Liu",
+          "Ming Wen",
+          "Hanxun Huang",
+          "Jun Wang",
+          "Xingjun Ma"
+        ]
+      },
+      {
+        "title": "Amortized Nonlinear Variable Selection with Prior-Data Fitted Networks",
+        "slug": "amortized-nonlinear-variable-selection-with-prior-data",
+        "url": "https://arxiv.org/abs/2611.04848",
+        "abstract": "Variable selection is an important task for interpreting potentially complex systems in fields such as biology, business, and sociology. The importance of variable selection has attracted considerable attention in statistics and machine learning. In this paper, we are mainly interested in model-agnostic variable selection for identifying variables that have general nonlinear dependence on the response. We propose MambaPFN, short for Model-Agnostic Markov BlAnket selection with Prior-data Fitted Networks, which is built upon the Transformer, a building block of many popular large language models. Specifically, we consider a functional-mapping perspective on variable-selection learning, in which the Transformer is treated as a learnable mapping from a dataset to its relevant variables. To learn this mapping, MambaPFN introduces three new components: (i) a faithful, rich, and scalable scheme for generating pretraining data, (ii) an objective that targets each variable's posterior inclusion probability, and (iii) a modified Transformer architecture tailored to variable selection. Once pretrained, MambaPFN is applied to new datasets without parameter updates. Empirically, MambaPFN achieves desirable variable-selection performance in simulation studies and exhibits a scaling law---more pretraining datasets and larger models can continuously improve its performance. Applied to a Facebook comments dataset, MambaPFN selects the fewest variables and achieves the highest computational efficiency and predictive performance, improving upon the best baselines by about 20%.",
+        "source": "chatpaper",
+        "source_name": "ChatPaper/AI",
+        "citation_count": 0,
+        "published_date": "2026-11-04",
+        "authors": [
+          "Jin Zhu",
+          "Junxian Zhu"
+        ]
+      },
+      {
+        "title": "DGC-Net: Cross-Modal Dynamic Routing with Global-Guided Compensation in Multimodal Sentiment Analysis",
+        "slug": "dgc-net-cross-modal-dynamic-routing-with-global-guided",
+        "url": "https://arxiv.org/abs/2611.04841",
+        "abstract": "User-generated videos, including opinion vlogs and video reviews, provide a rich source of people's attitudes toward products, services, and social topics. Understanding the sentiment expressed by speakers is important for analyzing online opinions, as transcripts alone may not capture the attitude and intensity conveyed through vocal tone and facial expressions. Multimodal sentiment analysis (MSA) addresses this need by integrating textual, acoustic, and visual cues. However, these cues are often subtle, noisy, and inconsistent across modalities. Existing local affective cue modeling methods typically operate within individual modalities and overlook global contexts from other modalities. This may cause cross-modal affective cue inconsistency. Hierarchical global-local fusion methods integrate global semantics with fine-grained local affective cues. However, they commonly determine the relative contributions of the two representations implicitly, preventing the global-local contributions from adapting to the sample-dependent reliability of local cues and resulting in either insufficient use of informative local cues or excessive interference from unreliable ones. To address these issues, we propose DGC-Net, a Dynamic Gating and Global-Guided Compensation Network for MSA. DGC-Net mitigates cross-modal affective cue inconsistency through cross-modal contribution-aware dynamic expert routing. This mechanism uses auxiliary global contexts to guide local expert selection. Moreover, global-guided dynamic compensation fusion alleviates sample-dependent global-local contribution imbalance while preserving global semantic as the primary anchor and adaptively incorporating expert-refined local cues. Experiments on five multimodal benchmark datasets demonstrate the effectiveness and general applicability of DGC-Net, and ablation studies verify the contribution of each proposed component.",
+        "source": "chatpaper",
+        "source_name": "ChatPaper/AI",
+        "citation_count": 0,
+        "published_date": "2026-11-04",
+        "authors": [
+          "Linan Zhu",
+          "Huaijing Wu",
+          "Xiao Han",
+          "Yuhao Wang"
+        ]
+      },
+      {
+        "title": "HTCE: Homeomorphism-inspired Topological Cross-Scene Experience Canonicalization and Reuse for Object Navigation",
+        "slug": "htce-homeomorphism-inspired-topological-cross-scene",
+        "url": "https://arxiv.org/abs/2611.04836",
+        "abstract": "As embodied agents perform object-goal navigation across residential environments, they accumulate successful experiences whose semantic structure recurs across scenes even when geometric trajectories do not. Reusing such experience is challenging because differences in region naming and observation granularity produce distinct graph representations of similar approaches, while meaningful differences in anchors, branches, and endpoints must stay distinguishable. We introduce HTCE, a homeomorphism-inspired topological framework that canonicalizes and reuses navigation experience. Feature and topology subdivisions characterize representational variations, and their semantically constrained reductions produce comparable semantic sequences and structural signatures while preserving semantic anchors, branching relations, and navigation endpoints. HTCE then retrieves historical successful approaches through subdivision-aware matching as guidance for a frozen vision-language policy. Canonicalization compresses the experience index losslessly, merging 17.7--23.6\\% of distinct stored route descriptions while retaining full task performance. Under a single frozen vision-language backbone shared by all compared systems, HTCE attains the best SR and SPL in every setting---59.9\\%/31.8\\% on HM3D v0.1, 71.0\\%/31.5\\% on HM3D v0.2, and 46.6\\%/16.6\\% on MP3D---with SR gains of up to 4.9 points and structured retrieval contributing up to 2.8 SPL points. The code is available in \\url{https://github.com/startracker0/htce.git}",
+        "source": "chatpaper",
+        "source_name": "ChatPaper/AI",
+        "citation_count": 0,
+        "published_date": "2026-11-04",
+        "authors": [
+          "Xiaoran Xu",
+          "Yupeng Wu",
+          "Tianyu Xue",
+          "Xuanran Dong",
+          "Yifan Xu",
+          "Xiaoshan Yang",
+          "Changsheng Xu"
+        ]
+      },
+      {
+        "title": "Feeling of Knowing in Large Language Models",
+        "slug": "feeling-of-knowing-in-large-language-models",
+        "url": "https://arxiv.org/abs/2611.04834",
+        "abstract": "Post-training updates change what large language models (LLMs) can answer, but may leave their answerability judgments misaligned. We study this knowledge-judgment desynchronization through functional feeling of knowing (FoK), which supports selective generation, retrieval triggering, and model routing without implying subjective experience. We propose two trainable channels: a knowledge channel that changes answerability and a FoK channel that judges the current knowledge state. Three stages train them: on-policy supervised fine-tuning (OP-SFT) updates knowledge from corrected on-policy answers; knowledge-delta FoK training (K$\\Delta$-FT) adapts judgments across intermediate knowledge states; and FoK-guided policy optimization (FGPO) trains the subsequent answer or explanation. Factual-QA experiments, cross-dataset evaluation, and three sequential updates show that explicit FoK alignment improves judgment quality on updated knowledge. MMLU and ARC-Easy separately assess capability preservation.",
+        "source": "chatpaper",
+        "source_name": "ChatPaper/AI",
+        "citation_count": 0,
+        "published_date": "2026-11-04",
+        "authors": [
+          "Zichuan Fu",
+          "Xian Wu",
+          "Jingtong Gao",
+          "Wenlin Zhang",
+          "Jiaxuan Li",
+          "Binhao Wang",
+          "Yimin Deng",
+          "Guojing Li",
+          "Xiaopeng Li",
+          "Derong Xu",
+          "Yefeng Zheng",
+          "Xiangyu Zhao"
+        ]
+      },
+      {
+        "title": "Reconstructing Fraudulent Strategies in Online Payments via Interpretable Inverse Reinforcement Learning",
+        "slug": "reconstructing-fraudulent-strategies-in-online-payments-via",
+        "url": "https://arxiv.org/abs/2611.04819",
+        "abstract": "Payment fraud causes financial losses and undermines users' trust in web payment services. Although fraud detection is a critical defense for payment security, complex and diverse fraudulent behaviors can still evade detection. Generating fraud samples for data augmentation can broaden detectors' coverage of different fraud patterns. However, existing methods matching the distribution of transaction attributes alone do not ensure that generated sequences preserve the sequential relationships among transaction choices, payment feedback, and subsequent behavioral adjustments. To this end, we propose PaySeqGen, an interpretable inverse reinforcement learning framework that reconstructs fraud behavior policies from fraudsters' observed payment trajectories. We design a mechanism for constructing candidate actions to support plausible payment sequence generation while enabling exploration. The framework also learns interpretable behavioral rewards that capture fraudsters' preferences across different transaction contexts. By alternating between reward learning and policy optimization, the framework reconstructs policies that generate new fraud sequences for detector augmentation and learns interpretable rewards supporting sequential fraud-pattern analysis in real trajectories. Experiments in real-world payment scenarios at Ant International, a leading global digital payment provider, show that PaySeqGen outperforms state-of-the-art generative augmentation methods. Reward-based trajectory analysis also identifies fraud patterns of practical value, helping analyst locating suspicious segments and examine multistep fraud tactics. Evaluation in the deployed system of online payment further confirms its effectiveness.",
+        "source": "chatpaper",
+        "source_name": "ChatPaper/AI",
+        "citation_count": 0,
+        "published_date": "2026-11-04",
+        "authors": [
+          "Huilin He",
+          "Weiyu Han",
+          "Linbo Shao",
+          "Ruobing Zuo",
+          "Xiao Tan",
+          "Shuai Chen",
+          "Dawei Cheng"
+        ]
+      },
+      {
+        "title": "The Pen is Mightier than the Pixel: Natural Textual Unlearnable Example for Large Vision Language Models",
+        "slug": "the-pen-is-mightier-than-the-pixel-natural-textual",
+        "url": "https://arxiv.org/abs/2611.04817",
+        "abstract": "The proliferation of Large Vision Language Models (LVLMs), trained on vast and often sensitive datasets, raised concerns regarding data privacy and unauthorized usage. Unlearnable Examples (UEs), which subtly perturb training data to mislead the models, have emerged as a promising defense method. This paper presents the first exploration of UEs specifically on LVLMs, which poses unique challenges due to their inherent multimodal nature. We propose a novel text-based perturbation method, Natural Textual Unlearnable Examples (NTUE), which can effectively mislead LVLMs by subtly manipulating the image label, establishing a shortcut between an identity of interest and a separate target, without introducing factual misinformation or affecting readability. Comprehensive experiments compared with traditional UE methods demonstrate the superior performance of NTUE. Our findings show that NTUE achieves a high success rate with a poison rate as low as 5%, underscoring its potential as a practical and robust solution for protecting multimodal data in the era of LVLMs.",
+        "source": "chatpaper",
+        "source_name": "ChatPaper/AI",
+        "citation_count": 0,
+        "published_date": "2026-11-04",
+        "authors": [
+          "Chenyu Yi",
+          "Jiawen Zong",
+          "Sami Hormi",
+          "Bingquan Shen",
+          "Xudong Jiang",
+          "Alex Chichung Kot"
+        ]
+      },
+      {
+        "title": "AgenticFinBench: Benchmarking Financial Agents on Diverse Tasks from Real-World Requests",
+        "slug": "agenticfinbench-benchmarking-financial-agents-on-diverse",
+        "url": "https://arxiv.org/abs/2611.04813",
+        "abstract": "Financial agents are becoming an important class of real-world AI systems. Financial tasks vary widely in type and difficulty, and many are open-ended with no ground-truth answers. However, existing benchmarks neither capture this breadth and open-endedness nor separate grounding from correctness. To bridge this gap, we introduce $\\textbf{AgenticFinBench}$, a benchmark of 230 real-world financial tasks spanning 8 categories, 2 languages, and 4 complexity levels. We also propose a reference-free evaluation framework that combines question-specific rubrics with a two-stage claim audit that detects hallucinations, defined as claims absent from the agent's trace and refuted by external evidence. This framework better matches how financial work is assessed in practice. Experiments across 18 agent configurations reveal three key findings: (1) Ignoring hallucinations can overstate agent performance: hallucination auditing lowers the baseline leader's score by 7.58 points and moves it to fourth place. (2) Harness differences explain more variation in evidence grounding than model differences (28.6% vs 8.8%). (3) Quality scores fall from 89.44 on direct retrieval to 79.18 on the most complex tasks. Case studies show that agents struggle to explain how events affect company profits or stock prices, compare financial data on a consistent basis, and justify their conclusions. By releasing AgenticFinBench, we aim to advance financial reasoning, factual verification, and agent design for more reliable responses to diverse real-world financial requests. Our project page is at $\\textbf{\\url{https://nashnovaresearch.github.io/AgenticFinBench/}}$.",
+        "source": "chatpaper",
+        "source_name": "ChatPaper/AI",
+        "citation_count": 0,
+        "published_date": "2026-11-04",
+        "authors": [
+          "Shu Zhou",
+          "Ziyang He",
+          "Yuxin Rao",
+          "Yudong Fang",
+          "Jiali Qian",
+          "Dongyuan Chen",
+          "Juntao Zhang",
+          "Yong Hu"
+        ]
+      },
+      {
+        "title": "RAHC: Rule-Augmented Hyper-Relational Knowledge Graph Completion for Materials Synthesis",
+        "slug": "rahc-rule-augmented-hyper-relational-knowledge-graph",
+        "url": "https://arxiv.org/abs/2611.04809",
+        "abstract": "Scientific discovery depends on reusing experimental knowledge, yet records scattered across papers and repositories are often incomplete. In materials synthesis, recovering missing conditions requires reasoning about the target material and the observed context of a specific experiment. Hyper-relational knowledge graphs (HKGs) represent this context through qualifiers, but existing completion methods leave domain knowledge and experimental regularities implicit. We propose RAHC, a rule-augmented HKG framework for single-slot and joint multi-slot synthesis-condition completion. RAHC builds a traceable rule catalog from training records and retrieved literature, retrieves rules for each query-candidate pair, and separately encodes graph structure and rule evidence. Hard rules constrain candidate validity, while soft rules guide ranking. RAHC-G aggregates rules using global reliability; RAHC-Q additionally learns query-specific relevance. Gated fusion combines structural and rule representations, while tuple-conclusion rules provide cross-condition evidence for joint completion. Experiments on five materials-synthesis datasets show improvements in single-slot and joint completion under Semi-inductive and Open-Answer Inductive settings, with Semi-inductive MRR gains of up to 15.6% over MAYPL. RAHC also improves performance on the entity-disjoint ILPC'22 Small benchmark, supporting transfer to fully inductive KG completion. These results support experimental condition selection, synthesis planning, and the reuse of scientific knowledge.",
+        "source": "chatpaper",
+        "source_name": "ChatPaper/AI",
+        "citation_count": 0,
+        "published_date": "2026-11-04",
+        "authors": [
+          "Jiawei Sun",
+          "Sijia Xu",
+          "Zihan Chen",
+          "Zhengyi Yang"
+        ]
+      },
+      {
+        "title": "Where Is the Truth When AI Agents Disagree? Dependence-Aware Belief Propagation for Unsupervised Truth Discovery (Extended Version)",
+        "slug": "where-is-the-truth-when-ai-agents-disagree-dependence-aware",
+        "url": "https://arxiv.org/abs/2611.04805",
+        "abstract": "LLM agents often give conflicting answers to the same question, and many deployed agents are variants of one base model, so their errors are correlated. We study truth discovery among such agents: inferring the true answer and each agent's reliability without labels. Classical truth-discovery and crowdsourcing estimators reward an agreeing bloc and can fall below majority vote. We propose BP-TD, which adds per-agent decorrelation weights to mean-field variational inference on a one-coin Dawid-Skene model, so that agents sharing a base model count together as about one vote. Its first iteration is exactly a weighted vote; later iterations estimate agent reliability. With 13 local agents on MMLU, BP-TD beats majority vote without any labels (0.716 vs. 0.624 on 160 questions; 0.707 vs. 0.674 on 10,000) and ranks agents by their true accuracy, which classical estimators invert. The gain depends on the pool: over 2,852 sub-pools of four benchmarks, decorrelation helps when the largest correlated bloc is weaker than the other agents and hurts when it is the strongest, and we found no label-free statistic that tells the two cases apart. Labels change the picture quickly: with 20 labelled questions, selecting the single best agent is more accurate than every aggregator we tested on MMLU, ARC and TruthfulQA.",
+        "source": "chatpaper",
+        "source_name": "ChatPaper/AI",
+        "citation_count": 0,
+        "published_date": "2026-11-04",
+        "authors": [
+          "Laure Berti-Equille"
+        ]
+      },
+      {
+        "title": "Reducing Logprob Without Causal Verification: Diagnosing SAE-Based PII Suppression in LLMs",
+        "slug": "reducing-logprob-without-causal-verification-diagnosing-sae",
+        "url": "https://arxiv.org/abs/2611.04782",
+        "abstract": "SAE-based feature-level interventions to suppress PII leakage in LLMs are primarily evaluated by log-probability reduction. We show that this criterion cannot distinguish feature specific suppression from a magnitude artifact: a direction-agnostic effect of sufficiently large activation perturbations. Across 36 (model, layer, PII type) cases, we compare selected SAE feature interventions with coherencematched random direction controls using logprob and rank-aware metrics. While 17 cases (47%) appear successful under logprob-only evaluation, only 1 case (2.8%) passes our multimetric framework. The rest reveal two failure modes: random directions outperform selected features, and feature selection collapse across PII types. These results indicate that existing evaluations cannot verify whether interventions target causal pathways of PII leakage. A 9,000 run causal mediation feasibility study corroborates this: the verifier separates candidates reliably, but correlation-selected candidates rarely pass it. We therefore propose a new research mission for NLP: causally grounded PII suppression through circuit-level localization and causal mediation analysis.",
+        "source": "chatpaper",
+        "source_name": "ChatPaper/AI",
+        "citation_count": 0,
+        "published_date": "2026-11-04",
+        "authors": [
+          "Chaerin Lee",
+          "Wonho Lee",
+          "Sohee Park",
+          "Daeseon Choi"
+        ]
+      },
+      {
+        "title": "When Self-Verification Hurts: Calibrated Answer Repair for Financial Question Answering",
+        "slug": "when-self-verification-hurts-calibrated-answer-repair-for",
+        "url": "https://arxiv.org/abs/2611.05166",
+        "abstract": "Financial question answering can fail even when a model extracts a plausible number from the supplied evidence: the answer may attach it to the wrong entity, period, unit, or accounting concept. Asking the model to verify and revise its draft can help, but open-ended revision may alter content that was already correct or inspect the wrong relation and reinforce the original error. We formulate repair as a decision that balances the information it may recover against the correct content it may damage. Based on this trade-off, we introduce Calibrated Answer Repair (CAR), which first estimates whether a draft is likely to benefit from repair, then selects a targeted check, localizes the relevant evidence or draft span, and limits the permitted edit. Across FinRank, Fin-RATE, and FinQA with three open-weight models, CAR outperforms generic verification in all dataset-model settings. At the system level, it recovers 14.6% of initially missed answer requirements while damaging 2.1% of initially correct ones. Its post-draft token cost is over 30 percent lower than the iterative revision alternatives. Ablations on two dataset-model settings show that evidence localization and bounded editing are the main contributors to CAR's gains.",
+        "source": "chatpaper",
+        "source_name": "ChatPaper/Computation and Language",
+        "citation_count": 0,
+        "published_date": "2026-11-04",
+        "authors": [
+          "Celine Guo",
+          "Weida Liang",
+          "Yujian Fu",
+          "Anqi Dang",
+          "Yanzheng Jin",
+          "Kenji Kawaguchi",
+          "Wenya Wang"
+        ]
+      },
+      {
+        "title": "GM League Arena: An Interactive Long-Horizon Task Benchmark Based on Professional Sports League Management",
+        "slug": "gm-league-arena-an-interactive-long-horizon-task-benchmark",
+        "url": "https://arxiv.org/abs/2611.05147",
+        "abstract": "Long-horizon decision-making under sustained competition requires large language models (LLMs) to balance immediate investment with future resource needs. However, local success in multi-step interactions can not adequately capture cumulative decision effects or demonstrate long-term goal achievement under resource constraints and sustained competition. To address this gap, we introduce GM Bench, a benchmark for managing professional sports teams across seasons under resource constraints and competition among teams. We build the environment simulators for four sports and add financial constraints, player demands, and market mechanisms to establish a unified task across sports. Diverse rosters of comparable strength are constructed from real-world player data, and each LLM is evaluated as a team general manager to assess its long-term management capabilities. We evaluate competitive performance, cash reserves, and cross-season improvement across four sports. Over five NBA seasons, Claude Opus 5.5 ranks first among 29 LLMs, while GPT-6 Astra and GPT-6.1 Sol combine strong performance with larger cash reserves.",
+        "source": "chatpaper",
+        "source_name": "ChatPaper/Computation and Language",
+        "citation_count": 0,
+        "published_date": "2026-11-04",
+        "authors": [
+          "Junkai Zhou",
+          "Ziming Pan",
+          "Zhaoyi Zhang"
+        ]
+      },
+      {
+        "title": "The Right Source Is Not Enough: Understanding History Interference in Speech-LLM Memory",
+        "slug": "the-right-source-is-not-enough-understanding-history",
+        "url": "https://arxiv.org/abs/2611.05124",
+        "abstract": "Speech large language models retain audio history to support multi-turn conversations. Yet remembering an event does not ensure that its information is used only when relevant. We investigate why irrelevant historical audio changes answers even when the queried event remains represented. Controlled experiments on MOSS-Audio and MiMo-Audio show that historical values direct errors toward specific competing answers, beyond a generic effect of context length. Causal interventions distinguish two paths. In open-ended question answering, most history-value errors disappear when subsequent computation cannot directly access the irrelevant source. In multiple-choice answering, many errors persist: early historical influence is carried by question-candidate states even after direct source access is blocked. Low-dimensional interventions further separate source-role information from answer-value information. Their effects peak at different depths, and changing the source-role signal does not eliminate the causal influence of competing values. On naturally occurring errors, strengthening the queried role and counteracting the historical value each improve answers; their joint intervention gives the greatest recovery. These findings support a failure of downstream evidence use beyond source identification alone: source-role information can influence a decision without exclusively controlling which historical values affect it. Reliable conversational memory therefore requires not only retention and retrieval, but also control over how retained information enters answer computation.",
+        "source": "chatpaper",
+        "source_name": "ChatPaper/Computation and Language",
+        "citation_count": 0,
+        "published_date": "2026-11-04",
+        "authors": [
+          "HongJin Song",
+          "Weiqiao Shan",
+          "Runwu Shi",
+          "Yifei Wu",
+          "Yujin Wang",
+          "Jiale Luo",
+          "Jiasheng Kuang",
+          "Xinyu Yang",
+          "Zhaoqi Cui",
+          "Chuizheng Kong",
+          "Ziyu Wu",
+          "Guowu Tan",
+          "Qiuyu Fang",
+          "Chunxiang Jin"
+        ]
+      },
+      {
+        "title": "Whose Effect Is It? How Objectives Inflate Learned Subspace Interventions",
+        "slug": "whose-effect-is-it-how-objectives-inflate-learned-subspace",
+        "url": "https://arxiv.org/abs/2611.05033",
+        "abstract": "Interpretability often locates concepts by copying part of a language model's state from one input into another (activation patching). A larger output change counts as stronger evidence that this part carries the concept. Methods that learn which part to copy often change the output more than the whole state does. By that reading, learned parts isolate the concept more cleanly. Yet the whole contains the part. So whose effect is this excess, the network's or the method's? Copying the whole state learns nothing, so it shows what the network produces. We prove that, to first order, the effects of orthogonal parts add up to that of the whole. A part therefore exceeds the whole exactly when the rest moves the output back, which does not require isolating the concept more cleanly. Objectives that reward a larger effect select such parts. Distributed alignment search with cross-entropy, for example, exceeds the whole-state copy just before the output on almost all tasks, and inside the network at most sites. In both, changing only its objective to target what the network produces removes most of the excess. It therefore comes largely from the objective, so a larger learned effect alone is not stronger evidence.",
+        "source": "chatpaper",
+        "source_name": "ChatPaper/Computation and Language",
+        "citation_count": 0,
+        "published_date": "2026-11-04",
+        "authors": [
+          "Toygar Tanyel",
+          "Serkan Ayvaz"
+        ]
+      },
+      {
+        "title": "Who is the Pronoun Pro? Comparing LLMs and Humans at Number-Disambiguation of 'they'",
+        "slug": "who-is-the-pronoun-pro-comparing-llms-and-humans-at-number",
+        "url": "https://arxiv.org/abs/2611.04968",
+        "abstract": "This study evaluates whether large language models (LLMs) can reliably replace or complement human research assistants in linguistically complex annotation. In a controlled annotation task, 73 human annotators (local students and crowdworkers with and without a background in linguistics) and more than 40 LLM configurations number-disambiguated 174 authentic uses of 'they' from Reddit, including innovative and context-sensitive cases. The best LLM, Kimi K3, reached 94.5% accuracy, above the human majority vote (86.2%) and the mean of the top half of human annotators (78.5%); only the single best human annotator scored higher (95.7%). LLMs also offer substantial practical advantages in cost and speed. However, qualitative error analysis reveals a crucial complementarity: human reasoning in low-agreement cases exposes inconsistencies in the annotation typology and thereby improves the methodological framework itself. The study contributes (i) a benchmark-style human-LLM comparison for a semantically demanding task, (ii) transparent cost and time evidence, and (iii) a methodological argument against a purely replacement-oriented view of automation. LLMs are viable for large-scale annotation support in linguistics, but their responsible use requires human critical oversight. The dataset with its gold-standard labels, all human and LLM annotations, and the fully reproducible code are openly available as a Quarto-based, public repository.",
+        "source": "chatpaper",
+        "source_name": "ChatPaper/Computation and Language",
+        "citation_count": 0,
+        "published_date": "2026-11-04",
+        "authors": [
+          "Carlos Hartmann"
+        ]
+      }
+    ]
+  }
+}
