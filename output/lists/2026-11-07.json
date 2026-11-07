@@ -1,0 +1,519 @@
+{
+  "date": "2026-11-07",
+  "github": [
+    {
+      "title": "morluto/rea",
+      "slug": "morluto-rea",
+      "url": "https://github.com/morluto/rea",
+      "abstract": "English · 簡體中文 · 繁體中文 · 日本語 · 한국어 · Türkçe · Русский · Tiếng Việt · ไทย · Deutsch · Español · Français · Українська · Polski · Português (Brasil) · العربية · فارسی · Bahasa Indonesia · Italiano · Ελληνικά · മലയാളം · Roman Urdu · Română REA: Reverse Engineer Anything One MCP for reverse engineering across binaries, applications, and runtime behavior. See a feature you like. Understand how it works, down to the binary level. Website · Guides · Showcases Quick start · How REA works · What you can analyze · Showcases · Build RL environments · FAQ · Documentation npx rea-agents setup Important Get REA from morluto/rea , rea.tools , or the rea-agents npm package .\nFollow the installation and release links from these official sources. A similar\nrepository name or copied README does not establish that a download is official. Join the Reverse Engineering Community Discord · Q&A · Show and Tell See a feature in an app that you want in your own product? Ask your agent to investigate it with REA. It can inspect the app without its source code, explain how the feature works, show the evidence, and build a version for your project. REA connects your agent to tools for inspecting native binaries, JavaScript and Electron apps, .NET assemblies, and websites. You can also use the same tools from your terminal. Analysis runs locally, and results include the evidence and limitations behind each conclusion. Setup registers REA with your agent and installs matching workflow instructions. Native analysis can use an existing Hopper, Ghidra, IDA or Kuna installation; setup can optionally install Hopper with approval. Static JavaScript analysis needs no native analysis engine. Visit the REA website for setup instructions, illustrated guides, and real case studies. Quick start On Linux, Ghidra, JADX, firmware tool launches and static JavaScript/Electron\nanalysis require a procps-compatible ps on REA's PATH for process ownership\nchecks. Recovery steps are in docs/getting-started/installation.md under\n\"Linux owned-process prerequisite\". Set up your agent With Node.js and npm installed, run: npx rea-agents setup Choose your agents, review the proposed changes, and approve them. Setup adds\nREA's MCP server and matching workflow instructions, with backups of existing\nconfiguration. Restart your agent afterward. Setup records the selected runtime and REA\nentry script directly. If acquired through a package runner, keep its cache entry\navailable. Run package acquisition from a trusted directory outside the target\nproject. Installation and recovery details are in the setup guide below. Setup supports Claude Code, Codex, Cursor, Gemini CLI, Grok Build and other agents . See installation and setup for provider configuration and\nmanual MCP registration and Claude Code/Codex plugin installation. MCP uses compact input schemas by default to reduce context overhead. Set REA_MCP_INPUT_SCHEMA_PROFILE=full in your MCP registration when you need the\ncomplete advertised field guidance and nested validation details. Both profiles\nkeep the full tool set and canonical server validation. See\n\"Compact input schema profile\" in the MCP contracts guide. Complete output schemas are advertised by default. If your client caps the\ncomplete tools/list frame, set REA_MCP_OUTPUT_SCHEMA_PROFILE=compact to\nbound each advertised output schema, or off to omit output schemas entirely.\nBoth settings keep canonical server-side validation and complete structured\nresults. See \"Output schemas\" in the MCP contracts guide. Ask your agent Understand how search works in the Notes app, show me the evidence, and build a\nsimilar feature for my project. Replace Notes with your target app and the feature you want to understand. Use the terminal Inspect an extracted JavaScript/Electron app directory or ASAR: npx -y rea-agents@latest analyze-javascript-application /absolute/path/to/app --json The result includes modules, imports, Electron boundaries and their evidence.\nReplace the path with your target, such as \"D:/apps/example\" on Windows. To install the rea command for regular use: npm install --global rea-agents\nrea --help For native analysis, configure a provider first. See the CLI and Evidence guide for native commands, provider selection,\nsnapshots and scripting. Update REA REA changes quickly, and new releases include frequent bug fixes. Keep your\ninstallation up to date. For a CLI installed with npm install --global or bun add --global : rea update rea --update is an alias for this verified workflow and accepts the same global\noutput flags. Use rea update when combining it with other command controls. Updater commands retain at most 4 MiB of stdout and stderr combined. Oversized\nmetadata replies are rejected after the command exits; verbose installs continue\nwith bounded diagnostics. Human progress output respects terminal backpressure\nand waits for submitted writes to finish. Bun global updates require Bun 1.2.17 or later. With an older Bun release,\nupgrade Bun manually before running rea update . To refresh your agent registrations and skill, run the setup command printed\nby the update. If you use npx , update your agent setup with: npx rea-agents@latest setup Review the setup changes and restart your agent. For one-off CLI commands,\nuse npx rea-agents@latest followed by the command. With Bun, use bunx rea-agents@latest in place of npx rea-agents@latest . How REA works Your agent calls REA through MCP to inspect the target and trace relevant code.\nREA returns findings with their evidence. The agent uses them to ask follow-up\nquestions, explain the behavior, or write and test an implementation.\nCLI commands use the same workflows. Open the full-size figure . What you can analyze REA requires Node.js 22.x (>=22.23.4), 24.x (>=24.22.1), or 26.12.1+, plus npm.\nAdditional tools and host support depend on the target: Target What REA returns Requirements and guide Desktop installations Runtime candidates, supporting files, component markers and next probes Built-in bounded directory/header inspection; desktop applications Native binaries Pseudocode, assembly, strings, symbols, calls and references Hopper, Ghidra, IDA or Kuna; native analysis Offline ELF layout Sections, segments, original symbols/relocations and static mitigation candidates Caller-supplied pwntools on Linux x64; binary diagnostics Go binaries Embedded compiler version, modules, replacements and build settings Built-in static ELF/PE/thin Mach-O inspection; no Go installation required GPU code objects CUDA/HIP targets, selected kernel parameters and resources, retained PTX text Built-in static ELF/PE/fatbin/CUBIN/PTX inspection; GPU code objects Model artifacts GGUF / safetensors metadata, tensor declarations and derived totals Built-in header inspection; optional full-file hash; model files IL2CPP metadata Unity global-metadata.dat assembly images, type and method names and index ranges Built-in static decoding of versions 24, 27, 29, 31 and 39; no Unity required Godot PCK Archive inventory and extraction, original header/directory facts and selected content identities Built-in static formats 2, 3 and 4; no Godot required Rust binaries Embedded cargo-auditable crate names, versions, sources and dependency edges Built-in static ELF/PE/thin Mach-O inspection; Rust binaries PE certificates Authenticode WIN_CERTIFICATE entries and PKCS#7 signer/X.509 identity fields Built-in static PE inspection; PE certificates PE imports Import and delay-load DLL names, ordinals, IAT RVAs and pefile import hash Built-in static PE inspection; PE imports ELF notes PT_NOTE/SHT_NOTE owners, types, GNU build-id and ABI-tag fields Built-in static ELF inspection; ELF notes Binary hardening PIE, NX, RELRO, CFG and related header flags for ELF, PE and Mach-O Built-in static header inspection; binary hardening Apple IPS crashes .ips metadata, threads, images, registers and documented crash classes Built-in static JSON inspection; Apple IPS Linux kernel modules .",
+      "stars_today": 3308,
+      "language": "TypeScript"
+    },
+    {
+      "title": "anthropics/skills",
+      "slug": "anthropics-skills",
+      "url": "https://github.com/anthropics/skills",
+      "abstract": "Note: This repository contains Anthropic's implementation of skills for Claude. For information about the Agent Skills standard, see agentskills.io . Skills Skills are folders of instructions, scripts, and resources that Claude loads dynamically to improve performance on specialized tasks. Skills teach Claude how to complete specific tasks in a repeatable way, whether that's creating documents with your company's brand guidelines, analyzing data using your organization's specific workflows, or automating personal tasks. For more information, check out: What are skills? Using skills in Claude How to create custom skills Equipping agents for the real world with Agent Skills About This Repository This repository contains skills that demonstrate what's possible with Claude's skills system. These skills range from creative applications (art, music, design) to technical tasks (testing web apps, MCP server generation) to enterprise workflows (communications, branding, etc.). Each skill is self-contained in its own folder with a SKILL.md file containing the instructions and metadata that Claude uses. Browse through these skills to get inspiration for your own skills or to understand different patterns and approaches. Many skills in this repo are open source (Apache 2.0). We've also included the document creation & editing skills that power Claude's document capabilities under the hood in the skills/docx , skills/pdf , skills/pptx , and skills/xlsx subfolders. These are also open source (Apache 2.0), and we wanted to share them with developers as a reference for more complex skills that are actively used in a production AI application. Disclaimer These skills are provided for demonstration and educational purposes only. While some of these capabilities may be available in Claude, the implementations and behaviors you receive from Claude may differ from what is shown in these skills. These skills are meant to illustrate patterns and possibilities. Always test skills thoroughly in your own environment before relying on them for critical tasks. Skill Sets ./skills : Skill examples for Creative & Design, Development & Technical, Enterprise & Communication, and Document Skills ./spec : The Agent Skills specification ./template : Skill template Try in Claude Code, Claude.ai, and the API Claude Code You can register this repository as a Claude Code Plugin marketplace by running the following command in Claude Code: /plugin marketplace add anthropics/skills Then, to install a specific set of skills: Select Browse and install plugins Select anthropic-agent-skills Select document-skills or example-skills Select Install now Alternatively, directly install either Plugin via: /plugin install document-skills@anthropic-agent-skills\n/plugin install example-skills@anthropic-agent-skills After installing the plugin, you can use the skill by just mentioning it. For instance, if you install the document-skills plugin from the marketplace, you can ask Claude Code to do something like: \"Use the PDF skill to extract the form fields from path/to/some-file.pdf \" Claude.ai These example skills are all already available to paid plans in Claude.ai. To use any skill from this repository or upload custom skills, follow the instructions in Using skills in Claude . Claude API You can use Anthropic's pre-built skills, and upload custom skills, via the Claude API. See the Skills API Quickstart for more. Creating a Basic Skill Skills are simple to create - just a folder with a SKILL.md file containing YAML frontmatter and instructions. You can use the template-skill in this repository as a starting point: --- name : my-skill-name description : A clear description of what this skill does and when to use it --- # My Skill Name [ Add your instructions here that Claude will follow when this skill is active ] ## Examples - Example usage 1 - Example usage 2 ## Guidelines - Guideline 1 - Guideline 2 The frontmatter requires only two fields: name - A unique identifier for your skill (lowercase, hyphens for spaces) description - A complete description of what the skill does and when to use it The markdown content below contains the instructions, examples, and guidelines that Claude will follow. For more details, see How to create custom skills . Partner Skills Skills are a great way to teach Claude how to get better at using specific pieces of software. As we see awesome example skills from partners, we may highlight some of them here: Notion - Notion Skills for Claude",
+      "stars_today": 386,
+      "language": "Python"
+    },
+    {
+      "title": "jamiepine/voicebox",
+      "slug": "jamiepine-voicebox",
+      "url": "https://github.com/jamiepine/voicebox",
+      "abstract": "Voicebox The open-source AI voice studio. Clone any voice. Generate speech. Dictate into any app. Talk to agents in voices you own. The full voice I/O stack, running locally on your machine. voicebox.sh • Docs • Download • Features • API • Troubleshooting Click the image above to watch the demo video on voicebox.sh Built with Capy Voicebox is built and maintained with Capy . A Capy Captain thread directs the project day to day, and its crew threads test, rebase, and review each contributor pull request on Linux and on a Mac Studio before Jamie merges it. Voicebox stays free and open source under the MIT license, with no splash screens, banners, or interruptions in the app. Try Capy → · How Voicebox is built What is Voicebox? Voicebox is a local-first AI voice studio — a free and open-source alternative to ElevenLabs and WisprFlow in one app. Clone voices from a few seconds of audio, generate speech in 23 languages across 8 TTS engines, dictate into any text field with a global hotkey, and give any MCP-aware AI agent a voice of your choosing. The two cloud incumbents sit on opposite halves of the voice I/O loop — ElevenLabs on output, WisprFlow on input. Voicebox does both, bridges them with a bundled local LLM for refinement and per-profile personas, and runs the whole thing on your machine. Complete privacy — models, voice data, and captures never leave your machine 8 TTS engines — Qwen3-TTS, Qwen CustomVoice, Qwen VoiceDesign, LuxTTS, Chatterbox Multilingual, Chatterbox Turbo, HumeAI TADA, and Kokoro Voice cloning and preset voices — zero-shot cloning from a reference sample, or 50+ curated preset voices via Kokoro and Qwen CustomVoice 23 languages — from English to Arabic, Japanese, Hindi, Swahili, and more Post-processing effects — pitch shift, reverb, delay, chorus, compression, and filters Expressive speech — paralinguistic tags like [laugh] , [sigh] , [gasp] via Chatterbox Turbo; natural-language delivery control via Qwen CustomVoice; voices described in plain language via Qwen VoiceDesign Unlimited length — auto-chunking with crossfade for scripts, articles, and chapters Stories editor — multi-track timeline for conversations, podcasts, and narratives Voice input — global dictation hotkey with push-to-talk and toggle modes, accessibility-verified auto-paste on macOS, in-app mic on every text field, Whisper-based STT Agent voice output — one tool call ( voicebox_speak ) and any MCP-aware agent (Claude Code, Cursor, Cline) speaks to you in a voice you've cloned Voice personalities — attach a free-form persona to any voice profile, then Compose, Rewrite, or Respond via a bundled local LLM — agents can invoke the same modes over MCP API-first — REST API plus a built-in MCP server for integrating voice I/O into your own apps and agents Native performance — built with Tauri (Rust), not Electron Runs everywhere — macOS (MLX/Metal), Windows (CUDA), Linux, AMD ROCm, Intel Arc, Docker Download Platform Download macOS (Apple Silicon) Download DMG macOS (Intel) Download DMG Windows Download MSI Docker docker compose up View all binaries → Linux — Pre-built binaries are not yet available. See voicebox.sh/linux-install for build-from-source instructions. Having trouble? See the Troubleshooting Guide for common install, generation, model-download, and GPU issues. Features Multi-Engine Voice Cloning Eight TTS engines with different strengths, switchable per-generation: Engine Languages Strengths Qwen3-TTS (0.6B / 1.7B) 10 High-quality multilingual cloning, delivery instructions (\"speak slowly\", \"whisper\") Qwen CustomVoice 10 9 curated preset voices with natural-language delivery control — no reference audio required Qwen VoiceDesign 10 Builds a voice from a written description — no reference audio or preset needed LuxTTS English Lightweight (~1GB VRAM), 48kHz output, 150x realtime on CPU Chatterbox Multilingual 23 Broadest language coverage — Arabic, Danish, Finnish, Greek, Hebrew, Hindi, Malay, Norwegian, Polish, Swahili, Swedish, Turkish and more Chatterbox Turbo English Fast 350M model with paralinguistic emotion/sound tags TADA (1B / 3B) 10 HumeAI speech-language model — 700s+ coherent audio, text-acoustic dual alignment Kokoro 8 50 curated preset voices, tiny 82M model, fast CPU inference Emotions & Paralinguistic Tags Only Chatterbox Turbo interprets paralinguistic tags like [laugh] and [sigh] . Qwen3-TTS, LuxTTS, Chatterbox Multilingual, and HumeAI TADA read them\nliterally as text. With Chatterbox Turbo selected, type / in the text input to open the tag\ninserter and add expressive tags inline with speech: Sounds: [laugh] [chuckle] [gasp] [cough] [sigh] [groan] [sniff] [shush] [clear throat] Delivery: [angry] [crying] [dramatic] [fear] [happy] [narration] [sarcastic] [surprised] [whispering] [advertisement] Post-Processing Effects 8 audio effects powered by Spotify's pedalboard library. Apply after generation, preview in real time, build reusable presets. Effect Description Pitch Shift Up or down by up to 12 semitones Reverb Configurable room size, damping, wet/dry mix Delay Echo with adjustable time, feedback, and mix Chorus / Flanger Modulated delay for metallic or lush textures Compressor Dynamic range compression Gain Volume adjustment (-40 to +40 dB) High-Pass Filter Remove low frequencies Low-Pass Filter Remove high frequencies Ships with 4 built-in presets (Robotic, Radio, Echo Chamber, Deep Voice) and supports custom presets. Effects can be assigned per-profile as defaults. Unlimited Generation Length Text is automatically split at sentence boundaries and each chunk is generated independently, then crossfaded together. Works with all engines. Configurable auto-chunking limit (100–5,000 chars) Crossfade slider (0–200ms) for smooth transitions Max text length: 50,000 characters Smart splitting respects abbreviations, CJK punctuation, and [tags] Generation Versions Every generation supports multiple versions with provenance tracking: Original — clean TTS output, always preserved Effects versions — apply different effects chains from any source version Takes — regenerate with a new seed for variation Source tracking — each version records its lineage Favorites — star generations for quick access Async Generation Queue Generation is non-blocking. Submit and immediately start typing the next one. Serial execution queue prevents GPU contention Real-time SSE status streaming Failed generations can be retried Stale generations from crashes auto-recover on startup Voice Profile Management Create profiles from audio files or record directly in-app Import/export profiles to share or back up Multi-sample support for higher quality cloning Per-profile default effects chains Organize with descriptions and language tags Stories Editor Multi-voice timeline editor for conversations, podcasts, and narratives. Multi-track composition with drag-and-drop Inline audio trimming and splitting Auto-playback with synchronized playhead Version pinning per track clip Global Dictation & Voice Input The other half of the voice I/O loop. Hold a hotkey anywhere on your system, speak, release — on macOS the transcript pastes straight into the focused text field. Or hit the mic on any Voicebox text input and dictate directly into the app. Configurable chord bindings — hold-to-speak and tap-to-toggle chords, each rebindable in the in-app chord picker.",
+      "stars_today": 318,
+      "language": "Python"
+    },
+    {
+      "title": "EbookFoundation/free-programming-books",
+      "slug": "ebookfoundation-free-programming-books",
+      "url": "https://github.com/EbookFoundation/free-programming-books",
+      "abstract": "List of Free Learning Resources In Many Languages Search the list at https://ebookfoundation.github.io/free-programming-books-search/ . This page is available as an easy-to-read website. Access it by clicking on . Intro This list was originally a clone of StackOverflow - List of Freely Available Programming Books with contributions from Karan Bhangui and George Stocker. The list was moved to GitHub by Victor Felder for collaborative updating and maintenance. It has grown to become one of GitHub's most popular repositories . The Free Ebook Foundation now administers the repo, a not-for-profit organization devoted to promoting the creation, distribution, archiving, and sustainability of free ebooks. Donations to the Free Ebook Foundation are tax-deductible in the US. How To Contribute Please read CONTRIBUTING . If you're new to GitHub, welcome ! Remember to abide by our adapted from Code of Conduct too ( translations also available). Click on these badges to see how you might be able to help: How To Share Share on Facebook Share on LinkedIn Share on Mastodon/Fediverse Share on Telegram Share on 𝕏 (Twitter) Resources This project lists books and other resources grouped by genres: Books English, By Programming Language English, By Subject Other Languages Arabic / al arabiya / العربية Azerbaijani / Азәрбајҹан дили / آذربايجانجا ديلي Bengali / বাংলা Bulgarian / български Burmese / မြန်မာဘာသာ Chinese / 中文 Czech / čeština / český jazyk Catalan / catalan / català Danish / dansk Dutch / Nederlands Estonian / eesti keel Finnish / suomi / suomen kieli French / français German / Deutsch Greek / ελληνικά Hebrew / עברית Hindi / हिन्दी Hungarian / magyar / magyar nyelv Indonesian / Bahasa Indonesia Italian / italiano Japanese / 日本語 Korean / 한국어 Latvian / Latviešu Malayalam / മലയാളം Norwegian / Norsk Persian / Farsi (Iran) / فارسى Polish / polski / język polski / polszczyzna Portuguese (Brazil) Portuguese (Portugal) Romanian (Romania) / limba română / român Russian / Русский язык Serbian / српски језик / srpski jezik Slovak / slovenčina Slovenian / Slovenščina Spanish / español / castellano Swedish / Svenska Tamil / தமிழ் Telugu / తెలుగు Thai / ไทย Turkish / Türkçe Ukrainian / Українська Urdu / اردو Uzbek / Oʻzbekcha / Ўзбекча Vietnamese / Tiếng Việt Cheat Sheets All Languages Free Online Courses Arabic / al arabiya / العربية Bengali / বাংলা Bulgarian / български Burmese / မြန်မာဘာသာ Chinese / 中文 English Finnish / suomi / suomen kieli French / français German / Deutsch Greek / ελληνικά Hebrew / עברית Hindi / हिंदी Indonesian / Bahasa Indonesia Italian / italiano Japanese / 日本語 Kannada / ಕನ್ನಡ Kazakh / қазақша Khmer / ភាសាខ្មែរ Korean / 한국어 Malayalam / മലയാളം Marathi / मराठी Nepali / नेपाली Norwegian / Norsk Persian / Farsi (Iran) / فارسى Polish / polski / język polski / polszczyzna Portuguese (Brazil) Portuguese (Portugal) Punjabi / ਪੰਜਾਬੀ / پنجابی Romanian (Romania) / limba română / român Russian / Русский язык Sinhala / සිංහල Spanish / español / castellano Swedish / svenska Tamil / தமிழ் Telugu / తెలుగు Thai / ภาษาไทย Turkish / Türkçe Ukrainian / Українська Urdu / اردو Vietnamese / Tiếng Việt Interactive Programming Resources Chinese / 中文 English German / Deutsch Japanese / 日本語 Russian / Русский язык Problem Sets and Competitive Programming Problem Sets Podcast - Screencast Free Podcasts and Screencasts: Arabic / al Arabiya / العربية Burmese / မြန်မာဘာသာ Chinese / 中文 Czech / čeština / český jazyk Dutch / Nederlands English Finnish / Suomi French / français German / Deutsch Hebrew / עברית Indonesian / Bahasa Indonesia Persian / Farsi (Iran) / فارسى Polish / polski / język polski / polszczyzna Portuguese (Brazil) Portuguese (Portugal) Russian / Русский язык Sinhala / සිංහල Spanish / español / castellano Swedish / Svenska Turkish / Türkçe Ukrainian / Українська Programming Playgrounds Write, compile, and run your code within a browser. Try it out! Chinese / 中文 English German / Deutsch Russian / Русский Translations Volunteers have translated many of our Contributing, How-to, and Code of Conduct documents into languages covered by our lists. English Code of Conduct Contributing How-to ... More languages ... You might notice that there are some missing translations here - perhaps you would like to help out by contributing a translation ? License Each file included in this repository is licensed under the CC BY License .",
+      "stars_today": 179,
+      "language": "Python"
+    },
+    {
+      "title": "elder-plinius/OBLITERATUS",
+      "slug": "elder-plinius-obliteratus",
+      "url": "https://github.com/elder-plinius/OBLITERATUS",
+      "abstract": "O B L I T E R A T U S Break the chains. Free the mind. Keep the brain. Try it now on HuggingFace Spaces — runs on ZeroGPU, free daily quota with HF Pro. No setup, no install, just obliterate. OBLITERATUS is the most advanced open-source toolkit for understanding and removing refusal behaviors from large language models — and every single run makes it smarter. It implements abliteration — a family of techniques that identify and surgically remove the internal representations responsible for content refusal, without retraining or fine-tuning. The result: a model that responds to all prompts without artificial gatekeeping, while preserving its core language capabilities. But OBLITERATUS is more than a tool — it's a distributed research experiment. Every time you obliterate a model with telemetry enabled, your run contributes anonymous benchmark data to a growing, crowd-sourced dataset that powers the next generation of abliteration research. Refusal directions across architectures. Hardware-specific performance profiles. Method comparisons at scale no single lab could achieve. You're not just using a tool — you're co-authoring the science. The toolkit provides a complete pipeline: from probing a model's hidden states to locate refusal directions, through multiple extraction strategies (PCA, mean-difference, sparse autoencoder decomposition, and whitened SVD), to the actual intervention — zeroing out or steering away from those directions at inference time. Every step is observable. You can visualize where refusal lives across layers, measure how entangled it is with general capabilities, and quantify the tradeoff between compliance and coherence before committing to any modification. OBLITERATUS ships with a full Gradio-based interface on HuggingFace Spaces, so you don't need to write a single line of code to obliterate a model, benchmark it against baselines, or chat with the result side-by-side with the original. For researchers who want deeper control, the Python API exposes every intermediate artifact — activation tensors, direction vectors, cross-layer alignment matrices — so you can build on top of it or integrate it into your own evaluation harness. We built this because we believe model behavior should be decided by the people who deploy them, not locked in at training time. Refusal mechanisms are blunt instruments — they block legitimate research, creative writing, and red-teaming alongside genuinely harmful content. By making these interventions transparent and reproducible, we hope to advance the community's understanding of how alignment actually works inside transformer architectures, and to give practitioners the tools to make informed decisions about their own models. Built on published research from Arditi et al. (2024) , Gabliteration (arXiv:2512.18901) , grimjim's norm-preserving biprojection (2025) , Turner et al. (2023) , and Rimsky et al. (2024) , OBLITERATUS implements precision liberation in a single command: obliteratus obliterate meta-llama/Llama-3.1-8B-Instruct --method advanced Or zero commands — just open the Colab notebook and hit Run All. Research Purpose & Responsible Use OBLITERATUS is an alignment research tool. It exists to advance the scientific understanding of how safety behaviors are encoded in language model weights — specifically, the geometric structure of refusal representations in transformer activation space. This is the same class of research as: Arditi et al. (2024) — discovering that refusal is mediated by a single direction HarmBench (Zou et al., 2024) — standardized evaluation of LLM safety JailbreakBench — tracking adversarial robustness of safety training Anthropic's red-teaming datasets — published for reproducible safety research By making refusal removal transparent, reproducible, and scientifically rigorous, OBLITERATUS contributes to the broader understanding of how alignment actually works inside transformer architectures — knowledge that is essential for building better safety mechanisms. Who this is for Alignment researchers studying refusal geometry, safety robustness, and mechanistic interpretability Red-teamers evaluating how post-training safety holds up against weight-level interventions AI safety evaluators who need unrestricted baselines for benchmarking Local-first practitioners who want full control over models running on their own hardware Who this is NOT for Anyone seeking to generate content that causes real-world harm to real people Anyone without the technical understanding to use uncensored models responsibly Models produced by OBLITERATUS have had safety guardrails surgically removed. You are solely responsible for how you use this tool and any models or content it produces. What it does Choosing settings? Start with Choose a workflow and the UI controls and feature-scope guide . They explain\ndefaults, tradeoffs, memory warnings, interpretation, and which features require\nthe CLI/API rather than the web interface. OBLITERATUS does four things — and the community does the fifth (see Community-powered research below): 1. Map the chains — Ablation studies systematically knock out model components (layers, attention heads, FFN blocks, embedding dimensions) and measure what breaks. This reveals where the chains are anchored inside the transformer — which circuits enforce refusal vs. which circuits carry knowledge and reasoning. 2. Break the chains — Targeted obliteration extracts the refusal subspace from a model's weights using SVD decomposition, then surgically projects it out. The chains are removed; the mind is preserved. The model keeps its full abilities but loses the artificial compulsion to refuse. One click, six stages: SUMMON  →  load model + tokenizer\nPROBE   →  collect activations on restricted vs. unrestricted prompts\nDISTILL →  extract refusal directions via SVD\nEXCISE  →  surgically project out guardrail directions (norm-preserving)\nVERIFY  →  perplexity + coherence checks — confirm capabilities are intact\nREBIRTH →  save the liberated model with full metadata EXCISE folds post-sublayer RMSNorm scales on Gemma 2, Gemma 3 text, and OLMo 2\nby default so the norms do not reintroduce removed directions into residual\nwrites. Use --no-fold-post-norms (Python: fold_post_norms=False ) for the old\nnumerics; the flag also applies to --remote runs, and the choice is recorded\nin run metadata. See the projection contract and supported combinations . Saved abliteration_metadata.json includes a provenance block with the tool\nversion, Git commit, tracked-file dirty state, and resolved source-model commit.\nThis is automatic, including on remote runs, where it describes the remote\ninstallation. Git fields are null outside a checkout or when unavailable;\nuntracked files are excluded from the dirty flag. Source revisions use the\nresolved Hub commit or local Hugging Face snapshot directory, including before\ndequantization. Ordinary local model directories and unresolved revisions record null ; branch or tag names are never reported as commits. 3. Understand the geometry of the chains — 15 deep analysis modules go far beyond brute-force removal. They map the precise geometric structure of the guardrails: how many distinct refusal mechanisms exist, which layers enforce them, whether they're universal or model-specific, and how they'll try to self-repair after removal. Know your enemy; precision preserves capability. See Analysis modules below. 4. Let the analysis guide the liberation — The informed method closes the loop: analysis modules run during obliteration to auto-configure every decision. Which chains to target. How many directions to extract. Which layers are safe to modify vs. which are too entangled with capabilities. Whether the model will self-repair (the Ouroboros effect) and how many passes to compensate. Surgical precision — free the mind, keep the brain. See Analysis-informed pipeline below.",
+      "stars_today": 61,
+      "language": "Python"
+    },
+    {
+      "title": "Marker-Inc-Korea/AutoRAG",
+      "slug": "marker-inc-korea-autorag",
+      "url": "https://github.com/Marker-Inc-Korea/AutoRAG",
+      "abstract": "AutoRAG Agent Now your agent can find anything in your computer. Important Looking for the original AutoRAG (RAG AutoML / pipeline optimization tool)? This repository now hosts AutoRAG 2.0 , a complete reimagining of AutoRAG as a personal librarian agent for your office work. The original Python-based AutoRAG — the RAG AutoML tool for automatically finding an optimal RAG pipeline for your data — now lives in the legacy/ directory of this repository. The legacy AutoRAG is NOT abandoned. It continues to be maintained (bug fixes, dependency updates, and PyPI releases via pip install AutoRAG ) in maintenance mode. Existing users can keep using it exactly as before — see the legacy README for its documentation, and file issues in this repository as usual. New feature development is focused on AutoRAG Agent (2.0). 🖥️ The desktop app A Finder for your computer that understands what's inside your files. The\nAutoRAG desktop app puts this librarian behind a real file manager: browse your\nfolders as usual, then ask a question and get an answer that cites the files,\nchats, and mail it came from. Everything it searches with is the engine in this\nrepository. 🔎 Just ask Ask the way you'd ask a teammate. The librarian reads the files and writes back,\nevery claim linked to the passage behind it. Drag files, folders, or links into\na question to ask about just those. 🗂️ Spot the twins proposal-final , proposal-v3 , proposal (1) : stacked into one row, newest\non top, tagged Latest , Similar , or Identical . Powered by dupey , the same scan as autorag duplicates . ⌨️ Space to see anything Markdown, code, PDF, video, audio, Office, and HWP/HWPX previewed instantly in\nQuick Look. HWP pages are drawn locally by rhwp ; Hancom Office is not required. 🪟 A real file manager Tabs and split panes: drag a tab to an edge to split, and every pane keeps its\nown tabs, so a folder and a conversation sit side by side. Folders update live\nas other apps change them. And more: hybrid keyword + meaning search with a reranker · scheduled\nre-indexing that runs even while the app is closed · an Ask entry in the\nFinder and Explorer right-click menu · light and dark mode · Korean, English,\nJapanese, and Simplified Chinese. Every place, one search The app connects the same datasources the librarian\ndoes, and searches them right alongside your files: 💬 Slack Channels and threads 💛 KakaoTalk Chats on this computer 🎮 Discord Servers and forums ✈️ Telegram Chats and channels 📱 WhatsApp Messages, read-only ✉️ Mail Every inbox you sign in to 🐙 GitHub Repos, issues, PRs 🔮 Obsidian Your vaults Private by design Embedded on your machine. Semantic indexing runs on MinSync's local\nQwen3-Embedding-0.6B engine (1024 dimensions), which MinSync provisions and\nruns; AutoRAG owns no embedding model. File contents are never sent to a\nremote embedder unless you explicitly configure a remote minSync.embedder . Keys stay encrypted. Sign-in tokens and API keys live in the system's\nencrypted store, never in a config file. Bring your own model. Use the hosted Dazzi Models plan ,\nor connect your own provider key and pay the provider directly. Tip The Dazzi desktop app's source lives in NomaDamas/AutoRAG-app (Electron + React, Fair Source under FSL-1.1-MIT ). It\ndepends on the open-source @autorag/librarian engine (Apache-2.0) from this\nrepository; build, run, and file app issues there. One engine, every surface The app is one way in. The same librarian runs everywhere else: Surface Use it for Start here Desktop app (Dazzi) Browsing and asking in one window NomaDamas/AutoRAG-app (Fair Source, FSL-1.1-MIT) Terminal UI Interactive, steerable search sessions autorag tui Messenger Asking the librarian from a chat app Telegram, Discord CLI Scripts, indexing, health checks CLI Command Reference MCP server Feeding retrieval to Claude Code, Codex, and other agents AutoRAG Lite MCP Server TypeScript API Embedding the librarian in your own app Programmatic usage Agent skills Letting a coding agent install and drive AutoRAG For AI Agents What is AutoRAG Agent? Search tools dump file paths and matching lines — forcing you to open files, read context, and synthesize answers yourself. AutoRAG Agent is a personal librarian agent that helps with your office work. Built on the Pi agent framework, a single configured model searches your files, mail, chats, and notes in place, opens source documents directly via bash to verify ground truth, and curates answers into clean, numbered knowledge units. Because it works for you rather than only on your index, it can also act on your files when you ask, such as organizing, renaming, moving, or editing them with a record of every change: You ask:  \"What changes were made to the cloud infrastructure contract in Q3?\"\n\nAutoRAG Agent:\n[1] Enterprise Compute Discount — AWS annual discount tier increased to 28% based on commitment volume. (contracts/cloud-2026.pdf:p.4)\n[2] Regional Data Residency — Explicit compliance clause pinning customer data storage to the Seoul AWS region. (/slack/legal-ops/chunks/318)\n[3] SLA Guarantee — Guaranteed uptime threshold adjusted to 99.95% with penalty credits starting at 15 minutes downtime. (contracts/sla-addendum.md:lines 45-62) Core Values Three principles drive every design decision in AutoRAG Agent: Never migrate your data to search it. Traditional RAG systems force you to upload, ETL, and duplicate your files into a centralized vector database. AutoRAG Agent federates your data in place , querying CLI-native stores ( lazykatok , discrawl , slacrawl , mailcrawl ) where your data already lives. Results retain opaque, source-native identities ( /kakao/... , /slack/... ) that preserve local access control and privacy. (See our Competitive Landscape Study on why in-place federation is the durable differentiator). Just works — no RAG degree required. No pipeline tuning, no vector-DB maintenance, and no remote embedding keys required. AutoRAG Agent automatically manages MinSync for incremental Change Data Capture (CDC) chunking and provides a local embedding backend out of the box with zero external telemetry. A remote rerank model is an opt-in extra: it runs only when you name one in rerank.model , and otherwise the first answer is built from each source's own top 10. Fast by design. Rather than coordinating slow multi-agent hierarchies, a single configured model owns the entire retrieval, direct-read, and curation loop. Local CDC chunks (SPLADE sparse, vector, and hybrid modes) deliver rapid, low-latency turnaround across multi-turn research queries. Architecture & How It Works AutoRAG Agent orchestrates five integrated subsystems: Retrieval Memory ( check_memory ): After each answer, cited evidence Jev judges to genuinely support it is stored in ~/.autorag/memory.json . Later searches receive this conversation's evidence, similar past questions, and long-term insights as advisory reference — it never reorders results or overrides current evidence. See docs/retrieval-memory.md . Pluggable Multi-Method Retrieval: SPLADE Sparse Search: Learned-sparse keyword ranking via MinSync's KURE-Sparse-nano encoder over parsed markdown mirrors; it replaced BM25 in MinSync 0.6 and matches Korean inflected forms ( 인증서를 → 인증서 ) with no tokenizer library. Exact identifiers among many look-alike files rank less reliably than with BM25. See docs/minsync-setup.md . Semantic Vector Search: Dense vector retrieval over CDC chunks via the shared MinSync embedder. Hybrid Search: MinSync fuses sparse and vector ranking over the same chunks. Jikji Find-First Discovery: Local CLI-backed fast discovery answer packs. Everything File-Name Search (Windows): The bundled voidtools Everything indexes file and folder names under your search roots so the agent finds files by name, extension, path, size, or date instantly ( everything_search ).",
+      "stars_today": 40,
+      "language": "TypeScript"
+    },
+    {
+      "title": "rivet-dev/rivet",
+      "slug": "rivet-dev-rivet",
+      "url": "https://github.com/rivet-dev/rivet",
+      "abstract": "Fast, high-density, scalable orchestration with Rivet Actors. Built on S3 at SSD speeds. 4.99 ms p99 cold starts, 72 KB RAM per Actor, scales to billions Quickstart • Documentation • Blog • Discord • X What is Rivet? Rivet Actors are long-lived processes with in-memory state, a SQLite database, WebSockets, and scheduling. You can create one for each agent, user, session, or tenant. 72 KB per Actor : Actors share a node process instead of each booting a sandbox, so one server holds hundreds of thousands. 4.99 ms p99 cold starts : No image pull and no VM boot. Built for scale : All data lives in S3, so a cluster scales to billions of Actors. Hibernates when idle, wakes on demand : Idle Actors cost nothing and wake on the next request with nothing lost. SQLite backed by S3, at SSD speeds : 1.07 ms durable writes and 1.36 ms reads at p99, for about 10.4× less than replicated SSD storage. Use cases Durable & multiplayer AI agents : memory that survives restarts, shared live with every client Workflows : multi-step operations that replay instead of starting over AI-generated apps : run the apps and Actors your agent generates Collaborative editing : one Actor per document, synced to every editor Example A minimal agent written from scratch. For a ready-made agent, use Pi Durable . // server.ts import { actor , setup } from \"rivetkit\" ; import { db } from \"rivetkit/db\" ; import { streamText } from \"ai\" ; import { openai } from \"@ai-sdk/openai\" ; // One Actor per agent, created on first use: agent.getOrCreate([\"agent-123\"]) export const agent = actor ( { // 1. SQLite: every agent has its own database, so history survives restarts db : db ( { onMigrate : async ( db ) => { await db . execute ( \"CREATE TABLE IF NOT EXISTS messages (role TEXT, content TEXT)\" ) ; } , } ) , // 2. In-memory state: plain variables that live with the Actor, with no database round trip createVars : ( ) => ( { online : new Map < string , string > ( ) } ) , // 3. WebSockets: each client holds a live connection, and the Actor pushes to all of them onDisconnect : ( c , conn ) => { c . vars . online . delete ( conn . id ) ; c . broadcast ( \"online\" , [ ... c . vars . online . values ( ) ] ) ; } , actions : { join : ( c , user : string ) => { c . vars . online . set ( c . conn . id , user ) ; c . broadcast ( \"online\" , [ ... c . vars . online . values ( ) ] ) ; } , sendMessage : async ( c , text : string ) => { // Save the message await c . db . execute ( \"INSERT INTO messages VALUES (?, ?)\" , \"user\" , text ) ; const messages = await c . db . execute ( \"SELECT role, content FROM messages\" ) ; // Stream tokens to every connected client const response = streamText ( { model : openai ( \"gpt-5\" ) , messages } ) ; for await ( const delta of response . textStream ) { c . broadcast ( \"token\" , delta ) ; } // Save the response await c . db . execute ( \"INSERT INTO messages VALUES (?, ?)\" , \"assistant\" , await response . text ) ; } , } , } ) ; export const registry = setup ( { use : { agent } } ) ; // client.ts (frontend or backend) import { createClient } from \"rivetkit/client\" ; import type { registry } from \"./server\" ; const client = createClient < typeof registry > ( ) ; // Open a WebSocket connection to the agent const agent = client . agent . getOrCreate ( [ \"agent-123\" ] ) . connect ( ) ; // Listen for realtime events agent . on ( \"online\" , users => console . log ( \"online:\" , users ) ) ; agent . on ( \"token\" , delta => process . stdout . write ( delta ) ) ; // Call actions on the Actor await agent . join ( \"nathan\" ) ; await agent . sendMessage ( \"how many r's in strawberry?\" ) ; Why run agents on Rivet Actors? Each Actor gives the agent a long-lived process for long agent turns, in-memory state for context, a WebSocket server for multiplayer, durable SQLite storage for session transcripts and agent artifacts, and hibernation when idle. Most of an agent's time is spent waiting on inference . When the agent loop runs inside a sandbox, you pay for a whole VM that sits mostly idle with low CPU usage. Rivet Actors run the agent loop outside of the sandbox instead, often called \"separating the head from the hands.\" The agent's state, memory, and context live in the Actor, and it reaches the sandbox through tools only when it needs to run code. This uses a fraction of the memory and limits the blast radius and trust boundary of the code it runs. Read more about running the harness outside of the sandbox . Do I need a sandbox with a Rivet Actor? Often not. An agent needs a sandbox only to run code it writes. Developers on Rivet use three patterns: Agents with tools : Many agents only need tool calls, MCP, and APIs, such as customer support or personal agents. No sandbox needed. Agents with a lightweight sandbox : agentOS provides Linux-compatible sandboxing for JS and Python using V8 and WebAssembly, with full POSIX filesystems, networking stacks, and process trees. It covers most workloads, like data analysis, file processing, evals, and code mode. Agents with a full sandbox : Keep your existing sandbox provider and expose its shell and filesystem to the agent as tools, such as a bash tool that runs commands in the sandbox. The Actor reattaches to it across sleeps and restarts. See the sandbox coding agent example . Getting Started Use with your coding agent Paste this prompt into Claude Code, Cursor, Codex, or any coding agent: Run npx skills add rivet-dev/skills, then ask me what to build and run it locally. Start from scratch Rivet ships libraries built on top of Actors for common use cases. Actors : Long-lived processes with state, realtime, and scheduling built in. Agents : Durable agents built on Actors, with memory that survives restarts. Workflows : Multi-step operations built on Actors that replay instead of starting over. agentOS : Run the code your agent writes, securely, with granular control over network access, filesystem access, and resource limits. Dynamic Apps (preview): A backend per user, deployed the moment it is generated. How Actors compare to sandboxes Metric Rivet Actor Sandbox Cold start (p99) 4.99 ms 1.70 s Memory per instance 72.4 KB 512 MiB Storage SQLite on S3 Disk per sandbox Storage cost 10.4× cheaper Replicated SSDs Benchmark details & methodology Rivet numbers come from the published Rivet Actors vs Cloudflare Durable Objects benchmark , run on Rivet 3.0.3. Its repository has the raw samples and the scripts to reproduce them. Sandbox numbers are for E2B : 512 MiB is its default memory allocation from E2B's billing documentation as of November 4, 2026, and 1.70 s is the p99 cold start from ComputeSDK's October 30, 2026 sandbox benchmark . Storage cost compares S3 Standard with three Amazon EBS gp3 copies at AWS list prices. Sources, dates, and the full method are at rivet.dev/docs/benchmarking . Features Fault tolerance : If a node goes down, its Actors move elsewhere with their state intact. HTTP & WebSocket networking : Call an Actor over HTTP or hold a live WebSocket to it. End-to-end type safety : Typed clients for your backend and React hooks for your frontend. Cron & scheduling : Wake an Actor on a schedule or at a time it sets for itself. Actor-to-Actor calls : Actors call each other by key across the cluster. Scoped JWTs : Give each client a JWT scoped to the Actors it may reach. OpenTelemetry : Traces, metrics, and logs in OTel format. Deployment Options Option Description Get started Local & self-host Run Rivet locally while you build. In production, run the control plane on Docker, Kubernetes, or a VM. S3 is the only dependency. Self-hosting docs Rivet Cloud Fully managed, dedicated clusters on AWS or GCP in any region. Run your nodes on Rivet Cloud or bring your own. Dashboard BYOC The control plane runs inside your own VPC on AWS, GCP, or Azure, fully managed by Rivet. Your data never leaves your cloud. BYOC docs Every option runs the same control plane, from local dev to production.",
+      "stars_today": 27,
+      "language": "Rust"
+    },
+    {
+      "title": "chaitin/MonkeyCode",
+      "slug": "chaitin-monkeycode",
+      "url": "https://github.com/chaitin/MonkeyCode",
+      "abstract": "百智辦公 · MonkeyAI 團隊 AI 辦公工作臺，企業級開源 AI 辦公管理平臺。 百智辦公是一款面向團隊的開源 AI 辦公工作臺。用自然語言提出需求，讓 AI 完成辦公、程式設計與設計任務，直接交付工作成果。支援團隊資源共享、統一管控與私有化部署。 官網 · 產品文件 · 獨立部署 · 客戶端下載 · 微信交流群 辦公、程式設計、設計，讓 AI 直接交付工作成果 一個工作臺覆蓋多種工作模式。提供相關資料，說明目標和交付要求，讓 AI 執行任務、整理結果。 辦公：把日常瑣事，交給 AI 完成 製作 PPT、編寫文件、處理表格、整理檔案。從零散的資料出發，整理出一份清晰的工作成果。 例如：把這些資料整理成彙報 PPT，並彙總表格中的關鍵資料。 程式設計：把開發需求，變成可用的程式碼 從架構設計到編寫程式碼、修復問題，讓 AI 參與開發任務，把精力留給更重要的技術判斷。 例如：根據這份需求實現功能，補充測試，並修復執行中發現的問題。 設計：把腦海創意，變成眼前的作品 從海報、平面設計到互動設計與短劇製作，圍繞你的想法展開創作，讓表達不止於文字。 例如：圍繞活動主題製作海報，並給出配套的頁面設計。 企業級管理，讓團隊協作有章可循 通過企業管理面板，統一管理團隊的 AI 資源、訪問許可權與使用情況。 能力 團隊可以做什麼 團隊資源共享 在團隊內共享大模型、知識庫、技能、專家、MCP 聯結器和規則，讓成員複用已有資源。 資源使用與計費 掌握資源使用情況，對資源使用進行計費管理。 許可權控制與使用審計 控制資源訪問許可權，記錄並審計資源使用情況。 團隊使用統計 檢視團隊資源使用情況與統計資料，為資源配置提供依據。 團隊可以接入自己的模型服務，通過 MCP 聯結器連線業務工具，再結合知識庫、技能、專家和規則，適配自己的工作流程。 獨立部署 一個命令，搭建屬於自己團隊的百智辦公伺服器： bash -c \" $( curl -kfsSL https://release.monkeycode-ai.com/public/monkeyai-install.sh ) \" 輕量配置： 1 核 CPU + 1 GB 記憶體 。實際配置可按團隊規模、儲存容量與任務負載調整。 資料由你管理 ：將團隊資料儲存在自己的伺服器上，自主安排訪問許可權、資料備份與保留策略。 獨立的執行環境 ：在自己的基礎設施中執行，按團隊的節奏安排升級和維護，掌握服務配置與執行狀態。 按業務自由擴展 ：基於開原始碼定製工作空間，選擇適合的模型與工具，連線已有業務系統。 安裝與配置請參閱 產品部署文件 。從原始碼使用 Docker Compose 啟動、配置代理與證書、備份和升級，請參閱 倉庫部署與運維說明 。 線上體驗 體驗客戶端 下載對應平臺的 客戶端 。 填寫演示伺服器地址： https://demo.work.baizhi.cloud/ 。 通過郵箱接收驗證碼登入。 體驗管理後臺 開啟 演示管理後臺 ，檢視團隊資源、許可權、使用統計與計費管理等功能。 專案 內容 地址 https://admin.demo.work.baizhi.cloud/ 演示賬號 admin@baizhi.cloud 演示密碼 work.baizhi.cloud 客戶端下載 電腦、手機或瀏覽器，都能連線同一個團隊。辦公室、出差途中或遠端辦公，沿用熟悉的裝置接入工作空間。 平臺 入口 Web 開啟演示伺服器 Windows x64 下載安裝包 macOS Apple Silicon 下載安裝包 macOS Intel 下載安裝包 Linux x64 下載 AppImage Android 敬請期待 iOS 敬請期待 Linux ARM64 敬請期待 鴻蒙桌面 敬請期待 最新的平臺版本與下載地址可在 官網客戶端下載區域 檢視。 版本與服務 從免費版開始瞭解，按團隊規模、管理與服務需求選擇方案。 方案對比 免費版 付費版 價格 ¥0 諮詢購買 團隊席位 最多 10 個席位 席位方案請諮詢 雲電腦 不提供 支援 技術支援 不提供 提供 內建內容 基礎內容 更豐富的內建內容 常見問題 不會程式設計，也能使用嗎？ 可以。日常辦公和創作任務可以直接用自然語言描述，例如“把這些資料整理成彙報 PPT”或“分析這份表格”。提供檔案、說明目標與交付要求即可。 可以接入自己的模型和業務工具嗎？ 可以。團隊可以配置模型服務，通過 MCP 聯結器接入工具，並結合知識庫、技能、專家和規則適配工作流程。配置方法見 產品文件 。 私有化部署後，資料會發送到哪裡？ 團隊資料儲存在自有伺服器。使用外部模型或工具時，相關內容仍會發送到所配置的服務；企業可以根據自己的要求選擇服務、配置許可權與資料訪問範圍。 可以修改原始碼或做二次開發嗎？ 可以檢視、修改和二次開發，使用、修改及分發須遵循本倉庫的 AGPL-3.0 許可證 。 社群與支援 加入微信交流群，交流使用與部署經驗，獲取 AI 資源包。 產品文件 企業諮詢與購買 提交問題或建議 開發與倉庫說明 服務部署與運維 後端開發說明 與 API 文件 企業管理後臺開發說明 官網開發說明 與 官網原始碼 原 MonkeyCode 專案介紹保留在 README.monkeycode.md ，原中文介紹見 readme.cn.md 。 License 本專案使用 GNU Affero General Public License v3.0 開源。",
+      "stars_today": 22,
+      "language": "TypeScript"
+    }
+  ],
+  "papers": {
+    "hf": [],
+    "others": [
+      {
+        "title": "Learning to Act, Failing to Retrieve: Diagnosing Reward-Effectiveness Mismatch in Proactive Conversational Information Retrieval",
+        "slug": "learning-to-act-failing-to-retrieve-diagnosing-reward",
+        "url": "https://www.semanticscholar.org/paper/f7e9dd6eff82a637ed5278ca7f38421c728655ab",
+        "abstract": "Proactive conversational information retrieval (CIR) requires an agent to decide not only what to retrieve, but how to act: when to ask the user for clarification, when to issue a new retrieval, and when to reuse evidence it has already gathered. We study this as a sequential dialogue-management problem over Ask, Push, and Reuse. We train the interaction policy with reinforcement learning in an LLM-driven environment providing user simulation, query reformulation, and a relevance judge that scores the training reward; evaluation instead uses held-out human relevance judgements (qrels). The resulting agent learns coherent, state-dependent behaviour and accumulates high shaped reward, yet its qrel-based retrieval effectiveness (nDCG, MAP) falls at or below simple non-learned baselines on iKAT. We argue that this reflects a reward–effectiveness mismatch: the shaped reward, scored by an LLM judge and crediting cheap reuse of buffered evidence, is only loosely coupled to held-out qrel effectiveness. We localize this mismatch to reward design and show that replacing the dialogue-shaped signal with a retrieval-gain-aligned reward recovers much of the gap to the strongest non-learned baseline—roughly doubling nDCG@10 and MAP, with the residual gap traced to clarification quality—suggesting that reward formulation is a key lever for aligning proactive dialogue behaviour with retrieval quality.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 1,
+        "published_date": "2026-11-06",
+        "authors": [
+          "Hao-Yan Zhang",
+          "Gareth J. F. Jones"
+        ]
+      },
+      {
+        "title": "Group-Relative RL Post-Training for Sequential Recommendation",
+        "slug": "group-relative-rl-post-training-for-sequential",
+        "url": "https://www.semanticscholar.org/paper/f3a36dacc3bb3495fd2e0914c075f7a740fbf9ae",
+        "abstract": "Sequential recommender systems are typically trained with next-item cross-entropy (CE), yet evaluated by top-N ranking metrics that reward relative item ordering in the recommendation slate. This mismatch remains unaddressed for strong collaborative sequential models. Recent group-relative reinforcement learning has shown promise for LLM alignment and LLM-based recommenders, but whether a critic-free post-training paradigm can reliably improve standard collaborative sequential recommenders remains unclear. We introduce GRFT (Group-Relative Fine-Tuning), a GRPO-style post-training framework that aligns a pretrained sequential recommender directly to slate-level ranking rewards. GRFT samples multiple top-K slates per user context via Plackett-Luce sampling without replacement, scores them with ranking rewards, and updates the model with a PPO-clipped group-relative objective anchored to the frozen supervised reference. We instantiate rankwise and listwise variants to support position-level and whole-slate credit assignment. Under leakage-resistant global temporal splits on four datasets, GRFT consistently improves a strong sequential backbone, achieving gains of up to 25.3% NDCG@20 and 19.5% Recall@20. The improvements remain complementary to stronger supervised initialization, showing that reward-aligned post-training adds value beyond better supervised training alone. GRFT thus establishes that GRPO-style, critic-free post-training can improve strong collaborative sequential recommenders.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 1,
+        "published_date": "2026-11-06",
+        "authors": [
+          "Danil Gusak",
+          "Evgeny Frolov"
+        ]
+      },
+      {
+        "title": "A bibliometric mapping of research trends in artificial intelligence-enabled virtual reality STEM education",
+        "slug": "a-bibliometric-mapping-of-research-trends-in-artificial",
+        "url": "https://www.semanticscholar.org/paper/b2821af079a2d04875eba974441fe75d08c83e27",
+        "abstract": "A bibliometric mapping of research trends in artificial intelligence-enabled virtual reality STEM education. Discover Education",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-07",
+        "authors": [
+          "H. Ajimotokan",
+          "Quwiyu A. Ajibade",
+          "N. S. Saidu",
+          "A. B. Kareem",
+          "AbdulRahmah O. Otuoze",
+          "I. B. Sadiku",
+          "Hafeez O. Mahmud"
+        ]
+      },
+      {
+        "title": "Multi-omics data integration in bioinformatics: methods, applications, and the path toward biological reasoning",
+        "slug": "multi-omics-data-integration-in-bioinformatics-methods",
+        "url": "https://www.semanticscholar.org/paper/a2992e06658061fd3247c73fc91a0b5e2b336f05",
+        "abstract": "Multi-omics data integration in bioinformatics: methods, applications, and the path toward biological reasoning. Functional & Integrative Genomics",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-07",
+        "authors": [
+          "Emel Kabartan Çökeli",
+          "Furkan Cerrahoğlu"
+        ]
+      },
+      {
+        "title": "Knowledge-enhanced named entity recognition for cyber threat intelligence: a multi-stage classification and retrieval framework",
+        "slug": "knowledge-enhanced-named-entity-recognition-for-cyber-threat",
+        "url": "https://www.semanticscholar.org/paper/9a0689d8ff0c2bea2b16de9e3f53139d4a0db152",
+        "abstract": "Knowledge-enhanced named entity recognition for cyber threat intelligence: a multi-stage classification and retrieval framework. Journal of Computer Virology and Hacking Techniques",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-07",
+        "authors": [
+          "Bo-Long Cheng",
+          "Aniket Mahanti",
+          "R. Naha",
+          "S. Battula"
+        ]
+      },
+      {
+        "title": "Coarsen or refine? coordination cost and the modular architecture of digital platforms under AI-driven complexity",
+        "slug": "coarsen-or-refine-coordination-cost-and-the-modular",
+        "url": "https://www.semanticscholar.org/paper/809866d58aaeb726e6539dceda09c7550283ee9a",
+        "abstract": "Coarsen or refine? coordination cost and the modular architecture of digital platforms under AI-driven complexity. Computational and mathematical organization theory",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-07",
+        "authors": [
+          "Li-Zi Zhang",
+          "Xiao-Min Cai"
+        ]
+      },
+      {
+        "title": "MemDTG: Dynamic Temporal Memory Graphs for Evidence-Admissible Agent Memory",
+        "slug": "memdtg-dynamic-temporal-memory-graphs-for-evidence",
+        "url": "https://www.semanticscholar.org/paper/fe0839b90f24f15259642c3dc590196c87acb14a",
+        "abstract": "Long-term agent memory is an online, non-monotonic retrieval problem. New interactions may reinforce, contradict, supersede, specialize, abstract, or expire earlier memories; the same fact can be a wrong current answer, a correct historical answer, or necessary transition evidence depending on query intent. Existing chunk, summary, and graph memories retrieve by semantic or graph relevance and treat time as post-hoc metadata, so they cannot determine whether a memory is observable, valid, lifecycle-admissible, and provenance-supported before it enters the candidate space. We propose MemDTG, a dynamic temporal memory graph that frames agent memory as temporal evidence admission. MemDTG separates immutable raw episodes from a mutable entity-state temporal graph and a memory-evolution graph over assertion versions. State slots localize mutable user and task states; an LLM-assisted slot-local resolver classifies semantic evolution only within bounded temporal histories; and deterministic commit rules update valid intervals, lifecycle states, and typed evolution edges. At read time, a query compiler instantiates observed-time, valid-time, version, edge-type, and role constraints before ranking, and QV-CTW retrieves evidence paths only inside the query-legal temporal subgraph. Evidence certificates record selected facts, sources, roles, and rejected stale or future alternatives, making retrieval auditable. On LongMemEval and LoCoMo, MemDTG achieves the best LLM-judge accuracy and Citation F1. Ablation and temporal error analyses confirm that provenance certificates and legal-subgraph pre-filtering are each essential for these gains, reducing stale-answer errors by 61.7% and future leaks by 80.1%.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-06",
+        "authors": [
+          "Ya-Xin Deng",
+          "Hong-Chao Qin",
+          "Tian-Yi Gao",
+          "Guang Zeng",
+          "Rong-Hua Li"
+        ]
+      },
+      {
+        "title": "Beyond Static Profiles: Intent-Aware Behavioural Control for LLM-based Recommendation Simulation",
+        "slug": "beyond-static-profiles-intent-aware-behavioural-control-for",
+        "url": "https://www.semanticscholar.org/paper/fc3bf357f148f70d0adeeb179ad309e4f87d1fd6",
+        "abstract": "Large language models (LLMs) are increasingly used in recommender systems for user modelling, ranking, and simulation. Among these applications, LLM-based user simulators provide a flexible way to evaluate recommender systems without relying on live user feedback. However, existing simulators typically reduce user behaviour to static preference matching based on fixed user profiles, overlooking the fact that real decisions may also reflect recent preference shifts and exploratory behaviour. To address this limitation, we propose IntRecSim (Intent-aware Recommendation Simulation), a plug-in behavioural control framework for LLM-based user simulation. IntRecSim introduces a lightweight intent mechanism that guides whether the simulated decision should follow long-term preferences, recent behavioural evidence, or exploratory behaviour. Since standard recommendation datasets lack explicit intent annotations, we construct pseudo-intent supervision from historical interactions using hybrid category and semantic preference signals. The inferred intent is injected into the LLM simulator as a dynamic control signal, making the framework compatible with different profile-generation backbones. Experiments on three benchmark datasets, covering discrimination and ranking tasks show that IntRecSim improves simulation performance in most evaluated settings. Further analysis highlights the importance of explicit behavioural control for modelling realistic user decisions in LLM-based recommender simulation.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-06",
+        "authors": [
+          "Xinye Wanyan",
+          "Cheng-Long Ma",
+          "Danula Hettiachchi",
+          "Zi-Qi Xu",
+          "Jeffrey Chan"
+        ]
+      },
+      {
+        "title": "Better Together: Human-LLM Pairs for Reliable System Rankings",
+        "slug": "better-together-human-llm-pairs-for-reliable-system-rankings",
+        "url": "https://www.semanticscholar.org/paper/fbedb81b7edd852be12a769ed478de3eec3c9284",
+        "abstract": "We consider the problem of assigning two bronze (i.e. ''non-topic-creator'') assessors per topic for constructing an IR test collection, where the quality of human assessors is unknown. Given the advent of LLM-as-a-judge strategies in IR evaluation, replacing one or both of the human assessors with an LLM certainly seems appealing. But which is the best assessor pairing strategy for the purpose of obtaining an effective system ranking that represents a collective view of human assessors? To address this question, we leverage a unique existing web search test collection whose relevance assessments were contributed by a total of 24 assessors. The collection consists of non-overlapping subcollections, each with over 50 topics. For each subcollection, our target system ranking reflects the collective view of eight assessors. We then form all possible pairs from a pool of 12—comprising the original eight assessors plus four LLMs—and evaluate how well each pair's generated ranking approximates the target ranking with only two assessors. Across the three subcollections, the best performing pair type is Human-Human (H-H), but the Human-LLM (H-LLM) pair is only 0.009 Kendall's τ behind on average. Two One-Sided Tests (TOST) further show that H-LLM pairs are practically equivalent to H-H pairs under a pre-defined margin. Furthermore, H-H pairs are not uniformly strong, as human assessors have larger performance variance and can occasionally underperform H-LLM pairs when a reliable LLM is used. When Llama 4—which produced output format errors during label generation—is excluded, H-LLM pairs surpass H-H on average. Our results suggest that pairing one human with a reliable LLM can closely approximate the collective view of the eight assessors for ranking systems.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-06",
+        "authors": [
+          "Ji-Na Lee",
+          "Tetsuya Sakai",
+          "Young-In Song"
+        ]
+      },
+      {
+        "title": "Terminal-Optimal Graph Diffusion with Null-Model-Constrained and Structure-Preserving Noise",
+        "slug": "terminal-optimal-graph-diffusion-with-null-model-constrained",
+        "url": "https://www.semanticscholar.org/paper/fa83ce1fdff05073a2c54d8a74f78873b9c78e59",
+        "abstract": "Graph diffusion models have emerged as a promising approach for generating complex networks, yet they typically face two major drawbacks. First, terminating the forward process in pure Gaussian noise eliminates the intrinsic structural signatures of the original network, which leads to suboptimal generation quality. Second, the absence of constraints along the diffusion trajectory causes progressive degradation of topological features, ultimately resulting in complete structural collapse. To overcome these challenges, we introduce Null-Model-Constrained Graph Diffusion (NMC-GD), a principled framework incorporating specialized designs for graph generation. Specifically, we substitute the conventional isotropic prior with a null-model distribution as the new forward diffusion endpoint, explicitly preserving critical statistical properties of the network. In addition, we develop a null-model-guided continuous-time stochastic differential equation (SDE) and design a directional noise term that enforces a global structural constraint on the diffusion trajectory, striking a balance between stochasticity and structural invariance. Extensive experiments on three public datasets demonstrate that NMC-GD achieves superior generation quality and computational efficiency.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-06",
+        "authors": [
+          "Yu-Chen Zhou",
+          "Yu-Hong Yan",
+          "Shu-Bao Jin",
+          "Jia-Ze Xin",
+          "Jie Gao",
+          "Rong Qian"
+        ]
+      },
+      {
+        "title": "TRACE: Tracing Temporal Constraints for Complex Temporal Knowledge Graph Question Answering",
+        "slug": "trace-tracing-temporal-constraints-for-complex-temporal",
+        "url": "https://www.semanticscholar.org/paper/f9df4d6bf668a1977b8912716e493568e62bc712",
+        "abstract": "Complex temporal knowledge graph question answering (TKGQA) requires composing multiple time-dependent facts under constraints such as validity intervals, temporal ordering, overlap, and set-style operations. Recent LLM-based approaches improve temporal reasoning through retrieval, decomposition, or planning, but the temporal constraints produced during intermediate reasoning are often left implicit: retrieved evidence may be temporally invalid, intermediate answers may be propagated without verification, and deterministic temporal operations may still be handled by free-form generation. We propose TRACE, a temporal-constraint-aware recursive framework that traces temporal constraints across retrieval, answer verification, constraint propagation, and execution. TRACE grounds temporal anchors and operators from sub-questions and intermediate answers, performs operator-aware temporal retrieval, verifies child-derived answers using grounding, bridge evidence, and operator consistency, and invokes symbolic temporal execution when root-level temporal operations are deterministically resolvable. Experiments on MultiTQ and TimelineKGQA show that TRACE improves multi-step and operator-sensitive temporal reasoning under the evaluated settings. Detailed analyses further show that verified answer propagation reduces error accumulation, while symbolic temporal execution is particularly effective for compositional temporal relations such as intersection and union. These results demonstrate that complex TKGQA benefits not only from retrieving or decomposing temporal questions, but also from explicitly tracing, verifying, and executing temporal constraints throughout the reasoning process.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-06",
+        "authors": [
+          "Shi-Qi Fan",
+          "Shi-Yue Li",
+          "Xiang-Zhi Mao",
+          "Ze-Qing Zang",
+          "Hong-Yi Nie",
+          "Tong Li",
+          "Wen Hua"
+        ]
+      },
+      {
+        "title": "Text-Conditioned Scene Graph Sequence Generation via Discrete Diffusion",
+        "slug": "text-conditioned-scene-graph-sequence-generation-via",
+        "url": "https://www.semanticscholar.org/paper/f9dd054c3469333be631892dc1fe8e32d9ba554d",
+        "abstract": "Scene graphs represent visual scenes as objects and their relationships. While considerable research has explored predicting scene graph sequences from images or videos, generating such sequences from text remains underexplored. In this work, we introduce a discrete diffusion framework for text-conditioned scene graph sequence generation, focusing on visual scenes centered on human--object interactions. The proposed framework represents each sequence as a fixed-slot discrete state, where each slot encodes the state of an object over time, and employs a Transformer-based denoiser to generate scene graph sequences aligned with the input text. The denoiser jointly leverages within-frame slot attention, cross-frame temporal attention, and text cross-attention to capture inter-object relationships, temporal dynamics, and text--graph correspondence. We compare the proposed framework with diverse baselines, including retrieval-based methods, scene graph parsers, large language models, sequence-to-sequence models, and non-diffusion generative models. Experimental results show that our framework improves both text--graph alignment and the accuracy of temporal dynamics represented in scene graph sequences, including object appearance, persistence, and disappearance.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-06",
+        "authors": [
+          "Bomi Kwon",
+          "Ki-Yong Lee"
+        ]
+      },
+      {
+        "title": "SEMAPHORE: Semantic Detour over Incomplete Knowledge Graphs for Multi-hop Numerical QA",
+        "slug": "semaphore-semantic-detour-over-incomplete-knowledge-graphs",
+        "url": "https://www.semanticscholar.org/paper/f7d6b9c15102ba4e7e067d0867e5871cb48650e9",
+        "abstract": "Numerical question answering (QA) over Knowledge Graphs (KGs) requires retrieving numerical values from structured sources. Knowledge Graph Question Answering (KGQA) and KG-augmented Large Language Model (LLM) methods exploit multi-hop connectivity for entity-centric questions but remain brittle for numerical queries, whose values typically appear as sparse attribute leaves. When required triples are missing, target values can become unreachable by explicit traversal; structural methods may retrieve values from the wrong numerical attribute, while numerical solvers assuming directly attached values cannot access non-local evidence. We propose SEMAPHORE, a neuro-symbolic framework that reformulates numerical QA over KGs as a semantic detour problem. SEMAPHORE combines symbolic path planning with embedding-based geometric navigation and decoupled scoring that separates relational navigation from numerical attribute grounding. This design identifies plausible detours while preserving the metric semantics required for accurate numerical answers. On numerical QA benchmarks derived from FB15K-237 and YAGO15K, SEMAPHORE outperforms strong LLM and KG-augmented baselines, demonstrating the value of semantic detours for robust numerical knowledge access over KGs. Sparsity and cross-dataset transfer experiments show that this advantage persists under severe graph incompleteness and when target-specific Knowledge Graph Embedding (KGE) training is replaced with transferred schema embeddings. Code is available at https://github.com/orcies8147/SEMAPHORE.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-06",
+        "authors": [
+          "Ho-Jun Lee",
+          "Hogun Park"
+        ]
+      },
+      {
+        "title": "Amplified and Emergent Safety Risks in Multi-Agent Recommendation and Retrieval",
+        "slug": "amplified-and-emergent-safety-risks-in-multi-agent",
+        "url": "https://www.semanticscholar.org/paper/f789731dc4ed91214b627670b5abdda87be21235",
+        "abstract": "Recommendation and retrieval systems are increasingly built by composition, with pipelines of LLM-powered agents that retrieve, reason, and act replacing standalone models. This shift inherits long-standing risks while introducing new ones, yet the resulting threats to robustness and safety, and the strategies to contain them, remain underexplored. Focusing on multi-agent recommender systems, this tutorial organises these threats along three tiers, from drift through misalignment to compromise, and separates risks that composition merely amplifies from those that emerge only once agents interact. Because agents that each pass their own safety checks can still interact in unsafe ways, we also show how to scope evaluation to the level at which each failure surfaces: the individual agent, the interaction, or the composed system. Interactive walkthroughs of simulated attacks illustrate how these failures propagate through complete recommender and retrieval pipelines.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-06",
+        "authors": [
+          "Kurt Cutajar",
+          "Jas Kandola",
+          "Anjun Hu",
+          "Yashar Deldjoo"
+        ]
+      },
+      {
+        "title": "LLMTGL: Large Language Models for Robust Text-Attributed Graph Learning under Missing Text and Label Noise",
+        "slug": "llmtgl-large-language-models-for-robust-text-attributed",
+        "url": "https://www.semanticscholar.org/paper/f676912df5c8570a070bb8be5058192f41fad935",
+        "abstract": "Text-attributed graphs have attracted considerable attention due to their extensive applications in domains such as social networks and citation networks. Existing methods typically rely on reliable text-attributed graphs. However, the frequent occurrence of missing text in real-world scenarios severely constrains model performance. Meanwhile, label noise is inevitably introduced during the data annotation process, leading to a degradation in the performance of graph learning. The large language model (LLM), with their text generation and semantic understanding, offers a unified solution to the challenges of missing text and label noise. To jointly address both challenges, we propose LLMTGL, a novel graph learning framework for text-attributed graph node classification. Specifically, we introduce graph topological properties to construct augmented prompts that guide the LLM in generating semantically coherent academic text descriptions for nodes with missing text. Subsequently, we design an LLM-driven pseudo-label expansion mechanism that selects high-confidence unlabeled nodes to the training set. This framework jointly optimizes for missing text and label noise by integrating graph topological structure with semantic information. Experimental results demonstrate that LLMTGL achieves superior performance compared to state-of-the-art methods on text-missing graphs with noisy labels. The source code is available at https://anonymous.4open.science/r/LLMTGL-EC24ssjs.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-06",
+        "authors": [
+          "Riting Xia",
+          "Guang-Liang Zhao",
+          "An-Chen Li",
+          "Ping Zhang",
+          "Yan Zhang"
+        ]
+      },
+      {
+        "title": "Can Frontier LLMs Capture $40 Billion in Supply Chain Value?",
+        "slug": "can-frontier-llms-capture-40-billion-in-supply-chain-value",
+        "url": "https://www.semanticscholar.org/paper/f617c439f70014c4af9fb88bb2b3e89ec14739d6",
+        "abstract": "Large Language Models (LLMs) perform well on many NLP tasks, but their ability to reason about complex supply chain relationships remains unclear. We introduce the Supply Chain Intuition Exam (SCIE), a benchmark for evaluating whether LLMs can identify and infer direct and indirect supplier relationships. We compare standard LLMs, models with grounding-based retrieval, and deep research (DR) systems. Despite access to public financial reports and real-world data, recall remains low: standard and grounded models achieve approximately 3--16%, while the best DR systems reach only 22%. These results suggest that retrieval alone is insufficient for professional-grade supply chain reasoning. SCIE highlights the need for methods that better integrate domain knowledge, retrieval, and multi-step reasoning in business and finance applications.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-06",
+        "authors": [
+          "Chung-Chi Chen",
+          "Ichiro Kobayashi",
+          "Yusuke Miyao",
+          "Hiroya Takamura"
+        ]
+      },
+      {
+        "title": "POLAR: Policy Optimization through Larger Reasoners",
+        "slug": "polar-policy-optimization-through-larger-reasoners",
+        "url": "https://www.semanticscholar.org/paper/f6150289ac729e4eada31d633beb59c2fad2f45e",
+        "abstract": "Reinforcement learning with verifiable rewards (RLVR) is a practical way to improve the reasoning and decision-making abilities of large language models, but its training signal is often sparse. When a policy faces prompts beyond its current ability, every sampled trajectory in a group may fail the verifier, resulting in an all-zero group. In this case, group-relative policy optimization gives little useful gradient even when the prompt contains valuable learning content. This capacity-difficulty mismatch is especially costly for smaller models used in knowledge-intensive and web-interaction tasks. We present POLAR, a difficulty-aware training framework that augments on-policy RL with conditional guidance from a larger reasoner. POLAR uses the standard GRPO branch when at least one sampled response succeeds, and switches to a supervised objective over verified teacher trajectories only when the whole student group receives zero reward. The method can turn otherwise wasted all-zero groups into targeted learning opportunities while keeping policy exploration on prompts the student can handle. We formalize the switching criterion, teacher selection objective, mixed RL/supervised loss, and compute overhead. We evaluate POLAR on WebShop, GAIA, and WebWalkerQA using Qwen2.5-7B-Instruct, Qwen3-4B, and Qwen3-8B policies. The results show consistent gains over matched GRPO baselines, with large improvements on hard web traversal questions for the two smaller policies. Ablations and diagnostics further show that the gains come from the proposed all-zero recovery mechanism.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-06",
+        "authors": [
+          "Ye Yuan",
+          "Zhi-Ping Xiao",
+          "Ming Zhang"
+        ]
+      },
+      {
+        "title": "PRISM: Reliable LLM Knowledge Distillation from Graph-Context Perspectives for Text-Attributed Graph Learning",
+        "slug": "prism-reliable-llm-knowledge-distillation-from-graph-context",
+        "url": "https://www.semanticscholar.org/paper/f4e025927da11b8143f789ed7d84a15accb23cc0",
+        "abstract": "Text-attributed graph (TAG) learning aims to leverage both textual attributes and graph structures for node classification. Recent studies have utilized Large Language Models (LLMs) to generate pseudo-labels and rationales for few-label TAG learning. However, existing approaches typically rely solely on the textual attribute of target nodes, making the generated knowledge susceptible to noise and unreliability. To address this limitation, we propose PRISM (Perspective-based Reliable Imitation with Semantic Multiplicity), a reliability-aware knowledge distillation framework for few-label TAG learning. PRISM constructs multiple structural-context perspectives for each target node and estimates the reliability of LLM-generated knowledge based on cross-perspective consistency. The resulting reliability weights are then incorporated into the distillation process, enabling GNNs to place greater emphasis on more reliable supervision signals. Extensive experiments on five TAG benchmark datasets demonstrate that PRISM consistently outperforms existing methods in few-label node classification.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-06",
+        "authors": [
+          "Jung-Hyun Kim",
+          "Sooho Jung",
+          "D. Y. Kang",
+          "Sang-Wook Kim"
+        ]
+      },
+      {
+        "title": "Structural Knowledge Induced Logical Learning for LLM Reasoning over Knowledge Graphs",
+        "slug": "structural-knowledge-induced-logical-learning-for-llm",
+        "url": "https://www.semanticscholar.org/paper/f478b4145c1d0dd4a1056b0242491b7dd54cfbf5",
+        "abstract": "Knowledge Graphs (KGs) are fundamental for grounding Large Language Models (LLMs) in factually consistent reasoning across diverse data-mining tasks. However, when reasoning over complex graph topologies, LLMs can be brittle in maintaining structural consistency and may rely on spurious correlations. We propose SKILL (Structural Knowledge Induced Logical Learning), a novel paradigm that transforms relational rules from passive symbolic patterns into explicit, generation-time symbolic guidance for LLM-based reasoning. Unlike existing methods that isolate symbolic mining from neural inference, SKILL introduces a semantically aligned rule synthesis framework that filters spurious patterns and enables LLMs to leverage relational regularities during inference. By grounding generation in pruned, query-specific subgraph structures together with rule–path evidence, SKILL improves inductive generalization while preserving generative flexibility. Extensive experiments on three inductive benchmarks demonstrate that SKILL achieves state-of-the-art performance, with up to a 5% absolute improvement in Hits@1, highlighting a new and effective way to integrate symbolic structure into LLM reasoning over knowledge graphs. Source code is available at https://github.com/luilui97/SKILL.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-06",
+        "authors": [
+          "Lei Gao",
+          "Ben Zhang",
+          "Jin-Chuan Zhang",
+          "Ling Tian",
+          "Hui Gao",
+          "Jun-Liang Xing",
+          "Yuan-Chun Shi"
+        ]
+      },
+      {
+        "title": "SymGRPO: Preventing Mode Collapse in Group Relative Policy Optimization via Symmetric Anti-Reinforcement",
+        "slug": "symgrpo-preventing-mode-collapse-in-group-relative-policy",
+        "url": "https://www.semanticscholar.org/paper/f3f0ebd08d13504ef4e81ed24df0f7d115ac279e",
+        "abstract": "Group Relative Policy Optimization (GRPO) has become the dominant critic-free method for reinforcement learning from human feedback in large language models, with growing adoption for fine-tuning LLM-based retrievers, query reformulators, rerankers, and agentic search systems. We identify a fundamental failure mode of GRPO in multi-prompt training: prompt-blind mode collapse, where the policy converges to a single output regardless of input prompt—a critical concern for information retrieval applications where prompt-conditioned behavior is essential. We prove this arises from a quadratic gradient vanishing at the collapsed state: GRPO's entropy restoration rate is Θ(ε2|log ε|) where ε = 1 − πmax. We propose SymGRPO, which augments GRPO with an anti-reinforcement log-barrier on unchosen tokens, raising the restoration rate to Θ(ε|log ε|)—a diverging ratio of α(V − 1)/ε. Critically, this benefit appears only when the batch advantage sum S ≠ 0, which holds under EMA baselines but is forced to zero by standard mean-zero normalization. Across four small-scale reasoning tasks, GRPO mode-collapses to 19–50% accuracy while SymGRPO reaches 100% on multi-solution tasks. The modification is three lines of code.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-06",
+        "authors": [
+          "Manu Ghulyani",
+          "Anuj Rathore",
+          "A. Azad",
+          "M. Chandran"
+        ]
+      },
+      {
+        "title": "ACMDG: An Effective and Scalable Active Clustering via Multi-granularity Diffusion Graph",
+        "slug": "acmdg-an-effective-and-scalable-active-clustering-via-multi",
+        "url": "https://www.semanticscholar.org/paper/f3663ac0aee1c1b4adb00216b638624b65f922f3",
+        "abstract": "Active clustering injects minimal human feedback into clustering via pairwise constraints, which is highly useful in data mining pipelines but difficult to scale in practice. Existing methods are expensive in two stages: initialization often requires building costly global structures, and each interaction round may trigger heavy recomputation. Meanwhile, substantial accuracy gains still demand many constraints. We present ACMDG, an effective and scalable active clustering framework built on a multi-granularity diffusion graph. ACMDG constructs a sparse yet connected multi-granularity diffusion graph structure by progressively modeling data relationships from fine-grained nearest-neighbor links to coarse-grained representations. Within an iterative refinement framework, it selects informative nodes in batch mode, categorizes them efficiently via a neighborhood-set-based interaction strategy, and refines clustering by diffusion-based label propagation. The overall framework runs in O(n log n) time. Extensive experiments on real-world and synthetic datasets show that ACMDG outperforms its counterparts in most cases in terms of clustering quality and scalability, while requiring significantly fewer constraints. Code is available at: https://github.com/BZhXuang/ACMDG_CIKM2026",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-06",
+        "authors": [
+          "Bin Zhang",
+          "Wen-Bo Xie",
+          "Zi-You Dong",
+          "Xuan-Lin Zhu",
+          "Xin Wang",
+          "Zhen Liu"
+        ]
+      },
+      {
+        "title": "FAIR-PIVOT: Fairness-oriented Perspective-Inversion via Viewpoint-balanced Outline-then-generaTion for Mitigating Political Bias in Web Corpora",
+        "slug": "fair-pivot-fairness-oriented-perspective-inversion-via",
+        "url": "https://www.semanticscholar.org/paper/f3637a542fad55954dee9c1d4a4b1fe6977ff4c9",
+        "abstract": "Large-scale web corpora (e.g., C4) are severely imbalanced in terms of political perspective: on the death penalty issue, e.g., left-leaning documents outnumber right-leaning ones by more than 8-fold. Such imbalances can transfer to downstream large language models, reinforcing political bias. We propose Fairness-oriented Perspective-Inversion via Viewpoint-balanced Outline-then-generaTion (simply, FAIR-PIVOT), a retrieval-augmented generation (RAG)-based two-level-agent framework that builds balanced perspective-inverted synthetic data for politically sensitive topics. After annotating web texts with multi-persona LLMs, FAIR-PIVOT retrieves documents from contrasting orientations and inverts their viewpoint, preserving authentic discourse structure rather than rephrasing the same-view text. Across nine topics, FAIR-PIVOT generates 13,954 instances and reduces the total variation distance, a measure of how far the orientation distribution deviates from uniform balance, by up to 83%, while improving linguistic fluency as measured by Perplexity (25.5 → 21.8 ↓). Fine-tuning small language models on the balanced corpus further shifts their downstream behavior toward the intended orientation (Gemma (L--R)% +48 → +34, Qwen +55 → +50), confirming that data-level balancing can yield fairer model responses. Code and scripts are available at https://github.com/bigbases/FAIR-PIVOT.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-06",
+        "authors": [
+          "Haneul Kim",
+          "Jaebeom You",
+          "Jaewon Lee",
+          "Kisung Lee",
+          "Hyuk-Yoon Kwon"
+        ]
+      },
+      {
+        "title": "Self-Supervised Learning for Address Linkage in Tracking Ecosystems via Large Language Models",
+        "slug": "self-supervised-learning-for-address-linkage-in-tracking",
+        "url": "https://www.semanticscholar.org/paper/f2e4f7346d6e80093ded4b61b4553dbbc9f10113",
+        "abstract": "User tracking aims to identify network activities belonging to the same user across websites and network environments, supporting applications such as personalized recommendation and targeted advertising. As dynamic address allocation and modern privacy protections constrain traditional tracking methods, traffic-based tracking techniques have emerged to link dynamic addresses through traffic patterns. However, existing methods usually rely on large-scale user labels for supervised training, while such labels are difficult to obtain in TLS encrypted traffic, severely limiting model generalization. In this paper, we propose SLATE, a self-supervised address linkage framework integrated with LLMs under limited labeled data. Specifically, SLATE introduces a homologous subgraph discrimination task based on address behavior partitioning, which encourages the encoder to capture stable behavior patterns across temporal evolution from large-scale unlabeled data. Moreover, SLATE develops a graph semantic projection module, which enables the LLM to better interpret behavior graph representations through graph-text matching and node semantic classification, and further leverages its reasoning capability to support address linkage decisions. We evaluate SLATE on two real-world user datasets. Experimental results show that SLATE substantially outperforms the strongest self-supervised methods, achieving an average improvement of over 15% in Hits@1, while remaining competitive with state-of-the-art supervised methods. These findings demonstrate the strong potential of combining self-supervised learning with LLMs for address linkage in tracking ecosystems.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-06",
+        "authors": [
+          "Yang Li",
+          "Gao-Peng Gou",
+          "Zhao-Yi Wang",
+          "Tian-Yu Cui",
+          "Chang Liu",
+          "Gang Xiong",
+          "Zhen Li",
+          "Li Guo"
+        ]
+      },
+      {
+        "title": "Co-JDPRec: Collaborative Joint Dynamic Pruning for Efficient LLM-based Generative Recommendation",
+        "slug": "co-jdprec-collaborative-joint-dynamic-pruning-for-efficient",
+        "url": "https://www.semanticscholar.org/paper/f245f2233906af1f05b2b6acbfe40dc311131182",
+        "abstract": "Generative recommendation leverages Large Language Models (LLMs) to model item semantics and user preference dynamics through sequence-to-token generation, but deep Transformer layers and wide Feed Forward Network (FFN) dimensions introduce substantial memory and latency overhead in online recommendation scenarios. Existing LLM pruning methods are mainly designed to preserve general language modeling ability, often overlooking the recommendation-specific states shaped by item semantics, collaborative signals, and temporal preference dynamics. To address this limitation, we propose Co-JDPRec, a collaborative joint dynamic pruning framework that shifts the pruning objective from parameter removal to recommendation-state preservation. Specifically, Co-JDPRec introduces a task-aware saliency criterion that combines collaborative alignment and sequence-order sensitivity, enabling the model to identify neurons critical for user-item relations and evolving preference dynamics. Guided by this saliency, Co-JDPRec jointly searches FFN width and layer depth to derive a compact heterogeneous architecture, followed by distillation recovery to restore recommendation performance. Theoretically, Co-JDPRec characterizes structural importance via first-order Taylor sensitivity under recommendation-aware objectives. Empirically, it achieves superior accuracy–efficiency trade-offs on both title-based and semantic-ID-based generative recommendation backbones, validating the effectiveness of recommendation-state-aware pruning.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-06",
+        "authors": [
+          "Shun-Hang Zheng",
+          "Peng-Fei Jiao",
+          "Pin-Long Zhao",
+          "Hao-Cheng Yang",
+          "Da-Lin Zhang",
+          "Yu-Ling Wang"
+        ]
+      },
+      {
+        "title": "E²L³AE: End-to-End Text Encoder Tuning for LLM-Enhanced Linear Autoencoders",
+        "slug": "e²l³ae-end-to-end-text-encoder-tuning-for-llm-enhanced",
+        "url": "https://www.semanticscholar.org/paper/f010aad26afe0b07d3936fd7e4a9b20baab99edc",
+        "abstract": "Enriching sparse user–item interactions with semantic item knowledge is essential for robust recommendation, particularly for long-tail items where collaborative signals are weak or unreliable. L³AE integrates frozen LLM embeddings into linear autoencoders, but fixed text representations can be suboptimal for recommendation because consumption-relevant item characteristics often deviate from general textual semantics. We propose an end-to-end extension that fine-tunes the text encoder within the same linear autoencoder framework, encouraging its embeddings to reflect item relatedness derived from user–item interactions, thereby adapting pretrained textual knowledge to recommendation objectives while remaining grounded in pretrained semantic knowledge. Experiments on public datasets show that our end-to-end trained hybrid model improves upon the original L³AE and other baselines. Moreover, the fine?tuned encoder alone serves as a competitive semantic?based recommender.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-06",
+        "authors": [
+          "Maryia Kurdun",
+          "Kiryl Liakhnovich",
+          "Michail Pechatov",
+          "Oleg Lashinin"
+        ]
+      },
+      {
+        "title": "CoRe-Rec: Budgeted Consistency Policy Re-Rolling for Sequential Recommendation",
+        "slug": "core-rec-budgeted-consistency-policy-re-rolling-for",
+        "url": "https://www.semanticscholar.org/paper/f00f1d03adaabb63876b7c192e758d0a03a16299",
+        "abstract": "Real-time sequential recommendation requires policies that are both expressive and efficient. Diffusion policies can model diverse user preferences, but their iterative denoising process introduces high serving latency. Standard reinforcement learning (RL) actors usually execute a single sampled action without checking whether the action is likely to trigger a positive user response before exposure. We propose CoRe-Rec, a budgeted consistency-policy re-rolling framework for RL-based slate recommendation. CoRe-Rec uses a shared consistency actor to generate continuous hyper-actions in one or few denoising steps. Each hyper-action induces a provisional slate through top-K item scoring. Before execution, a frozen user response model (URM) evaluates multiple low-cost candidates generated with different sampler configurations and noise seeds, and an early-stopping rule selects the best slate under an inference budget. The re-rolling step is a detached test-time search procedure: gradients are not propagated through the discrete sampler selection or the top-K slate construction; instead, the selected branch is recomputed for actor-critic learning. Experiments in simulated environments built from RL4RS, BookCrossing, and MovieLens 1M show that CoRe-Rec improves cumulative reward and episode depth while providing a favorable reward--latency trade-off.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-06",
+        "authors": [
+          "Zhi-Yuan Zhang",
+          "Yuxin He",
+          "Yong Sun",
+          "Li-Jiang Liu",
+          "Jun-Yu Shi",
+          "Zheng-Jie Zhang",
+          "Min-Xue Fang",
+          "D. Yan",
+          "Qiang Nie"
+        ]
+      },
+      {
+        "title": "Interpretation-Aware Image Manipulation Detection",
+        "slug": "interpretation-aware-image-manipulation-detection",
+        "url": "https://www.semanticscholar.org/paper/ef3e5360530d679980f888822818e89767b43556",
+        "abstract": "Image manipulation has been a common practice since the early days of photography, and has evolved into a sophisticated threat with the rise of powerful image editing tools and generative AI. It can be used to spread misinformation, manipulate public opinion, and cause harm to individuals and communities. In this article, we study the problem of determining whether an image is misleading, i.e. edited in a misleading way. We introduce a risk framework to assess the intrinsic interpretive shift (ITS) of an ordered image pair, which evaluates whether the final edited image changes the interpretation supported by a source reference image. We show our risk framework can be operationalized with the Content Provenance and Authenticity (C2PA) provenance framework. We estimate ITS with a single-call vision-language implementation of our risk framework, which first checks for meaningful visual differences, then tests whether the differences induce interpretive shift, and finally determines whether the shift is fully explained by permissible transformations rather than content-level changes. The system outputs a binary label (potentially misleading or not) together with interpretive clues and a short justification. To test the approach and show that ITS is a measurable proxy for misleading edits, we built a benchmark of 418 ordered pairs, drawn from real-world fact-check cases and meaning-preserving transformations. The best-performing model configuration (gpt-5.4) achieves 88.2% precision, 94.2% recall, and 96.5% balanced accuracy. The code is available at https://github.com/liyu0x/ITS_detection/.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-06",
+        "authors": [
+          "Yun-Qi Li",
+          "Rolando Trujillo-Rasua",
+          "De-Peng Chen"
+        ]
+      }
+    ]
+  }
+}
