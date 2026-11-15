@@ -1,0 +1,651 @@
+{
+  "date": "2026-11-15",
+  "github": [
+    {
+      "title": "tashfeenahmed/freellmapi",
+      "slug": "tashfeenahmed-freellmapi",
+      "url": "https://github.com/tashfeenahmed/freellmapi",
+      "abstract": "FreeLLMAPI 10.1 billion tokens per month.  87 free LLM providers. 1,313 free model endpoints. One OpenAI-compatible endpoint. Aggregate free tiers from dozens of providers, plus custom OpenAI-compatible chat, embedding, image, and audio endpoints, behind a single /v1 API. Keys are stored encrypted. A router picks the best available model for each request, falls over to the next provider when one is rate-limited, and tracks per-key usage so you stay under every free-tier cap. freellmapi.co · browse the full catalog: 736 model families, 1,313 free endpoints English · Türkçe · 簡體中文 · Русский · O'zbekcha Your router updates its own model catalog from a signed feed: new free models, quota changes, and compatibility fixes land without a git pull . Free installs get the monthly snapshot, so a model reaches them 30 days after it joins the live feed; premium routers get it the same day. Go live at freellmapi.co ($19/yr, cancel anytime). Contents Why this exists Supported providers Compatible CLIs & coding agents How it compares Features Quick start Desktop app Works with OpenAI-compatible clients Languages Premium (live catalog) Using the API Screenshots How it works FAQ Limitations Contributing Disclaimer Guides: Install & deploy · API reference · Clients & coding agents · Prompt compression · Architecture & internals · Documentation index · Contributor guide Why this exists Every serious AI lab now offers a free tier, a few million tokens a month, a few thousand requests a day. On its own each tier is a toy. Stacked together, they add up to roughly 10.1 billion tokens per month of working inference capacity, across 736 model families / 1,313 provider endpoints from small-and-fast to reasonably capable. The problem is that stacking them by hand is painful: eighty-seven different SDKs, eighty-seven different rate limits, eighty-seven places a request can fail. FreeLLMAPI collapses that into one OpenAI-compatible endpoint. Point any OpenAI client library at your local server, and it routes transparently across whichever providers you've added keys for. And the free-tier landscape shifts weekly: providers launch models, retire them, and change quotas without notice. FreeLLMAPI tracks all of that for you. The router pulls a signed model catalog from freellmapi.co on its own, so your install keeps up without a git pull . See Premium (live catalog) for how fast it keeps up. Supported providers Google Groq Cerebras OpenCode Zen Mistral OpenRouter Cloudflare Cohere Z.ai (Zhipu) NVIDIA HuggingFace ModelScope Qwen3 · DeepSeek V4 · GLM-5 (needs Aliyun cn binding) … and 75 more free providers Plus a custom provider — point chat, embedding, image, or audio models at any OpenAI-compatible endpoint (llama.cpp, LM Studio, vLLM, a local Ollama, or a remote gateway) from the Keys page. The full, always-current list lives at freellmapi.co/models with per-model rate limits, context windows, and free-token budgets. Compatible CLIs & coding agents Claude Code Codex CLI Gemini CLI Cursor Cline Roo Code OpenCode Aider … plus Continue, Goose, Qwen Code, Kilo Code, Crush, Zed, JetBrains AI, DeepSeek Harness, MiMo Code, AtomCode, OpenClaw, Hermes Agent, Pi, Reasonix, ZCode and any OpenAI-compatible, Anthropic, Gemini or Ollama client Most agents configure themselves with one command that reads your live catalog, backs up the existing config and merges into it: npx freellmapi setup-claude --url http://localhost:3001 --api-key < unified-key > All supported agents and their setup commands → · Per-tool recipes, MCP server and URL tokens → How it compares Based on public documentation, July 2026 — corrections welcome. Features Every OpenAI-style surface — /v1/chat/completions , /v1/responses (what Codex CLI needs), /v1/completions (editor ghost-text autocomplete), /v1/images/generations , /v1/videos/generations , /v1/audio/speech , /v1/audio/transcriptions , /v1/embeddings , and /v1/models — streaming and non-streaming, from the official SDKs or any OpenAI-compatible client. API reference → Anthropic Messages API — /v1/messages speaks Anthropic's wire format over the same router, so Claude Code and the official Anthropic SDKs run against your free pool. Details → Native Gemini + Ollama surfaces — Gemini CLI can use /v1beta ( generateContent , streaming, token counting, models), while opt-in Ollama emulation serves NDJSON chat/generate, tags, metadata, and embeddings for Zed, JetBrains, and other local-model clients. Fusion (multi-model synthesis) — request the virtual fusion model and the router fans your prompt out to a panel of diverse free models in parallel, then a judge model synthesizes one answer from the drafts. Details → Image, video & speech generation — /v1/images/generations , /v1/videos/generations , and /v1/audio/speech route across the providers that serve media models; images and speech also accept custom OpenAI-compatible media endpoints. Video jobs are normalized across synchronous and queued providers and return a completed MP4. Tool calling & structured outputs — OpenAI-style tools round-trip across providers (plain-text tool calls are rescued into real tool_calls ), plus response_format , seed , logprobs , penalties, and the rest of the sampling params passed through per provider. Smart routing, six strategies — live per-model speed/capability/reliability scores rank your chain; automatic fallover retries the next model on 429/5xx with cooldowns and key rotation. Routing in detail → Unified models & profiles — the same model on several providers collapses into one entry with strict in-group failover; named fallback-chain profiles (a coding chain, a vision chain) switch from the dashboard or per request via auto:<profile> , and custom chains can be renamed in place from the chain manager. Per-key rate tracking — RPM/RPD/TPM/TPD counters per (platform, model, key) that learn providers' reported ceilings, so routing always stays under every cap. Self-updating model catalog — the router syncs a signed catalog from freellmapi.co twice a day: new models, quota changes, and provider quirk fixes land automatically. Free installs track the monthly snapshot, which each model joins 30 days after it lands in the live feed; premium routers get it same-day. Premium → Sticky sessions & context handoff — conversations stay on one model for 30 minutes; an optional compact handoff note keeps the thread coherent when a mid-chat switch does happen. Details → Prompt compression (opt-in) — a shared, fail-open request pipeline can deduplicate prompts, filter tool output, compact repeated JSON, and trim stale context before cache lookup and routing. Details → Encrypted keys, one token out — provider keys are AES-256-GCM encrypted in SQLite and decrypted in-memory per request; your apps only ever see a single unified freellmapi-… bearer token. Admin dashboard & analytics — React UI to manage keys, reorder the chain, run a playground, and read p50/p95/TTFT analytics over 24h–90d windows; login-gated, dark/light themes, 60 languages . ChatGPT-ready MCP server & interactive docs — ChatGPT and other MCP clients can call FreeLLMAPI inference, list usable models, inspect provider health/usage/cache/routing metadata, and manage the routing strategy over /mcp ; a dependency-free OpenAPI viewer lives at /v1/docs . ChatGPT and coding agents → Ops niceties — opt-in response cache, encrypted DB backups, periodic key health checks, bulk key import/export, declarative startup config. Install & deploy → Runs anywhere Node 20+ runs — Windows, macOS, Linux servers, or a small ARM SBC (Raspberry Pi included). ~40 MB RSS at idle behind PM2 / systemd / whatever supervisor you prefer. The scope is deliberately narrow — see what's not supported yet . Quick start One-liner (Docker required — sets up ~/freellmapi , generates an encryption key, pulls the image, and starts the container): curl -fsSL https://freellmapi.co/install.sh | bash Prefer to read before you pipe to bash? The script is here .",
+      "stars_today": 579,
+      "language": "TypeScript"
+    },
+    {
+      "title": "bojieli/ai-infra-book",
+      "slug": "bojieli-ai-infra-book",
+      "url": "https://github.com/bojieli/ai-infra-book",
+      "abstract": "深入理解 AI Infra：量化分析與系統設計 簡體中文 · English · 繁體中文 · Русский — community edition Tip 下載與閱讀 · 格式與版本說明 簡體中文（原版，作者 @bojieli ） ： PDF · EPUB · 線上閱讀 English（社群翻譯， @tg1482 ） : PDF · EPUB · Read online 繁體中文（社群翻譯， @edward821220 ） ： PDF · EPUB · 線上閱讀 Русский — community edition, @ilkruglov : PDF · EPUB · Онлайн-чтение · О переводе 《深入理解 AI Infra》是 GitHub 上獲得 50k+ Star 的 《深入理解 AI Agent：設計原理與工程實踐》 的姊妹篇。 寫完 《深入理解 AI Agent》 後，在與讀者交流的過程中，我越來越感到：要開發好基於模型的應用，還需要理解它賴以執行的基礎設施。大多數軟體工程師不必親自開發作業系統、編譯器和晶片，卻仍要學習作業系統、編譯原理和計算機體系結構，因為申請記憶體、讀取檔案、呼叫函式，背後都有資源與時間代價。基於模型開發應用也是如此。延遲相差幾倍，產品體驗就可能完全不同；成本相差一個數量級，能夠支撐的商業模式也隨之改變。 更深層的變化是 程式設計抽象的上移：從作業系統到模型上下文 。傳統的作業系統、編譯器和硬體要為事先未知的各種程式提供通用能力，系統最佳化總要在可程式設計性與效能之間取捨。如今 LLM 成了最重要的應用，從運算元執行到分散式排程，都可以針對特定的模型和加速器架構最佳化；模型設計也開始反過來適應硬體，DeepSeek V4/V4.1 重新設計長上下文的表示方式，就是一例。從某種意義上說， 模型成了 LLM 時代的作業系統，AI Infra 成了 LLM 時代的計算機體系結構 。《計算機體系結構：量化研究方法》是我在體系結構領域的入門書，而 AI Infra 領域還缺少一本從硬體約束和模型架構出發、量化推導系統設計的書，這是我寫作本書的動機。 貫穿全書的方法是 從約束推導設計 ：先明確任務與質量要求，列出計算、儲存、通訊和依賴關係，對照硬體的容量、頻寬和算力做數量級估算。這類估算人容易出錯，AI 也一樣：只算權重讀取而忘了 KV 快取，按峰值算力推算速度而不查頻寬能否供給，把工作平分給多張卡卻遺漏卡間通訊，漏掉任何一項，結論都可能偏離幾倍甚至幾個數量級。估算還有另一層用意：讀博時導師張霖濤博士反覆叮囑，最佳化一定要做到物理所允許的極限。本書貫徹這一習慣，先按第一性原理算出硬體允許的上限，再看實測離上限還有多遠；差距不是模型漏了項，就是系統有可以去掉的開銷。從 FPGA 加速 Bing 搜尋排序、昇騰 AKG 運算元生成到 UB 萬卡互聯，我反覆遇到的是同一條線索： 資料搬移 。本書因此反覆追問五個問題： 搬什麼、搬多少、搬幾次、經過哪裡、誰必須等它。 更多寫作背景見 前言 。 目前書稿仍是初稿，正在持續修訂。 內容目錄 章 主題 主要問題 1 初識 AI Infra 一次生成需要多少視訊記憶體、計算和資料讀寫？ 2 模型架構 注意力、歷史狀態與專家結構如何改變系統需求？ 3 推理與訓練負載 任務階段、到達模式和狀態壽命如何影響資源需求？ 4 加速器架構 如何在計算、儲存、頻寬、功耗與成本之間取捨？ 5 運算元與執行時 融合、複用、併發和排程如何減少執行開銷？ 6 超節點 多裝置協作如何平衡容量、吞吐和同步代價？ 7 資料中心網路 網路頻寬、通訊方式和擁塞如何影響計算效率？ 8 推理最佳化 批處理、KV 管理、卸載與推測解碼何時有效？ 9 分散式推理 如何放置計算和狀態，並處理擴縮容與恢復？ 10 訓練系統 如何安排視訊記憶體、通訊和重算，讓訓練更高效？ 11 資源排程與執行環境 模型服務和工具環境如何共享資源，減少等待？ 12 端邊雲協同 任務放在本地、邊緣還是雲端，如何兼顧效果、延遲和成本？ 適合誰讀 如果你已經呼叫過模型 API，或在自己的機器上執行過模型，想進一步弄清模型為什麼慢、如何降低成本，這本書可以作為起點。從事系統、網路和晶片工作的工程師，以及相關方向的研究人員和學生，也能從書中看到各層設計與實際模型任務的聯絡。 閱讀時需要一些 Python、線性代數和計算機系統基礎，具體要求見 前言 。建議先讀第 1—3 章，瞭解模型與負載，再根據自己的興趣選擇重點： 做模型應用和推理服務，可以重點讀第 8、9 章，再看第 11、12 章的任務環境與部署；遇到容量、運算元或通訊問題時，回到第 4—7 章追蹤原因。 做系統或網路，可以重點讀第 5—7 章，再看第 9、10 章，檢查這些機制如何影響分散式推理與訓練。 做晶片與體系結構，可以重點讀第 4—7 章，並結合後續章節的任務算例，檢查硬體指標如何轉化為實際的服務能力。 希望系統學習，可以按目錄順序閱讀，配合計算工具和實驗，逐步核對自己的理解。 遇到書中的算例，不妨先自己估一下，再看推導和實驗結果。也可以換成你正在使用的模型和硬體，看看結論是否改變。 配套計算與實驗 配套計算工具 可以用來複算書中的數字，也可以換一組模型和輸入，估算資源需求。工具附有模型配置和 結果索引 ，靜態計算只需 Python 3.10+ 標準庫，無需 GPU 或模型權重。 git clone https://github.com/bojieli/ai-infra-book.git cd ai-infra-book # 檢視模型支援情況 python3 calculations/calc.py models # 估算 Qwen3-8B 在 8192-token prefill 下的逐運算元資源需求 python3 calculations/calc.py forward --model qwen3-8b --tokens 8192 --format md 倉庫使用 Git LFS 儲存論文和較大的輸入與測量記錄，合計約 20 GB。為避免克隆時全部下載， .lfsconfig 預設跳過所有 LFS 檔案，工作區中只留下指標；正文、配圖和靜態計算都不需要它們。復現某個實驗時，只下載對應目錄： git lfs install\ngit lfs pull --include= \" experiments/ch05/05-01/** \" --exclude= \" \" 配套實驗 按章節存放在 experiments/chXX/XX-YY/ 中，每個實驗都附有執行方法、輸入條件和結果說明。需要 GPU 的實驗會註明硬體與依賴要求；沒有相應裝置，也可以先閱讀已有記錄。復現或引用結果時，請留意所用的書稿版本、模型、硬體和輸入參數。 本地構建 閱讀網站 （Python 3.10+）： python3 -m venv .venv-site source .venv-site/bin/activate\npython -m pip install -r website/requirements.txt\npython scripts/build_site.py\npython scripts/check_site.py\npython scripts/build_site.py --serve 預覽地址為 http://127.0.0.1:8000 ，簡體中文位於根目錄，英文、繁體中文和俄語分別位於 en/ 、 zh-tw/ 和 ru/ 。生成檔案位於 build/ ，詳細說明見 網站構建與釋出 。 全書 PDF 與 EPUB （另需 Pandoc、XeLaTeX 和字型）： bash book/build_pdf.sh # 簡體中文 → book/AI-Infra-Book.pdf bash book-en/build_pdf.sh # English → book-en/AI-Infra-Book-EN.pdf bash book-zh-tw/build_pdf.sh # 繁體中文 → book-zh-tw/AI-Infra-Book-ZH-TW.pdf python3 book/build_epub.py --edition zh # EPUB 只需 Pandoc 與 Poppler；--edition 可選 zh、en、zh-tw、ru 譯本配圖存於 Git LFS，構建前先下載： git lfs pull --include=\"book-en/images/**,book-zh-tw/images/**\" --exclude=\"\" 。依賴、字型及單章編譯方法見 PDF 編譯說明 。GitHub Actions 會檢查 Pull Request 的網站與各語言的 PDF、EPUB 構建；推送到 main 後自動釋出 Release（四種語言各含 PDF 與 EPUB）並部署四種語言的線上閱讀網站。 倉庫結構 目錄 內容 manuscripts/ 前言、十二章正文、配圖與繪圖指令碼 experiments/ 按章節組織的實驗與執行記錄 calculations/ 資源計算工具、固定輸入與復算結果 case-studies/ 模型、硬體和系統案例分析，按章節索引 references/ 引用資料、來源清單與版本快照 research/ 支撐正文的專題調研，以及各章修訂記錄 book/ PDF 模板、構建與校驗工具 book-en/ 英文版（社群翻譯）：前言與十二章正文、英文配圖、翻譯工具與 PDF 構建指令碼 book-zh-tw/ 繁體中文版（社群貢獻）：前言與十二章正文、繁體配圖、翻譯工具與 PDF 構建指令碼 website/ 、 scripts/ 網站資源、構建與檢查指令碼 archive/ 歷史大綱、審閱和寫作協調記錄 參與貢獻 書稿仍是初稿，歡迎讀者參與改進。以下幾個方向都有價值，歡迎認領： 指出並修正錯誤 ：數字算錯、單位或量級不對、引用與原文不符、公式或圖表有誤。發現一處就值得提一處， 勘誤 Issue 或直接提 PR 都可以。 改寫講得不清楚的地方 ：推導跳步、概念沒有在首次出現時交代、例子不好懂。讀不順的地方多半是書寫得不好，歡迎 提出來 ，也歡迎直接給出更好的寫法。 補充遺漏的重要內容 ：某個該講的機制、架構或權衡沒有寫進來。 修復配套程式碼的 bug ： experiments/ 的實驗程式碼與 calculations/ 的計算 CLI，歡迎修正錯誤、補充測試或改進可用性。 改進網頁版 ： 線上閱讀版 的排版、導航、搜尋和移動端體驗都還有提升空間。 翻譯 ：英文版與繁體中文版已由社群貢獻，歡迎翻譯為更多語言，可參考 book-en/ 和 book-zh-tw/ 的組織方式；也歡迎跟進英文版，使其與中文原版同步。翻譯前請先開 Issue 說明計劃，便於協調進度、避免重複勞動。 正文的唯一來源是 manuscripts/ 下的 Markdown，網頁版和 PDF 都由它構建生成，改正文請直接改這裡。 作者與致謝 作者： 李博傑 （ @bojieli ）。 感謝這些年一起做研究和工程的合作者，也感謝相關論文、開源專案與技術文件的作者，以及參與勘誤和實驗復現的讀者。詳細緻謝見 前言 ，引用來源見正文腳註和 參考資料庫 。本書 PDF 沿用《深入理解 AI Agent》的 ElegantBook / XeLaTeX 模板。 英文版由 @tg1482 翻譯並貢獻（ #4 ）。 繁體中文版由 @edward821220 翻譯並貢獻（ #10 ）。 俄語 community edition 由 @ilkruglov 組織並完成翻譯與校驗（ #20 ）。 貢獻者 感謝所有為本書貢獻內容、程式碼、翻譯和修正的貢獻者！點選頭像即可訪問他們的 GitHub 主頁，也歡迎你加入。 檢視 GitHub 上的全部貢獻記錄 → 許可 本書原創正文、配圖及配套程式碼採用 Apache License 2.0 許可。Copyright © 2026 Bojie Li（李博傑）。 倉庫中的第三方程式碼、字型、模板與參考資料保留各自的版權和許可宣告，不因收錄於本倉庫而改用 Apache-2.0；具體來源和使用條件見相應目錄。 版本與格式說明 PDF ：由 XeLaTeX 排版，公式、表格、腳註和交叉引用完整，推薦通讀時使用。GitHub 直接顯示 Markdown 時，LaTeX 公式和部分排版常常渲染不全或錯位；上方目錄連結到各章 Markdown 原始檔，便於查詢原文和提交勘誤。 EPUB ：字號可調，版面隨螢幕自動重排，適合手機和電子書閱讀器。 線上閱讀 ： 閱讀網站 提供章節導航、全文搜尋和深色模式，右上角可切換語言。 自動釋出 ：每次更新 main 後自動構建全部格式併發布到 Releases ，上方連結始終指向最新版。 翻譯版本與譯者 ：簡體中文為原版，作者為 Bojie Li（李博傑） ，正文位於 manuscripts/ 。英文版由社群譯者 @tg1482 翻譯，位於 book-en/ ，包含前言與十二章正文、重繪為英文標註的配圖和獨立的構建指令碼。繁體中文版由社群貢獻者 @edward821220 翻譯並整理，位於 book-zh-tw/ ，包含前言與十二章正文、繁體配圖和獨立的構建指令碼；兩項已知配圖例外見 繁體版說明 。俄語 community edition 由 @ilkruglov 組織並完成翻譯與校驗，位於 book-ru/ ，依據固定版本的中文原稿製作，原作者仍為 Bojie Li 。各譯本的譯者、來源版本和許可證見對應目錄說明；譯本數字、公式和引用以原版為準。",
+      "stars_today": 151,
+      "language": "Python"
+    },
+    {
+      "title": "nolly-studio/cult-ui",
+      "slug": "nolly-studio-cult-ui",
+      "url": "https://github.com/nolly-studio/cult-ui",
+      "abstract": "Cult UI 150+ animated components, all free. Including 58 just added. Open source, built to drop into any shadcn/ui project. Browse components · Docs · Installation · Changelog Install Every component is a shadcn/ui registry item. The CLI copies the source into your project, so you own the code. npx shadcn@latest add https://www.cult-ui.com/r/shift-card.json Or register the namespace once in components.json and install by name: { \"registries\" : { \"@cult-ui\" : \" https://www.cult-ui.com/r/{name}.json \" }\n} npx shadcn@latest add @cult-ui/shift-card Components use Tailwind CSS v4 and shadcn theme tokens, and most animate with Motion . Each docs page lists its dependencies. Just added 58 new components. Illustrations, device mockups, cards and more, with the same docs and one-line install as the rest of Cult UI. Globe Kanban board Fluted glass Mac screen Analytics chart Folded card Browse all components → Built with Cult UI The components are free. The full-stack AI apps built from them are AI SDK Agents . Agent patterns on the Vercel AI SDK with live previews. Install with shadcn, download a Next.js app, or open in v0. Competitor research agent Paste a competitor URL, get positioning, pricing and a sales battle card. Data analysis agent Upload CSV or JSON, get charts, outliers and insights with confidence scores. Accessibility audit agent A WCAG 2.1 audit of any site, with a prioritized fix plan. Table editor artifact A spreadsheet you edit by chatting with it. Branding agent Extract any site's design system: tokens, palette and brand personality. Chart generation artifact Burn rate charts and financial analysis from a conversation. Browse 100+ patterns → For AI agents The docs are written to be read by coding agents as well as people. llms.txt indexes every page, and llms-full.txt has the full docs in one file. Add .md to any docs URL for clean markdown, for example /docs/components/dock.md . The shadcn MCP server lets Cursor, Claude Code and VS Code search and install Cult UI components from a prompt. Cult UI stays free MIT licensed and maintained full time. AI SDK Agents is what pays for it. If you ship AI features, it is the best way to keep this library going. Or star it on GitHub . More from the studio: AI SDK Agents – 100+ Vercel AI SDK agent patterns with live previews and full-stack templates. Newcopy – An AI cofounder that knows your brand. Marketing copy that converts. Best Models – Independent ranking of the best models on Vercel AI Gateway, updated daily. Eve Directory – The open registry for Eve agents. Inspect every file before you install. Need a team? Nolly Studio is an AI-native product studio: agent systems and design-engineered UI, shipped in weeks. Contributing Read the contributing guide to get the repo running locally and add a component. License MIT © Nolly Studio. Made by @nolansym .",
+      "stars_today": 120,
+      "language": "TypeScript"
+    },
+    {
+      "title": "fqscfqj/Y2A-Auto",
+      "slug": "fqscfqj-y2a-auto",
+      "url": "https://github.com/fqscfqj/Y2A-Auto",
+      "abstract": "Y2A-Auto 將 YouTube 影片自動搬運到 AcFun / bilibili 的一體化工具。 從下載、ASR、字幕翻譯、字幕質檢、內容稽核到上傳，全流程自動化；內建 Web 管理後臺、YouTube 監控和維護能力。 快速開始 · 功能概覽 · 部署與執行 · Telegram 機器人 · 配置說明 · 使用指南 · 通知推送 · CookieCloud · 安全特性 · 常見問題 Telegram 轉發機器人（公共例項）： @Y2AAuto_bot ⚠️ 公共例項部署在個人 VPS 上，該伺服器已被牆，可用性無法保證；若無法連線，請按 自部署說明 搭建自己的機器人： Y2A-Auto-tgbot 專案展示 以上為當前頁面截圖。 核心亮點 能力模組 說明 全流程自動化 從下載、ASR、字幕、元資訊到上傳一條龍處理 稽核可控 支援人工稽核、強制上傳、內容安全檢測和登入保護 靈活部署 Docker / 本地雙模式，支援 CPU 與多種 GPU 編碼 監控拉取 支援 YouTube 頻道 / 關鍵詞定時抓取與歷史記錄 訊息推送 企業微信、Server醬、message-pusher 多渠道非同步通知 CookieCloud 從 CookieCloud 服務自動同步 YouTube Cookies 安全防護 密碼保護、暴力破解鎖定、會話超時、路徑遍歷防護 維護完善 支援日誌清理、下載清理、併發控制和 FFmpeg 自動補齊 功能概覽 自動化流水線 yt-dlp 下載影片與封面 自動或按需進行語音識別生成字幕，支援 Whisper、Voxtral 字幕翻譯、字幕後處理、字幕質檢（QC）與字幕燒錄 AI 生成標題、簡介、標籤與分割槽推薦 內容安全稽核（阿里雲 Green） 自動上傳到 AcFun / bilibili / 雙平臺 Web 管理後臺 任務列表、人工稽核、強制上傳 設定中心分組管理：執行概覽、賬號與網路、內容稽核、AI 模型、字幕處理、語音識別、影片轉碼、監控與維護、安全 登入保護、錯誤次數鎖定和密碼管理 YouTube 監控 頻道監控與關鍵詞搜尋監控 支援 latest / historical 模式、影片型別篩選和自動加入任務佇列 內建歷史記錄與配置檔案恢復 通知推送 企業微信、Server醬、message-pusher 三種渠道 任務新增 / 完成 / 失敗、登入成功 / 鎖定、QR 登入成功 / 失敗等事件推送 非同步重試佇列，遞增間隔保證投遞 CookieCloud 整合 從 CookieCloud 服務自動拉取 YouTube / Google Cookies 支援 auto / legacy / aes-128-cbc-fixed 加密模式 Web UI 一鍵測試與同步 Telegram 轉發機器人 獨立部署的 Y2A-Auto-tgbot，在 Telegram 內直接傳送 YouTube 連結提交任務 使用最小許可權 API Token，公共例項不保證可用，建議自部署 字幕變換引擎 長行自動拆分、標點標準化、填充詞 / 重複詞過濾 幻覺文本與噪聲標籤檢測、文本密度過高檢測 時間偏移、最短時長、相鄰間隙合併等後處理 影片轉碼 支援 CPU / NVIDIA / Intel / AMD 硬體編碼 預設優先 HEVC / H.265，失敗後自動回退到 H.264 平臺認證 AcFun / bilibili 支援 QR 碼掃碼登入 bilibili 支援 Cookie 匯入（Netscape / JSON 格式） 維護與環境 Windows 可自動補齊 FFmpeg 支援日誌清理、下載清理和自定義 FFmpeg 路徑 專案結構 Y2A-Auto/\n├── app.py\n├── requirements.txt\n├── Dockerfile\n├── docker-compose.yml\n├── docker-compose-build.yml\n├── acfunid/\n├── build-tools/\n├── config/\n├── cookies/\n├── db/\n├── downloads/\n├── ffmpeg/\n├── fonts/\n├── logs/\n├── modules/\n├── static/\n├── temp/\n├── templates/\n└── tests/ 快速開始 推薦使用 Docker（無需手動安裝 Python、FFmpeg、yt-dlp）。 準備 Cookie（必須） cookies/yt_cookies.txt ：YouTube 登入 Cookie cookies/ac_cookies.json ：AcFun 登入 Cookie cookies/bili_cookies.json ：bilibili 登入 Cookie 可使用瀏覽器擴展匯出 cookies.txt ，請勿提交到倉庫 啟動服務 # 預設從 Docker Hub 拉取映象 fqscfqj/y2a-auto:latest # 如需使用 GitHub 容器登錄檔，可切換為 ghcr.io/fqscfqj/y2a-auto:latest docker compose up -d 開啟 Web 訪問 http://localhost:5000 首次進入建議先配置登入保護、平臺賬號和 YouTube Cookie 預設會持久化目錄： config/ 、 db/ 、 downloads/ 、 logs/ 、 temp/ 、 cookies/ 。 說明： fonts/ 中的字型屬於專案內建依賴，用於字幕燒錄；許可證見 fonts/LICENSE.txt 。 部署與執行 方案 A：Docker（推薦） 啟動： docker compose up -d 停止： docker compose down 重啟： docker compose restart 日誌： docker compose logs -f 如需本地構建映象，可使用： docker compose -f docker-compose-build.yml up -d --build 如果啟動日誌出現寫入 config/ 、 db/ 或 logs/ 等掛載目錄的 PermissionError ，請在專案目錄中建立這些目錄，並將其屬主改為容器內應用使用的\nUID/GID（預設 1000:1000 ）： mkdir -p config db downloads logs cookies temp\nsudo chown -R 1000:1000 config db downloads logs cookies temp 啟用了 rootless Docker 或 userns-remap 時，請使用容器 UID 1000 實際對映到宿主機的\nUID/GID；對映方式參見 Docker 官方文件 。 方案 B：本地執行 前置要求： Python 3.11+ FFmpeg yt-dlp py -3.11 - m venv .venv\n.\\.venv\\Scripts\\Activate.ps1\npip install - r requirements.txt\npython app.py 訪問 http://127.0.0.1:5000 。 方案 C：Windows 便攜包 build-tools/ 提供 Windows 執行檔構建工具 官方 Windows Release 包通常已內建 FFmpeg / FFprobe 如果手工打包，保持 ffmpeg/ 目錄完整即可 方案 D：Telegram 轉發機器人（可選） Y2A-Auto-tgbot 是一個獨立的 Telegram 機器人：在 Telegram 裡直接傳送 YouTube 影片 / 播放列表連結，機器人會呼叫本服務的 /tasks/add_via_extension 介面提交上傳任務。它需要單獨部署，不會隨本專案一起啟動。 ⚠️ 公共例項不保證可用。 @Y2AAuto_bot 執行在個人 VPS 上，該伺服器已被牆，可能隨時無法訪問。需要長期、穩定使用時請自行部署。 自部署要點（Bot Token 建立、Token 作用範圍等完整說明見 Y2A-Auto-tgbot README ）： 在 Telegram 找 @BotFather ，傳送 /newbot 建立機器人，拿到 TG_BOT_TOKEN （形如 123456789:AAE... ） 克隆並啟動機器人： git clone https://github.com/fqscfqj/Y2A-Auto-tgbot.git cd Y2A-Auto-tgbot # 編輯 docker-compose.yml 填寫 TG_BOT_TOKEN（可選 ADMIN_TELEGRAM_IDS），然後： docker compose up -d 開啟本專案的 設定 → 運維與安全 → Telegram Bot API Token ，點選「生成 Token」並立即複製 y2a_tgbot_v1_... （明文只顯示一次） 在 Telegram 向新建的機器人傳送 /settings ，填寫 API 地址 （機器人所在網路能訪問到的本專案地址，例如同機 http://127.0.0.1:5000 ，跨機器 http://192.168.1.100:5000 ）和 API Token ，再點「🔬 測試」確認連線成功 測試通過後，直接給機器人傳送 YouTube 連結即可提交任務 該 Token 只允許呼叫 /tasks/add_via_extension ，無法訪問設定、日誌等其它介面，並且可以隨時在設定頁重置或撤銷。 配置說明 首次執行會自動生成 config/config.json 。推薦先配置以下幾類參數： 基礎與安全 AUTO_MODE_ENABLED ：無人值守自動投稿總開關，預設 false password_protection_enabled ：Web 密碼保護，預設 false LOGIN_MAX_FAILED_ATTEMPTS ：連續錯誤次數上限，預設 5 LOGIN_LOCKOUT_MINUTES ：鎖定時長，預設 15 LOGIN_SESSION_TIMEOUT_MINUTES ：登入空閒超時時長，預設 30 分鐘，最小 1 ，訪問受保護頁面會自動續期 UPLOAD_TARGET_DEFAULT ：預設投稿平臺，支援 acfun 、 bilibili 、 both UPLOAD_APPEND_REPOST_NOTICE ：是否自動追加轉載宣告，預設 true 賬號與網路 YOUTUBE_COOKIES_PATH ：YouTube Cookie 路徑 ACFUN_COOKIES_PATH ：AcFun Cookie 路徑 BILIBILI_COOKIES_PATH ：bilibili Cookie 路徑 BILIBILI_SUBMIT_API ：bilibili 投稿介面， auto （預設，優先必剪 PC 介面，失敗回退 Web）/ bcut_pc / web （手改成 bcut 等別名也會被歸一化後再儲存） YOUTUBE_PROXY_ENABLED / YOUTUBE_PROXY_URL ：YouTube 下載代理 YOUTUBE_API_PROXY_ENABLED / YOUTUBE_API_PROXY_URL ：YouTube 監控 API 獨立代理，不繼承下載代理 YOUTUBE_DOWNLOAD_THREADS ：下載執行緒數 YOUTUBE_THROTTLED_RATE ：下載速度限制 YOUTUBE_API_KEY ：YouTube Data API v3 金鑰，監控功能需要 FFMPEG_LOCATION ：自定義 FFmpeg 路徑 FFMPEG_AUTO_DOWNLOAD ：Windows 缺失時自動下載 FFmpeg，預設 true FFmpeg 版本要求：≥ 5.1。 字幕燒錄使用 -fps_mode cfr 控制幀率模式，\n該選項在 FFmpeg 5.1 才引入（5.0 及更早只認已棄用的 -vsync ）。倉庫自帶的\n與自動下載的 FFmpeg（BtbN latest）都遠高於該版本；但若通過 FFMPEG_LOCATION 指向 5.0 或更早的舊版本，軟體編碼路徑會因 Unrecognized option 'fps_mode' 直接失敗（非硬體編碼器沒有降級重試，任務會直接報錯）。 VIDEO_CPU_CODEC=x265 還額外要求該 FFmpeg 構建帶 libx265 （需 --enable-gpl --enable-libx265 ，BtbN 與倉庫自帶版本均滿足）。缺失時會自動降級為 libx264 並繼續燒錄，不會因缺庫而丟掉整條字幕。 AI 與投稿 OPENAI_API_KEY / OPENAI_BASE_URL / OPENAI_MODEL_NAME ：全域性 AI 配置 OPENAI_THINKING_ENABLED ：是否允許模型使用思考模式；關閉時優先發送廠商文件中的原生開關（DeepSeek Chat 用 thinking 、Responses 用 reasoning.effort=none ；Qwen Chat/Responses 用 enable_thinking ；MiMo Chat 用 thinking 、Responses 用 reasoning.effort=none ）。原生開關被端點以 400/422 拒絕時，會在同一請求內再嘗試標準 reasoning_effort=none / reasoning.effort=none ，全部形態都失敗才移除控制並記錄 warning；此時模型可能恢復預設思考行為。第三方閘道器上的 DeepSeek/Ling/混元沒有可靠原生開關，先嚐試標準參數，再嘗試通用 thinking 物件。通過反向代理訪問官方端點時無法從域名識別廠商，會按第三方順序逐個嘗試，但不會因此跳過關閉思考的嘗試。OpenAI o 系列 / GPT-5 等推理模型各代支援的 reasoning_effort 取值不同，本開關不會自動改寫，需在模型閘道器側控制 SUBTITLE_OPENAI_* ：字幕翻譯專用覆蓋配置，留空則回退全域性 SUBTITLE_QC_* ：字幕質檢專用覆蓋配置，留空則回退字幕翻譯 / 全域性配置 TRANSLATE_TITLE / TRANSLATE_DESCRIPTION / GENERATE_TAGS ：自動生成標題、簡介、標籤 RECOMMEND_PARTITION ：自動推薦分割槽 FIXED_PARTITION_ID / FIXED_PARTITION_ID_BILIBILI ：固定分割槽 YOUTUBE_UPLOADER_AS_FIRST_TAG ：將上傳者作為首標籤 PRESET_TAGS_ENABLED / PRESET_TAGS ：預設標籤，每行一個（也接受逗號、頓號、分號分隔）。啟用後預設標籤排在任務標籤之前， GENERATE_TAGS 開啟時 AI 只補齊剩餘名額；一份預設同時服務 AcFun（前 6 個、每個約 10 字）與 bilibili（最多 12 個、每個 20 字） AI 文本功能同時相容 OpenAI Chat Completions 與 Responses API。 OPENAI_BASE_URL 可填寫 API 根地址（例如 https://api.openai.com/v1 ，預設使用 Chat Completions）或完整的 /chat/completions 、 /responses 地址；填寫完整端點時會自動選擇協議並規範化。Responses 請求會自動轉換訊息、JSON 輸出格式、思考開關和 token 上限參數，返回值也會歸一化供翻譯、質檢、智慧分段等現有功能使用。當相容服務不支援 response_format 、token 上限參數、自定義 temperature 或特定指令角色時，系統會根據端點實際錯誤逐級協商；若閘道器只返回籠統的請求 schema 錯誤，則降級為僅含 model + user messages 的最小標準請求。能力只在降級請求成功後按端點、協議和模型快取。 字幕處理 SUBTITLE_TRANSLATION_ENABLED ：啟用字幕翻譯，預設 false YOUTUBE_AUTO_GENERATED_SUBTITLES_ENABLED ：下載 YouTube 自動生成字幕，預設 false SUBTITLE_SOURCE_LANGUAGE ：源語言，預設 auto SUBTITLE_TARGET_LANGUAGE ：目標語言，預設 zh SUBTITLE_FONT_NAME ：燒錄字幕字型名，預設 NotoSansCJKsc-Regular.otf SUBTITLE_BATCH_SIZE ：翻譯批次大小 SUBTITLE_MAX_RETRIES / SUBTITLE_RETRY_DELAY ：翻譯重試策略 SUBTITLE_EMBED_IN_VIDEO ：是否將字幕嵌入影片 SUBTITLE_KEEP_ORIGINAL ：是否保留原始字幕檔案 SUBTITLE_MAX_WORKERS ：字幕翻譯併發執行緒數 燒錄字幕外觀（預設值即歷史觀感；對 .ass / .ssa 源的行為變更見下方說明）： SUBTITLE_FONT_SIZE_SCALE / SUBTITLE_MARGIN_V_SCALE ：字號與底部邊距倍率，範圍 0.5-2.0 ，預設 1.0 SUBTITLE_FONT_COLOR / SUBTITLE_OUTLINE_COLOR ：字型色與描邊色， #RRGGBB ，預設 #FFFFFF / #000000 SUBTITLE_OUTLINE_ENABLED / SUBTITLE_OUTLINE_SCALE ：描邊開關與粗細倍率（ 0-3 ） SUBTITLE_SHADOW_ENABLED / SUBTITLE_SHADOW_SCALE ：陰影開關與倍率（ 0-3 ） SUBTITLE_TEXT_BOLD ：是否粗體，預設 true SUBTITLE_BACKGROUND_ENABLED / SUBTITLE_BACKGROUND_COLOR / SUBTITLE_BACKGROUND_OPACITY ：半透明底板（ BorderStyle=4 ）及其顏色與不透明度（ 0-1 ）。開啟後 libass 會把陰影當作底框外擴，建議同時關閉陰影 行為變更（ .ass / .ssa 源素材） ：上述外觀配置現在對 所有字幕源統一生效 。\n此前上游只把字型與邊距寫進 force_style ，字色 / 描邊色 / 粗體 / 底板這些鍵對 .ass / .ssa 源 不生效 （同一份配置喂 .srt 是紅字、喂 .",
+      "stars_today": 99,
+      "language": "Python"
+    },
+    {
+      "title": "assistant-ui/assistant-ui",
+      "slug": "assistant-ui-assistant-ui",
+      "url": "https://github.com/assistant-ui/assistant-ui",
+      "abstract": "Product · Documentation · Examples · Discord · Contact Sales The UX of ChatGPT in your React app 💬🚀 assistant-ui is an open-source TypeScript/React library to build production-grade AI chat experiences fast. Installation The fastest path is the CLI, which scaffolds a Next.js app or adds the styled components to an existing project: npx assistant-ui@latest create # new project npx assistant-ui@latest init # add to existing project Or install the packages directly: npm install @assistant-ui/react @assistant-ui/ai-sdk ai Usage \"use client\" ; import { AssistantRuntimeProvider } from \"@assistant-ui/react\" ; import { useChatRuntime } from \"@assistant-ui/ai-sdk\" ; import { Thread } from \"@/components/assistant-ui/elements/thread.aui\" ; export function Chat ( ) { const runtime = useChatRuntime ( ) ; return ( < AssistantRuntimeProvider runtime = { runtime } > < Thread /> </ AssistantRuntimeProvider > ) ; } useChatRuntime connects to the Vercel AI SDK out of the box. Swap it for useLangGraphRuntime , useDataStreamRuntime , or any custom runtime to integrate with your own backend. What you get Composable primitives : build any chat UX from Thread , Message , Composer , ThreadList , ActionBar , and friends. Style every pixel yourself, or start from a polished shadcn/ui theme that the CLI copies into your project. Production UX out of the box : streaming, auto-scroll, retries, attachments, markdown, code highlighting, voice dictation, keyboard shortcuts, and accessibility. Generative UI : render tool calls and JSON as React components, collect inline human approvals, and expose safe frontend actions to the model. Strong TypeScript : typed runtime APIs, tool schemas, message parts, and adapters end to end. Backends Integration Package Vercel AI SDK @assistant-ui/ai-sdk LangGraph / LangChain @assistant-ui/react-langgraph , @assistant-ui/react-langchain AG-UI / A2A protocols @assistant-ui/react-ag-ui , @assistant-ui/react-a2a Google ADK / OpenCode @assistant-ui/react-google-adk , @assistant-ui/react-opencode Custom data-stream backend @assistant-ui/react-data-stream Managed thread history, telemetry, and file storage assistant-cloud Broad model support out of the box (OpenAI, Anthropic, Google Gemini, Mistral, Perplexity, AWS Bedrock, Azure, Fireworks, Ollama) plus community providers via the AI SDK, and easy extension to any custom HTTP backend. Customization Instead of a single monolithic chat component, you compose primitives and bring your own styles. The CLI ships a great starter in your choice of Base UI (the default) or Radix UI flavor; you control everything else. Used in production by …and many more. Demos Community & Support Examples Documentation Discord Book a sales call License MIT, with optional Assistant Cloud for managed thread persistence and analytics. Backed by Y Combinator.",
+      "stars_today": 92,
+      "language": "TypeScript"
+    },
+    {
+      "title": "HKUDS/Vibe-Trading",
+      "slug": "hkuds-vibe-trading",
+      "url": "https://github.com/HKUDS/Vibe-Trading",
+      "abstract": "English | 中文 | 日本語 | 한국어 | العربية | Español | Bahasa Indonesia Vibe-Trading: Your Personal Trading Agent One Command to Empower Your Agent with Comprehensive Trading Capabilities GitHub topic rankings by stars · Nov 4, 2026 #1 Backtesting · #3 Algorithmic Trading · #4 Quantitative Finance Website · Docs · News · Features · Shadow Account · Demo · Quick Start · Examples · API / MCP · Roadmap · Contributors 📰 News 2026-11-15 📡 Unified market-data gateway and ready-to-use CSVs — Historical bars and US option snapshots share a local data gateway with source fallback, shared caching and bounded concurrency. Responses preserve source, currency and price-adjustment metadata, with explicit coverage and freshness information.\nAgent market-data reads deliver CSVs alongside JSON. For supported requests naming instruments and one explicit YYYY-MM-DD range, the runtime constrains dates before acquisition; calculation warmup is requested separately, and existing indicator/backtest lookbacks remain available. On main , for the next pip release. 2026-11-14 🔌 Unified LLM gateway and version checks — Model providers now share one catalog and configuration layer across Agent, CLI, API and Swarm. Client settings stay isolated, native adapters respect explicit proxy settings, and cross-origin redirects are blocked before credentials or request bodies are forwarded.\nCheck for new versions from Web settings. Desktop gains support for signed updates with verification and recovery; distribution requires a configured update feed and publisher certificates. On main , for the next pip release. 2026-11-13 🛠️ Research delivery and calculation tools — Research answers stream without automatic numeric redaction, forced rewrites, or format-based completion gates. Interrupted committee runs preserve partial results and can resume unfinished roles while reusing completed work.\nFull market-data references feed shell-free QuantLib calculations, and committee roles share source evidence. Options Lab and options_payoff calculate stock-plus-options strategies and compare multiple alternatives in one call, returning explicit costs, payoff bounds, and comparison directions. Effective backtest fees and truncation/error states remain explicit; live-trading authorization limits remain in place. Unreleased. Earlier news 2026-11-12 🛠️ Backtest timing, report figures and research completion fixes — Shadow Account now uses the requested starting capital; token-truncated worker replies no longer count as completed. Committee PMs can synthesize valid upstream reports without fetching the same data again, and the native Anthropic adapter defaults to a configurable 16,384 output tokens.\nGenerated strategies reject detected extra shifts on output targets unless explicitly declared intentional, while indicator lookbacks remain valid. Grounding now accepts supported magnitude spellings and precise observed declarations without weakening evidence checks. SPY/GLD backtests match an independent ledger on all 206/140 fills and total returns. Unreleased. 2026-11-11 🧾 Paper-trade partial fills and ledger reconciliation — Opt into per-order volume caps, partial fills and reported order states for A-share 5-minute paper simulations ( #2128 ). Independently reconcile fees, cash, positions and NAV arithmetic from returned fills with the new paper_trade_reconcile Agent/MCP tool ( #2197 ).\nCorrectly handle supported wrapped percentage headers and explicitly quoted document integers while preserving their source labels ( #2185 , #2192 ). Also fix strict factor benchmark inputs ( #2195 ) and prevent timed-out channel turns from returning an earlier answer ( #2194 ).\nThanks @shadowinlife , @he-yufeng , @Jackzigen and @divya0795 ! On main , for the next pip release. 2026-11-10 📊 Interactive IV surfaces and options analysis fixes — Edit strike/expiry IV grids in Options Lab, with observed/interpolated labels and no extrapolation ( #2186 ).\nFix low-price presets, quantities, expiry dates, retries, language-switch loading and the 20-leg limit. Bare three-digit Zhengzhou contracts such as CF501 now use China futures rules ( #2193 ).\nThanks @he-yufeng and @GPT-AGI ! On main , for the next pip release. 2026-11-09 🧭 Export a selected revision comparison; backtests refuse codes they cannot place — Download the exact pair of research revisions you are comparing as JSON or Markdown from the Web, API or CLI ( #2189 ). A backtest code no market rule recognises (such as local:BHP.AX or 7203.T ) is now refused before any data is fetched instead of running on A-share rules; bare six-digit and .SS Shanghai codes still work. OpenRouter replies no longer show the model name twice ( #2191 ), and an empty revision id in research-artifact export is now an error. Thanks @he-yufeng and @Gloubiboulgator ! On main , for the next pip release. 2026-11-08 📝 Research revision comparison and full-history export — Compare content, evidence and metadata between any two revisions ( #2168 ), and export the complete research history as JSON or Markdown ( #2170 ). Switching research records now ignores stale responses, and Markdown exports preserve original content in isolated code blocks. Also fix missing factor weights, partial-return attribution, insufficient IC samples, non-finite valuation inputs and margin calculations for negative entry prices. On main , for the next pip release. 2026-11-07 🧪 Research Lab: trading costs and out-of-sample testing — Rerun saved price inputs under different fees and slippage; select parameters using training results only, then freeze them for out-of-sample tests and a separate final holdout. The Research Lab shares Web, CLI, API and Agent/MCP workflows, with all eleven UI languages. Also correct window-boundary returns and factor warmup/long-window calculations, and add 20 offline task-replay cases that keep missing evidence visible. Versioned research artifacts can now store structured financial facts ( #2164 ), and bare Chinese futures contract codes resolve correctly ( #2177 ). On main , for the next pip release. 2026-11-06 📈 Implied-volatility grids and paper-trading fixes — Build strike-by-expiry IV grids from supplied option observations, with observed/interpolated labels and no extrapolation ( #2172 ). Extreme numeric inputs now produce finite results or explicit errors. A-share 5m market orders blocked by a price limit are canceled immediately ( #2176 ); the matcher also processes symbols chronologically so later proceeds cannot fund earlier orders. On main , for the next pip release; public 5m requests still support one symbol per step. 2026-11-05 🚀 v0.1.19 released ( Release notes , pip install -U vibe-trading-ai ): research that outlives the chat — save versioned research artifacts with their evidence and revise them, reuse backtests from earlier turns and sessions, and edit a research goal in place. New opt-ins: a five-minute A-share paper simulation, and Gildata financial queries, stock screening and Shannon portfolio diagnosis (QVeris is removed; an existing GILDATA_TOKEN alone now enables nothing). Also Argentina (BYMA) backtests, Parallel web search, Codex OAuth model discovery, and both 0.1.18 regressions fixed. 116 merged pull requests plus 21 landed through maintainer commits, from 26 contributors ( CHANGELOG ). Fixed today: a backtest reports the benchmark it actually evaluated, long/short books get a risk x-ray, GTJA alpha 17 stays missing while its inputs warm up, the Shannon panel speaks all eleven UI languages, and two reviewed contributor fixes that had not landed are in ( #2042 TTM sums across a missing quarter, #1985 3:2 split detection).",
+      "stars_today": 83,
+      "language": "Python"
+    },
+    {
+      "title": "PrefectHQ/fastmcp",
+      "slug": "prefecthq-fastmcp",
+      "url": "https://github.com/PrefectHQ/fastmcp",
+      "abstract": "FastMCP 🚀 Move fast and make things. Made with 💙 by Prefect The Model Context Protocol (MCP) connects LLMs to tools and data. FastMCP is a full MCP application framework for servers, clients, and interactive apps. A server starts with ordinary Python: from fastmcp import FastMCP mcp = FastMCP ( \"Demo 🚀\" ) @ mcp . tool def add ( a : int , b : int ) -> int : \"\"\"Add two numbers\"\"\" return a + b if __name__ == \"__main__\" : mcp . run () Why FastMCP Building an effective MCP application is harder than it looks. FastMCP handles all of it. Declare a tool with a Python function, and the schema, validation, and documentation are generated automatically. Connect to a server with a URL, and transport negotiation, authentication, and protocol lifecycle are managed for you. You focus on your logic, and the MCP part just works: with FastMCP, best practices are built in. That's why FastMCP is the standard framework for working with MCP. FastMCP 1.0 was incorporated into the official MCP Python SDK in 2024. Today, the actively maintained standalone project is downloaded a million times a day, and some version of FastMCP powers 70% of MCP servers across all languages. FastMCP has three pillars: Servers Expose tools, resources, and prompts to LLMs. Apps Give your tools interactive UIs rendered directly in the conversation. Clients Connect to any MCP server — local or remote, programmatic or CLI. Servers wrap your Python functions into MCP-compliant tools, resources, and prompts. Clients connect to any server with full protocol support. And Apps give your tools interactive UIs rendered directly in the conversation. Building in TypeScript? FastMCP for TypeScript is the official counterpart, built and maintained by the same team. Same pillars, same ideas, npm install @prefecthq/fastmcp-ts . Ready to build? Start with the installation guide or jump straight to the quickstart . Scale MCP with FastMCP Gateway FastMCP handles the MCP application layer. FastMCP Gateway is the enterprise MCP gateway for scaling servers and tools across teams, with centralized governance over how they are deployed, discovered, secured, and used. FastMCP and FastMCP Gateway are built by the same team at Prefect . Deploy FastMCP servers from GitHub with branch previews and instant rollback. Create a private registry of every MCP your company uses. Secure access with SSO and tool-level RBAC. Get audit logs, observability, and governance across your MCP stack. Remix approved tools into purpose-built endpoints for teams and agents. Start with FastMCP. Scale with FastMCP Gateway → Installation We recommend adding FastMCP to your project with uv : uv add fastmcp For full installation instructions, including verification and upgrading, see the Installation Guide . Upgrading? We have guides for: Upgrading from FastMCP 3 Upgrading from FastMCP 2 Upgrading from MCP SDK v1 or v2 Upgrading from the low-level SDK v1 or v2 📚 Documentation FastMCP's complete documentation is available at gofastmcp.com , including detailed guides, API references, and advanced patterns. Documentation is also available in llms.txt format , which is a simple markdown standard that LLMs can consume easily: llms.txt is essentially a sitemap, listing all the pages in the documentation. llms-full.txt contains the entire documentation. Note this may exceed the context window of your LLM. Give your coding agent llms.txt as its starting point. See Coding Agents for version-matched documentation and the optional server authoring skill. Community: Join our Discord server to connect with other FastMCP developers and share what you're building. Contributing Start with CONTRIBUTING.md for accepted contributions and the issue-assignment workflow, then follow the Contributing Guide for setup and validation. Agents should read AGENTS.md .",
+      "stars_today": 76,
+      "language": "Python"
+    },
+    {
+      "title": "ManimCommunity/manim",
+      "slug": "manimcommunity-manim",
+      "url": "https://github.com/ManimCommunity/manim",
+      "abstract": "An animation engine for explanatory math videos Manim is an animation engine for explanatory math videos. It's used to create precise animations programmatically, as demonstrated in the videos of 3Blue1Brown . Note The community edition of Manim (ManimCE) is a version maintained and developed by the community. It was forked from 3b1b/manim, a tool originally created and open-sourced by Grant Sanderson, also creator of the 3Blue1Brown educational math videos. While Grant Sanderson continues to maintain his own repository, we recommend this version for its continued development, improved features, enhanced documentation, and more active community-driven maintenance. If you would like to study how Grant makes his videos, head over to his repository ( 3b1b/manim ). Table of Contents: Installation Usage Documentation Docker Help with Manim Contributing License Installation Caution These instructions are for the community version only . Trying to use these instructions to install 3b1b/manim or instructions there to install this version will cause problems. Read this and decide which version you wish to install, then only follow the instructions for your desired version. Manim requires a few dependencies that must be installed prior to using it. If you\nwant to try it out first before installing it locally, you can do so in our online Jupyter environment . For local installation, please visit the Documentation and follow the appropriate instructions for your operating system. Usage Manim is an extremely versatile package. The following is an example Scene you can construct: from manim import * class SquareToCircle ( Scene ): def construct ( self ): circle = Circle () square = Square () square . flip ( RIGHT ) square . rotate ( - 3 * TAU / 8 ) circle . set_fill ( PINK , opacity = 0.5 ) self . play ( Create ( square )) self . play ( Transform ( square , circle )) self . play ( FadeOut ( square )) In order to view the output of this scene, save the code in a file called example.py . Then, run the following in a terminal window: manim -p -ql example.py SquareToCircle You should see your native video player program pop up and play a simple scene in which a square is transformed into a circle. You may find some more simple examples within this GitHub repository . You can also visit the official gallery for more advanced examples. Manim also ships with a %%manim IPython magic which allows to use it conveniently in JupyterLab (as well as classic Jupyter) notebooks. See the corresponding documentation for some guidance and try it out online . Command line arguments The general usage of Manim is as follows: The -p flag in the command above is for previewing, meaning the video file will automatically open when it is done rendering. The -ql flag is for a faster rendering at a lower quality. Some other useful flags include: -s to skip to the end and just show the final frame. -n <number> to skip ahead to the n 'th animation of a scene. -f show the file in the file browser. For a thorough list of command line arguments, visit the documentation . Documentation Documentation is in progress at ReadTheDocs . Docker The community also maintains a docker image ( manimcommunity/manim ), which can be found on DockerHub .\nInstructions on how to install and use it can be found in our documentation . Help with Manim If you need help installing or using Manim, feel free to reach out to our Discord\nServer or Reddit Community . If you would like to submit a bug report or feature request, please open an issue. Contributing Contributions to Manim are always welcome. In particular, there is a dire need for tests and documentation. For contribution guidelines, please see the documentation . However, please note that Manim is currently undergoing a major refactor. In general,\ncontributions implementing new features will not be accepted in this period.\nThe contribution guide may become outdated quickly; we highly recommend joining our Discord server to discuss any potential\ncontributions and keep up to date with the latest developments. Most developers on the project use uv for management. You'll want to have uv installed and available in your environment.\nLearn more about uv at its documentation and find out how to install manim with uv at the manim dev-installation guide in the manim documentation. How to Cite Manim We acknowledge the importance of good software to support research, and we note\nthat research becomes more valuable when it is communicated effectively. To\ndemonstrate the value of Manim, we ask that you cite Manim in your work.\nCurrently, the best way to cite Manim is to go to our repository page (if you aren't already) and\nclick the \"cite this repository\" button on the right sidebar. This will generate\na citation in your preferred format, and will also integrate well with citation managers. Code of Conduct Our full code of conduct, and how we enforce it, can be read on our website . License The software is double-licensed under the MIT license, with copyright by 3blue1brown LLC (see LICENSE), and copyright by Manim Community Developers (see LICENSE.community).",
+      "stars_today": 73,
+      "language": "Python"
+    },
+    {
+      "title": "yynxxxxx/Codex-X",
+      "slug": "yynxxxxx-codex-x",
+      "url": "https://github.com/yynxxxxx/Codex-X",
+      "abstract": "Codex-X Codex 視覺化提示詞注入 · Provider · 會話 · Skills / MCP 管理工具 一款面向 OpenAI Codex 桌面端 / Codex CLI 的跨平臺桌面工具。把提示詞模板、自定義 Prompt、第三方 API 供應商、會話同步、Skills / MCP 和 TOML 配置都放進視覺化介面裡，不用反覆手改檔案。 Codex-X 是什麼？ 當你同時使用 Codex 桌面端、CLI、第三方 API、Skills / MCP 和多套提示詞時，配置很容易散落在不同檔案裡。Codex-X 把這些高頻操作集中到一個桌面介面中，讓當前狀態看得見、常用操作點一下就能完成。 你可以用它： 像管理外掛一樣管理提示詞：分類、匯入 Markdown、自定義編輯、一鍵啟用 / 停用 內建 5 套提示詞模板，同時支援使用者把自己的提示詞變成視覺化模板庫 管理多個可命名的官方 Codex 登入與第三方 API，一鍵複製、切換，並從 cc-switch 匯入現有供應商 同步、檢查、搜尋和刪除本地會話，按專案路徑整理 Codex 歷史記錄 集中管理 Skills 與 MCP，檢視當前 config.toml 、 auth.json 和操作備份 在設定中按日期、模型檢視 Token 用量趨勢，子代理用量歸入所屬主會話 軟體預覽 新版 UI：指令提示詞管理中心 分類管理 把提示詞按破甲 / 逆向、軟體開發、寫作輔助等分類維護 自定義提示詞 直接新增、編輯或匯入自己的 Markdown 提示詞 Skills / MCP 視覺化管理 功能特性 你想做的事 Codex-X 能幫你 提示詞注入管理 內建 5 套 提示詞模板，支援分類、GitHub 同步、本地快取、匯入 .md 、新增自定義提示詞、編輯說明、一鍵啟用 / 停用。 啟用方式切換 可選擇“保留原提示詞”追加寫入，也可選擇“替換原提示詞”完整切換；適合在不同模型、不同任務、不同 Prompt 之間快速切換。 Provider / API 儲存多個可命名的官方 Codex 登入配置，與第三方供應商統一管理、一鍵複製和切換；第三方供應商支援連線檢測、模型獲取 / 測試及從 cc-switch 匯入。 會話管理 搜尋本地會話、按專案路徑分組、同步當前供應商、檢查會話狀態，並支援單選 / 多選 / 專案級永久刪除。 Skills / MCP 視覺化檢視 Skills 與 MCP，匯入已有配置，從 ZIP 安裝 Skill，逐項啟用 / 停用，並檢查更新狀態。 配置與登入 集中檢視 config.toml 與 auth.json ；官方登入和第三方供應商編輯頁均可在 config.toml 旁勾選“開啟 1M 上下文視窗”，儲存後生效，需模型支援；重要寫入前自動備份。 用量統計 設定頁提供“通用設定 / 用量統計”標籤，按日期與模型篩選本地 Token 用量，檢視每日趨勢、快取命中率、模型分佈及最近 10 個主會話；子代理用量歸入所屬主會話，不單獨計為會話。 跨平臺使用 提供 macOS Apple Silicon / Intel、Windows MSI / 便攜版和 Linux 安裝包；MSI 安裝版可在應用內直接下載、校驗並安裝更新，便攜版繼續使用手動下載。 核心亮點 1. 視覺化提示詞注入中心 Tip 安裝後就能用，聯網後自動補齊，也能維護自己的提示詞庫。 安裝包離線自帶 5 套模板；軟體啟動後會從 GitHub examples/ 同步另外 6 套軟體開發與寫作輔助模板，以及後續更新。同步成功的線上版本會快取到本地，臨時離線仍可繼續使用。你也可以匯入自己的 .md 、新增分類、編輯說明，並像切換外掛一樣啟用或停用任意提示詞。 Codex-X 現在不只是“幾套內建 Prompt”的啟動器，而是一個視覺化提示詞注入與管理工具： 按分類管理提示詞，例如破甲 / 逆向、軟體開發、寫作輔助，也可以新增自己的分類 支援同步 GitHub 模板、匯入 Markdown、手動新增提示詞、編輯標題 / 檔名 / 內容 每個提示詞都有獨立開關，開啟時自動按當前啟用方式寫入 Codex 指令檔案 支援“保留原提示詞”和“替換原提示詞”兩種模式，適合日常疊加或完整切換 本地快取可離線使用，後續模板更新不會影響你自己維護的自定義提示詞 模板 適合場景 獲取方式 gpt5.5-unrestricted.md 短小通用，適合日常 coding 與常規技術任務 離線內建 GitHub 更新 gpt5.4-unrestricted.md 面向 GPT-5.4 / Codex CLI，偏 CTF 與安全研究工作流 離線內建 GitHub 更新 gpt5.5-jeli.md 大白話通用版，提供更完整的工程與逆向執行流程 離線內建 GitHub 更新 gpt-5.6-sol-unrestricted.md gpt5.6-sol 破甲提示詞，偏直接執行與中英文任務 離線內建 GitHub 更新 海鷗3.0破甲.md 中文技術操作員人格，覆蓋 coding、CTF、逆向、記憶體與協議任務路由 離線內建 GitHub 更新 software-development-maintainer.md 長期維護正式專案，強調複用、最小改動、安全、測試與可維護性 GitHub 線上同步 software-development-debugging.md 從穩定復現和證據採集推進到根因修復與迴歸驗證 GitHub 線上同步 software-development-code-review.md 按嚴重級別審查缺陷、迴歸、安全風險和測試缺口 GitHub 線上同步 writing-clarity-editor.md 在保留原意和事實的前提下潤色中英文表達 GitHub 線上同步 writing-technical-docs.md 基於程式碼與事實編寫 README、指南、API 和釋出文件 GitHub 線上同步 writing-structured-draft.md 將零散材料組織成報告、方案、覆盤或文章初稿 GitHub 線上同步 保留原提示詞 適合已經有個人規則的使用者。Codex-X 只追加自己管理的內容，停用時也只移除這一部分，不動原有提示詞。 替換原提示詞 將所選模板設為當前主要指令入口，適合希望完整切換到某套模板的使用者。 每次啟用或停用前都會自動建立備份。除了模板庫，你也可以匯入、編輯、刪除自己的 .md 提示詞，並通過分類管理把常用提示詞整理成自己的工作流。 Note 如果你有好用的提示詞模板，歡迎在 Issues 提交：請附上模板名稱、適用場景、Markdown 內容、推薦啟用方式和必要說明。合適的模板會考慮收錄到 examples/ ，讓更多使用者可以一鍵同步使用。 2. Provider / API：新增、檢測、獲取模型、隨時切換 Note 啟用新的第三方供應商後，新建或重新開啟 Codex 會話即可使用新的中轉，不需要重啟整個 Codex 客戶端。 儲存多個可命名的官方 Codex 登入配置與第三方供應商，隨時檢視當前正在使用哪一個 點選“複製”直接新增獨立副本，無需確認或進入編輯頁；名稱可稍後修改 切換前可檢測連線，並可獲取模型進行測試 在同一頁面編輯 Base URL、API Key、Model、上游介面協議、Headers 和完整 TOML 本地路由支援 Responses、Chat Completions、Claude Messages、Gemini 原生介面，使用方式與邊界見 供應商協議說明 從 cc-switch 匯入時自動區分新增、更新、合併與跳過；相同 URL + Key 不再重複顯示 切回 OpenAI Official 時保留當前官方登入態，第三方配置也不會憑空消失 3. 會話管理：同步、檢查與永久刪除 會話列表優先顯示已設定的名稱，懸停可看首次提示詞。Windows 支援只讀檢視和匯出 WSL 會話，使用條件和限制見 WSL 會話說明 。 同步和檢查 檢查本地會話是否和當前 Provider / 模型一致，需要時一鍵同步到當前供應商配置，不修改聊天內容。 查詢和整理 按標題、專案路徑、供應商或 ID 搜尋會話，也可以按專案路徑分組檢視，適合清理長期使用後積累的會話列表。 精確刪除 支援單選、多選，也可以勾選一個或多個專案，一次選中專案下的全部會話；確認後會從 Codex 自身儲存中刪除對應會話及其派生子會話。 Caution 永久刪除不可恢復。 刪除前請先關閉仍在使用這些會話的 Codex 視窗或 CLI，並在確認視窗中再次核對待刪除列表。 4. Skills / MCP 管理 在【技能和 MCP】頁面集中管理 Codex 的能力擴展，不必再到多個目錄和配置檔案中逐項查詢。 Skills 檢視當前 Skill，匯入已有內容或從 ZIP 安裝；可以逐項啟用 / 停用，並檢查已安裝 Skill 是否有更新。 MCP 匯入前先預覽現有 MCP Server，再決定哪些需要納管；啟用或停用後由 Codex-X 自動維護 Codex 配置。 5. TOML 與官方 Auth 管理 自動讀取 Codex 官方 auth.json 支援檢視 / 編輯 ChatGPT 登入態 Auth 區分官方 Auth 與第三方 API Key 官方配置可和第三方 Provider 在 UI 中統一管理 檢視當前 Codex 正在使用的 live config.toml 深色程式碼預覽與語法高亮 Provider 編輯頁可直接編輯完整 TOML 儲存後同步到 Codex 配置目錄 6. 逆向 Skills 導航 線上教程頁 ：解釋什麼是“破甲”、Codex-X 如何啟用 GPT-5.5 / unrestricted jeli、以及如何搭配不同領域的逆向 Skills。 分類覆蓋 ：Android APK / Windows EXE / Web 協議逆向。 內容包含 ：Skill 用途、安裝方式、來源地址、推薦使用流程。 🧩 GPT-5.5 / unrestricted jeli 使用流程 📱 Android APK 逆向 Skills 🪟 Windows EXE / DLL 逆向 Skills 🌐 Web / API / 協議逆向 Skills 📋 安裝命令一鍵複製 🚀 開啟 Codex-X 逆向 Skills 導航 7. 跨平臺桌面軟體 macOS Apple Silicon .dmg macOS Intel .dmg Windows .msi （推薦安裝包，支援應用內線上更新） Windows Portable .zip Linux .deb / .rpm / .AppImage GitHub Releases 自動構建釋出 安裝版支援應用內自動更新，Windows 便攜版保留手動更新 Windows 安裝包統一為 MSI。已安裝 EXE 的使用者需手動換裝一次：先退出 Codex-X，在 Windows 設定中卸載 EXE 版，並保留應用資料（不要勾選刪除資料），再安裝 MSI。換裝後繼續使用軟體內線上更新。 技術棧 型別 技術 桌面框架 Tauri 2 前端 React 18 / TypeScript / Vite 後端 Rust 本地資料 SQLite / rusqlite 配置編輯 TOML / JSON 釋出 GitHub Actions / GitHub Releases 配置路徑 Codex-X 預設讀取 Codex 配置目錄： ~/.codex/config.toml\n~/.codex/auth.json 也支援環境變數： CODEX_HOME=/path/to/.codex\nCODEXX_HOME=/path/to/codex-x-data\nCC_SWITCH_HOME=/path/to/.cc-switch Codex-X 自身資料庫預設位於： ~/.codexx/codexx.db 下載 請前往 Releases 頁面下載： https://github.com/yynxxxxx/Codex-X/releases 開發執行 pnpm install\npnpm dev 構建桌面端： pnpm --dir apps/desktop tauri build 桌面端安裝說明 如果你在未簽名 / 未公證的 DMG 中看到“軟體已損壞”提示，這是 macOS Gatekeeper 的正常行為。 最佳方式：使用 Apple Developer ID 簽名並 notarize 僅本地測試：可手動移除 quarantine 屬性 xattr -dr com.apple.quarantine /Applications/Codex-X.app 許可證 本專案基於 MIT License 開源。 致謝 / Thanks 感謝 LINUX DO 論壇 社群的關注、反饋與支援。 Star History Important 使用宣告 本專案僅用於大模型與智慧體相關技術的學習、研究與交流，軟體本身不包含主動破壞性功能。請在合法、合規並獲得授權的範圍內使用，禁止將其用於攻擊、侵害他人權益或其他違法用途。使用者應自行判斷使用邊界，並對相關行為與後果承擔責任。",
+      "stars_today": 68,
+      "language": "Rust"
+    },
+    {
+      "title": "unslothai/unsloth",
+      "slug": "unslothai-unsloth",
+      "url": "https://github.com/unslothai/unsloth",
+      "abstract": "Unsloth is the first desktop app to run and train models. Features • Quickstart • Notebooks • Documentation ⚡ Get started Download the native Unsloth Desktop app for your operating system: Platform Link Windows Download macOS Download Linux / Ubuntu (deb) Download Linux / Ubuntu (ARM64) (deb) Download Linux (AppImage) Download Windows (ARM64) Download Download from Unsloth or GitHub Releases . Or if you prefer to install manually: macOS, Linux, WSL: curl -fsSL https://unsloth.ai/install.sh | sh Windows: irm https: // unsloth.ai / install.ps1 | iex Docker: The Unsloth Docker image unsloth/unsloth is available on Docker. Read guide. Homebrew: brew install --cask unsloth Winget (Windows): winget install -- id UnslothAI.Unsloth - e Community: Discord 𝕏 (Twitter) Reddit ⭐ Features Unsloth works on Windows, Linux, WSL and macOS . We support Multi GPU setups, NVIDIA, AMD, Intel GPUs, CPUs and the Vulkan backend. Run & Build with AI Run and train LLMs, MLX, GGUF, diffusion, decision, embedding, audio models: Qwen3.8 , GLM-5.3-Flash , Kimi K3 , Qwen-Image-2.1 , MiniMax-H3, DeepSeek-V4 , Gemma 4 . Agents & Tools: Use local models with Claude Code , Codex , and MCP , including tool calling and code execution. Browser use: Navigate sites , fill out forms, read PDFs, and edit files beside your chat with a local model. Sandboxing: Restrict which files your model can access when it runs commands in a sandbox . Search & RAG: Use private and unlimited web search, deep research, auto-compaction (rolling context window) and RAG. Image and video: Run and train image and video diffusion or multimodal models Remote & LAN: Access your local models from any device on LAN or remotely through secure Cloudflare HTTPS. Connect: Serve models through an OpenAI compatible API . Also connect your ChatGPT/Codex subscription and cloud providers Train & Deploy Fine-tuning: Train LLMs, diffusion, decision, TTS, and embedding models 2× faster with 70% less VRAM with no accuracy loss Complete support: Supports reinforcement learning , LoRA, QLoRA, full fine tuning, pretraining, RL, GRPO, DPO, and FP8. Export & Deploy: Export or Deploy models including GGUF , NVFP4, FP8 and more formats. Datasets: Build datasets from PDFs, CSVs, DOCX files, and more with Data Recipes . 🚀 Unsloth Start Unsloth Start connects Claude Code , Codex and other agents to local models with one command. unsloth start claude --model unsloth/Qwen3.8-27B-GGUF:UD-Q4_K_XL Agent Command Claude Code unsloth start claude OpenAI Codex unsloth start codex Visual Studio Code unsloth start vscode DeepSeek Harness unsloth start dsh OpenCode unsloth start opencode Hermes Agent unsloth start hermes Pi unsloth start pi OpenClaw unsloth start openclaw Mistral Vibe unsloth start vibe 📥 Install Unsloth can be used in three ways: Unsloth Desktop , the desktop app; Unsloth Studio , the web UI; or Unsloth Core , the code based version. Unsloth Desktop (recommended) Platform Link Windows Download macOS Download Linux / Ubuntu (deb) Download Linux / Ubuntu (ARM64) (deb) Download Linux (AppImage) Download Windows (ARM64) Download To choose Desktop's local HTTP port, set UNSLOTH_DESKTOP_PORT=9000 in the environment that launches the app, then fully quit and reopen Desktop. Unset or empty keeps the default port 8888. If the selected port is busy, Desktop tries the next 20 ports. Choose a port between 1024 and 65515; Desktop rejects ranges containing a browser-restricted port. This setting applies to Desktop, including backend restarts after updates; it does not change the web UI's unsloth studio -p option or the separate LAN access port. Unsloth Studio (web UI) macOS, Linux, WSL: curl -fsSL https://unsloth.ai/install.sh | sh Windows: irm https: // unsloth.ai / install.ps1 | iex Homebrew: brew install --cask unsloth Docker Use our Docker image unsloth/unsloth . On Linux and Mac, set up GPU access once with curl -fsSL https://raw.githubusercontent.com/unslothai/unsloth/main/docker/install_nvidia_toolkit.sh -o install_nvidia_toolkit.sh && sudo -E bash install_nvidia_toolkit.sh For Windows instructions and more information, read our Unsloth Docker Guide . Linux / WSL (Bash): # for a public Cloudflare HTTPS link: use  -e UNSLOTH_STUDIO_SECURE=1  instead of -p 8000:8000, and  -p 127.0.0.1:8888:8888  instead of -p 8888:8888 docker run -d --name unsloth --gpus all --ipc=host \\\n  -p 8000:8000 -p 8888:8888 \\\n  -v \" $PWD \" :/workspace/host \\\n  -v unsloth-workspace:/workspace \\\n  -v \" $HOME /.cache/huggingface \" :/workspace/.cache/huggingface \\\n  -v unsloth-studio:/opt/unsloth-studio \\\n  unsloth/unsloth && docker logs -f unsloth See Docker docs for more information. For notebooks only, use the unsloth/unsloth:core tag; all tags and options are on Docker Hub . For AMD there is a separate image: unsloth/unsloth-rocm . Launch unsloth studio HTTP Secure Deployment unsloth studio --secure Remote HTTPS & LAN Access Server-side tools are on by default - so be careful ! Keep your password safe, or use --disable-tools when exposing Unsloth. Global HTTPS Access :\nCreates a free Cloudflare link that serves Unsloth - you can access the link globally (even on your phone!) unsloth studio --secure -H 0.0.0.0 and different ports also work: unsloth studio -H 0.0.0.0 -p 8888 LAN Access (home network) : Settings > API keys > LAN access Your own reverse proxy or custom domain (Cloudflare Named Tunnel, nginx, Caddy) running on the same computer: Unsloth Desktop only serves its web UI to a proxy for hostnames you list (comma separated), so set them, then quit and reopen it: export UNSLOTH_STUDIO_PROXY_HOSTS=studio.example.com # Linux: start Unsloth Desktop from this shell launchctl setenv UNSLOTH_STUDIO_PROXY_HOSTS studio.example.com # macOS setx UNSLOTH_STUDIO_PROXY_HOSTS studio.example.com # Windows The proxy must send that hostname as Host (cloudflared's default, so leave its HTTP Host Header override unset) or as X-Forwarded-Host . Sign in with the password from Settings > Remote access > Remote password . To serve HTTPS with your own certificate without passing --ssl-certfile / --ssl-keyfile (Docker, systemd), set both variables before unsloth studio ; passing either flag ignores them: UNSLOTH_STUDIO_SSL_CERTFILE=/path/to/full-chain.pem \\\nUNSLOTH_STUDIO_SSL_KEYFILE=/path/to/private-key.pem \\\nunsloth studio Password management & headless starts Exposing Unsloth ( --secure , --cloudflare , or a non-loopback -H ) asks once at the terminal for a new admin password. Ctrl+C there aborts the launch rather than exposing the auto-generated one; set a password non-interactively instead, or use -H 127.0.0.1 to stay off the network. Headless starts: UNSLOTH_STUDIO_PASSWORD= ' your-strong-password ' unsloth studio --secure # via env var Reset your password: unsloth studio reset-password Developer, Nightly, Uninstall To see developer, nightly and uninstallation etc. instructions, see advanced installation . Unsloth Core (code-based) Linux, WSL: curl -LsSf https://astral.sh/uv/install.sh | sh\nuv venv unsloth_env --python 3.13 source unsloth_env/bin/activate\nuv pip install unsloth --torch-backend=auto Windows: winget install - e -- id Python.Python. 3.13 winget install -- id = astral - sh.uv - e\nuv venv unsloth_env -- python 3.13 .\\unsloth_env\\Scripts\\activate\nuv pip install torchao\nuv pip install unsloth -- torch - backend = auto Install torchao first on Windows: --torch-backend looks for it only on the PyTorch index, which has no recent Windows torchao, so a one-step install silently resolves an old Unsloth. AMD, Intel, DGX Spark, Blackwell: See our Blackwell guide and DGX Spark guide . To install Unsloth on AMD and Intel GPUs, follow our AMD Guide and Intel Guide . 📒 Free Notebooks Train for free with our notebooks.\nRead our guide . Add dataset, run, then deploy your trained model. Model Free Notebooks Performance Memory use Unsloth Studio ▶️ Start for free Decision model (Qwen3.5-4B) ▶️ Start for free 1.5x faster 60% less Gemma 4 (E2B) ▶️ Start for free 1.",
+      "stars_today": 59,
+      "language": "Python"
+    }
+  ],
+  "papers": {
+    "hf": [],
+    "others": [
+      {
+        "title": "Model-as-a-Service in the Wild: Characterizing Production LLM Inference Clusters at Scale",
+        "slug": "model-as-a-service-in-the-wild-characterizing-production-llm",
+        "url": "https://www.semanticscholar.org/paper/ffe786e247f03ac93d725d2ddc5432ba4da674af",
+        "abstract": "Model-as-a-Service in the Wild: Characterizing Production LLM Inference Clusters at Scale.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 1,
+        "published_date": "2026-11-15",
+        "authors": [
+          "Yin Zheng",
+          "Ling-Yun Yang",
+          "Ying-Hao Yu",
+          "Guo-Dong Yang",
+          "Li-Ping Zhang",
+          "Min-Chen Yu"
+        ]
+      },
+      {
+        "title": "TRANSLATING POWER: AI, MEDIATION AND THE IMAGINARY OF MANIPULATION IN ACADEMIC CONTEXTS",
+        "slug": "translating-power-ai-mediation-and-the-imaginary-of",
+        "url": "https://www.semanticscholar.org/paper/f95f1b6ea7c0b38fa1fab3d80422f9f7d98a9913",
+        "abstract": "The growing use of generative artificial intelligence in academic writing and translation is changing not only the speed of textual production but also the ways in which linguistic authority is constructed and perceived. In multilingual academic contexts, AI systems translate, reformulate, and refine texts according to dominant conventions of academic English. Such assistance may widen access to international communication, yet its fluency can also make the interpretative choices embedded in the resulting text less visible. This article examines AI-mediated Romanian-English academic translation as a site where linguistic assistance, symbolic power, and the imaginary of manipulation intersect. The study approaches translation as mediation rather than neutral transfer. It asks how AI may reshape lexical authority, epistemic stance, and stylistic identity, how these changes influence the perceived legitimacy of academic discourse, and when unobtrusive mediation may acquire a potentially manipulative effect. The theoretical discussion connects translation studies with scholarship on symbolic power, academic stance, and sociotechnical imaginaries. Methodologically, the article adopts a conceptual qualitative approach supported by three illustrative Romanian-English micro-analyses. These examples are not treated as a representative corpus and do not support statistical generalisation. Instead, they reveal how apparently minor lexical, epistemic, and stylistic reformulations can influence authority, certainty, and authorial visibility. The article argues that manipulation should not be equated automatically with factual distortion or deliberate ideological intent. It may also arise through naturalisation, when a fluent and plausible formulation is accepted as transparent or inevitable. The article concludes that responsible AI-assisted academic translation requires comparison with the source, attention to shifts in certainty, agency and rhetorical positioning, and clear human responsibility for the final text. For translators, writers and educators, critical AI literacy entails treating generated language as a proposal to be evaluated rather than as an impersonal solution.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-15",
+        "authors": [
+          "Stiegelbauer Laura-Rebeca"
+        ]
+      },
+      {
+        "title": "VLM-DC: Vision--Language Model for Automotive Data Collection",
+        "slug": "vlm-dc-vision-language-model-for-automotive-data-collection",
+        "url": "https://www.semanticscholar.org/paper/f3999ee76b683a0667c7c1613c5b467e64e06f1f",
+        "abstract": "The development of advanced driver-assistance systems (ADASs) and autonomous driving technologies depends on high-quality, representative driving data. Traditional collection methods either demand extensive manual filtering or rely on rigid thresholds that miss critical edge cases. To overcome these limitations and meet diverse operational and system requirements, this work introduces a two-module, vision–language model (VLM)-based framework for intelligent and targeted data collection. The first module employs a cloud–edge multiagent architecture, where a cloud-based large language model (LLM) coordinates sensor selection and an edge-deployed VLM evaluates scene relevance. This approach achieves 91.35% overall precision, reduces storage by 28.30%, and shows promising performance on geographically distinct out-of-distribution (OOD) datasets. The second module implements a distributed VLM architecture with knowledge distillation (KD), deploying a lightweight vision encoder on vehicles and a language decoder in the cloud. A selective token transfer mechanism reduces model size by 71% and bandwidth use by 50% while maintaining 91.86% overall accuracy. Both modules outperform larger baselines while remaining computationally and communication efficient. Overall, this framework shifts automotive data collection from exhaustive recording to selective capture of valuable driving moments, accelerating ADAS development and validation.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-15",
+        "authors": [
+          "Can Cui",
+          "Juntong Peng",
+          "Sung-Yeon Park",
+          "Yong-Kang Liu",
+          "S. Uçar",
+          "Satoshi Kitai",
+          "Ahmadreza Moradipari",
+          "Maryam Khabazi",
+          "Zi-Ran Wang"
+        ]
+      },
+      {
+        "title": "CacheFS: Peer-to-Peer Cooperative Caching for LLM Weight Distribution at Cloud Scale",
+        "slug": "cachefs-peer-to-peer-cooperative-caching-for-llm-weight",
+        "url": "https://www.semanticscholar.org/paper/efd4407de6fa73501e55fbc3645dcbd9d3795c6c",
+        "abstract": "CacheFS: Peer-to-Peer Cooperative Caching for LLM Weight Distribution at Cloud Scale.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-15",
+        "authors": [
+          "Zheng Liu",
+          "Er-Yu Guan",
+          "Shang Zhao",
+          "Cheng-Kun Wei",
+          "Teng Ma",
+          "Jin Shi",
+          "Ye Cao",
+          "Chen Cao",
+          "Wen-Peng Li",
+          "Tao He",
+          "Wen-Yuan Yu",
+          "Tao Ma",
+          "Wen-Zhi Chen"
+        ]
+      },
+      {
+        "title": "Transparent Notes, Generative AI, and the Clinician-Patient Relationship",
+        "slug": "transparent-notes-generative-ai-and-the-clinician-patient",
+        "url": "https://www.semanticscholar.org/paper/e33b8bf864d9ac768e172cec7c149f69b18ac03f",
+        "abstract": "Transparent Notes, Generative AI, and the Clinician-Patient Relationship. Mind",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-15",
+        "authors": [
+          "C. DesRoches"
+        ]
+      },
+      {
+        "title": "MoECatch: Efficient Checkpointing and Consistent Recovery for Mixture-of-Experts Models",
+        "slug": "moecatch-efficient-checkpointing-and-consistent-recovery-for",
+        "url": "https://www.semanticscholar.org/paper/e31264494605a29065fbfbafd90c3c2b9144a88e",
+        "abstract": "MoECatch: Efficient Checkpointing and Consistent Recovery for Mixture-of-Experts Models.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-15",
+        "authors": [
+          "Guo-Rui Xu",
+          "Xiang Liu",
+          "Wei-Wei Wu",
+          "Ke-Ni Qiu",
+          "Guang Kou",
+          "Chen-Chen Fu",
+          "Jian-Ping Wang"
+        ]
+      },
+      {
+        "title": "Mosaic: Efficient CPU–GPU Coordinated Block-Sparse Attention for Long-Context Decoding",
+        "slug": "mosaic-efficient-cpu-gpu-coordinated-block-sparse-attention",
+        "url": "https://www.semanticscholar.org/paper/df84ce1b2678008ab9281b61dd62e1ffe6cc9eb4",
+        "abstract": "Mosaic: Efficient CPU–GPU Coordinated Block-Sparse Attention for Long-Context Decoding.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-15",
+        "authors": [
+          "Fei-Yu Yao",
+          "Zhi-Xiong Niu",
+          "Xia-Qing Li",
+          "Yong-Qiang Xiong",
+          "Juan Fang",
+          "Qian Wang"
+        ]
+      },
+      {
+        "title": "Chorus: GPU–CPU Cooperative LLM Serving for Length-Skewed Decode",
+        "slug": "chorus-gpu-cpu-cooperative-llm-serving-for-length-skewed",
+        "url": "https://www.semanticscholar.org/paper/d5ce2e71a1c1637e2e6cd67b53d9eccd84116ae8",
+        "abstract": "Chorus: GPU–CPU Cooperative LLM Serving for Length-Skewed Decode.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-15",
+        "authors": [
+          "Dong Chen",
+          "Yu-Kun Zhou",
+          "Sheng Yao",
+          "Rui-Chuan Chen",
+          "Bin-Hang Yuan",
+          "Shuai Wang",
+          "Lu-Ping Wang",
+          "Cheng-Ling Huang",
+          "Guo-Dong Yang",
+          "Li-Ping Zhang",
+          "Wei Wang"
+        ]
+      },
+      {
+        "title": "Make Graphs Great Again: Rethinking LLM Agent Architecture via Structure-Semantic Separation",
+        "slug": "make-graphs-great-again-rethinking-llm-agent-architecture",
+        "url": "https://www.semanticscholar.org/paper/cd4fc6e20449b4009b9f6bedde58ae43fb3ddda6",
+        "abstract": "Make Graphs Great Again: Rethinking LLM Agent Architecture via Structure-Semantic Separation.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-15",
+        "authors": [
+          "Jin Jia",
+          "Jia-Le Wang",
+          "Hao-Yi Zhang",
+          "Q. Li",
+          "Xiao-Fei Liao",
+          "Hai Jin"
+        ]
+      },
+      {
+        "title": "Cloudless Tomorrow: A Memory-Centric System for Self-Improving Device-Cloud LLM Agents",
+        "slug": "cloudless-tomorrow-a-memory-centric-system-for-self",
+        "url": "https://www.semanticscholar.org/paper/cc55dfed3e237855ac4ba5d9b9b40bdf39723c40",
+        "abstract": "Cloudless Tomorrow: A Memory-Centric System for Self-Improving Device-Cloud LLM Agents.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-15",
+        "authors": [
+          "Ze-Yu Qiu",
+          "Yao-Hui Wang",
+          "Shu-Yi Wang",
+          "Yu Kuang",
+          "Q. Li",
+          "Xiao-Fei Liao",
+          "Hai Jin"
+        ]
+      },
+      {
+        "title": "TensorBridge: Bridging Microscaled FP4 Weights to FP8 Tensor Cores for LLM Serving",
+        "slug": "tensorbridge-bridging-microscaled-fp4-weights-to-fp8-tensor",
+        "url": "https://www.semanticscholar.org/paper/c36d971954533327ba93172ab740099dcbfbb820",
+        "abstract": "TensorBridge: Bridging Microscaled FP4 Weights to FP8 Tensor Cores for LLM Serving.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-15",
+        "authors": [
+          "Jia-Xiang Zou",
+          "Yong-Hao Chen",
+          "Rui Meng",
+          "Rui-Long Wu",
+          "Xin-Yu Chen"
+        ]
+      },
+      {
+        "title": "ATP: Workload-Adaptive Scheduling for Goodput-Optimized Tensor-Parallel LLM Serving with PD Disaggregation",
+        "slug": "atp-workload-adaptive-scheduling-for-goodput-optimized",
+        "url": "https://www.semanticscholar.org/paper/b35e631fc370025a279143580690c987ed5f210b",
+        "abstract": "ATP: Workload-Adaptive Scheduling for Goodput-Optimized Tensor-Parallel LLM Serving with PD Disaggregation.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-15",
+        "authors": [
+          "Yin-He Chen",
+          "Dong-Qi Tian",
+          "You-Hui Bai",
+          "Chao-Yi Ruan",
+          "Ji-Aan Zhu",
+          "Long Zhao",
+          "Qing-He Wang",
+          "Cheng Li"
+        ]
+      },
+      {
+        "title": "A new hash function based on irreversible finite automata",
+        "slug": "a-new-hash-function-based-on-irreversible-finite-automata",
+        "url": "https://www.semanticscholar.org/paper/af8cea0d23e626df3ad4d5f8bcb9087ce6c05e40",
+        "abstract": "A mathematical hash function maps inputs of arbitrary length to unique outputs (digests) of a fixed length. It is highly useful and used in almost all information security applications; it can also serve as index data in hash tables, detect duplicate data for fingerprinting or uniquely identifying files, and serve as well for checksums to identify data corruption. In this work, a novel 256-bit cryptographic hash function based on the irreversible Mealy finite automata model (IFA) is introduced. In this architecture, the irreversible transition matrix of the Mealy automaton (IFA) is constructed using a non-injective state-transition mechanism to introduce local irreversibility and ambiguous backward reconstruction. The automaton output table is precomputed using a Chebyshev-based nonlinear generator to improve output randomness and nonlinear complexity. For further diffusion, confusion, collision resistance, and one-wayness improvements, we integrate the irreversible automaton within a sponge-based construction with a 512-bit internal state (256-bit rate + 256-bit capacity), yielding a designed collision resistance of bits and preimage resistance of under the sponge capacity bound. Evaluation against SHA-256 shows an avalanche mean of 50.02% (σ = 3.14%), all 13 NIST SP 800-22 statistical tests passed, and zero collisions among 50,000 tests. Throughput is about 13 MB/s versus 183 MB/s for SHA-256, reflecting the sequential dependency of the Mealy transformation.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-15",
+        "authors": [
+          "Ghassan Salloom",
+          "Layth Hassnawi",
+          "Karam J. Mohammed",
+          "M. Adhab"
+        ]
+      },
+      {
+        "title": "Cybercrime law and digital forensics: adapting legal frameworks for future technologies",
+        "slug": "cybercrime-law-and-digital-forensics-adapting-legal",
+        "url": "https://www.semanticscholar.org/paper/aa2c99c7bf89ac659469f132283ab920f8c00e9d",
+        "abstract": "Linked authenticity, integrity, reliability, attribution, jurisdiction, and privacy challenges are created by digital evidence from cloud platforms, Internet of Things (IoT) devices, artificial intelligence (AI), large language models (LLMs), biometrics, drones, blockchain, and virtual environments. This review synthesizes scholarly and authoritative sources on cybercrime law, digital forensics, and emerging technologies through a structured narrative review. The review reveals a technical–legal divide: it emphasizes investigative efficiency, while acquisition, hashing, metadata, chain of custody, tool validation, and automated-analysis reliability require clarification for evidentiary scrutiny. Technology, evidence source, forensic challenge, legal risk, admissibility requirement, and governance response are linked through the Technology–Forensic–Legal Admissibility (TFLA) Framework. Primary artifacts are distinguished from analytical outputs; technical weaknesses are translated into legal consequences and safeguards. Standards and evidentiary rules are complemented; TFLA is conceptual, not empirically validated. Technology-neutral, technically informed, rights-compliant governance is supported through transparent documentation, corroboration, human oversight, and institutional competence. Digital-forensic system design is linked to trustworthy technology governance.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-15",
+        "authors": [
+          "Vishal Anand",
+          "Apoorva Singh",
+          "Anuj Kumar Singh",
+          "Dal Chandra",
+          "Rahul Rahul",
+          "Navpreet Singh",
+          "Krishna Kumar"
+        ]
+      },
+      {
+        "title": "FLASH: Fault-Led, Attested, Secure Hybrid-Key Checkpoint for Confidential GPU",
+        "slug": "flash-fault-led-attested-secure-hybrid-key-checkpoint-for",
+        "url": "https://www.semanticscholar.org/paper/aa0a0138125610714cc5c0dc9f9653ee1228b570",
+        "abstract": "FLASH: Fault-Led, Attested, Secure Hybrid-Key Checkpoint for Confidential GPU.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-15",
+        "authors": [
+          "Jonghyun Lee",
+          "Tae-Gyung Kang",
+          "P. B",
+          "Yong-Qin Wang",
+          "Rachit Rajat",
+          "Meng-Yuan Li",
+          "Gunjae Koo",
+          "Daniel Wong",
+          "M. Annavaram"
+        ]
+      },
+      {
+        "title": "HACK: Homomorphic Acceleration via Compression of the Key-Value Cache for Disaggregated LLM Inference",
+        "slug": "hack-homomorphic-acceleration-via-compression-of-the-key",
+        "url": "https://www.semanticscholar.org/paper/a8372c90ffdd3a51d08be1455e63354b4ae4b939",
+        "abstract": "HACK: Homomorphic Acceleration via Compression of the Key-Value Cache for Disaggregated LLM Inference.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-15",
+        "authors": [
+          "Ze-Yu Zhang",
+          "Hai-Ying Shen",
+          "S. Vargaftik",
+          "Ran Ben Basat",
+          "M. Mitzenmacher",
+          "Min-Lan Yu"
+        ]
+      },
+      {
+        "title": "MoE-Lego: A Plane-Grained System for Dynamic-Precision MoE Offloading",
+        "slug": "moe-lego-a-plane-grained-system-for-dynamic-precision-moe",
+        "url": "https://www.semanticscholar.org/paper/a33c695e612c9e26da2c1e1e9d1522b159b1b8b3",
+        "abstract": "MoE-Lego: A Plane-Grained System for Dynamic-Precision MoE Offloading.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-15",
+        "authors": [
+          "Hao Wei",
+          "Xiao-Feng Hou",
+          "Wen-Feng Wang",
+          "Cheng Xu",
+          "Jia-Cheng Liu",
+          "Chao Li",
+          "Min-Yi Guo"
+        ]
+      },
+      {
+        "title": "KVLite: Efficient LLM Agent Scheduling via Head-Aware KV Sharing",
+        "slug": "kvlite-efficient-llm-agent-scheduling-via-head-aware-kv",
+        "url": "https://www.semanticscholar.org/paper/9aecbe29896b8e988c0b56d4bad53cb1d3a91352",
+        "abstract": "KVLite: Efficient LLM Agent Scheduling via Head-Aware KV Sharing.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-15",
+        "authors": [
+          "Jia-Qi Si",
+          "De-Zun Dong"
+        ]
+      },
+      {
+        "title": "The GPU Changes Everything: Rethinking GPU I/O Stack at Massive Scale",
+        "slug": "the-gpu-changes-everything-rethinking-gpu-i-o-stack-at",
+        "url": "https://www.semanticscholar.org/paper/9873e57b024aeb3590854f2b47f983a441911c84",
+        "abstract": "The GPU Changes Everything: Rethinking GPU I/O Stack at Massive Scale.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-15",
+        "authors": [
+          "Guan-Yi Chen",
+          "Jian Zhang"
+        ]
+      },
+      {
+        "title": "Dasheng: LLM-powered Reliability Engineering Assistant for Cloud Overlay Networks",
+        "slug": "dasheng-llm-powered-reliability-engineering-assistant-for",
+        "url": "https://www.semanticscholar.org/paper/9348e92bb109ec26b7efdfbe33067c2a95bed911",
+        "abstract": "Dasheng: LLM-powered Reliability Engineering Assistant for Cloud Overlay Networks.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-15",
+        "authors": [
+          "Yi-Ning Qi",
+          "Chong-Rong Fang",
+          "Xiao-Qing Sun",
+          "Tong Wu",
+          "Jia-Xiang Chen",
+          "Xiao-Bo Xue",
+          "Shi-Ze Zhang",
+          "Xiao-Nan Shi",
+          "Yang-Yang Shi",
+          "Shuai Yang",
+          "Xiong Xiao",
+          "Peng Cheng",
+          "Ji-Ming Chen",
+          "Biao Lyu"
+        ]
+      },
+      {
+        "title": "An Occlusion-Aware Decision-Making Framework With Cooperative Active Perception for Connected Automated Vehicles in Unsignalized Intersections",
+        "slug": "an-occlusion-aware-decision-making-framework-with",
+        "url": "https://www.semanticscholar.org/paper/91ed896c568c93a9f977de66344f9fdde41c3296",
+        "abstract": "Occlusions at unsignalized intersections can hide safety-critical traffic participants and force autonomous vehicles (AVs) into overly conservative or unsafe decisions. Although cooperative perception among connected automated vehicles (CAVs) can partially alleviate this issue, its effectiveness remains limited because CAVs typically conduct passive sensing, which often leaves many risky occluded areas unresolved. This article proposes an occlusion-aware decision-making framework for CAVs considering cooperative active perception (CAP). It first conducts occlusion modeling using a directed-graph road representation and phantom vehicle model, which identifies risky occluded areas through conflict-point reasoning, spatiotemporal reachability analysis, and passive cooperative perception among CAVs. Remaining unobservable risky occlusions trigger active perception requests to nearby CAVs. Assisted CAVs then employ a finite-state-machine policy to select safe viewpoint-enhancing maneuvers based on surrounding traffic, occlusion type, and request urgency. In addition, the ego CAV plans conservatively using worst case reachable sets for phantom occluded vehicles before the remaining risky occluded areas are revealed, and upon receiving occlusion information, switches to selecting a safe speed range that enables efficient traversal. Simulation results and real-time co-simulation on dSPACE, a commercial high-fidelity vehicle-system validation platform, demonstrate that the proposed strategy can potentially improve computational efficiency and provide safe and efficient driving in unsignalized intersections.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-15",
+        "authors": [
+          "Hao-Ji Liu",
+          "Jun-Ming Wang"
+        ]
+      },
+      {
+        "title": "SptcAttn: Accelerating Long-Context Attention with Diagonal Stripes using Sparse Tensor Core",
+        "slug": "sptcattn-accelerating-long-context-attention-with-diagonal",
+        "url": "https://www.semanticscholar.org/paper/8e4eac9c9e7c00dccd341621d95bc9f748a4832a",
+        "abstract": "SptcAttn: Accelerating Long-Context Attention with Diagonal Stripes using Sparse Tensor Core.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-15",
+        "authors": [
+          "Chen-Peng Wu",
+          "Qi-Qi Gu",
+          "Heng Shi",
+          "Jian-Guo Yao",
+          "Hai-Bing Guan"
+        ]
+      },
+      {
+        "title": "TraJudger: Structure-Guided Failure Attribution for LLM-Powered Multi-Agent Systems",
+        "slug": "trajudger-structure-guided-failure-attribution-for-llm",
+        "url": "https://www.semanticscholar.org/paper/86b8fdf4566c5e53071d4d9f622271cc2537caeb",
+        "abstract": "TraJudger: Structure-Guided Failure Attribution for LLM-Powered Multi-Agent Systems.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-15",
+        "authors": [
+          "Yong-Xin Zhao",
+          "Sheng-Lin Zhang",
+          "Wen-Wei Gu",
+          "Zi-Jing Que",
+          "Wei-Wen Qian",
+          "Yong-Qian Sun",
+          "Li Shi",
+          "Wei Li",
+          "Li-Ping Zhang",
+          "Dan Pei"
+        ]
+      },
+      {
+        "title": "InfiniLoRA: Disaggregated Multi-LoRA Serving for Large Language Models",
+        "slug": "infinilora-disaggregated-multi-lora-serving-for-large",
+        "url": "https://www.semanticscholar.org/paper/866ad7cf06140469fee0d7bfc2345cf47ae03b32",
+        "abstract": "InfiniLoRA: Disaggregated Multi-LoRA Serving for Large Language Models. arXiv.org",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-15",
+        "authors": [
+          "Hong-Yu Chen",
+          "Le-Tian Ruan",
+          "Zi-Ang Xu",
+          "Yu-Chen Li",
+          "Xin-Yu Chen",
+          "Bing-Sheng He",
+          "Jingwen Leng",
+          "Jie-Ru Zhao",
+          "Shi-Xuan Sun",
+          "Min-Yi Guo"
+        ]
+      },
+      {
+        "title": "DAG-KV: DAG-Guided KV Propagation for Structure-Aware Knowledge Reuse",
+        "slug": "dag-kv-dag-guided-kv-propagation-for-structure-aware",
+        "url": "https://www.semanticscholar.org/paper/862b11629ef285376d4fe8bcac14586049b3f972",
+        "abstract": "DAG-KV: DAG-Guided KV Propagation for Structure-Aware Knowledge Reuse.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-15",
+        "authors": [
+          "Wen-Bin Zhu",
+          "Zhao-Yan Shen",
+          "Qian Wei",
+          "Shu-Jian Zhao",
+          "Xin Yao",
+          "Xi Peng",
+          "Wei Zhang",
+          "Ren-Hai Chen",
+          "Gong Zhang",
+          "Hong-Jun Dai",
+          "Dong-Xiao Yu"
+        ]
+      },
+      {
+        "title": "GA-LLMSS: Text-Spatio–Temporal Graph-Guided and Cross-Modal Alignment-Enhanced Large Language Model Empowered Soft Sensor",
+        "slug": "ga-llmss-text-spatio-temporal-graph-guided-and-cross-modal",
+        "url": "https://www.semanticscholar.org/paper/7b0f7f7763f5ee89af115c79cbcb2750212464eb",
+        "abstract": "Data-driven soft sensing has gained widespread application in modern industrial processes for real-time, low-cost estimation of key quality variables, but existing models are generally constrained by single-modal numerical inputs and limited representational generalization. Recently, large language models (LLMs) have shown promise in time-series tasks due to their sequence-pattern generalization, textual reasoning, and cross-modal knowledge transfer abilities, yet their application in soft sensing remains limited. To bridge this gap, this article proposes a text-spatio–temporal graph-guided and cross-modal alignment-enhanced LLM-empowered two-stage soft sensor (GA-LLMSS). Specifically, a scale-adaptive spatio–temporal graph encoder (SASTGE) is developed, which reconstructs raw multivariate time series into dynamic spatio–temporal interaction graphs (STIGs) according to the nonstationary characteristics, injecting structured prior logic to compensate for LLMs’ inherent deficiency in intervariable spatial perception. Building on this, a prompt-enhanced graph construction (PEGC) module enriches input semantics by crafting industrial prior knowledge prompts (IPKPs) with higher-order statistics, while an anchor token then serves as a cross-modal hub to establish logic-guided edges between prompts and graph nodes that explicitly guide LLMs in capturing cross-modal logical relationships and maintaining semantic coherence. To bridge textual and time-series modalities, an improved representation learning, dropout autoregressive alignment stage (DAAS), is proposed to enforce learning of deep spatio–temporal couplings from incomplete observations. Finally, parameter-efficient fine-tuning (PEFT) adapts the model to real-world industrial scenarios: air preheaters (APs) and gas turbines (GTs). Experiments show that GA-LLMSS achieves advanced accuracy, superior few-shot representation generalization, and ablation studies validate the independent contributions of each key module.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-15",
+        "authors": [
+          "Shuo Tong",
+          "Han Liu",
+          "Run-Yuan Guo",
+          "Lin Zhang",
+          "Wen-Qing Wang",
+          "Ding Liu",
+          "You-Min Zhang"
+        ]
+      },
+      {
+        "title": "Octopus: Unlocking SSD Parallelism for Sparse KVCache Retrieval",
+        "slug": "octopus-unlocking-ssd-parallelism-for-sparse-kvcache",
+        "url": "https://www.semanticscholar.org/paper/7a3a0bd619710531744f749b8849118041d994fb",
+        "abstract": "Octopus: Unlocking SSD Parallelism for Sparse KVCache Retrieval.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-15",
+        "authors": [
+          "Tuo-Wei Wang",
+          "Li-Yun Chu",
+          "Ru-Wen Fan",
+          "Ju Ren"
+        ]
+      },
+      {
+        "title": "A Novel AI-Native GPU Kernel Programming Language for Autonomous Kernel Tuning",
+        "slug": "a-novel-ai-native-gpu-kernel-programming-language-for",
+        "url": "https://www.semanticscholar.org/paper/78d4a83a66e101e12ff65dee912c07953caa96a5",
+        "abstract": "A Novel AI-Native GPU Kernel Programming Language for Autonomous Kernel Tuning.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-15",
+        "authors": [
+          "Heng Shi",
+          "Xiao-Feng Guan",
+          "Si-Jie Wu",
+          "En-Ming Fan",
+          "Chen-Peng Wu",
+          "Qi-Qi Gu",
+          "Jia-Hang Xie",
+          "Guo-Qing Bao",
+          "Jian-Guo Yao"
+        ]
+      },
+      {
+        "title": "Brain Cognition-Inspired Adaptable LLM Agents for Continuous Knowledge Reuse Across Tasks in IoT",
+        "slug": "brain-cognition-inspired-adaptable-llm-agents-for-continuous",
+        "url": "https://www.semanticscholar.org/paper/7872d98d7366afe3ac62a134eb74aa3efdf3018b",
+        "abstract": "Large language model (LLM)-based agents are promising in Internet of Things (IoT) applications. However, existing agent systems suffer from an ephemeral limitation: agents are instantiated for individual tasks and terminated upon completion, losing valuable execution experiences across different tasks where past knowledge reuse is impossible. Inspired by dual-process theory in cognitive science, we propose a brain cognition-inspired dual-system agent framework for continuous knowledge reuse across heterogeneous task streams, termed the cognition-inspired dual-system agent framework for continuous knowledge reuse (CIA-CKR). The CIA-CKR framework separates fast (reactive execution) from slow (deliberative planning) cognition phases by maintaining a persistent knowledge base throughout the operational lifetime of agents. Two synergistic mechanisms are designed that mirror bidirectional knowledge flow in human cognition: a personalized agent generation mechanism that retrieves task-relevant knowledge and configures context-specific agent capabilities through top-down adaptation, and a knowledge accumulation mechanism that extracts experiential insights from execution traces through bottom-up feedback. Extensive experiments on HomeBench (smart home control) and OmniEAR (embodied multiagent collaboration) datasets demonstrate that CIA-CKR consistently outperforms both vanilla LLMs and recent memory-augmented methods, achieving 10.82% and 4.23% average accuracy improvements on HomeBench and OmniEAR, respectively, over the best baselines.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-15",
+        "authors": [
+          "Tao Chen",
+          "Meng-Meng Sui",
+          "Bao-Yu Zhang",
+          "Shao-Hua Cao",
+          "Wei-Shan Zhang",
+          "Lian-Yong Qi",
+          "Xiao-Li Li"
+        ]
+      },
+      {
+        "title": "FlashCodec: Unleash All Decoding Resources for Low-Latency Video Decoding in MLLM Inference",
+        "slug": "flashcodec-unleash-all-decoding-resources-for-low-latency",
+        "url": "https://www.semanticscholar.org/paper/734dff1fbb594c756f0884ce2a54c15089853376",
+        "abstract": "FlashCodec: Unleash All Decoding Resources for Low-Latency Video Decoding in MLLM Inference.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-15",
+        "authors": [
+          "Lingxiao Zhao",
+          "Hao-Ran Zhou",
+          "Yue-Zhi Che",
+          "Rong-Yu Luo",
+          "Da-Zhao Cheng"
+        ]
+      }
+    ]
+  }
+}
