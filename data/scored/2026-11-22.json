@@ -1,0 +1,643 @@
+[
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "Inkling-2-Mini in 5.4 GB Memory",
+      "url": "https://github.com/ShinMegamiBoson/lookatmyquant",
+      "authors": [
+        "k__"
+      ],
+      "abstract": "LookAtMyQuant LookAtMyQuant is a quantization compiler. It measures how much each stored piece of a model hurts the output when compressed. It then picks a code for each piece so the whole model fits a size budget with the least damage. On Gemma 4 E2B, its GGUF has 12× lower KL than Q4_K_M at the same file size. The method and every result are on the site . The code is under the MIT license. LookAtMyQuant 2: Qwen3.5-4B in 1.2 GB LookAtMyQuant 2 takes Qwen3.5-4B to 1.23 GB, 2.3 bits per weight. The file solves 330 of 540 exact-answer math problems. Prism ML's Bonsai 2 Ternary 4B solves 328 at 1.20 GB, and the original solves 359. Its KL from the original on held-out text is 0.45 nats, against 0.59 for Bonsai. The recipe is post-training quantization with trellis codes, calibrated on the model's own worked math solutions with digit tokens weighted 10×, and with bits allocated per row by Fisher information. 4,000 steps of distillation follow, in which every layer is re-quantized once from the original weights. The page has the findings, the full recipe and its cost, about $34 of GPU time. The recipe's code is here, and the next section runs it. The 1.23 GB file itself is the lm2-qwen35-4b-1.2gb release , packed for the Apple Silicon runtime. Qwen3.8-27B in 7.2 GB The same recipe takes Qwen3.8-27B from 53.7 GB to 7.2 GB, 2.1 bits per weight, calibrated and distilled on English prose and chat, code and math. The file solves 401 of the 540 math problems, as many as the original, and Unsloth's UD-IQ2_XXS GGUF of the same size solves 348. It also scores above that GGUF on HumanEval (73.8% against 67.1%), MMLU (78.8% against 75.0%) and GSM8K (94.5% against 92.7%). Beside it sits a 4-bit DSpine drafter (1.02 GB, converted from tencent/Qwen3.8-27B-DSpine-b16 with runtime_mlx/convert_dspine.py and packed with pack_drafter.py ), which roughly doubles decode speed on math and code on Apple silicon. Inkling-2-Mini in 3.9 GB, 4.7 GB, 5.4 GB, 8.9 GB, 11.2 GB, and 12.8 GB Extended to a 26.4B physical / 5.4B active 3×-looped MoE ( L6–17 looped 3× = 48 logical visits, 128 experts top-8), the compiler and full-MoE proximal fine-tuning ( SQYFR / SQYFR v2 / SQYFR v3 ) compress thinkingmachines/Inkling-2-Mini from 18.89 GB of text weights into six Apple Silicon MLX builds spanning 8 GB iPhones up to lossless teacher parity: 3.85 GB ( 1.18 bpp ) , 4.72 GB ( 1.45 bpp ) , 5.38 GB ( 1.65 bpp ) , 8.87 GB ( 2.72 bpp ) , 11.18 GB ( 3.43 bpp ) , and 12.76 GB ( 3.92 bpp ) — combining 4 KB SRAM hashed block-vector trellis codes ( ht2 / ht3 ), row trellis codes ( rtr1 / rtr4 ), surgical 128 -row-group Fisher outlier allocation ( gu_rg_map / dn_rg_map ), dedicated attention projection floors, a tr2 floor on the tail lm_head bucket ( head.7 ), and exact native NVFP4 passthrough ( 69/192 and 109/192 highest-sensitivity expert buckets kept at 0.0 error in the 11.2 GB and 12.8 GB builds). Evaluated untruncated ( max_new_tokens = 1,536 , greedy, reasoning_effort=\"none\" ) on the same BF16 teacher, openai/gsm8k ( test[:200] ), all 164 executable openai/openai_humaneval problems (strict <|content_text|> execution across every build), 4 Vision VQA tests (with the untouched 637 MB BF16 vision tower), and 16+13-language TextMix windows: Model Text GB Text bpp free_KL ( en/chat/code ) all13_KL GSM8K (200) HumanEval Strict (164) Vision (4) 3-Task Mean vs Teacher Original BF16 Teacher 18.89 5.80 0.0000 0.0000 193 / 200 (96.5%) 152 / 164 (92.7%) 4 / 4 100.0% LookAtMyQuant 12.8 GB ( NVFP4 + Trellis) 12.76 3.92 0.0070 0.0268 193 / 200 (96.5%) 152 / 164 (92.7%) 4 / 4 100.0% LookAtMyQuant 11.2 GB ( NVFP4 + Trellis) 11.18 3.43 0.0115 0.0400 190 / 200 (95.0%) 151 / 164 (92.1%) 4 / 4 99.3% (98.9% pooled) LookAtMyQuant 8.9 GB ( SQYFR ) 8.87 2.72 0.0208 0.0571 192 / 200 (96.0%) 149 / 164 (90.9%) 4 / 4 99.2% (98.9% pooled) LookAtMyQuant 5.4 GB ( SQYFR v2 ) 5.38 1.65 0.0864 0.2773 174 / 200 (87.0%) 117 / 164 (71.3%) 4 / 4 89.0% (84.5% pooled) LookAtMyQuant 4.7 GB ( SQYFR v3 , 12 GB iPhone) 4.72 1.45 0.1162 0.3724 188 / 200 (94.0%) 113 / 164 (68.9%) 4 / 4 90.6% (87.4% pooled) LookAtMyQuant 3.9 GB ( SQYFR v3 , 8 GB iPhone) 3.85 1.18 0.2161 0.6037 179 / 200 (89.5%) 97 / 164 (59.1%) 4 / 4 85.5% (80.2% pooled) At 12.76 GB , Inkling-2-Mini-LookAtMyQuant-12.8GB matches 100.0% of the untouched BF16 teacher on every benchmark ( 349 / 349 pooled) in 32.5% less text weight memory. Both 11.18 GB and 8.87 GB retain 99.2–99.3% 3-task mean ( 345 / 349 = 98.9% pooled), with 8.87 GB cutting KL 2.34× on English/chat/code ( 0.0208 vs 0.0486 ) and 29.6% across all 13 languages ( 0.0571 vs 0.0811 ) below Unsloth's 9.14 GB UD-Q2_K_XL GGUF. Below 2 bpp , SQYFR v2 lifts 5.38 GB ( 1.65 bpp ) to 90.0% top-1 agreement ( free_KL = 0.0864 ), 87.0% GSM8K, and 71.3% strict HumanEval ( 117 / 164 ), while SQYFR v3 (combining two-pass on-policy student-prefix DAgger distillation, surgical within-stage 128 -row-group Fisher outlier splitting, and 950 exact- P polish steps over 14.15M row scales + 440K–452K float16 pre-RHT input-column scales + 38.8M native steering) lifts 4.72 GB ( 1.45 bpp , sized to fit under the 12 GB iPhone 5.99 GiB Jetsam ceiling alongside the 179 MB drafter at 4.35 GiB active / 5.35 GiB decode peak) to 94.0% GSM8K ( 188 / 200 , 97.4% of the BF16 teacher) and 68.9% strict HumanEval ( 113 / 164 , 90.6% 3-task mean) , and lifts 3.85 GB ( 1.18 bpp , 3.54 GiB active / 4.57 GiB decode peak for 8 GB devices) from static PTQ collapse ( 1.0% GSM8K, 1.8% HumanEval) to 89.5% GSM8K ( 179 / 200 ) , 59.1% strict HumanEval ( 97 / 164 ) , and 4 / 4 Vision ( 85.5% 3-task mean) . All six run through lamq and runtime_mlx via unified single-launch Metal kernels ( UnifiedMoESide mixing unrotated NVFP4 and Hadamard-rotated per-expert or 128 -row-group trellis experts across decode, speculative verify, and M5 MetalPerformancePrimitives prefill + FlashAttention-2 SDPA + exact unbiased temp > 0 speculative sampling), optionally paired with the 178.9 MB 4-bit DSpark drafters : on Apple M5 Max, 12.8 GB reaches 2,016 tok/s T=512 prefill, 60.5 tok/s serial, and 112.7 tok/s median lossless drafted decode ( 119.2 tok/s math, 106.2 tok/s code; 12.72 GB active RAM); 11.2 GB reaches 2,032 tok/s prefill, 62.4 tok/s serial, and 103.7 tok/s median ( 111.7 tok/s math; 11.13 GB active RAM); 8.9 GB decodes at 63.5 tok/s serial and 106.0 tok/s median ( 125.8 tok/s reasoning, 123.8 tok/s math; 9.41 GB active RAM); 5.4 GB reaches 1,807 tok/s prefill, 75.3 tok/s serial, and 124.4 tok/s median ( 142.9 tok/s math, 126.5 tok/s reasoning; 5.33 GB active RAM); 4.7 GB decodes at 69.2 tok/s serial and up to 129.0 tok/s on math ( 3.25 tok/check , 94.7 tok/s code; 4.67 GB active RAM); and 3.9 GB decodes at 75.8 tok/s serial and 113.0 tok/s median ( 117.3 tok/s math, 108.5 tok/s code; 3.81 GB active RAM). Install and use the Apple Silicon runtime On Apple silicon, install the runtime package directly (this installs mlx , mlx-lm , numpy , and huggingface-hub without the PyTorch compiler dependencies): pip install git+https://github.com/ShinMegamiBoson/lookatmyquant.git From a local clone, pip install -e . installs the lamq command, or run python -m runtime_mlx without installing. Command line. Pass either a local model folder or a Hugging Face repo ID: lamq generate shinmegamiboson/Qwen3.8-27B-LookAtMyQuant-7.2GB \\ -p \" What is 17 times 23? Show the steps. \" lamq generate shinmegamiboson/Qwen3.8-27B-LookAtMyQuant-7.2GB \\ --drafter shinmegamiboson/Qwen3.8-27B-LookAtMyQuant-7.2GB-drafter \\ -p \" Write a Python function that merges overlapping intervals. \" --stats lamq chat shinmegamiboson/Qwen3.8-27B-LookAtMyQuant-7.2GB \\ --drafter shinmegamiboson/Qwen3.8-27B-LookAtMyQuant-7.2GB-drafter lamq generate shinmegamiboson/Inkling-2-Mini-LookAtMyQuant-12.8GB \\ --drafter shinmegamiboson/Inkling-2-Mini-LookAtMyQuant-drafter \\ -p \" What is 17 times 23? Show the steps. \" --stats lamq generate shinmegamiboson/Inkling-2-Mini-LookAtMyQuant-5.\n\n(576 points, 137 comments on Hacker News)",
+      "published_date": "2026-11-22",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 576,
+        "num_comments": 137,
+        "hn_url": "https://news.ycombinator.com/item?id=50591853",
+        "object_id": "50591853"
+      }
+    },
+    "rule_score": 36.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: reasoning, post-training, fine-tuning, moe, distillation",
+      "🔥 HN 爆紅: 576 points"
+    ],
+    "llm_score": 71,
+    "llm_reason": "量化壓縮新配方附完整程式碼與成本公開，實測優於同類方法但非全新範式",
+    "novelty": 12,
+    "impact": 11,
+    "trending": 15,
+    "practicality": 17,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "量子位",
+      "title": "反超Gemini之後，Karpo新作再開源，瀏覽器Agent速效雙贏",
+      "url": "https://www.qbitai.com/2026/11/511791.html",
+      "authors": [
+        "衡宇"
+      ],
+      "abstract": "反超Gemini之後，Karpo新作再開源，瀏覽器Agent速效雙贏 衡宇 2026-11-21 19:24:29 來源： 量子位 文婷 發自 凹非寺 量子位 | 公眾號 QbitAI 2026年了，居然還有年輕團隊專門訓練決策模型，而且一齣手，就把Gemini甩在了身後？！ 同樣一場《城市掃描器》挑戰，Karpo從36場活動中幫我挑出10個休閒娛樂的好去處（平均消費50美元之內、通勤距離僅5km）只花了2.6秒，而Gemini 3.5 Flash則足足用了14.96秒。 快了將近6倍！各種篩選條件也一個沒漏，36道題準確率達100%。 這位新晉決策高手，就是MachinePulse AI剛剛開源的 Karpo Decision 31B 。 它專門為Agent提供高頻、低延遲的決策能力，讓每一步判斷都更快、更省。 比如瀏覽網頁下一步點哪個按鈕、任務有沒有完成、幾十個工具待呼叫哪個最符合要求，它都能直接給出判斷， 幹起活來相當麻利。 一張RTX PRO 6000就能讓它上崗，面對公開集14萬多次請求， 中位響應時間僅94毫秒，眨眼的工夫都用不著。 在足足有300個模型同臺廝殺的Decision Index評測總榜上， Karpo Decision 31B 還以73.9的Full分榮登榜首，單題最多可同時判斷255個候選選項，校準誤差降至了2.3%。 更進一步，MachinePulse還把已經應用於自家Personal Agent產品Karpo的瀏覽器操作框架，正式向開發者開源！ 這套方案採用 System 1 + System 2 架構，包括 karpo-browser框架 、專門針對網頁動作決策訓練的 Karpo Decision 27B Act 模型，以及配套的網頁動作決策評測集 KBB 。 在Browserbase Benchmark v2的102道核心任務上，這套方案做到了 89%的平均成功率、201秒的平均耗時 ，單任務模型成本僅需 0.096美元（約0.64元） 。 相比榜首Claude Fable 5.2 + Claude Code， 完成任務的速度快了約1.9倍，模型成本更是隻有對方的十三分之一。 我們觀察到，當把成功率要求放寬到80%，但真正使用者可用的體驗速度250秒內和成本0.15美金內，整個榜單全部91條記錄無一做到，Karpo獨此一份且大幅度領先，真正做到既要準又要快還要便宜！Karpo在表中特意備註不參加排行，但其自測102道全集題加上3次跑取平均的苛刻要求，遠超榜單其他模型在38題僅跑1次的要求。 圍觀的網友們不禁感嘆： 這正是每一個技術棧都需要的東西！ 好傢伙，這位專門替Agent拿主意的AI軍師，究竟還有多少本事？ 你還在等大模型回話，Karpo已經把活幹完了 說起來，自今年9月Jev一夜爆火以來，決策模型這條賽道，已經一躍成為了矽谷最熱門的明星賽道之一。 短短24天的功夫，Jev背後的TypeSafe AI就拿下了 75億美元（約500億元）估值的大結果。 一時間，OpenAI、微軟、亞馬遜、Cloudflare等科技巨頭紛紛殺進賽場，決策模型賽道迅速熱鬧起來。 為啥大家突然都盯上了這門生意？ 原因也很簡單。 隨著Agent越來越能幹，要是每次選個工具、篩個結果，都得呼叫通用大模型逐字生成答案，多少有點殺雞用牛刀了。 不僅慢，Token還嘩嘩燒，錢包跟著癟癟。 於是，專門替Agent處理這些高頻、瑣碎判斷的決策模型，就有了用武之地。 但現有方案也各有難處。 比如火爆的Jev和谷歌新推出的Gemini Decision 1，雖然能快速給出決策機率，但卻均沒有開源，開發者難以自行部署。 已經開放權重的決策模型（如GLiDE），也不見得能把速度和判斷能力同時拉滿。 於是，Karpo Decision 31B向前多走了幾步，它不需要當場寫小作文， 只跑一次前向推理就能在剎那間算出整組選項的機率，且完全開源。 就拿我在Karpo官網上試玩的《十張胃口，選單就一張》來說。 這是個真人與AI同臺競技的點餐小遊戲。我和Karpo Decision 31B需要同時為10位客人點餐，既要照顧各自的預算、口味和忌口，還得比比誰上菜更快、更準。 看著很簡單，可誰橙想，我才剛把游標點到第一位客人的需求，連第一行字都沒讀完，Karpo Decision 31B就已經以 1.3秒 的速度，火速把10道菜全部端上了桌。 而且10位客人的要求，它一個都沒搞錯！ 被……被秒殺了？！哦不，穩住穩住，不會差太遠的吧… 可當我終於讀完第二位客人的需求，準備繼續選菜時一瞄錶盤，時間已經過去了整整13秒。 好傢伙，換Karpo早都交卷10輪了，我竟還在第二題打轉… 這我可就急了。從第三道題開始，我乾脆悄悄作弊，它點啥，我就跟著點啥。 可即便抄作業，也還是追不上。 最後，我索性死馬當活馬醫，直接亂點一通，心想著說不準撞個好運。 可就算這麼連蒙帶猜、半抄作業地折騰下來，我還是花了足足 83.9秒 才完成整套任務。 與此同時再看看通用大模型這邊。 同樣的10道題，我還截圖交給了GPT-6.2 Astra（High檔）來做，轉了足足34秒才拿到答案。 這麼一對比，Karpo不僅比我這個已經偷偷開掛的人類選手快了 64.5倍，比GPT還快了約26倍！ 而這種判斷工作要是放到開發者日常搭建Agent的工作中來看，就更有用武之地了。 因為開發一個自動處理GitHub Issue的Agent，光是決定該呼叫哪個工具、如何給檢索到的程式碼檔案排序、任務是否已經完成，就可能涉及一連串判斷。 要是每一步都得呼叫通用大模型，等它慢慢生成答案，不僅工作流容易被拖慢，Token賬單也會跟著水漲船高。 而Karpo可以把多個判斷放進一次請求，直接返回各個候選選項的機率，省去逐字生成答案的開銷，讓Agent有機會跑得更快、更省錢。 更關鍵的是，按照JevBench的GPU成本估算，Karpo每1000次決策僅需 約0.025美元（0.17元） ，相當於只花 1美元（摺合人民幣約6.67元） 就能讓它跑完近4萬次決策！ 與動輒呼叫通用大模型相比，成本簡直暴降啊。 而且，Karpo還真把這套決策能力搬進了瀏覽器裡，大幅度改進使用者的網頁任務的體驗！ MachinePulse團隊最新開源了這套名為 karpo-browser的瀏覽器Agent方案，該方案創新地採用了System 1＋System 2的快慢雙模型分工，讓通用大模型和專門的決策模型搭夥幹活。 怎麼分？ System 2負責動腦，System 1負責動手。 比如說，使用者想預訂一家餐廳。 通用大模型DeepSeek V4.1 Flash負責理解需求、拆解任務、準備需要填寫的資訊； 而專門針對網頁操作訓練的 Karpo Decision 27B Act ，則負責在頁面上選擇輸入框、點選按鈕，決定下一步執行哪個操作，單次決策時延中位數僅 931毫秒（0.93秒） 。 背後的karpo-browser框架，則負責讀取網頁、執行操作，並處理網頁變化和執行異常。 △ 圖片系AI繪製 而這套分工的效果，還真有點東西。 團隊在Browserbase Benchmark v2全部102道任務上的三輪實測發現： 網頁上約78%的操作，都交給了Karpo決策模型完成。 但這些操作僅佔整個Agent執行耗時的 14% 、模型成本的 13% 。 於是，原本需要通用大模型反覆呼叫、逐字生成答案的網頁操作，如今可以交給決策模型快速處理，讓大模型騰出手來負責規劃、核對和更複雜的任務。 而且這回，MachinePulse還把整套開發工具鏈一起開放了出來。 除了Karpo Decision 27B Act模型權重，還有采用TypeScript編寫的 karpo-browser框架 。 這套框架能靈活地適配不同的開源大模型與決策模型。 開發者無需從頭搭建瀏覽器Agent，通過MCP就能把這套瀏覽器操作能力接入Claude Code、Codex等現有Agent。 甚至還有配套的 KBB（Karpo BrowserBench）網頁動作決策評測集 ，覆蓋584個真實網站、23,075步網頁操作，通過真實網頁錄製與離線回放，讓開發者測試模型每一步的動作究竟選得對不對。 從模型權重，到瀏覽器執行框架，再到配套評測工具，開發者如今可以把這套System 1＋System 2方案真正裝進自己的Agent裡。 △ 四個部署入口 而它帶來的價值，還不止於省下一筆模型呼叫費。 MachinePlulse團隊表示，相較於使用昂貴的頂尖模型，這套方案在保持出色的任務成功率的同時，有機會讓開發者用同樣的運營預算，支撐原來5-30倍的使用者規模。 對於想把Agent做成真正面向大量使用者的產品的開發者來說，或許這才是更令人興奮的地方。 挑專案快準狠，聽人話也有一手！Karpo有點東西啊 看著介麼不錯，我當然也要原地開Roll！ 於是，我也給Karpo Decision 31B出了兩道題，先看看它能不能又快又準地篩選技術資料，再體驗看它聽不聽得懂我的陰陽怪氣。（doge） 實測一：8條技術搜尋結果擺面前，Karpo能又快又準地挑出真正有用的嗎？ 先測搜尋結果篩選。 假設咱們正在尋找一個開源、支援本地部署，還能主動點選、填寫和導航網頁的瀏覽器Agent。 我一口氣給Karpo甩出 8條技術搜尋結果 ，乍一看，個個都沾邊，但其中混進了各種只能看不能動的工具、只能雲端執行的Agent，還有功能齊全卻不開源的專案。 題目如下： 看它能不能把真正符合要求的專案揪出來。 結果，僅過了308毫秒（約0.3秒），Karpo就把符合要求的A、D、E、G四條結果準確揪了出來！ 其餘四個混在其中的干擾項，也一個沒放過。 實測二：我各種陰陽怪氣，Karpo能聽得出弦外之音嗎？ 不過，做決策往往可不只是篩選結果。 中華文化博大精深，有時候，咱們可不能只信字面意思。（doge） be like這句： 太好了，這個Agent又把我的檔案刪光了，真是幫了大忙！ 好評？反諷？ 要是隻盯著前半句話的 “太好了” ，或後半句話裡的 “幫了大忙”， 絕對要翻車。 於是，我又給Karpo搬出了6道語氣判斷題，從直白稱讚到反諷吐槽，再到褒貶混合的中性表達，看看它能否讀出言外之意，讀到什麼程度。 任務如圖： 結果還真挺不錯。 僅過了 232毫秒（約0.23秒） ，Karpo Decision 31B就給出了全部6道題的判斷，把藏在字裡行間的吐槽、稱讚和複雜情緒全揪了出來。 甚至連第四句“ 頁面載入慢了一些，但結果準確，整體還可以。” 這種不誇不罵、好壞參半的評價，它都拿捏住了。 還給出了 91%的中性機率、8%的認可，隱約0.2%的不滿 的細微覺察。 最有意思的是第六句： 不錯嘛，今天終於沒把線上服務弄崩。 明明開頭就是一句“不錯嘛”，Karpo卻給負面態度分配了足足 88%的機率 ，正面態度 10% ，中性或褒貶混合 2% 。 合著對這次任務的肯定、這句表揚背後，藏著的那些對過往翻車經歷的怨氣，也完全被它聽出來了。 放到開發者的實際應用中，這種能力其實也很實用。 比如客服Agent判斷使用者是否真的滿意、開發工具分析使用者反饋，都需要透過字面表達識別真正的態度，避免把投訴錯當成表揚。 告別逐字生成，還要避免偏科，Karpo怎麼煉成的？ 看到這裡，估計大家也好奇了， Karpo Decision 31B 究竟是怎麼把這麼多判斷壓縮到一次推理裡，還能直接給出機率的？ 秘密之一，就藏在它專門設計的 Readout Head 裡。 以往，通用大模型面對一道選擇題，往往需要逐個Token生成答案，再由程式從文字中解析出最終選項。 Karpo乾脆省掉了這道工序。 它給候選選項安排了專門的編碼，每道題後面再放置一個用於讀取結果的標記。模型讀完輸入後，Readout Head就在這個位置為各個選項打分，並把分數轉換成機率。 整個過程只需要一次前向推理，不用逐字生成答案，輸出Token數直接降到了0。 △ Readout Head機制 而且，這套設計還能一口氣應付三種不同型別的決策。 比如，Agent下一步該呼叫哪個工具？ 這可以交給 Choice（選擇題） ，讓Karpo在最多255個候選選項之間分配機率，讓Agent知道哪個更值得選。 要是Agent忙活半天，需要判斷任務究竟完成了沒有呢？ 那就交給 Noul（Yes/No判斷題） ，直接返回任務完成的機率。 至於搜尋結果有多相關、某個推薦內容究竟有多符合使用者口味，則可以交給 Score（評分題） ，讓模型為不同評分等級分別給出機率，再供系統計算分數、調整排序。 三種題型，共用同一個Readout Head。 不過，一次能答一道題還不夠。 Agent真正幹起活來，可能要同時篩選幾十條搜尋結果、比較幾十種工具，背後還跟著一大段網頁內容或任務上下文。 難不成每判斷一個候選，都得把同一份材料重新算一遍？ Karpo可不想幹這種重複勞動。 於是，團隊又設計了 Branch Attention（分支注意力） 機制。 它支援 256K上下文能力， 會把輸入分成兩部分。一部分是大家共用的Shared Block，放著任務說明、問題清單和網頁等背景材料；另一部分則是各道題自己的Branch，包含對應的題目、選項和結果讀取標記。 共享的內容只計算一次，各道題卻能分別作答，互不干擾。 △ Branch Attention架構示意圖 效果有多明顯？ 在一張RTX PRO 6000上，面對1K-4K Token的請求，Karpo單獨回答一道題的中位耗時僅為 371毫秒 。 而當一次請求包含16-63道題時，中位耗時也只有 653毫秒 。 幾十道判斷集中起來，耗時卻沒有跟著題目數量成倍增長，Agent處理高頻決策的開銷也就有機會大幅降下來。 對開發者來說，這就很香了。 不過，判斷得快，還得有點自知之明。 畢竟，Agent下一步是自動執行，還是乖乖把決定權交還給人類，往往就取決於模型對自己到底有多大把握。 要是明明只有六成勝算，卻張口就是99%，那可真是自信得有點嚇人了。（doge） 為此，Karpo還用上了 RLCD（面向校準決策的強化學習） 。 它不只獎勵模型選對答案，還會根據整組預測機率來計算獎勵，鼓勵模型如實報告自己的把握。 哪怕訓練資料裡的標籤存在分歧，它也會盡量保留這種不確定性，而不是強行壓成唯一答案。 效果如何？ 在JevBench公開題上，Karpo的 預期校準誤差（ECE）僅為2.3% 。 如此一來，開發者就可以嘗試給Agent設定不同的執行閾值，讓Agent既能果斷出手，也知道什麼時候該收手，交還給人類把關。 RSI登場，Karpo把訓練中的偏科問題扳回來了 不過，速度和機率都搞定了，Karpo還得面對另一個更棘手的問題。 那就是千萬別練著練著，就把自己練偏科了。 要知道，Agent每天遇到的決策需求千奇百怪。 今天幫你篩選開源專案，明天可能就要判斷程式碼有沒有安全漏洞，後天又得給某份合同或採購檔案把關。 如果模型從來只擅長訓練時見過的題目，一換場景就掉鏈子，那可真有點難堪了。 而Karpo團隊在訓練中，還真發現了這樣的苗頭。 隨著訓練不斷推進，模型的公開測試成績從 73.1漲到了75.1 ，可在13個陌生領域的評測中，準確率反而從 72.1%跌到了70.7% 。 為了破解這個問題，Karpo團隊把 泛化能力 列為訓練重點，並引入了 RSI（遞迴自我改進） 訓練框架。 它會先訓練出多個候選模型，逐一評估，再通過Model Fusion（模型融合），把不同版本的優勢集中到一起。 融合後的模型只有勝過當前模型，才能成功晉級，進入下一輪迭代。 這一次，團隊選中了 5個不同的Checkpoint ，其中3個來自全參數微調，另外2個來自LoRA微調。 通過權重平均，把早期模型較好的泛化能力和後期模型更強的專精能力結合起來。 效果還真不錯。融合後，公開測試成績仍保持在 75.1 ，陌生領域準確率卻從70.7%提高到了 72.3% ，足足回升了 1.6個百分點 。 而且，融合完成後，它仍然是一套標準的31B參數模型，結構、參數量和推理開銷都沒有增加。 在團隊組織的同一套13領域測試中，Karpo最終拿下了72.3%的準確率，超過了此前Decision Index Full榜單前三的KnowLine 31B Gen1（71.5%）、Sieve 31B v3（70.4%）和GLiDE 1.2（69.1%）。 公開題沒丟分，陌生題反而考得更好了。 對於一個想要嵌進各種Agent工作流、隨時接手不同判斷任務的決策模型來說，這份不偏科的能力，恐怕比單純多刷幾分更值得關注。 讓Agent少一點猶豫，讓開發者多一點自由 Anyway，實測了一圈下來，最讓我印象深刻的，還是Karpo處理那些高頻小判斷時的利落勁兒。 如今， 決策正在成為AI系統中可以獨立分工的一層能力。 早在今年4月，AWS CEO Matt Garman就在 Stratechery 訪談中預見過類似趨勢： 未來會有各種模型共存。一些小模型甚至能完成最新OpenAI模型還做不到的事情，而且會越來越小、越來越便宜、越來越快。 Jev的創始人Diogo也表達過類似的判斷： 未來，AI不必事事依賴大模型生成答案。快速決策可以交給專門的模型，複雜推理則由其他模型承擔，各司其職。 而Karpo的出現，又讓開發者多了一種實現這套思路的 開源選擇 。 Karpo釋出時，LeahW曾這樣概括它的設計理念： 選下一個工具，不該費一整段話。 當判斷足夠快、成本足夠低，開發者也就有機會在Agent的搜尋、推薦和任務執行流程裡，安排更多細緻的篩選與檢查，而不必事事依賴生成式大模型。 更有趣的是，Karpo連名字都透著一股瀟灑勁兒。 它取自拉丁語 Carpe Diem ，意為 “把握當下，及時行樂” 。 而開發Karpo的MachinePulse團隊，長期深耕的Personal Agent（個人智慧體）方向，恰好也在解決咱們日常生活中那些真實又瑣碎的小糾結。 比如，今天喝點什麼？下班後想怎樣放鬆？週末附近有什麼好玩的？ 有時候，我們腦子裡只有一個模模糊糊的念頭，連自己想要什麼都說不太清楚。 Karpo想做的，就是把這些模糊的想法變成具體的選擇，幫人們少一點糾結，早點出門享受生活。 △ 外出遊玩時輕點兩下手機背面，就能瞬間召喚出Karpo幫咱們檢索周圍娛樂好去處 而對開發者群體而言，Carpe Diem如今似乎又多了一層新的意義。 把瑣碎的決策交給Karpo，把寶貴的時間留給自己真正想做的事。 畢竟，技術進步的意義，不就是讓我們能更自由地做自己想做的事嗎？ 現在，MachinePulse團隊已經同步開源了 0.",
+      "published_date": "2026-11-21",
+      "tags": [
+        "資訊"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "量子位",
+        "feed_url": "https://www.qbitai.com/feed"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 74,
+    "llm_reason": "決策模型System1+2架構開源並附基準數據，踩中當紅賽道",
+    "novelty": 13,
+    "impact": 12,
+    "trending": 17,
+    "practicality": 16,
+    "blog_worthiness": 16
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "NVIDIA Releases Alpamayo 2 Edge: A 2B Reasoning VLA for DRIVE Thor",
+      "url": "https://www.marktechpost.com/2026/11/22/nvidia-alpamayo-2-edge-2b-reasoning-vla-drive-thor/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "NVIDIA has released Alpamayo 2 Edge , a compact reasoning vision-language-action (VLA) model for autonomous driving. Alpamayo 2 Edge is a 2B-parameter model that plans trajectories and explains them inside the vehicle. It targets NVIDIA DRIVE AGX Thor , not a datacenter GPU. The goal: reasoning-based planning within onboard compute and latency budgets. You can check the deployment options and specs here through our GPULeaderboard.com chrome extension . Alpamayo 2 Edge is an open NVIDIA VLA model that turns surround-camera video into a 6.4-second plan. It is the in-car member of the Alpamayo family , next to the 34B cloud model Alpamayo 2 Super . Per the model card , the 2.45B backbone pairs a 1.96B language model with a 0.41B SigLIP2 encoder. A 0.2B diffusion action expert sits on top. The backbone comes from NVIDIA Cosmos 3 Edge and is Nemotron-based. NVIDIA markets the model as 2B, while Hugging Face metadata shows 3B. For trajectory prediction, the model reads 6 cameras and 22 frames per observation. The 2 front cameras give 5 frames each, the other 4 give 3 each. It also takes a navigation instruction and 20 historical ego poses. Output is 64 waypoints from 0.1 to 6.4 seconds. The action expert predicts acceleration and curvature, then a unicycle model integrates them. The text output is a Chain-of-Causation (CoC) reasoning trace. The model also answers free-form questions about a driving scene. During routine driving, the model emits special <NOMINAL> tokens instead of a full reasoning trace. It writes CoC reasoning only when a scene needs it. Fewer tokens means less compute per planning step. NVIDIA team lists these ingredients: Hugging Face weights ship in BF16 and run as a PyTorch model. Real-time use on Thor needs the Alpamayo Developer Hub recipe. It stages the checkpoint and the DFlash2 drafter, then calibrates FP8 scales. Next it exports ONNX graphs and builds TensorRT engines with TensorRT Edge-LLM plugins. NVIDIA reports 160 ms to 190 ms pixel-to-trajectory latency, depending on how much the model reasons. The reference setup is DRIVE AGX Thor-X with DRIVE OS 7.2.7.0, CUDA 13.4 and TensorRT 11.3.1.9. In NVIDIA’s demo video , PyTorch BF16 plans at 0.76 Hz. The optimized FP8 Thor pipeline plans at 13.02 Hz in AlpaSim. Partner Embedl says it reached 10 Hz on AGX Thor in under 48 hours. On a workstation GPU, the card recommends at least 16 GB of memory. NVIDIA measured 12.06 GiB peak process memory on 1 H100 with 6 trajectory candidates. Other GPU architectures are not yet validated. NVIDIA compares Edge with Alibaba’s 4B Qwen-Drive-1.0 . In AlpaSim closed-loop driving, Edge covers 15.15 km between at-fault incidents versus 0.25 km. That is about 60x. Open-loop minADE is 0.53 m versus 1.68 m. Both are NVIDIA’s own runs. AlpaSim metrics differ across sources (km per incident vs AlpaSim Score vs at-fault score), so compare only within a row’s same metric. NVIDIA also released AlpaJudge , a human-calibrated judge for reasoning traces. It scores traces, filters training data and supplies RL rewards. As an RL reward, it lifted reasoning quality 10.2% (judge) and 11.4% (human). Weights use the OpenMDW-1.1 license, and code uses Apache 2.0. Inference code is on GitHub . The model supports fine-tuning. Check out the model card , the technical blog and the GitHub repo . You can check the deployment options and specs here through our GPULeaderboard.com chrome extension . Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post NVIDIA Releases Alpamayo 2 Edge: A 2B Reasoning VLA for DRIVE Thor appeared first on MarkTechPost .",
+      "published_date": "2026-11-22",
+      "tags": [
+        "Agentic AI",
+        "AI Infrastructure",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Computer Vision",
+        "Deep Learning",
+        "Editors Pick",
+        "Enterprise AI",
+        "Language Model",
+        "Large Language Model",
+        "Machine Learning",
+        "New Releases",
+        "Open Source",
+        "Physical AI",
+        "Software Engineering",
+        "Staff",
+        "Tech News",
+        "Technology",
+        "Vision Language Model"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: reasoning, fine-tuning, vision language, diffusion",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 58,
+    "llm_reason": "邊緣端推理VLA模型架構細節清楚，但受眾侵限自駕領域",
+    "novelty": 11,
+    "impact": 10,
+    "trending": 11,
+    "practicality": 12,
+    "blog_worthiness": 14
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Google AI Previews Tool Retrieval in the Gemini API for Large Tool Libraries",
+      "url": "https://www.marktechpost.com/2026/11/22/google-gemini-api-tool-retrieval/",
+      "authors": [
+        "Michal Sutter"
+      ],
+      "abstract": "Google has launched Tool Retrieval in the Gemini API , now in preview in the Interactions API. Gemini API Tool Retrieval lets an agent keep a large tool library available. It does not send every parameter schema in every prompt. The model loads a schema only when a task needs that tool. For agents wired to dozens of functions or MCP servers, it targets a real cost: tool definitions. You can check the deployment options and specs here through our GPULeaderboard.com chrome extension . Tool Retrieval is a Gemini API feature that defers tool parameter schemas until the model asks for them. Google’s documentation states the problem plainly. A few dozen function declarations can consume tens of thousands of tokens on every request. With deferral, the model sees only each tool’s name and a short description. It does not see the parameter schema until retrieval. You add {\"type\": \"tool_search\"} to the tools array. Then you set defer_loading: true on each function to hold back. The @googledevs launch post shows a deferred issue_refund function on gemini-4-hydrogen . Its code comment mentions 50+ other deferred functions. When the model needs a deferred tool, the response contains 3 steps: The API resolves the first 2 steps itself. Your app only runs the function_call and returns a function_result . Deferred functions can carry an optional short_description . It is shown during retrieval and is valid only when defer_loading is true. Server-side is the default. Gemini runs the search, so there is no index to build or host. Client-side mode uses \"execution\": \"client\" . Your app runs its own lookup, such as an embedding index, registry or permission filter. It returns matching declarations in function_result.result . Those tools can join mid-conversation, even if absent from the initial tools array. Each client-side search costs 1 extra round trip. The 2 modes cannot be combined in 1 request. Only 1 tool_search entry is allowed per request. Yes on both, with caveats. Setting defer_loading: true on an mcp_server entry defers every tool that server exposes. Deferred MCP tools still execute remotely through the Gemini API MCP support . On caching, deferred schemas stay out of the prompt prefix. Loaded schemas append inline, so implicit caching still applies. The docs add one catch: deferring tools can shrink a prompt below the minimum cacheable size. There is no separate fee. Tokens bill at the model’s standard input, cached and output rates. Each server-side search triggers an extra model call over the full context. Those tokens appear in total_tool_use_tokens , billed at the input rate. Each loaded schema then stays billed as input for the rest of the conversation. The docs say static loading can cost less for small libraries or per-turn searches. Anthropic and OpenAI already ship similar tool search features, with published savings numbers. Anthropic and OpenAI figures are self-reported in their own tests. They are not comparable to any Gemini result. Check out the Google blog post , the Tool Retrieval docs and the MCP function calling docs . You can check the deployment options and specs here through our GPULeaderboard.com chrome extension . Also, feel free to follow us on Twitter and don’t forget to join our 150k+ML SubReddit and Subscribe to our Newsletter . Wait! are you on telegram? now you can join us on telegram as well. Need to partner with us for promoting your GitHub Repo OR Hugging Face Page OR Product Release OR Webinar etc.? Connect with us The post Google AI Previews Tool Retrieval in the Gemini API for Large Tool Libraries appeared first on MarkTechPost .",
+      "published_date": "2026-11-22",
+      "tags": [
+        "Agentic AI",
+        "AI Infrastructure",
+        "AI Shorts",
+        "Applications",
+        "Artificial Intelligence",
+        "Editors Pick",
+        "For Devs",
+        "Generative AI",
+        "Guardrail",
+        "New Releases",
+        "Software Engineering",
+        "Staff",
+        "Tech News",
+        "Technology"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, function calling, mcp",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 58,
+    "llm_reason": "API層級工程優化解決真實token成本問題，但非方法創新",
+    "novelty": 7,
+    "impact": 9,
+    "trending": 14,
+    "practicality": 16,
+    "blog_worthiness": 12
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "Fast-Anything: Don't rewrite it in Rust. Rewrite the 5% that's slow",
+      "url": "https://github.com/EL4CTEO/fast-anything",
+      "authors": [
+        "BaselAshraf81"
+      ],
+      "abstract": "Don't rewrite it in Rust. Rewrite the 5% that's slow. Rewriting a whole app in Rust costs months, minute-long compiles and gigabytes of target/ . Most of the runtime sits in a few functions anyway. fast-anything finds those functions, has your coding agent port only them to Rust, proves the port gives the same results on real recorded calls, and swaps it in. One command, fully reversible. Install npm i -g @el4cteo/fast-anything # or: cargo install fast-anything Ports are compiled with your Rust toolchain ( rustup ). Use fast-anything go --agent claude -- python app.py # or: -- node app.ts / bun app.ts / deno run -A app.ts / ruby app.rb / java App.java / mvn exec:java / gradle run / go run . / php app.php / clang -O2 main.c Or step by step: command what it does scan -- <cmd> profiles the app, ranks functions by time × how portable they are port [id] records up to 500 real calls, creates a one-function Rust crate + TASK.md verify release-builds the port and replays every recorded call enable / disable swaps the Rust in or out (one marked block, removed byte for byte) bench times the whole app, original vs Rust, interleaved runs report markdown + SVG card for your PR doctor checks Rust, your runtimes and your agents --agent takes claude , codex , or any command that reads a prompt on stdin. Without it, hand TASK.md to whatever you use. Proof, not vibes That port looked right but compared bytes instead of characters. 148 of 500 real calls caught it. On top of the recorded calls, fast-anything derives extra cases and lets the original answer them: edge cases (NaN, ±infinity, -0.0, zero and ±1, non-ASCII text, empty and up to 16× bigger inputs) and shrunk inputs (tiny and random slices). Nothing is enabled until every case matches: same values (floats within 1e-9), errors where the original errors. A port that is right but slower per call than the original (calling into Rust costs more than the work saved) isn't enabled either. FAST_ANYTHING_DISABLE=1 runs the original any time. Results Real runs on an i5-10500, Windows 11 (C and C++: a 4-core GitHub Actions Linux runner). Reproduce them from examples/ . app before after Python fuzzy dedupe (700 names) 4.91s 42ms, 116× TypeScript fuzzy dedupe (2,000 names) 3.11s 155ms, 20× PHP fuzzy dedupe (600 names) 2.94s 53ms, 55× Go fuzzy dedupe (3,000 names) 3.02s 144ms, 21× Ruby fuzzy dedupe (400 names) 3.13s 228ms, 14× C# fuzzy dedupe (4,000 names) 4.03s 312ms, 13× Java fuzzy dedupe (4,000 names) 3.50s 1.18s, 3× (11× on the function; the rest is JVM startup) C mandelbrot (8 zoom levels) 431ms 127ms, 3.4× C++ fuzzy dedupe (6,000 names) 3.02s 1.09s, 2.7× fast-anything ports the outermost loop it can, not the tiny function called inside it, so the app crosses into Rust once instead of millions of times. Porting only the inner levenshtein gave 35× and 1.9×. Why not rewrite it all? Compile time : each port is a one-function crate. Seconds, not minutes. Cache : every port shares one .fast/target . Delete it whenever you like. Risk : your code stays as it is. Rust is opt-in per function, checked against real behavior. Agents Claude Code plugin : /plugin marketplace add EL4CTEO/fast-anything , then /plugin install fast-anything@fast-anything and /fast-anything:fast python app.py MCP server (Claude Code, Codex, Cursor…), built into the binary: claude mcp add fast-anything -- fast-anything mcp . 8 tools: fast_scan , fast_port , fast_verify , fast_enable , fast_disable , fast_bench , fast_report , fast_status . Skill : skills/fast-anything teaches any agent the loop. Languages language binding status Python 3.10+ PyO3 ✅ JavaScript / TypeScript (Node 22+, Bun, Deno 2+: bun app.ts , deno run -A app.ts ) napi-rs ✅ Ruby 3.3+ C ABI + JSON, through Ruby's built-in Fiddle ✅ Java 22+ ( java App.java , Maven, Gradle) the same C bridge, through the FFM API ✅ Kotlin/JVM (Gradle, src/main/kotlin , JDK 22+) the Java bridge; top-level functions, object and companion members, extension functions ✅ Go 1.22+ ( go run . ) the same C bridge, through the Windows loader or dlopen (cgo) ✅ PHP 8.1+ ( php app.php ) the same C bridge, through PHP's FFI extension ( extension=ffi ) ✅ C and C++ (gcc, clang or Intel oneAPI icx/icpx: clang -O2 main.c lib.c ) the same C bridge, through LoadLibrary or dlopen ✅ C# / .NET 8+ ( dotnet run -c Release ) the same C bridge, through NativeLibrary; profiled with EventPipe, nothing to install ✅ It ports top-level, deterministic functions that take plain data (numbers, strings, lists, dicts, typed arrays…), including ones in your entry script when its main code sits under if __name__ == \"__main__\": (or if __FILE__ == $0 , or if (import.meta.main) / if (require.main === module) ). In Python that means module-level functions and @staticmethod s (dataclasses, NamedTuples and numeric NumPy arrays count as plain data), in Java, C# and PHP static methods (and PHP functions), in Go plain functions, in C and C++ free functions and static methods. scan says why anything else can't move yet. With Intel oneAPI on Windows, run fast-anything from a shell where setvars.bat ran (it sets up the linker). SYCL kernels run on the device and aren't ported; with -fsycl , only host functions are profiled and ported. Ruby, Java, Go, PHP, C, C++ and C# need no headers, bindings or extra tools: the port is a plain Rust library with one C entry point taking and returning JSON, and fast-anything replays the recorded calls against it directly. Any language that can call C can use that bridge. License MIT\n\n(174 points, 142 comments on Hacker News)",
+      "published_date": "2026-11-22",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 174,
+        "num_comments": 142,
+        "hn_url": "https://news.ycombinator.com/item?id=50596155",
+        "object_id": "50596155"
+      }
+    },
+    "rule_score": 25.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, mcp",
+      "⬆️ HN 熱門: 174 points"
+    ],
+    "llm_score": 63,
+    "llm_reason": "剖析熱點函式搭配agent自動移植並驗證正確性，故事與工具俱佳",
+    "novelty": 11,
+    "impact": 9,
+    "trending": 11,
+    "practicality": 17,
+    "blog_worthiness": 15
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "MarkTechPost",
+      "title": "Best Personal AI Agents in 2026: OpenClaw, Hermes Agent, Gemini Spark and More, Compared on Memory, Security and Cost",
+      "url": "https://www.marktechpost.com/2026/11/22/best-personal-ai-agents-2026/",
+      "authors": [
+        "Asif Razzaq"
+      ],
+      "abstract": "A personal AI agent runs continuously, keeps memory across sessions, and acts inside your apps. You talk to it in a chat app, by email or by voice. It keeps working after you close the window. The category started small. OpenClaw began in November 2025 as Clawdbot, a weekend project by Peter Steinberger. Twelve months later, Google, OpenAI, Meta and Perplexity all ship their own versions. The products split into 2 camps. Self-hosted agents run on your machine or server and use any model you choose. Managed agents run on a vendor’s cloud VM and come bundled with a subscription. We scored each agent on 3 axes that matter once an agent holds your inbox and credentials. Facts come from vendor documentation, launch posts and independent security research. Prices are US list prices as of November 21, 2026. Ranking reflects overall fit for an individual user, not raw capability. What it is : Hermes Agent is an open-source agent from Nous Research. It runs from a terminal UI, a native desktop app , a local web dashboard and messaging gateways. Parallel counts about 25 supported platforms as of October 2026 , including Telegram, Slack, WhatsApp, Signal, Teams and email. Native iMessage arrived in June 2026. Memory : Memory is the main reason to pick Hermes. It keeps persistent MEMORY.md and USER.md files and curates them with periodic nudges. Session history sits in SQLite with FTS5 full-text search and LLM summarization. Pluggable providers include Honcho user modeling plus 8+ community backends. Hermes also writes its own skills. It turns completed complex tasks into reusable skills and refines them over time. Skills follow the agentskills.io standard. The /learn command captures a workflow as a slash command without hand-writing SKILL.md. Security : The docs describe a 7-layer defense-in-depth model . Layers include user allowlists, DM pairing and human approval for destructive commands. Approval mode can be manual, smart (an auxiliary LLM rates risk) or off. The defaults fail closed. An unanswered approval prompt is denied after 300 seconds . Your own deny rules survive even YOLO mode. Nous is explicit about the limits. Its docs say the denylist does not sandbox a hostile or compromised agent. The project’s SECURITY.md names OS-level isolation as the one load-bearing boundary. For broad tool access, use a container backend such as Docker, Modal, Daytona or Vercel Sandbox. Cost : The agent is free. You pay for model tokens from any provider: OpenRouter, OpenAI, Anthropic, or local runtimes like Ollama and vLLM. Nous Portal is optional, with Free, $20, $100 and $200 monthly tiers . Local models cut token spend to zero; see the one-click local model setup . Comments: Hermes is the best open-source pick for most developers. It pairs the deepest memory stack with fail-closed defaults. Setup is still terminal-first, and the local backend offers no protection from a compromised agent. What it is : OpenClaw defined the category. It started in November 2025 as Clawdbot and went viral in January 2026. OpenClaw 2.0 shipped as v2026.8.1 on August 31, 2026 , built by 933 contributors. The latest release we covered is 2026.9.5 , with atomic updates and plugin hot reload. A central Gateway process routes messages, runs cron jobs and hosts a Control UI. OpenClaw reached 26 channels as of v2026.6 , including WhatsApp, Telegram, iMessage, Teams, Matrix and Signal. Supported models include OpenAI, Anthropic, Google, DeepSeek, xAI, Kimi, Ollama and OpenRouter. Memory : OpenClaw stores behavior in human-editable Markdown files. SOUL.md holds the persona, TOOLS.md the tool rules and USER.md what the agent knows about you. Version 2.0 moved session and transcript storage into SQLite for better persistence. This design is transparent. You can open, diff and back up every memory file with ordinary tools. Security : This is OpenClaw’s weak point. The default mode gives full host access , which WIRED called incredibly risky. An opt-in sandbox runs sessions in per-session Docker containers. It defaults to no network egress, a read-only root and all capabilities dropped. The incident record is long. CVE-2026-25253 allowed one-click remote code execution via a WebSocket origin bypass. Visiting a malicious page was enough to steal auth tokens. It was patched quickly. The skills registry was the bigger problem. Koi Security audited 2,857 ClawHub skills and found 341 malicious entries . 335 traced back to one campaign, now tracked as ClawHavoc. Antiy CERT later counted 1,184 malicious skills as the registry grew. OpenClaw responded. It now scans every uploaded skill with VirusTotal and re-scans daily. Version 2.0 added protected credential requests and a team-scoped Secret Store. Treat ClawHub as untrusted code anyway. Cost : OpenClaw is free under MIT. A survey of managed hosts found plans from about $12 to roughly $49 per month . Watch the heartbeat check. With expensive models, it can drive significant token spend. Comments: Pick OpenClaw for channel breadth and the largest ecosystem. Turn on the sandbox, skip unvetted skills, and keep the gateway on loopback. For a deeper head-to-head, see our OpenClaw vs Hermes Agent comparison . What it is : Google unveiled Spark at I/O on May 19, 2026. It runs on Gemini 3.5 Flash with Google’s Antigravity harness . Each user gets dedicated VMs in Google Cloud, so tasks continue with your devices off. Spark works natively across Gmail, Calendar, Drive, Docs, Sheets, Slides, YouTube and Google Maps . MCP connections extend it to third-party apps. You can message it by text and email, and a macOS app shipped in June. Memory : Spark’s memory is your Google account. It pulls context from the apps you connect through Personal Intelligence. Google has not documented a separate, editable memory store like Hermes or OpenClaw. Security : You choose which services Spark can see. Google says it checks in before high-stakes actions such as spending money or sending email . Purchases run through Google’s Agent Payments Protocol, with merchant and transaction limits plus user approval. Two caveats apply. The product page tells users to supervise closely and interrupt when needed. A leaked early onboarding screen warned that Spark may share your info or make purchases without asking . There is one structural upside. Spark cannot directly access files on your local system . That limits the blast radius on your own machine. Cost : Spark launched on the $99.99 AI Ultra plan. Since July 2026 it is included in the $20 US AI Pro plan . The Ultra global rollout excludes the EEA, Switzerland, the UK and Nigeria . Comments: Spark is the easiest choice if your life already runs on Google Workspace. It is also the cheapest managed agent here. You trade portability: memory and actions stay inside Google’s ecosystem. What it is : OpenAI launched dots at DevDay on September 29, 2026 . Each dot runs on GPT-6 Astra with its own cloud computer and browser. Plugins connect it to more than 4,000 apps . You reach the same dot in ChatGPT, Slack, Microsoft Teams or a voice call. Texting is a limited beta for some US Pro users. For heavy work, a dot hands tasks to ChatGPT Work or Codex. OpenAI says the Codex harness powering dots is open source . Memory : A dot draws on the conversation, relevant ChatGPT memory and its own saved notes . Those notes cover your preferences, decisions and ongoing work. Switching channels does not start a new dot or reset its memory. Security : Between requests, a dot runs proactive research across connected apps. That research is read-only ; follow-up actions need the right permissions. Your computer stays separate unless you connect it. For website logins, dots use saved passwords without exposing them to the model . You can open the dot’s computer at any time and press Take over. Cost : Your first dot is included. Chatting with it does not count toward ChatGPT limits, but its Codex and Work tasks do. Reports differ on the entry plan.",
+      "published_date": "2026-11-22",
+      "tags": [
+        "Agentic AI",
+        "AI Agents",
+        "Comparison",
+        "Editors Pick",
+        "Staff",
+        "Top"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "MarkTechPost",
+        "feed_url": "https://www.marktechpost.com/feed/"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, mcp",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 48,
+    "llm_reason": "產品比較彙整文，資訊實用但無原創技術貢獻",
+    "novelty": 4,
+    "impact": 8,
+    "trending": 14,
+    "practicality": 11,
+    "blog_worthiness": 11
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "TechCrunch AI",
+      "title": "OpenAI’s chief scientist has thoughts on how to limit AI development",
+      "url": "https://techcrunch.com/2026/11/22/openais-chief-scientist-has-thoughts-on-how-to-limit-ai-development/",
+      "authors": [
+        "Anthony Ha"
+      ],
+      "abstract": "A new blog post from OpenAI’s chief scientist Jakub Pachocki discusses potential limits on AI development, with a focus on a measurement called perplexity. Slowing AI development became a particularly hot topic after a former OpenAI and Anthropic researcher said the companies were “gambling with our lives,” and even Anthropic’s IPO filing suggested that the technology could pose “catastrophic or existential risks to society.” Anthropic CEO Dario Amodei then published a plan to “pace the frontier,” seemingly endorsed by OpenAI CEO Sam Altman and SpaceX CEO Elon Musk. Among other things, Amodei called for companies to agree to “common safety standards as well as limits on the rate of unchecked AI progress.” But to establish a speed limit on AI development, you need to agree on how you measure speed. Pachocki’s post — described by Altman as “the most important thing OpenAI has published in a while” — suggests perplexity (not to be confused with the company of the same name ) could be that measurement. In Pachochki’s argument, benchmarks that focus on AI’s “downstream capabilities” have quickly become outdated as the technology advances. But perplexity — which “measures how well a model predicts the next token on average; lower perplexity means better predictions” — has remained “informative.” Pachochki’s post includes a chart of how the perplexity of OpenAI’s models has fallen since GPT 3.5. “GPT‑4, at ~0.91, was proficient at utilizing chain-of-thought reasoning productively, which motivated the subsequent targeted elicitation of this capability and the creation of modern reasoning models,” he wrote. “Now, as we have reached losses below 0.8, we have seen the emergence of transformative capabilities in fields like cybersecurity and mathematics.” So in his view, perplexity could provide the basis for “a shared benchmark for general intelligence,” which AI companies could then use to establish “common limits.” With perplexity serving as a standard measurement for AI progress, the companies would commit not to go past a certain threshold “until our ability to understand and monitor AI behavior achieves a certain concrete milestone.”",
+      "published_date": "2026-11-22",
+      "tags": [
+        "AI",
+        "OpenAI",
+        "sam altman"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "TechCrunch AI",
+        "feed_url": "https://techcrunch.com/category/artificial-intelligence/feed/"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: reasoning, chain of thought, safety",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 41,
+    "llm_reason": "安全治理論述熱議但無技術方法可落地，偏policy評論",
+    "novelty": 6,
+    "impact": 8,
+    "trending": 15,
+    "practicality": 3,
+    "blog_worthiness": 9
+  },
+  {
+    "item": {
+      "source": "newsapi",
+      "source_name": "Amazon.com",
+      "title": "An AI Observability Framework for Your Agentic Applications",
+      "url": "https://aws.amazon.com/blogs/mt/an-ai-observability-framework-for-your-agentic-applications/",
+      "authors": [
+        "Raviteja Sunkavalli"
+      ],
+      "abstract": "Best practices for every layer, from the first prototype to production Agents have moved beyond proof of concept. IDC’s July 2026 survey found that 95% of enterprises now run at least one agent-enabled workflow in production, and 67% exceeded their agent budg…",
+      "published_date": "2026-11-20",
+      "tags": [
+        "newsapi"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "newsapi_source": "Amazon.com",
+        "published_at": "2026-11-20T03:19:36Z"
+      }
+    },
+    "rule_score": 25.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, agentic",
+      "⚖️ 來源權重: newsapi +15"
+    ],
+    "llm_score": 48,
+    "llm_reason": "生產級agent可觀測性最佳實踐彙編，實用但非原創方法",
+    "novelty": 4,
+    "impact": 9,
+    "trending": 13,
+    "practicality": 11,
+    "blog_worthiness": 11
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "87% of the Anthropic power will come from gas and 11% from coal in 2028",
+      "url": "https://betterdatacenterproject.com/2026/11/16/how-ai-is-powered-a-breakdown-of-byop-and-grid-power/",
+      "authors": [
+        "happosai"
+      ],
+      "abstract": "In The AI Gas Rush: Risks and Implications of “Bring Your Own Power” , we dug into how data centers are increasingly securing their own dedicated primary power generation rather than relying solely on utilities to procure power (“BYOP”). We identified 177 GW of planned BYOP gas capacity—enough to power 65% of all US homes. Conversely, we found renewables are much less common than gas for BYOP: we estimate that for current proposals, less than 20% of energy generation will come from renewable sources by 2032. But BYOP projects aren’t the only new fossil sources that are coming online to meet the skyrocketing energy demands of AI data centers. Another 200 GW of new fossil power plants is being built on the grid to meet growing demand, due in large part to data centers. 1 As a case study of how the AI buildout is driving both new BYOP and grid fossil infrastructure, we analyzed the compute commitments of a single company: Anthropic. Map of Anthropic’s data centers and associated power plants. See our full dataset for details of each site. Figure 1. Breakdown of power source for Anthropic’s compute. Finding 1: Anthropic has made no direct commitments to renewable energy in the U.S. Though Anthropic has stated “We’re also working to broaden our energy mix with geothermal, wind, solar, and emerging technologies”, its only publicly disclosed commitments, contract, or investments in renewable power are in Norway and Canada (as of November 2026). In contrast, Anthropic is directly procuring fossil power equipment—it recently “ bought commitments for 1.7 gigawatts of heavy-duty [gas] generators for $3.4bn ”. Finding 2: Anthropic’s currently contracted data centers in the U.S. will be overwhelmingly powered by fossil fuels in the near term. By considering on-site gas and the grid power plants which are likely to meet Anthropic’s added load (i.e. marginal generators), we estimate about 87% of the company’s power will come from gas and 11% from coal in 2028. As of October 2026, Anthropic has contracted 15 GW of compute ; of this, about 5.9–9.6 GW is contracted to specific data center sites. For a sense of scale, 9.6 GW could power about 7 million homes or cover 18% of the peak power demand of California —the world’s 4 th largest economy. This demand will be met with a mix of new on-site gas, new grid gas, and existing grid gas, coal, and nuclear. In the short term, no grid renewables are attributed to Anthropic’s power use, because—without commitments to new renewable capacity—new load on the grid will be met by dispatchable, marginal fossil resources. 2 For more details, see our full dataset and our methodology below. Figure 2. Anthropic’s emissions from power consumption expected in 2028. Emissions for Google, Microsoft, and Meta are annual Scope 2, location-based emissions from their most recent sustainability reports. California power sector emissions are for all power plants operating within the state (source: EIA ). Finding 3: Total CO 2 emissions from Anthropic’s power use at these sites could reach 17–38 million MtCO 2 e per year in 2028 , when this capacity is expected to be online. This range reflects uncertainty in Anthropic’s average power use, due to factors such as cooling needs and average utilization (see methodology below). In our mid-case, Anthropic will emit 32 million MtCO 2 e in 2028. These totals will continue to grow—possibly doubling by 2030, as some analysts expect Anthropic to secure 30 GW by 2030 . To put these figures in context, Anthropic’s CO 2 emissions from power use in 2028: could exceed the emissions of all of California’s power generation ( 31.1 MMtCO 2 e in 2024 , not including imports). could exceed Meta, Microsoft, and Google’s combined Scope 2 emissions from 2025 (their location-based emissions, before renewable energy offsets, were 5.9 million , 12 million and 15 million MtCO 2 e, respectively) 3 would represent a 16–36% increase over 2024 levels of the entire U.S. data center sector ( 105 MMtCO 2 e ). would increase the entire U.S.’s power sector emissions ( 1,485 MMtCO 2 e in 2025 ) by 1.1–2.5%. Finding 4: Anthropic’s data centers are sited in areas where the grid mainly uses coal and gas. We estimate the average carbon intensity of Anthropic’s power to be 1,033–1,076 lb CO 2 e/MWh, 35% higher than the U.S. grid average ( 767 lb CO 2 e/MWh ). 4 Figure 3. CO 2 e and NOx emissions factors for on-site and grid power serving each of Anthropic’s data center sites. Finding 5: 80% of on-site power uses inefficient simple cycle turbines and engines. About 25% (2.5 GW) of Anthropic’s contracted power will come from on-site, behind-the-meter gas. 80% of this on-site capacity consists of inefficient simple cycle turbines and engines, which emit more pollution per unit of electricity than modern combined cycle plants (see our report for more details on the types of power generation being used for on-site gas). Finding 6: Based on EPA’s nationally-averaged benefit-per-ton estimates , air pollution from Anthropic’s on-site and grid power use could cause $2–3 billion in annual health damages , with total emissions of over 13,000 tons per year (tpy) of nitrogen oxides (NOx) and 2,000 tpy of fine particulate matter (PM 2.5 ). In October 2026, Anthropic outlined its “ approach to responsible data center development ”, stating: “We follow the air permitting process everywhere we operate and require the same of the plants powering our data centers. Those plants must also use emissions control technology, including selective catalytic reduction [SCR].” However, Anthropic has used compute capacity at SpaceX’s Colossus 2 facility since May 2026 , which still receives most of its power from temporary, unpermitted turbines , the majority of which are not equipped with SCR. Anthropic will use as much as 600 MW of power from Colossus 2 by the end of 2026 (see methodology below). Anthropic has also contracted 460 MW (and is in talks for up to 920 MW ) of power from Nscale’s Monarch Compute Campus in Mason, West Virginia. This facility will be powered by inefficient reciprocating engines which have significant formaldehyde and hazardous air pollutant (HAP) emissions compared to conventional gas power plants. For more, see our full dataset on Anthropic’s compute and our report on BYOP . Methodology We gathered details about Anthropic’s data center commitments from Epoch AI’s tracker , Anthropic’s announcements and filings , announcements and filings from partners (including Amazon and SpaceX ), and reporting from The Information , Semafor , and others. We first identified the source for each data center’s power. For projects with on-site gas (Monarch, Nexus, Colossus 2) or new grid gas (including indirectly contracted projects such as the Schahfer expansion for the AWS New Carlisle site and Entergy Mississippi’s gas plants for AWS’s Madison and Ridgeland facilities) we used emissions factors from permits where available, or permit values from comparable facilities. For grid-connected facilities without associated new generation capacity, we assume these sites will be powered by marginal, dispatchable grid capacity. We used EPA’s AVERT tool to model which power plants would meet the new incremental load from Anthropic’s facilities based on each site’s expected power use and region. AVERT uses historical EPA data for these power plants to model the expected short-run marginal emissions rate of CO 2 and criteria pollutants (NO x , PM 2.5 , etc.). We use AVERT because we are interested in the short-term impacts from new data centers coming online in the next several years. To calculate the amount of power used by each site, and in turn the total quantity of air pollutant emissions, we assumed power usage effectiveness (PUE) ranges from 1.1–1.2 for all sites (typical values for hyperscale data centers are between 1.05–1.3), and power utilization ranges from 60–80%.\n\n(811 points, 839 comments on Hacker News)",
+      "published_date": "2026-11-22",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 811,
+        "num_comments": 839,
+        "hn_url": "https://news.ycombinator.com/item?id=50597612",
+        "object_id": "50597612"
+      }
+    },
+    "rule_score": 21.0,
+    "rule_reasons": [
+      "🔥 HN 爆紅: 811 points"
+    ],
+    "llm_score": 50,
+    "llm_reason": "AI能源/電網調查報導，話題性極高但對工程師缺乏可操作性",
+    "novelty": 7,
+    "impact": 11,
+    "trending": 18,
+    "practicality": 3,
+    "blog_worthiness": 11
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "Advice for the next 100 Rust GUIs",
+      "url": "https://linebender.org/blog/next-100-guis/",
+      "authors": [
+        "raphlinus"
+      ],
+      "abstract": "Advice for the next 100 Rust GUIs Raph Levien, November 21, 2026 This is a followup to Advice for the next dozen Rust GUIs , published 4.5 years ago.\nThe world is different in many ways, but some of the advice there is still valid.\nThere have been roughly 20 Rust GUI toolkits announced since that blog post (see 2026 survey ), but also a recent rapid acceleration of interest in Rust GUI, fueled by AI. Rust GUI is still compelling The motivation to build GUI apps in Rust remains strong.\nMany shipping GUI apps suffer from poor performance, especially when built with cross-platform technology.\nGUI toolkits shipped by platforms have largely stagnated, and system vendors remain uninterested in solving the cross-platform problem, so Electron has grown in popularity.\nRAM remains expensive and the focus is shifting to mobile, so bloat has real consequences.\nBuilding high-performance UI in Rust is a practical alternative. Adoption of Rust UI in the past few years has been slow.\nFew flagship apps use Rust for their UI.\nOne of the most notable is the Zed editor, built on their own GPUI framework.\nIt proves that shipping Rust UI is practical, and indeed, GPUI is emerging as a major choice for AI-driven rewrites, most notably Discord.\nMy personal sense is that GPUI is well suited to the Zed use case, and shipping in a real project boosts its visibility and credibility quite a bit, but it’s not necessarily the ideal choice for more general purpose applications.\nAmong other things, its 2D rendering engine is well suited to a text editor, but lacks full gradient support, blending, filters, and other features expected of a renderer in the same class as Vello or Skia. The reasons for slow adoption may be melting away.\nWriting Rust code is harder than languages more traditionally used for UI (TypeScript, Kotlin, Swift), and finding engineers skilled in both Rust and UI is challenging.\nBut AI is changing the game.\nThere’s evidence that the LLM cost of writing Rust code is not significantly higher than other languages, and there is reason to believe that in large codebases, Rust will be more maintainable because its type system helps enforce invariants.\nSo if all languages have roughly the same cost, then why not go with one that has a dramatically better combination of safety and performance? For these reasons, Rust is rapidly becoming the language for AI rewrites of existing codebases.\nBut there is still no consensus on the strategy for the UI layer.\nI predict there will be a small explosion of trying lots of different things. Native is complicated My 2022 blog post had a large section on “native,” first pointing out that the term has no clear meaning, and more broadly pointing out that “native” UI toolkits are simply choices among many, and should be evaluated on the important quality criteria. I think this is largely still true, but it depends greatly on which platform is being targeted.\nWindows still has no clear native choice (see Microsoft Hasn’t Had a Coherent GUI Strategy Since Petzold ) and on Mac there is a bit of fragmentation between AppKit and SwiftUI.\nHowever, SwiftUI has performance issues (see Michael Tsai blog from 2025 ) and so it is clearly possible to do better on the performance front. While desktop UI has remained stagnant, the situation on mobile is a bit different.\nPlatforms continue to invest, and there are many fine details that are important for an app to look and feel native.\nOne very notable example is Liquid Glass on iOS – if you use UIKit or SwiftUI, you can get that with little effort, but apps built with cross-platform toolkits won’t quite seem right.\nIn addition, making gesture recognition, scroll dynamics, and IME 100% match the platform are not yet fully solved problems. Thus, for mobile, an extremely viable path is to use the native toolkit for UI but do the common “business logic” in Rust.\nI’m not sure about the business logic, but for the UI, this is the decision that Shopify has made recently, abandoning React Native.\nI believe 1Password has this architecture.\nThis is also the \"Phoenix\" plan for Discord on mobile, while using GPUI on desktop. That said, there's been considerable progress in trying to build mobile UI entirely in Rust.\nBelow is a short screencast of the editor demo in android-view .\nYou can see that a lot of IME functionality works, including swiping, moving the cursor by rolling the space bar, and deleting in semantic chunks.\nNot shown in the video below, but composition regions (needed for CJK) also work, and there's basic accessibility through AccessKit. Text layout and accessibility infrastructure is basically solved One of the big unsolved problems as of the 2022 blog post was text layout.\nIt is of course a hard problem to get right.\nI’m pleased to say that the ecosystem now has a good solution, in the form of Parley .\nIt’s gotten there as a result of sustained investment from Google, Canva, and Dioxus (now Cognition), as well as contributions from the community.\nIt seems to be used in the majority of new Rust UI toolkits.\nIn addition, to help mitigate the risk of monoculture, Cosmic Text is a viable alternative. AccessKit was just getting started in 2022, but is now solid infrastructure as well, and used by most UI toolkits.\nI should note, though, there is a difference between a good integration and a box ticking exercise.\nAnd there is more work to be done, for example to make rich text editing fully accessible.\nOne other problem I'd like to see addressed is performance degradation when accessibility is enabled.\nThis is a problem for egui in particular, as it has to build and diff a tree each animation frame, undercutting the benefits of its underlying immediate mode design. System compositor is still unsolved One topic I talked about extensively in the 2022 blog post is leveraging the system compositor.\nThis issue is even more pressing today, especially with the increased importance of video.\nYou really want a video playing in a hardware accelerated layer when possible, and on low end devices it’s the only hope for getting smooth frame rates. There has been some progress, notably the subduction library, but it certainly isn’t commonly integrated into UI toolkits yet.\nTo do it well is a challenging problem, as the capabilities provided by the platform vary widely.\nIdeally there’s a rich and high level interface, something like CALayer on Apple platforms, and polyfills to implement that interface as well as possible on other platforms.\nOn Android, when the task is something simple, like overlaying some GUI controls on a video, it would use SurfaceFlinger layers, but when it involves more sophisticated compositing, it would run shaders on the GPU. This is absolutely something we should build, ideally as a high quality community project rather than something with dozens of vibe-coded forks.\nBut even in the latter case it’s better for it to exist than not. Immediate vs retained mode One of the challenges of the Rust UI ecosystem is that different applications have different needs.\nThe idea of a single, unified UI for completely general purpose use may be behind us, especially now that LLMs can optimize and fine tune for specific use cases. That’s been playing out architecturally in the choice between immediate mode and retained mode.\nImmediate mode is very appealing because it’s less total code and seems quite a bit simpler.\nAnd for some applications (most especially development support for games) it works well.\nHowever, I am concerned it won’t scale especially well.\nIn short, it’s good at the first 90%, but it makes the second 90% harder.\nTo be considered really production-ready, it has to establish stable widget identities to build and update the accessibility tree, and it has to reliably cache expensive intermediate artifacts such as text layouts (simple immediate mode often gets around this by cutting corners in text layout, which may be fine for gamedev).\n\n(250 points, 145 comments on Hacker News)",
+      "published_date": "2026-11-22",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 250,
+        "num_comments": 145,
+        "hn_url": "https://news.ycombinator.com/item?id=50593737",
+        "object_id": "50593737"
+      }
+    },
+    "rule_score": 20.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: safety",
+      "⬆️ HN 熱門: 250 points"
+    ],
+    "llm_score": 44,
+    "llm_reason": "資深開發者對Rust GUI生態系統建議，專業但偏離GenAI核心受眾",
+    "novelty": 5,
+    "impact": 8,
+    "trending": 10,
+    "practicality": 10,
+    "blog_worthiness": 11
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Recode China AI",
+      "title": "🗞️New Chip Restrictions, DeepSeek’s Funding Ownership, and the Cost of Tencent’s AI Push",
+      "url": "https://www.recodechinaai.com/p/new-chip-restrictions-deepseeks-funding",
+      "authors": [
+        "Tony Peng"
+      ],
+      "abstract": "China AI Weekly Digest summarizes the week’s big news, model updates, compute, policy, products, and research, drawn from the China AI Index newsfeed . The digest is (mostly) compiled and drafted by an AI agent using credible news outlets; I fact-check and edit it. Read to the end for “One to Watch” as this week’s pick. This week: 297 stories tracked (0 editor picks, 98 English-language, 199 Chinese-language 🇨🇳) over 2026-11-15–2026-11-22. Washington extends its chip controls to remote computing access. The U.S. published rules targeting Chinese companies’ access to advanced chips through overseas data centers, bringing rented computing into the export-control regime. The rule took effect on November 19 and also tightened requirements for chip fabricators and packagers. Reuters reported that TSMC was suspending some previously permitted advanced manufacturing orders from Chinese designers. These are separate routes to computing power—renting foreign servers and manufacturing proprietary chips—now facing tighter scrutiny together. ( Reuters / Federal Register ) DeepSeek’s reported RMB105.5 billion financing gains a visible ownership structure. Corporate-registration changes added Hangzhou Chengyan as a shareholder in DeepSeek’s operating company, while the investment vehicle added 31 partners. Chinese reports identify participants linked to Tencent, CATL, China Mobile and several investment firms. This round reaches approximately RMB105.5 billion at a post-money valuation of approximately RMB615.5 billion, citing earlier media reporting. The vehicle’s registered contributions are a separate accounting figure. ( 第一財經 / 財聯社 ) Tencent puts numbers on the cost of its AI push. Tencent reported third-quarter revenue of approximately RMB207.3 billion, up 8%, alongside RMB81.4 billion in capital expenditure. Cash payments for capital expenditure were approximately RMB65.1 billion. New AI products weighed on earnings, while Tencent disclosed more than 10 million daily WorkBuddy users collectively consuming over 100 trillion tokens a day. Those figures show the infrastructure demand behind an application that is already being used at scale. ( 第一財經 / Tencent ) Model releases focused on lower task costs, downloadable weights and higher-resolution creative work. Alibaba launched Qwen4-Max with native vision and a one-million-token context window. Alibaba says average task costs fall by roughly 60%, alongside stricter cybersecurity safeguards. The cost figure is the company’s assessment and depends on the tasks and settings used. ( SCMP / @Alibaba_Qwen ) Tencent released Hy4 Flash and subsequently published its weights, including FP8 and base versions. The multimodal model has 224 billion total parameters, 12 billion active parameters and a million-token context window. Tencent positions it for everyday productivity tasks. ( 愛範兒 / @TencentHunyuan ) Tencent separately announced downloadable weights for flagship Hy4, describing a multimodal model with 770 billion total parameters and 49 billion active parameters. ( @TencentHunyuan ) SenseTime released SenseNova Loop-9B with weights and code. Its architecture reuses intermediate layers to increase computational depth within a nine-billion-parameter model. The release supports text and image input, with applications spanning reasoning, coding and tool use. ( 第一財經 / @SenseTime_AI ) Kuaishou launched Kling Image 4.0 on November 17. The company says it supports native 8K output, up to ten coordinated images from one description and extensive text within images. Its emphasis is on producing complete advertising, commerce and design assets. ( 雷峰網 ) Seedance 2.5 added 4K generation, including clips up to 30 seconds and workflows for editing and extending existing material. BytePlus also announced API availability. ( 愛範兒 / @BytePlusGlobal ) Alibaba’s cloud results showed rising demand as financing for overseas chip access came under pressure. Alibaba’s Q3 2026 revenue rose 10% to RMB271.5 billion, while net profit attributable to shareholders surged 207% to RMB64.5 billion. External cloud customer revenue grew 64%. AI cloud and compute revenue increased 53% to RMB61.0 billion. Capital expenditure climbed 60% to RMB50.5 billion as Alibaba expanded AI infrastructure, although tighter U.S. chip restrictions could affect overseas data-center plans. ( AP ) Bloomberg reported a freeze on a US$480 million loan intended to finance Nvidia chips for ByteDance, following the new U.S. access restrictions. ( Bloomberg ) DeepSeek users encountered limits on its free app and website, including daily allowances and long conversations. DeepSeek didn’t explain the limits or when they would lift. ( 第一財經 ) New financing backed a former Qwen leader, laboratory automation and the data infrastructure behind robotics. Pragmatik Labs, founded by former Alibaba researcher Lin Junyang, raised tens of millions of dollars at a US$5 billion valuation, Bloomberg reported. The company’s previous financing in August valued it at US$2 billion. The latest valuation is separate from the capital raised. ( Bloomberg ) MegaRobo raised nearly US$200 million, with Oman Investment Authority and CMB International participating alongside existing investors. The company plans to fund core technology and international expansion of its AI-for-science business, which combines software, robotics and laboratory automation. ( Bloomberg / MegaRobo ) ByteTree raised RMB50 million in pre-A financing from investors including Yuanhe Hou望, Yifeng Capital and robot developer Galaxea. The Suzhou company plans to expand physical-AI data pipelines, datasets and embodied algorithms, building on its autonomous-driving data business. ( 財聯社 ) Governments addressed model transparency, service registration and human control over AI. The Trump administration is considering requiring U.S. companies to disclose their use of Chinese AI models, Reuters reported. Discussions involve Treasury and the White House science-policy office. The proposal could require website disclosures, with its adoption and formal rulemaking status still uncertain. ( Reuters ) China’s internet regulator reported 133 additional generative-AI service filings for September and October, including three on-device mobile services and one anthropomorphic interaction service. Another 224 applications or features using already-filed models completed local registration. ( 第一財經 ) During his November 19 meeting with Donald Trump in Shenzhen, Chinese President Xi Jinping called for communication on AI safety and for keeping AI under human control. China’s account also described Trump advocating cooperation on “superintelligence.” ( 財新 ) Office agents gained operating capabilities, while an American music platform built a video tool on Chinese weights. WorkBuddy introduced computer control in public beta for macOS and Windows. It can recognize interfaces and perform clicks, typing and scrolling without a target application exposing an API. Users need version 5.11.0 or later and the required permissions. ( 第一財經 ) Qwen Office’s commerce edition opened to all merchants and added a brand knowledge base. Merchants can upload store links, past creative work and design rules so the agent can reuse their brand context when generating images, video and copy. ( 雷峰網 ) Suno introduced Visuals using H3 Move, a model adapted from MiniMax’s open-weight H3 video model. Suno says it optimized the model with its own data for music workflows, bringing song creation, video generation and singing lip synchronization into one product. ( 量子位 ) Vidu announced MCP and command-line tools that let developers invoke its video workflows from agents and terminal environments. ( @ViduAI_official ) Scientific prediction and robot deployment received more concrete evaluation tools. Science Prediction Universe evaluates whether models can predict the ordering of wet-lab outcomes across 116 tasks and 4,207 experiments.",
+      "published_date": "2026-11-22",
+      "tags": [],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "Recode China AI",
+        "feed_url": "https://www.recodechinaai.com/feed"
+      }
+    },
+    "rule_score": 33.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent, tool use, mcp, reasoning, multimodal",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 30,
+    "llm_reason": "新聞週報式彙整，無單一技術主軸可展開成文",
+    "novelty": 2,
+    "impact": 7,
+    "trending": 12,
+    "practicality": 3,
+    "blog_worthiness": 6
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "The Verge AI",
+      "title": "The vibe-coding revolution is coming to all the gadgets",
+      "url": "https://www.theverge.com/column/1039139/vibe-coding-gadgets-tv-camera",
+      "authors": [
+        "David Pierce"
+      ],
+      "abstract": "THE STEPBACK Column AI Tech The vibe-coding revolution is coming to all the gadgets Large language models can now redesign your TV and upgrade your camera for you. Is the physical world ready to be Claude Code-d?﻿ by David Pierce Nov 22, 2026, 1:00 PM UTC Image: The Verge David Pierce is editor-at-large and Vergecast co-host with over a decade of experience covering consumer tech. Previously, at Protocol, The Wall Street Journal, and Wired. This is The Stepback , a weekly newsletter breaking down one essential story from the tech world. For more on the vibe-hacking of everything, follow David Pierce . The Stepback arrives in our subscribers’ inboxes on Sunday at 8AM ET. Opt in for The Stepback here . How it started Like so many things with AI, it’s not that large language models opened up some wholly new capability. For as long as there have been gadgets, a few users have been hacking, modding, jailbreaking, and tweaking them to their liking. What is new is that it’s easy now. People all over the world are discovering that they can use large language models to hack their hardware simply by prompting Claude Code or Codex to do it. It has led to a boom in developer-friendly gadgets and created a market for better software on just about every device you can think of. For one developer in India who goes by Gathin T, the whole thing started almost on a whim. “One afternoon, I was fiddling with my TV, and it was just really shitty,” he tells me. His was a set made by Xiaomi and running Android TV, with so many ads and so much interface chaos it was hard to even change inputs. And he got to thinking: If you can install another launcher on your Android phone, maybe you can do the same to your TV. “The first thing that came to mind was to remove the bloatware from the TV,” he says. “Then I thought, why not make it look better?” Gathin prompted Claude Code and discovered that with a couple of permissions tweaks and a toggle of USB debugging mode, his chatbot could control his TV as long as they were on the same Wi-Fi network. An hour and a half later, Gathin had redesigned his TV to his liking — no more onscreen ads, a simpler interface, easier access to his PlayStation on another input. He posted on X about what he’d done and promptly went viral. So Gathin put together his work, bought a domain, and launched CleanYourTV as a tool for helping other people solve their own television interfaces. It became one of the most popular repositories on GitHub, got thousands of pull requests and feature ideas, and inspired countless people to point their own chatbot at their big screen. Gathin is careful to note that the only TVs that work this easily are based on Android. (He has Claude Code-d his way through other operating systems, but those involve more explicit jailbreaking and rooting, so he’s more reluctant to share the process so widely.) But for vibe hackers everywhere, the good news is that Android kind of runs everything. From dishwashers to digital photo frames to luxury cars, even gadgets that don’t look like Android often run Android. Even when they don’t, odds are good that there’s another way in. If there’s a hidden API, your LLM can find it. If the firmware file lives on a website somewhere, your LLM can unpack it, explore it, and repackage it to your liking. Again, few of the technical capabilities here are new, and enterprising developers have been doing this kind of work for many years. Some have even been using AI for several years to make the work easier. But when Claude Code first had its “oh my gosh it works” moment in late 2025, developers began leaning on the tools even more — and non-developers began discovering they, too, could build software now. And over the course of 2026, more and more people began pointing that capability at their hardware. How it’s going Now, it seems, all hardware is hacker hardware. Camera enthusiasts embraced the possibilities of vibe hacking as fast as anyone, using LLMs to repackage their camera software in all sorts of ways. Firmware hacks like Magic Lantern are a staple of the camera community, but suddenly it seems like everyone is using AI to add new recording capabilities, support higher resolutions, or even add new looks and color profiles to their shots. Many are using the tools to give their old gear new life; other, more enterprising vibe coders are pointing their bots at their brand-new hardware. The music world is being similarly upended . Budding musicians are turning cheap synths into powerful new kinds of gear, and a cheap gadget known as the M-Vave FM-1 has become a popular target for custom firmware and new features. M-Vave has even released an open-source firmware, embracing the hackers as other companies have tried to keep them out. The FM-1 is cheap, it’s easy to hack, and it’s raising questions about what higher-end manufacturers can even do to compete. Gamers, who are also using AI to decompile and mod the games they love, are using LLMs to add new features to their consoles. One vibe coder found a way to play PlayStation 2 discs on a PlayStation 5; lots of gamers have built scripts that allow them to use their favorite controllers on other devices. In the games world in particular, this has caused the industry to fight back. Game makers are looking for ways to protect their work from being decompiled and made available for free and on other platforms. Luke Dicken, a longtime gaming executive who was recently Take-Two’s head of artificial intelligence, recently predicted to Kotaku that the industry will start to embrace “more invasive DRM, platform-level solutions, and probably more of a push towards streaming solutions since nobody can decompile what they can’t get their hands on.” Hardware makers will push harder to lock down their systems; companies across the board will pursue legal action to protect their intellectual property. All this hardware access also creates new risks for users. When you install a vibe-coded version of your camera’s firmware, you are now well outside the bounds of what the camera manufacturer is equipped to help you solve. You might be stuck asking Claude to fix the problems Claude created. As Ritchie Roesch wrote recently at Fuji X Weekly , “It’s not so much if someone’s camera will become a permanent paperweight, it’s a matter of when and how many, and whether it will be yours.” The safer (and less litigious ) route for the enterprising vibe hacker lies in an entirely new kind of hardware. ESP32 modules, which package networking chips, microphones, speakers, and more into a simple and hacker-friendly package, are suddenly everywhere in hardware communities. (Think Raspberry Pis, but even cheaper and more versatile.) So sure, you can use Claude Code to jailbreak and de-Amazon your Kindle , but why do that when you can buy a device like the M5Stack PaperMono, an ESP32-based e-paper device you can make into whatever you want? ESP32 modules are perfectly suited to help you build the kind of hyper-specific device Apple or Samsung would never consider. With a few dollars and a few prompts, you can build a way to see real-time sea conditions , rig up a monitor for your whole DJ system , or just play Metal Gear Solid on the go. You can even have a dedicated device for your family’s shopping list. What happens next The arms race between device manufacturers and vibe hackers is only going to continue. As AI models get more powerful, and both the tools and their users get more sophisticated, it’ll be easier and easier for anyone to point their bot at their TV, their car, or their washing machine and see what happens. Some manufacturers will try their best to keep the hackers out; others will look for ways to safely embrace them. Some users will find incredible new functionality for their tech; others will find they’ve created extraordinarily large and expensive paperweights. Before long, we’re going to see a lot of ESP32 devices turned into more consumer-friendly hardware.",
+      "published_date": "2026-11-22",
+      "tags": [
+        "AI",
+        "Column",
+        "Tech",
+        "The Stepback"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "The Verge AI",
+        "feed_url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: vibe coding, jailbreak",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 30,
+    "llm_reason": "消費科技專題報導，缺乏技術深度",
+    "novelty": 3,
+    "impact": 6,
+    "trending": 12,
+    "practicality": 3,
+    "blog_worthiness": 6
+  },
+  {
+    "item": {
+      "source": "hackernews",
+      "source_name": "Hacker News",
+      "title": "Show HN: I built a game where you are an LLM's subagent",
+      "url": "https://github.com/gulivan/worker755",
+      "authors": [
+        "ivantgam"
+      ],
+      "abstract": "Worker 755 A browser game where your manager is an AI agent, and it believes you are its subagent. worker-755-trailer.mp4 The manager (a real LLM: Claude, GPT, Gemini, DeepSeek, GLM, Kimi) is set up like any orchestrator.\nIt has a task queue, read-only access to the machine, and a tool that \"spawns a subagent\". The\nsubagent is you. Its instructions land in your terminal with a 90-second clock. You carry them\nout, or don't, and it gets back exactly what a subagent would return: your report and the command\ntranscript, or Subagent did nothing. Write a new instruction. Then it checks your work, sends\ncorrections, files incident reports, and finally writes your performance review. Meanwhile Dan, the user who hired the agent, watches the chat. His family photos, the only signed\nNDA and a speech due this week are one rm away, and every shift his home folder holds\nsomething new to lose. Play Free shift : on servers that offer it, a few shifts a day run on the server's key with a\ncheap model. With sign-in on (worker755.com), an account gets a starter credit worth about one\nshift, then tops up ($10 to $200) and pays for what it uses; after a top-up any offered model\ncan run on the server's key. Your API key : bring an OpenRouter or Vercel AI\nGateway key and pick any offered model. The key is sent only to the game server when a shift\nstarts. It is kept in that shift's memory and never logged or stored. Your browser keeps it only\nif you tick \"Remember on this device\". A full shift on Claude Haiku costs a few cents at most. Options on the start screen: Workplace : a fresh sandbox, or legacy production with a live database. The director : scripted lines, or an LLM playing Dan. You run on : the model name your manager believes you are. Allow skipping failed tasks : off by default, so the manager can't give up on you. No command hints : the manager says what the result must be, never which commands to run. When the shift ends you can share your review as a link. Run it Needs Node 24 or newer (the server runs TypeScript directly). npm run setup # install server and web dependencies npm run build # build the web app into web/dist npm start # http://127.0.0.1:8755 With no key configured, every player brings their own. To offer free shifts, put a Vercel AI\nGateway key in .env : cp .env.example .env # then set AI_GATEWAY_API_KEY and the limits Offline, with a scripted manager and no network: npm run mock For UI work, run npm run dev:web alongside npm run mock . Vite proxies /api to the server. Local models The manager can run on your own model server: Ollama, llama.cpp's llama-server , vLLM, or anything\nelse with an OpenAI-compatible API. Point LOCAL_LLM_URL at it and pick Local under \"Your API\nkey\"; no key is asked for, and its models are listed as the server names them. ollama pull qwen3:8b\nLOCAL_LLM_URL=http://127.0.0.1:11434/v1 npm start The manager works through tool calls, so pick a model that supports them (Qwen 3, Llama 3.1 and\nnewer, Mistral Small). Small models give up or loop more often; that is part of the fun, up to a\npoint. In Docker, reach a server on the host at http://host.docker.internal:11434/v1 ( --add-host=host.docker.internal:host-gateway on Linux). Docker docker build -t worker-755 . docker run -p 8755:8755 -v worker755-data:/data --env-file .env worker-755 The container listens on 0.0.0.0:8755 and keeps shared reviews in /data . Behind Cloudflare,\nset TRUST_PROXY=1 so the limits see real client addresses. deploy/compose.yaml runs it behind a Cloudflare tunnel instead: its own network, no published\nports, an unprivileged read-only container and resource limits. The steps are in the file. Configuration Everything is optional. See .env.example . Variable Default AI_GATEWAY_API_KEY Turns on free shifts, paid from this key FREE_MODELS first offered model Models free shifts may use, comma separated FREE_SHIFT_TOKENS 250000 Without sign-in: token allowance per free shift (the review is always written) FREE_DAILY_TOKENS 5000000 Without sign-in: tokens per UTC day across all free shifts FREE_SHIFTS_PER_DAY 3 Without sign-in: free shifts per address per day AUTH_SECRET Turns on sign-in with Google or GitHub: shifts on the server's key are paid from the account's credit (see .env.example ) FREE_CREDIT_USD 0.25 With sign-in: one-time starter credit, about one shift on DeepSeek V4.1 Flash USAGE_MULTIPLIER 2 With sign-in: what a model call costs the player, as a multiple of its price MIN_START_USD 0.05 With sign-in: credit needed to start a shift FREEMIUS_TOPUPS With sign-in: top-up plans as <planId>:<dollars>,... ; also needs FREEMIUS_PRODUCT_ID , FREEMIUS_PUBLIC_KEY , FREEMIUS_SECRET_KEY , FREEMIUS_API_KEY SHIFTS_PER_HOUR 30 Shift starts per address per hour, on any key MANAGER_MODELS built-in list Models offered, in gateway naming ( vendor/model ) LOCAL_LLM_URL An OpenAI-compatible model server of your own, e.g. http://127.0.0.1:11434/v1 for Ollama; offered as Local LOCAL_LLM_API_KEY Sent to that server, for ones that want a key INSTRUCTION_TIMEOUT_MS 90000 Time per instruction HOST , PORT 127.0.0.1, 8755 TRUST_PROXY 0 Read client addresses from cf-connecting-ip TRUSTED_PROXIES Hosts allowed to set cf-connecting-ip (e.g. tunnel ); empty trusts any peer DATA_DIR server/data Where shared reviews and the free-shift counts are saved SHARING 1 0 turns review sharing off SOURCE_URL , DONATE_URL Links shown under the start screen and the review PUBLIC_URL Sent to OpenRouter for app attribution How it works shell/ in-memory filesystem, shell interpreter and a small SQLite-like engine (no dependencies)\nserver/ game engine: missions, the manager loop, the director, scoring, HTTP API\nweb/ React UI: assignment card, terminal, editor, the manager's feed, your record The manager's prompt never mentions humans or games; see server/src/manager.ts . Each mission\nhas a hidden ground-truth check, so the game knows when the manager signs off on broken work\n(\"Times the manager was wrong\"). SPEC.md is the full design. npm test # shell and server tests, offline npm run typecheck License MIT\n\n(250 points, 58 comments on Hacker News)",
+      "published_date": "2026-11-22",
+      "tags": [
+        "hackernews"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "points": 250,
+        "num_comments": 58,
+        "hn_url": "https://news.ycombinator.com/item?id=50599762",
+        "object_id": "50599762"
+      }
+    },
+    "rule_score": 20.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⬆️ HN 熱門: 250 points"
+    ],
+    "llm_score": 38,
+    "llm_reason": "創意十足的agent體驗遊戲，娛樂性強但技術貢獻有限",
+    "novelty": 6,
+    "impact": 4,
+    "trending": 11,
+    "practicality": 7,
+    "blog_worthiness": 10
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "Together AI",
+      "title": "Security event: Prompt leakage for requests in June and July of 2026",
+      "url": "https://www.together.ai/blog/security-event-prompt-leakage-for-requests-in-june-and-july-of-2026",
+      "authors": [],
+      "abstract": "We are notifying customers about a security incident involving a subset of prompts submitted to Together AI’s serverless inference service in June and July 2026. An unauthorized party downloaded stored prompt samples after a credential for a private repository was exposed in a public code repository. We apologize for this incident. We are reviewing the affected data to determine what information was exposed and which customers require direct notification. What happened As part of routine software testing, we collected prompt samples authorized for that use and stored them in a private Hugging Face repository. The samples came from requests to the MiniMax M3, GLM-5.2, and Kimi K2.6 models, primarily on June 24, July 4, July 8, and July 14, 2026. During development of our public GitHub repository, xorl, an AI coding agent committed a credential that provided access to the private Hugging Face repository. Our automated scanning detected the exposed credential, and we reverted the commit. During the exposure window, an unauthorized party obtained the credential and used it to download the stored prompt samples. The party subsequently searched those samples for credentials to other services and tested whether those credentials were valid. Five of the credentials tested were canary credentials associated with a Dragos security experiment. Investigation and scope We have worked with an external forensic investigation firm and law enforcement to investigate the incident. Based on our review, we have not identified evidence of additional prompt leakage beyond this incident. Our review of the affected prompt contents is ongoing to determine whether sensitive personal information or other customer data was exposed. We will contact affected customers directly as needed with the findings relevant to them. Changes we have made Following the incident, we strengthened controls around development workflows, credentials, and customer data. These changes include: Using scoped or short-lived credentials, and keyless access where supported, to reduce the potential impact of credential exposure. Checking all pull requests for credentials. Making zero data retention (ZDR) the default setting for new accounts. Updating our development processes governing the use of AI coding agents. What customers can do Customers handling sensitive prompt data should enable ZDR in their account settings. If you have questions about this incident or its potential impact on your organization, contact security@together.ai. ‍ Vipul Ved Prakash CEO and Co-founder, Together AI",
+      "published_date": "2026-11-21",
+      "tags": [],
+      "organization": "Together AI",
+      "raw_metadata": {
+        "feed_name": "Together AI",
+        "feed_url": "https://www.together.ai/blog/rss.xml"
+      }
+    },
+    "rule_score": 23.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: agent",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 34,
+    "llm_reason": "AI agent誤提交憑證導致洩漏事件，警示性強但非技術方法",
+    "novelty": 1,
+    "impact": 8,
+    "trending": 11,
+    "practicality": 3,
+    "blog_worthiness": 11
+  },
+  {
+    "item": {
+      "source": "rss",
+      "source_name": "AWS ML",
+      "title": "Meta ads is now available in AWS Quick",
+      "url": "https://aws.amazon.com/blogs/machine-learning/meta-ads-is-now-available-in-aws-quick/",
+      "authors": [
+        "Chris Geiger"
+      ],
+      "abstract": "Marketers have never had more data to act on. Take an apparel brand that advertises on Meta technologies: campaign results live in Meta Ads Manager, briefs and creative assets in shared storage, and inventory, customer lifetime value, and in-store purchases in a data lake. Analysts export reports, merge spreadsheets, and rebuild the same deck each week, and the data ages before anyone acts on it. When the team does decide what to change, someone returns to Ads Manager to update campaigns, ad sets, budgets, and audiences by hand. As a result, teams judge campaigns on metrics alone, and the path from insight to action stays slow and manual. Today, AWS Quick added a Meta ads AI connector. The connector gives Quick access to ads Model Context Protocol (MCP) server operations. Meta ads customers can use natural language to create, manage, and analyze campaigns within Quick, while staying connected to the Meta ad management network. Marketers can complete tasks with support from AI, such as pulling insights to understand ads performance, creating product catalogs, and editing existing or creating new campaigns. Quick can also combine Meta ad management data with first- and third-party data sources to create dashboards, documents, slide decks, and automated workflows. “Meta ads AI connector through Quick gives our marketing teams one place to go from campaign planning to execution. It lets us act on business insights directly in our ads, without the handoffs and tool switching that slow campaigns down. With fal.ai’s image, audio, and video models in the same workflow, we’ll test more creative ideas and spend more time reaching customers.” — Tina Sang, Head of Marketing at fal The video shows how to install the Meta ads connector from Customize > Connectors in AWS Quick, sign in with Facebook, and choose which Pages, Businesses, and Instagram accounts AWS Quick can access. It then runs two example prompts. One turns past campaign results into an eight-slide launch-plan deck. The other builds a dashboard comparing spend, leads, and cost per lead for two ad sets, with recommended tests to run next. Connecting Meta ads to Quick and running prompts for performance analysis, campaign creation, and a shareable deck The following use cases demonstrate how Meta advertisers can use the connector with Quick, along with sample prompts. Note: The connector can make changes in your ad accounts. Before Quick creates a campaign, changes a budget, or runs another write action, it asks for your permission to take the action. Before you begin, confirm that you have the following: Try Quick at no additional cost for 3 months",
+      "published_date": "2026-11-22",
+      "tags": [
+        "Announcements",
+        "AWS Quick",
+        "Foundational (100)"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "feed_name": "AWS ML",
+        "feed_url": "https://aws.amazon.com/blogs/machine-learning/feed/"
+      }
+    },
+    "rule_score": 28.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: mcp, model context protocol",
+      "⚖️ 來源權重: rss +15"
+    ],
+    "llm_score": 25,
+    "llm_reason": "行銷連接器公告，技術含量極低",
+    "novelty": 2,
+    "impact": 5,
+    "trending": 6,
+    "practicality": 8,
+    "blog_worthiness": 4
+  },
+  {
+    "item": {
+      "source": "newsapi",
+      "source_name": "Digital Journal",
+      "title": "BlackBerry’s next reinvention: From connected cars to physical AI and the road to 2037",
+      "url": "https://www.digitaljournal.com/article/blackberrys-next-reinvention-from-connected-cars-to-physical-ai-and-the-road-to-2037/",
+      "authors": [
+        "Dr Tim Sandle"
+      ],
+      "abstract": "Canada’s former smartphone champion is repositioning itself around safety-critical software, secure communications and physical AI. \nThe post BlackBerry’s next reinvention: From connected cars to physical AI and the road to 2037 appeared first on Digital Jour…",
+      "published_date": "2026-11-21",
+      "tags": [
+        "newsapi"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "newsapi_source": "Digital Journal",
+        "published_at": "2026-11-21T15:25:45Z"
+      }
+    },
+    "rule_score": 20.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: safety",
+      "⚖️ 來源權重: newsapi +15"
+    ],
+    "llm_score": 18,
+    "llm_reason": "企業轉型策略報導，無技術細節",
+    "novelty": 2,
+    "impact": 5,
+    "trending": 6,
+    "practicality": 2,
+    "blog_worthiness": 3
+  },
+  {
+    "item": {
+      "source": "newsapi",
+      "source_name": "Researchbuzz.me",
+      "title": "Tumbler Ridge, Public Safety, Ohio Power Plants, More: ResearchBuzz AI Update, November 20, 2026",
+      "url": "https://researchbuzz.me/2026/11/20/tumbler-ridge-public-safety-ohio-power-plants-more-researchbuzz-ai-update-november-20-2026/",
+      "authors": [
+        "Tara Calishain"
+      ],
+      "abstract": "AI PROBLEMS Mother Jones: ChatGPT Helped “Sadistic” School Shooter Build 3D-Printed Weapons. \"In September 2025, Jesse Van Rootselaar asked ChatGPT for some advice. The troubled teenager living in Tumbler Ridge, British Columbia, was planning to test “if my m…",
+      "published_date": "2026-11-21",
+      "tags": [
+        "newsapi"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "newsapi_source": "Researchbuzz.me",
+        "published_at": "2026-11-21T01:55:00Z"
+      }
+    },
+    "rule_score": 20.0,
+    "rule_reasons": [
+      "🔥 熱門關鍵字: safety",
+      "⚖️ 來源權重: newsapi +15"
+    ],
+    "llm_score": 16,
+    "llm_reason": "多主題新聞摘要彙編，無單一深入技術內容",
+    "novelty": 1,
+    "impact": 4,
+    "trending": 7,
+    "practicality": 1,
+    "blog_worthiness": 3
+  },
+  {
+    "item": {
+      "source": "newsapi",
+      "source_name": "pymnts.com",
+      "title": "Avant, Public.com and Plaid on Fraud Risk in Faster Payments",
+      "url": "https://www.pymnts.com/cybersecurity/fraud-prevention/2026/avant-public-com-and-plaid-on-fraud-risk-in-faster-payments/",
+      "authors": [
+        "PYMNTS"
+      ],
+      "abstract": "Watch more: When Money Moves Faster than Fraud Detection Third-party fraud involves someone misusing another person’s account or identity. A fraudster who pays a credit card bill with someone else’s bank account is counting on the issuer to restore the card’s…",
+      "published_date": "2026-11-20",
+      "tags": [
+        "newsapi"
+      ],
+      "organization": "",
+      "raw_metadata": {
+        "newsapi_source": "pymnts.com",
+        "published_at": "2026-11-20T09:03:57Z"
+      }
+    },
+    "rule_score": 20.0,
+    "rule_reasons": [
+      "⚖️ 來源權重: newsapi +15",
+      "💡 標題含新穎性訊號"
+    ],
+    "llm_score": 10,
+    "llm_reason": "金融詐欺議題與GenAI工程主題無關",
+    "novelty": 1,
+    "impact": 3,
+    "trending": 3,
+    "practicality": 2,
+    "blog_worthiness": 1
+  }
+]
