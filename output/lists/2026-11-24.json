@@ -1,0 +1,551 @@
+{
+  "date": "2026-11-24",
+  "github": [
+    {
+      "title": "samuelgursky/davinci-resolve-mcp",
+      "slug": "samuelgursky-davinci-resolve-mcp",
+      "url": "https://github.com/samuelgursky/davinci-resolve-mcp",
+      "abstract": "DaVinci Resolve MCP Server English | 簡體中文 | 繁體中文 A Model Context Protocol (MCP) server that lets AI assistants control DaVinci Resolve Studio through the official Scripting API. It provides full API coverage plus guarded workflow helpers for editing, media pool organization, render setup, review markers, grading, Fusion, Fairlight, project lifecycle tasks, extension authoring, and source-safe media analysis. A local browser control panel ships with the server for inspecting Resolve state, running source-safe analysis, drilling into analyzed clips and shots, and editing analysis output inline. See the Control Panel Guide for the full tour. Quick Start npx davinci-resolve-mcp setup Before connecting, open DaVinci Resolve Studio and set Preferences > General > External scripting using to Local . (On the free edition that preference does not help — see Free edition below.) The npm launcher installs a managed copy under your user application-data directory, then runs the universal Python installer. The installer creates a virtual environment, detects Resolve paths, and can configure Claude Desktop, Claude Code, Cursor, VS Code, Windsurf, Zed, Continue, Cline, Roo Code, OpenCode, Codex CLI, and JetBrains IDEs. For source installs: git clone https://github.com/samuelgursky/davinci-resolve-mcp.git cd davinci-resolve-mcp\npython install.py For platform paths, client-specific config, and manual setup, see Installation and Configuration . The installer and server check the latest GitHub release for MCP updates. Checks are best-effort and throttled; the server never blocks MCP startup for a prompt. The installer can prompt, snooze, ignore a release, disable checks, or apply an opt-in safe auto-update for clean git checkouts. Free edition (in-app bridge) Blackmagic gates external scripting to Studio: on the free edition scriptapp(\"Resolve\") refuses a foreign process, whatever the preference says.\nThrough Resolve 21.0.x the Workspace ▸ Scripts menu was not gated — a script\nlaunched from it is handed the live resolve object (measured on free 21.0.3.7) —\nso the server can reach the free edition through a small script that runs inside Resolve and re-exports it over an authenticated loopback listener. Resolve 21.1\nmoved Python scripting to Studio. On free 21.1 the Scripts menu no longer lists .py files at all (reported on Fedora 44 in #203; a Lua script in the same folder\nlists normally). Whether the Console still runs Python there is unconfirmed, so\ntreat the bridge as a 21.0.x path until that is measured. python scripts/install_resolve_bridge.py # restart Resolve, open a project, then: Workspace > Scripts > resolve_bridge The installer and MCP client use ~/.config/davinci-resolve-mcp/bridge.json by default. To keep the authenticated bridge config elsewhere, set DAVINCI_RESOLVE_BRIDGE_CONFIG while running the installer and in the MCP\nclient environment; both sides will use that path. Once that listener is running it is used automatically whenever external\nscripting is unavailable — no environment variable required. Setting DAVINCI_RESOLVE_BRIDGE=1 forces the bridge instead: it becomes the only\ntransport tried, so a bridge that stops answering reports its own fault rather\nthan quietly falling back to another transport. Use it when the bridge is the\npath you intend to depend on. On macOS , Resolve looks for Python 3 in exactly two places: the PYTHON3HOME environment variable, then /usr/local/bin/python3 . Homebrew,\npyenv, uv and conda land in neither, so the script silently never appears in the\nmenu. A python.org install works because its installer creates /usr/local/bin/python3 — but you do not need one: point Resolve at the\ninterpreter you already have, no sudo required. launchctl setenv PYTHON3HOME \" $( python3 -c ' import sys; print(sys.prefix) ' ) \" Use launchctl setenv , not export — Resolve is launched from the Dock and\nnever sees your shell's environment. Restart Resolve afterwards. A Lua canary is\ninstalled alongside so you can tell \"Python not detected\" apart from a wrong\nfolder. Two things that bite (#182). The prefix must contain both lib/libpython3.X.dylib and bin/python3 under that exact unversioned name — Homebrew's framework builds often ship only bin/python3.13 , which is\nhalf a Python as far as Resolve is concerned, and the installer's preflight now\nsays so instead of reporting a usable prefix. And launchctl setenv does not\nsurvive a reboot ; if scripts stop listing weeks later with no error, that is\nwhy. For something persistent, put an interpreter where Resolve already looks\n(this one needs sudo , and check that /usr/local/bin does not precede your\nnormal Python on PATH ): sudo ln -s \" $( command -v python3 ) \" /usr/local/bin/python3 Validated on free 21.0.3.7 and Studio 19.1.3.7, both macOS. The Windows paths\nadded in v2.70.1 (issue #106) shipped unverified; reports on free 21.0.1.11\n(issue #109) and free 21.0.3.7 (issue #112) have since shown the bridge\ninstalling, listing and serving from both %PROGRAMDATA% and %APPDATA% on\nWindows 11, so those paths are now confirmed rather than assumed. Linux is\nconfirmed as well: a report on free 20.3.2.9 (issue #129, Fedora 43) shows the\nbridge installing to ~/.local/share/DaVinciResolve/Fusion/Scripts/Utility ,\nlisting against the system Python — Linux has none of this discovery problem —\nand serving end-to-end. No platform now rests on an assumption: macOS was\nvalidated directly, Windows and Linux on user reports. Note that the bridge holds its port for as long as it serves. Before v2.70.3 a\nWindows bridge could outlive Resolve and block the next session's listener; if\nyou are on an older build and a bridge stops answering, check for a stale fuscript.exe still holding the port. This is the documented in-app path, not a licence circumvention, but Blackmagic\ncould close it — treat it as a supported-until-it-is-not tier. Loopback only,\nHMAC-signed requests, one-use nonces. Local Control Panel Launch the single-user local control panel from the repository root: venv/bin/python -m src.control_panel The command starts a loopback-only server and opens the control panel in your browser at a URL that carries a per-launch access token ( http://127.0.0.1:8765/#token=… ) — use that exact URL; the panel refuses requests without it. To have an AI coding agent do this, ask: \"Open the Resolve MCP control panel for this repo.\" Agents should use venv/bin/python -m src.control_panel unless your Python environment is already active. Persisted analysis jobs refresh the local search index automatically after successful slices; the manual Build Index action is for rebuilding from existing reports. Server Modes Mode Entry point Tools Best for Compound src/server.py 37 Default mode for most assistants. Related Resolve operations are grouped behind action parameters to keep context usage low. Full / granular src/server.py --full or src/resolve_mcp_server.py 390 Power users who want one MCP tool per Resolve API method. The compound server is recommended unless you specifically need the granular one-tool-per-method surface. Advanced server — beyond the scripting API (optional, Node) The same package ships a second, optional MCP server: davinci-resolve-advanced-mcp (bin bin/davinci-resolve-advanced-mcp.mjs ). Where the Python server drives a live Resolve over the\nsanctioned scripting API, the advanced server does what the API can't — it reads and edits Resolve files ( .drp / .drt / .drx ) and applies DB/XML-level changes with no Resolve running , so it\nruns cloud or local.",
+      "stars_today": 20,
+      "language": "Python"
+    }
+  ],
+  "papers": {
+    "hf": [
+      {
+        "title": "WeightCode: Installing New Capabilities into Neural Networks via Weight-Space Programming",
+        "slug": "weightcode-installing-new-capabilities-into-neural-networks",
+        "url": "https://huggingface.co/papers/2611.25476",
+        "abstract": "Neural networks encode learned capabilities in their weights, yet extending those capabilities with explicit task knowledge remains a fundamental challenge. Here we show that Weight-Space Programming (WSP), in which executable programs read, construct or modify a network's weights directly, can install new capabilities within trained neural networks. WeightCode, a WSP framework, uses a frozen language model to write executable weight programs that install new computations into trained neural networks using task knowledge and their existing weights, without gradient-based training. Once installed, the new capabilities run independently of the language model. Given a grammar or eight demonstrations, weight programs enable previously unseen command compositions (0% to 99.8% exact match) and a new pickup action (0% to 98.4% success), while preserving the original command and navigation capabilities. On ImageNet, four weight programs achieve net gains of 8.84-17.62 points while preserving clean accuracy, outperforming the best of eight fine-tuning methods under matched examples, checks, and retention constraints. In a Vision Transformer, causal interventions show that installed noise-correction gates drive robustness gains, while their selective activation preserves clean accuracy. Rerun on five independently trained Vision Transformers without further language model calls, ten weight programs retain 83-110% of their source-network gains on average, whereas copying their fixed weight edits yields negligible gains. Six programs written for an already edited network add 5.23-14.50 points of contrast robustness while retaining the previously installed noise gain. Together, these results establish WSP as a new route to acquiring and accumulating capabilities in trained neural networks through reusable weight programs.",
+        "upvotes": 6,
+        "arxiv_id": "2611.25476",
+        "authors": []
+      },
+      {
+        "title": "AutoPILOT: A Visual Agent Harness for Real-Time Gameplay",
+        "slug": "autopilot-a-visual-agent-harness-for-real-time-gameplay",
+        "url": "https://huggingface.co/papers/2611.28202",
+        "abstract": "A harness that lets multimodal foundation models emit primitive actions, open-loop macros, or closed-loop controllers improves real-time game performance and reduces API cost.",
+        "upvotes": 3,
+        "arxiv_id": "2611.28202",
+        "authors": []
+      },
+      {
+        "title": "Self-WSP: Can Language Models Improve Themselves Through Weight-Space Programming?",
+        "slug": "self-wsp-can-language-models-improve-themselves-through",
+        "url": "https://huggingface.co/papers/2611.28833",
+        "abstract": "Language models can edit their own neural network weights to improve task performance, though the resulting gains are poorly understood and sometimes matched by random search.",
+        "upvotes": 2,
+        "arxiv_id": "2611.28833",
+        "authors": []
+      }
+    ],
+    "others": [
+      {
+        "title": "CoMotion: A Real-Time System for User-Driven Semantic Steering in Text-to-Motion Generation",
+        "slug": "comotion-a-real-time-system-for-user-driven-semantic",
+        "url": "https://www.semanticscholar.org/paper/f83b74cff88ee7109caaff86424a433f1a6d5be0",
+        "abstract": "Current text-to-motion frameworks typically operate as a rigid, one-shot workflow where users are unable to intervene during the generation process, effectively limiting all refinement efforts to the iterative modification of the text prompt. This black-box process hinders iterative design, leading to inefficiency. Furthermore, natural language inherently suffers from ambiguity when describing fine-grained 3D motions, making it difficult for users to articulate their intent solely through text precisely. In this paper, we propose CoMotion, a real-time system that shifts the interaction paradigm from static text prompting to user-driven semantic steering. Instead of requiring users to restart the entire generation process for every modification, CoMotion operates directly within a discrete latent space by retrieving prompt-relevant atomic actions and presenting them as user-visible, adjustable controls. Through CoMotion, users can adjust semantic steering levels for these atomic actions to guide the generation toward their intent without the computational overhead of full text-to-motion model re-inference. Our approach provides a more diverse design pathway for the traditional one-shot text-to-motion generation process, enabling fine-grained, personalized motion control during generation. We validate our system using a standardized benchmark based on Large Language Models. Quantitative experiments demonstrate that CoMotion enables robust semantic correction and geometric diversity while maintaining the kinematic quality of the generated motions. Crucially, by transforming complex generative tasks into low-latency, interactive operations, CoMotion supports an interactive refinement workflow for the evaluated motion generation tasks.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-23",
+        "authors": [
+          "Ze-Yuan Fan",
+          "Cheng-Shuo Xia"
+        ]
+      },
+      {
+        "title": "Task-specific fine-tuning versus frontier large language models for RoB 2 risk of bias assessment: development and external benchmark evaluation of RoB-BERT",
+        "slug": "task-specific-fine-tuning-versus-frontier-large-language",
+        "url": "https://www.semanticscholar.org/paper/f2dcd39b7bdd654668ae9ee9157d4ebe457c865e",
+        "abstract": "Task-specific fine-tuning versus frontier large language models for RoB 2 risk of bias assessment: development and external benchmark evaluation of RoB-BERT. medRxiv",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-23",
+        "authors": [
+          "T. Pitre",
+          "J. Mah",
+          "A. Azlan",
+          "D. Nguyen",
+          "D. Zeraatkar",
+          "A. Agarwal",
+          "G. Guyatt"
+        ]
+      },
+      {
+        "title": "“Hey Grok, Take My Clothes Off”: sexualization, shame, and the cultural policing of women’s bodies in an AI image-editing trend",
+        "slug": "hey-grok-take-my-clothes-off-sexualization-shame-and-the",
+        "url": "https://www.semanticscholar.org/paper/dc9ae9787625a64b565bfa06499234994ad96142",
+        "abstract": "“Hey Grok, Take My Clothes Off”: sexualization, shame, and the cultural policing of women’s bodies in an AI image-editing trend. AI and Ethics",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-23",
+        "authors": [
+          "Maurice St Matthews",
+          "Paul Bleakley",
+          "Elliot Gamelin"
+        ]
+      },
+      {
+        "title": "The unedited acceptance rate: a review-fidelity metric for human-in-the-loop clinical AI",
+        "slug": "the-unedited-acceptance-rate-a-review-fidelity-metric-for",
+        "url": "https://www.semanticscholar.org/paper/cb2564acee93bf81f294e6ae1de3b4a530dbe406",
+        "abstract": "The unedited acceptance rate: a review-fidelity metric for human-in-the-loop clinical AI. medRxiv",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-23",
+        "authors": [
+          "O. Elalfy",
+          "S. Youssef",
+          "J. Davids"
+        ]
+      },
+      {
+        "title": "Generative and agentic artificial intelligence for network intrusion detection: a systematic literature review",
+        "slug": "generative-and-agentic-artificial-intelligence-for-network",
+        "url": "https://www.semanticscholar.org/paper/cae22a987a9fb4210140a673b53462b997331ae0",
+        "abstract": "Generative and agentic artificial intelligence for network intrusion detection: a systematic literature review. International Journal of Information Security",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-23",
+        "authors": [
+          "Naveed Ahmed",
+          "N. H. Abdul Wahab",
+          "Uzma Batool",
+          "Zahid Iqbal",
+          "T. Al-Qablan",
+          "Tanja Pavleska",
+          "Md Asri Ndadi"
+        ]
+      },
+      {
+        "title": "Approval invalidation and renewed authorization in agentic AI: a conceptual synthesis of responsibility and human oversight",
+        "slug": "approval-invalidation-and-renewed-authorization-in-agentic",
+        "url": "https://www.semanticscholar.org/paper/bccf8d8ea4756ef9d38ddf3881dccc455b59fea9",
+        "abstract": "Approval invalidation and renewed authorization in agentic AI: a conceptual synthesis of responsibility and human oversight. AI and Ethics",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-23",
+        "authors": [
+          "Jiaxing Du"
+        ]
+      },
+      {
+        "title": "Beyond billing codes: a proof-of-concept study of large language models for pregnancy episode reconstruction from clinical notes",
+        "slug": "beyond-billing-codes-a-proof-of-concept-study-of-large",
+        "url": "https://www.semanticscholar.org/paper/909a6fcca5243bf3fc3bf1093c205f036792728c",
+        "abstract": "Beyond billing codes: a proof-of-concept study of large language models for pregnancy episode reconstruction from clinical notes. medRxiv",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-23",
+        "authors": [
+          "Ann-Kathrin Schalkamp",
+          "S. Azzam",
+          "A. Ayati",
+          "A. Belov",
+          "M. Wang",
+          "V. Rudrapatna"
+        ]
+      },
+      {
+        "title": "Continually pretrained open-weight language models can outperform traditional machine learning in EHR-based clinical prediction",
+        "slug": "continually-pretrained-open-weight-language-models-can",
+        "url": "https://www.semanticscholar.org/paper/7f775a97ef8167e3cc1ced95412453c48bbe9c3a",
+        "abstract": "Continually pretrained open-weight language models can outperform traditional machine learning in EHR-based clinical prediction. medRxiv",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-23",
+        "authors": [
+          "J. Zhou",
+          "X. Zhang",
+          "C. Yan",
+          "J.-Z. Ye",
+          "M. B. Patel",
+          "L. Novak",
+          "A. Kho",
+          "A. Wright",
+          "B. Malin",
+          "Y. Chen"
+        ]
+      },
+      {
+        "title": "A testable framework for AI alignment: Simulation Worldview as an engineered reality model for silicon-based agents",
+        "slug": "a-testable-framework-for-ai-alignment-simulation-worldview",
+        "url": "https://www.semanticscholar.org/paper/5f9c77c4b33c9ec565db3c954e9b2c59803f7b31",
+        "abstract": "A testable framework for AI alignment: Simulation Worldview as an engineered reality model for silicon-based agents. AI and Ethics",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-23",
+        "authors": [
+          "J. Habdank"
+        ]
+      },
+      {
+        "title": "Artificial Intelligence-Enabled Resilience in Circular Economy Systems: A Systematic Review and the AICR Framework",
+        "slug": "artificial-intelligence-enabled-resilience-in-circular",
+        "url": "https://www.semanticscholar.org/paper/54d7172d704f6fa29691a31b172fc9266f27e998",
+        "abstract": "Artificial Intelligence-Enabled Resilience in Circular Economy Systems: A Systematic Review and the AICR Framework. Circular Economy and Sustainability",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-23",
+        "authors": [
+          "Hamed Taherdoost",
+          "Shireen S. Al-Hourani",
+          "Dua Weraikat"
+        ]
+      },
+      {
+        "title": "What Does an Agent-Run Clinic Cost? Protocol for a Prospective Observational Study of the Compute Cost of Completed Work in a Clinical Agent Fleet",
+        "slug": "what-does-an-agent-run-clinic-cost-protocol-for-a",
+        "url": "https://www.semanticscholar.org/paper/53188fd30585987be8916fab08f0cec8a3c395a4",
+        "abstract": "What Does an Agent-Run Clinic Cost? Protocol for a Prospective Observational Study of the Compute Cost of Completed Work in a Clinical Agent Fleet. medRxiv",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-23",
+        "authors": [
+          "O. Elalfy",
+          "S. Youssef",
+          "J. Davids"
+        ]
+      },
+      {
+        "title": "rendehR: a cohort-first, provenance-aware, agentic-ready pipeline for harmonizing multi-source electronic health records",
+        "slug": "rendehr-a-cohort-first-provenance-aware-agentic-ready",
+        "url": "https://www.semanticscholar.org/paper/415353a9f93bc00dffc590559b96bf8c7f5e4e6f",
+        "abstract": "rendehR: a cohort-first, provenance-aware, agentic-ready pipeline for harmonizing multi-source electronic health records. medRxiv",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-23",
+        "authors": [
+          "M. Mussavi Rizi",
+          "V. Shein",
+          "A. Torres-Espin"
+        ]
+      },
+      {
+        "title": "Generating verified BPMN models with large language models and formal verification",
+        "slug": "generating-verified-bpmn-models-with-large-language-models",
+        "url": "https://www.semanticscholar.org/paper/35142d300a000551f3bad9919c592a840dc5c9a6",
+        "abstract": "Generating verified BPMN models with large language models and formal verification. International Conference on Automated Software Engineering",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-23",
+        "authors": [
+          "Yu-Han Sun",
+          "Run-Dong Mu",
+          "Qin Li"
+        ]
+      },
+      {
+        "title": "Foundations for MetNet: A Proposed Framework for Modeling Metaphorical Productivity",
+        "slug": "foundations-for-metnet-a-proposed-framework-for-modeling",
+        "url": "https://www.semanticscholar.org/paper/341413bd897157cca8e169e8a340020d4bf002c2",
+        "abstract": "Abstract An adequate computational treatment of metaphor requires a representational model that captures its cross-domain, productive nature. Existing approaches and resources fall short: (i) ontological models of general meaning representation, such as WordNet, ConceptNet, BabelNet, and OntoLex, treat concepts atomically, omitting the event structure needed to capture contextual variation; (ii) distributional models (e.g., Word2Vec, BERT) encode metaphorical patterns only implicitly, offering little interpretive insight; (iii) metaphor-specific resources such as MetaNet typically pre-encode mappings rather than deriving them from independent structure, or emphasize ontological (Framester, Amnestic Forgery) or pragmatic (MetCL) representation instead. Although FrameNet – encoding events (frames) and participant roles (frame elements) to support systematic cross-domain alignment – offers a promising foundation, existing approaches built on it leave the underlying linguistic mechanism unaccounted for. In this paper, we review these models and resources to motivate the need for a new theoretical approach to capture this linguistic – and thus systemic – metaphorical mechanism, MetNet, a theoretical framework that refines FrameNet for metaphor modeling through a dedicated reasoning engine, specified through four core tenets: lexical frames, providing the structured, role-based representations over which mappings are established; abstract frames, narrowing the space of plausible candidate pairs; constraints, determining whether a given candidate mapping is admissible; and a mappability scale, grading admitted mappings by the density of their preserved relational structure. Our approach rests on two premises: (i) metaphor should be modeled analogically, as mappings between non-metaphorical frames; and (ii) evaluating such mappings requires a framework capable of encoding graded alignment constraints.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-23",
+        "authors": [
+          "Ricardo Monteiro",
+          "Raquel Amaro"
+        ]
+      },
+      {
+        "title": "VsensAgent: A Human-Agent Interface for Collaborative Virtual Sensor Data Authoring",
+        "slug": "vsensagent-a-human-agent-interface-for-collaborative-virtual",
+        "url": "https://www.semanticscholar.org/paper/0bd0a8bd40eb1dd8ea0c4b38e8ebf7392ccd14da",
+        "abstract": "Virtual sensing can reduce the cost of generating sensor datasets for human activity recognition and ubiquitous sensing, yet users must still translate sensing intent into concrete scene configurations. This fragmentation makes it difficult to translate sensing goals into concrete configurations and refine them as results emerge. We present VsensAgent, a human–agent interface that grounds an LLM-powered agent in a shared 3D simulation environment. Users combine natural-language delegation with direct scene manipulation, while the agent can inspect scene state, configure sensors and avatar motions, record data, and support signal analysis. We conducted a task-based study of VsensAgent in which 12 participants completed 36 virtual sensing authoring sessions. Analysis of interaction logs, authored configurations, and post-task interviews showed that participants progressively developed intent through executable scene states, shifted control between agent delegation and direct manipulation at the level of individual operations, and treated agent proposals as editable starting points. These findings frame virtual sensor generation as progressive, collaborative authoring and inform the design of agents for stateful workflows.",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-23",
+        "authors": [
+          "Feng-Zhou Liang",
+          "Tian Min",
+          "Cheng-Shuo Xia",
+          "Y. Sugiura"
+        ]
+      },
+      {
+        "title": "Who must answer? Answerability, moral remainder, and the limits of the responsibility-gap debate in AI-mediated decision-making",
+        "slug": "who-must-answer-answerability-moral-remainder-and-the-limits",
+        "url": "https://www.semanticscholar.org/paper/0165feea0beb437b531a93095b2b14370e778edd",
+        "abstract": "Who must answer? Answerability, moral remainder, and the limits of the responsibility-gap debate in AI-mediated decision-making. AI and Ethics",
+        "source": "semantic_scholar",
+        "source_name": "Semantic Scholar",
+        "citation_count": 0,
+        "published_date": "2026-11-23",
+        "authors": [
+          "H. Gbouri",
+          "Husham Gburi"
+        ]
+      },
+      {
+        "title": "Seeing Is Not Acting: WARD Diagnoses the Evidence-to-State-to-Action Gap in Longitudinal Clinical Agents",
+        "slug": "seeing-is-not-acting-ward-diagnoses-the-evidence-to-state-to",
+        "url": "http://arxiv.org/abs/2611.29243v1",
+        "abstract": "Large language models for longitudinal clinical care must revise their assessments and actions as patient information accumulates. However, benchmarks centered on isolated responses or final task outcomes provide limited insight into intermediate failures in evidence use, state updating, and action selection. We introduce WARD, a benchmark for evaluating how clinical agents translate accumulating evidence into patient-state judgments and timely, safe actions. WARD comprises 4,560 clinical tasks across seven clinical output domains, organized into 240 checkpoints from 40 longitudinal clinical trajectories spanning 95 hospitalizations. Its Longitudinal Track evaluates these tasks under controlled cumulative evidence. Its Interactive Track evaluates end-to-end, tool-mediated clinical management across 271 verifiable evidence items and 141 reference transitions. Across 12 models with scorable checkpoint outputs, evidence recognition consistently outpaces downstream state and action decisions, with linked-evidence nonresponse reaching 74.47--90.90\\%. Models also struggle to retain and update information over time, while in the Interactive Track only 11.46\\% of executed actions advance a reference transition. These results reveal a persistent evidence-to-state-to-action gap and highlight the need for process-level evaluation of longitudinal clinical agents.Code and data: https://github.com/Dingsuper-creator/WARD.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-11-22",
+        "authors": [
+          "Chao Ding",
+          "Yidong Jiang",
+          "Junzhi Ning",
+          "Juncheng Wu",
+          "Yuhan Wang",
+          "Renjie Lu",
+          "Minjia Yuan",
+          "Gaopeng Wang",
+          "Liyang Wang",
+          "Pengcheng Chen",
+          "Dong Yin",
+          "Meiping Wang",
+          "Jinru Ding",
+          "Yuyin Zhou"
+        ]
+      },
+      {
+        "title": "Edit-Induced Dependency Mismatch: Propagation Omissions, Recovery, and Evaluation Blind Spots in Coding Agents",
+        "slug": "edit-induced-dependency-mismatch-propagation-omissions",
+        "url": "http://arxiv.org/abs/2611.29242v1",
+        "abstract": "During iterative code modification, coding agents may continue to rely in subsequent reasoning on outdated dependency judgments whose text remains fixed in the context, leading to errors in subsequent reasoning and leaving consumer defects undetected by the original task evaluations, thereby exposing blind spots in the tested benchmarks. We study actual agent execution trajectories collected on benchmark tasks: deepseek-v4-flash runs on DeepSWE and SWE-bench Verified, supplemented by Qwen3.8-Flash cases on FeatureBench. Focusing on edit-induced consumer obligations, a full-corpus blinded human audit of the DeepSWE runs identifies terminal mismatches, including diagnoses whose task scope remains disputed. Following supplementary execution checks, all retained DeepSWE terminal events have execution support. The audit also shows that recovery within a trajectory can coexist with terminal omissions in the same run. The process analysis links the presentation of relevant consumer code to explicit dependency judgments and subsequent synchronization actions recorded in the trajectories. An explicit dependency-review prompt reduces terminal omissions under the tested conditions, supporting re-derivation of consumer obligations after edits. Local replays of selected DeepSWE cases show that synchronizing the diagnosed consumers restores the target behavior while the listed controls continue to pass. Cross-benchmark execution counterexamples show that the original task evaluations do not fully detect edit-induced dependency mismatches: patches pass those evaluations, yet additional execution checks confirm unintended defects along existing consumer paths. These findings support measuring task scores, terminal propagation states, and recovery separately.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-11-22",
+        "authors": [
+          "Fei Ding"
+        ]
+      },
+      {
+        "title": "Fuzzy e-Means: Fuzzy c-Means on Large Data with Moving-Average Mini-Batch Updates",
+        "slug": "fuzzy-e-means-fuzzy-c-means-on-large-data-with-moving",
+        "url": "http://arxiv.org/abs/2611.29241v1",
+        "abstract": "Fuzzy c-means (FCM) gives every point a degree of membership in every cluster. Its standard solver, alternating optimization (AO), needs a full pass over the data per iteration and often many iterations, while methods built for large data stop at a worse objective or still need tens of passes. We run FCM with the optimizer of e-means, a recent mini-batch k-means that keeps moving averages of the number and the sum of the points in each cluster and sets its batch size and step size by scaling laws. The optimizer carries over because an FCM centroid is also a weighted sum divided by a total weight, but this direct transfer fails in two ways: the e-means rule that relocates nearly empty clusters also removes the centroids of small, distant groups, and FCM started from random points can settle in poor local minima. Fuzzy e-means (e-FCM) therefore starts with one pass of e-means with hard assignments and then runs fuzzy moving-average passes without relocation. On 28 configurations with up to 109.5 million points and 16,384 clusters, e-FCM reaches the objective of 25 AO iterations in two to four passes when clusters hold several hundred points or more, 11 to 20 times faster than AO on one-million-point embedding sets with 1,024 clusters. It ends within 0.16% of converged AO on these sets and below converged AO where AO from random points lands in poor minima, but it is slower than AO on small low-dimensional problems, where an AO pass takes milliseconds. Finally, the common fuzzifier m=2 makes the centroids collapse or merge on most high-dimensional sets, and e-FCM can choose the fuzzifier by matching a known overlap at about two passes per candidate value.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-11-22",
+        "authors": [
+          "Paritosh Tiwari",
+          "Punit Rathore"
+        ]
+      },
+      {
+        "title": "GameAnything: From Any Inspirations to Playable Game Worlds",
+        "slug": "gameanything-from-any-inspirations-to-playable-game-worlds",
+        "url": "http://arxiv.org/abs/2611.29238v1",
+        "abstract": "AI-driven game development holds the potential to transform diverse human inspirations into interactive experiences. However, existing systems and benchmarks primarily focus on explicit development specifications, with limited support for adapting multimodal references and evaluating actual gameplay experiences. We introduce GameAnything, an open-source agentic platform that transforms multimodal inspirations into playable extensions of existing games through iterative development. GameAnything integrates coding agents with an independent playtesting critic, persistent development state, and reusable experience memory to support continuous refinement. We further present GameAnything-Bench, a benchmark spanning diverse reference modalities, game creation objectives, and gaming environments, with exploratory gameplay testing to assess both functional correctness and gameplay quality. Evaluations of nine coding agent configurations reveal that current agents can adapt reference content but still struggle with playable interactions and precise modifications. Moreover, multimodal references improve content fidelity, while iterative refinement yields substantial but varying improvements across agents. These findings highlight both the potential and remaining challenges of inspiration-driven game development.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-11-22",
+        "authors": [
+          "Wenyi Wu",
+          "Siqi Liu",
+          "Yuru Feng",
+          "Zixuan Song",
+          "Aayush Salvi",
+          "Sibo Zhu",
+          "Kun Zhou",
+          "Biwei Huang"
+        ]
+      },
+      {
+        "title": "Complementary Geometry in Gaussian Splatting",
+        "slug": "complementary-geometry-in-gaussian-splatting",
+        "url": "http://arxiv.org/abs/2611.29236v1",
+        "abstract": "Gaussian Splatting has achieved high visual quality in novel view synthesis, but the accuracy of its rendered geometry remains a challenge. In particular, the rendered depth is computed as an opacity-weighted average along each ray, which may not correspond to the actual scene surface. In this paper, we observe that depth predictions from different views of the same frozen Gaussian representation exhibit complementary errors, allowing us to improve novel-view geometry using information from other views without modifying the original representation. Based on this observation, we propose REVEAL, a general framework that selectively refines novel-view depth using complementary geometric information. Specifically, we first reproject depth predictions from source views to the target view and combine them using robust multi-view consensus. We then introduce a learned selection mechanism to determine whether the candidate depth is more accurate than the original prediction, based on the expected reduction in depth error. In addition, we introduce RIG, a real-world benchmark captured with synchronized RGB-D cameras, which provides ground-truth depth for evaluating both static and dynamic reconstruction models. Experiments on 6 Gaussian Splatting backbones across 3 benchmarks show that REVEAL consistently improves depth accuracy while maintaining comparable rendering quality.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-11-22",
+        "authors": [
+          "Mingle Jiang",
+          "Jikui Zhou",
+          "Chenghan Lyu",
+          "Rui Xu",
+          "Yunke Wang",
+          "Chang Xu"
+        ]
+      },
+      {
+        "title": "Why Adaptive Optimizers Struggle with Large Convolution Kernels",
+        "slug": "why-adaptive-optimizers-struggle-with-large-convolution",
+        "url": "http://arxiv.org/abs/2611.29232v1",
+        "abstract": "Large convolution kernels enlarge the receptive fields of ConvNets at a modest computational cost, but they are notoriously difficult to train. Existing large-kernel networks therefore rely on costly training techniques, such as parallel small-kernel branches with batch normalization. In this paper, we trace this difficulty to adaptive optimizers such as Adam, which normalize the update of every weight separately. Since input features rarely average to zero, all weights of a kernel share a common gradient, and these optimizers move the mean of a $k\\times k$ kernel $k$ times as far as a single parameter. We find this mean amplification in widely used ConvNets and vision transformers, and show that it can force the maximal learning rate to fall as $1/k^2$. We further prove that the basis of the discrete cosine transform (DCT) isolates the mean and is the only orthonormal basis that diagonalizes every stationary gradient statistic with mirrored boundaries. We therefore train large kernels through their DCT coefficients and convert them back after training. The resulting method, DCT-Rep, requires only a few lines of code and adds no parameters, no inference cost and negligible training overhead. Extensive experiments on image classification, object detection, semantic segmentation and image restoration show that DCT-Rep consistently improves large-kernel ConvNets and vision transformers, by $+0.79\\%$ top-1 accuracy for a large-kernel ConvNeXt-T and $+0.43\\%$ for ViT-S/16 on ImageNet-1K, $+1.4$ box AP on COCO, $+1.2$ mIoU on ADE20K and up to $+0.4$ dB on image deblurring, where the gain grows with the kernel size.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-11-22",
+        "authors": [
+          "Tianyu Ding",
+          "Jiachen Jiang",
+          "Jinxin Zhou",
+          "Yong Ma",
+          "Zhihui Zhu",
+          "Luming Liang"
+        ]
+      },
+      {
+        "title": "Tenlai-TTS 2.0: Continuous-Representation LLM-Based TTS System with End-to-End Training",
+        "slug": "tenlai-tts-2-0-continuous-representation-llm-based-tts",
+        "url": "http://arxiv.org/abs/2611.29226v1",
+        "abstract": "Autoregressive text-to-speech (TTS) with continuous speech latents avoids quantization-induced information loss, but typically relies on a latent space that is learned separately and then frozen before language-model training. Such a space must satisfy two competing requirements: it must retain enough acoustic detail for high-fidelity reconstruction, yet be sufficiently structured and regularized to support autoregressive prediction by a language model. We present Tenlai-TTS 2.0, which learns continuous speech representations through end-to-end training to balance acoustic detail with autoregressive predictability. The model comprises a speech encoder with a capacity-controlled Gaussian bottleneck, a large language model (LLM) with an autoregressive diffusion transformer (AR-DiT) head, a flow-matching (FM) mel-spectrogram decoder, and a multi-task recognition model (RM). With energy normalization and fixed-variance Gaussian noise, the bottleneck has a closed-form upper bound on its information rate. Through joint optimization with reconstruction, recognition, and next-patch prediction objectives, we learn continuous speech representations that suit all three tasks and train the LLM and AR-DiT for autoregressive generation. The LLM and AR-DiT are further optimized using differentiable reconstruction and recognition feedback on their predicted latents through the FM decoder and RM. On Seed-TTS-eval, this feedback-based optimization reduces character error rate (CER) from 0.82% to 0.74% on test-zh and from 8.32% to 7.08% on test-hard-zh, and word error rate (WER) from 1.32% to 1.27% on test-en, compared with joint training alone. Subsequent reinforcement learning further reduces CER to 6.29% on test-hard-zh and WER to 1.08% on test-en, with speaker similarity scores of 0.811, 0.766, and 0.784 on test-zh, test-en, and test-hard-zh, respectively.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-11-22",
+        "authors": [
+          "Changfeng Gao",
+          "Yong Ren",
+          "Jun Yuan",
+          "Zhengkun Tian",
+          "Ye Bai",
+          "Zhao You",
+          "Shidong Shang"
+        ]
+      },
+      {
+        "title": "IteraSong: LLM-Guided Iterative Symbolic Music Creation in a Web DAW",
+        "slug": "iterasong-llm-guided-iterative-symbolic-music-creation-in-a",
+        "url": "http://arxiv.org/abs/2611.29225v1",
+        "abstract": "Music creation is inherently iterative, yet many symbolic generation systems still center on producing or regenerating isolated outputs. We present IteraSong, an interactive web-based Digital Audio Workstation (DAW) for LLM-guided iterative symbolic music creation. Unlike one-shot generation systems, IteraSong supports a generate-audition-edit-refine loop over a persistent multi-track project. Users initialize a fully labeled pop draft, then progressively refine it through natural-language instructions. The LLM maps requests to a hierarchical action space of editing primitives exposed via Model Context Protocol (MCP) tools, spanning global, track, section, and bar/note scopes. The demo enables attendees to edit multi-track compositions in natural language, apply deterministic and generative edits, and undo/redo changes in real time.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-11-22",
+        "authors": [
+          "Di Lu",
+          "Xinran Zhang",
+          "Yan Gao",
+          "Yuan Zhang",
+          "Xiaoqing Wang",
+          "Qingwen Zhou",
+          "Xiaobing Li",
+          "Maosong Sun"
+        ]
+      },
+      {
+        "title": "Curvature Mismatch and Local Errors in Galaxy Property Estimation",
+        "slug": "curvature-mismatch-and-local-errors-in-galaxy-property",
+        "url": "http://arxiv.org/abs/2611.29224v1",
+        "abstract": "Linear probes are widely used to evaluate learned representations and infer physical quantities from unlabelled data. The probe's predictions are from an affine function in ambient space restricted to the underlying representation, and consequently, even a representation that has complete information needed to predict a target can produce systematic probe errors when that information is encoded in a form inaccessible to the linear probe. Here we share that some of this probing error is due to the innate geometry of the manifold. Linear probes, when evaluated on a curved manifold, generally have a nonzero intrinsic Hessian (what we colloquially call \"probe-facing curvature\") given by $\\langle w_N,\\mathrm{II}\\rangle$, the manifold's second fundamental form dotted with the probe's normal component. We fit linear probes to galaxy embeddings from five pretrained encoders and intervene on this curvature term to evaluate its contribution to the probe performance. We find that keeping this inherited curvature improves the local fit where it matches the label's curvature. Removing the curvature component of the probe where it does not match the label curvature also provides improvements, and correcting it in every neighbourhood raises held-out local $R^2$ by 0.006 to 0.010 on galaxies, gaining more where the two curvatures disagree. We isolated these gains to be from the underlying geometry and not an automatic guarantee from least squares training.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-11-22",
+        "authors": [
+          "Austin Lutterbach",
+          "Angus Hoy",
+          "Jasper Chong",
+          "Aman Kumar",
+          "Michael J. Smith"
+        ]
+      },
+      {
+        "title": "Ego-HMB: Human Motion Bridging from Egocentric Images via A Motion Bridge Diffusion Model",
+        "slug": "ego-hmb-human-motion-bridging-from-egocentric-images-via-a",
+        "url": "http://arxiv.org/abs/2611.29218v1",
+        "abstract": "We introduce Egocentric Human Motion Bridging, a task that generates a coherent 3D human motion sequence from two endpoint egocentric images. Unlike conventional motion in-betweening, which requires structured 3D endpoint poses, this setting uses raw first-person observations available from wearable devices in VR/AR and robotics. It presents challenges due to viewpoint variations, partial body visibility, and temporal ambiguity under cross-modal endpoint constraints. To address these challenges, we propose Ego-HMB, a unified diffusion-based framework that learns endpoint pose estimation and temporally consistent motion infilling within a single model through two training stages. First, Egocentric-to-Canonical Pretraining uses a hierarchical curriculum with progressively increasing temporal spans to strengthen endpoint pose priors. Second, Motion Bridge Diffusion Training incorporates endpoint and physics awareness, diffusing from neighboring poses to promote temporal continuity while preserving global endpoint constraints. Extensive experiments compare our approach with one-stage methods that directly generate motion from two egocentric images and two-stage pipelines that combine endpoint pose estimation with motion interpolation. Ego-HMB consistently outperforms these baselines in endpoint accuracy and motion generation quality. Code is available at https://github.com/gaogehan/Ego-HMB.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-11-22",
+        "authors": [
+          "Gaoge Han",
+          "Yongkang Cheng",
+          "Shaoli Huang",
+          "Jing Zhang",
+          "Mingming Gong",
+          "Fakhri Karray",
+          "Tongliang Liu"
+        ]
+      },
+      {
+        "title": "NANO: Unifying Missingness and Input Uncertainty in Tabular Learning",
+        "slug": "nano-unifying-missingness-and-input-uncertainty-in-tabular",
+        "url": "http://arxiv.org/abs/2611.29214v1",
+        "abstract": "Missing values are common in tabular data, yet current approaches to handling them often overlook two dimensions. First, an observed value may be uncertain, while a Not-Observed (N.O.) value may still have a reasonable estimate. Inputs should therefore span a continuous spectrum from no evidence to a fully trusted observation. Second, Not-Applicable (N.A.) means that no meaningful value exists for a record, yet this semantic state often lacks explicit representation. To address both dimensions, we introduce NANO, a unified plug-in for input encoding that fits most token-based architectures. Guided by Bayesian evidence weighting, NANO adjusts the influence of a supplied value according to confidence, with all zero-confidence estimates mapped to the same N.O. representation. NANO accepts, but does not require, per-example confidence information during training or inference. For N.A., a separate representation enables models to encode inapplicability and its schema-defined reasons into context. Experiments across eleven datasets and nine backbones show that mixed-confidence training enables a single NANO model to generalize across inference confidence levels, remaining competitive without estimates and improving steadily as estimate reliability and confidence increase. The effectiveness of NANO's handling of N.A. is further demonstrated on three augmented datasets.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-11-22",
+        "authors": [
+          "Kuangdai Leng",
+          "Maria Tsekhmistrenko",
+          "Matteo Bagagli",
+          "Simon Jeffery",
+          "Tarje Nissen-Meyer"
+        ]
+      },
+      {
+        "title": "PartPO: Part-Level Policy Optimization for Shape-to-Program Generation",
+        "slug": "partpo-part-level-policy-optimization-for-shape-to-program",
+        "url": "http://arxiv.org/abs/2611.29213v1",
+        "abstract": "We present PartPO, a reinforcement learning method for generating structured shape programs from 3D point clouds. Existing shape-to-program models are trained with supervised learning on procedurally generated data and generalize poorly to more diverse shapes, while reinforcement learning from execution feedback assigns a single scalar reward to a long program that builds many parts, making credit assignment difficult. PartPO instead builds on a core property of the task: shape programs are self-describing, with each semantically named part produced by its own code block. It segments each generated program by its parts and applies part-level rewards only to the code of the corresponding part, a category reward only to the object name, and a shape-level reward to the whole program. The required part supervision is obtained without manual annotation, by grounding part names on target meshes with an open-vocabulary segmentation model prompt-tuned on the model's own outputs. Applied to MeshCoder, PartPO improves reconstruction accuracy and execution success on ShapeNetCore and ABO over the base model, rejection-sampling fine-tuning and trajectory-level RL, and generalizes to the unseen HSSD dataset. Code will be released at https://github.com/HannuoZ/PartPO.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-11-22",
+        "authors": [
+          "Hannuo Zhang",
+          "Zhixiang Chi",
+          "Xuanchen Li",
+          "Yiqun Zhou",
+          "Yang Wang",
+          "Xinxin Zuo"
+        ]
+      },
+      {
+        "title": "THETA: Heat Diffusion as a Structural Prior for Cross-Domain Transfer in Graph Foundation Models",
+        "slug": "theta-heat-diffusion-as-a-structural-prior-for-cross-domain",
+        "url": "http://arxiv.org/abs/2611.29210v1",
+        "abstract": "Graph foundation models (GFMs) aim to learn transferable representations across domains with heterogeneous node attributes and graph structures. However, relations inferred from node attributes can rely on domain-specific feature semantics, limiting their transferability to unseen graphs, particularly in low-label regimes. We propose THETA (Topology-aware HEat-based TrAnsfer), a graph foundation model that leverages Heat Kernel Signatures (HKS) as a topology-based structural prior for cross-domain transfer. By characterizing nodes' heat-return behavior across diffusion scales, HKS provides a common structural descriptor across graphs without requiring aligned attribute semantics, complementing feature-based relations with information about local and multiscale connectivity. THETA incorporates this prior into both pre-training and few-shot adaptation. During pre-training, it combines HKS with node attributes to construct refined graph views and trains a shared encoder via contrastive learning. During adaptation, it uses HKS to guide edge-weight adjustment and prototype refinement while keeping the encoder frozen and retaining the contribution of labeled support nodes. Through HKS, THETA uses structural information from heat diffusion to guide both representation learning and few-shot adaptation with unlabeled target-domain data. Extensive experiments across diverse graph domains demonstrate that THETA consistently outperforms existing baselines on downstream tasks, highlighting the value of heat diffusion as a structural prior for transferable graph representations.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-11-22",
+        "authors": [
+          "Haonan Liu",
+          "Shuo Wang",
+          "Zhao Kang"
+        ]
+      },
+      {
+        "title": "DriveTTO: Understanding Search and Selection in Test-Time Trajectory Optimization for End-to-End Driving",
+        "slug": "drivetto-understanding-search-and-selection-in-test-time",
+        "url": "http://arxiv.org/abs/2611.29205v1",
+        "abstract": "In difficult driving scenes, a learned scorer can select a poor trajectory from a fixed pool even when a better candidate is available. Nearby vehicles and road boundaries can also leave only a narrow range of high-scoring maneuvers. These constraints vary with the scene and are difficult to cover exhaustively during training. We introduce DriveTTO, a training-free method that searches around native proposals and checks each proposed refinement against a retained trajectory. A frozen scorer evaluates completed paths at the endpoints they actually reach, guiding resampling in progressively smaller neighborhoods. From a shared reference, one branch draws on planner proposals and another perturbs vehicle controls. DriveTTO blends their poses at matching times and accepts a branch or fusion update only when both frozen scorers predict a gain. On Navtest, DriveTTO recovers nonzero predictive driver model scores (PDMS) in 51.35% of native zero-score cases on average. Accounting for new failures, the zero-score rate falls from 1.63% to 1.13%. Benchmark-specific configurations achieve 95.54 PDMS and 92.30 extended PDMS (EPDMS) on Navtest, 57.10 EPDMS on Navhard, and 40.1 HD-Score on HUGSIM under observed commands. With a single frozen scorer, DriveTTO-S improves all six evaluated planners on both Navtest and Navhard.",
+        "source": "arxiv",
+        "source_name": "arXiv",
+        "citation_count": 0,
+        "published_date": "2026-11-22",
+        "authors": [
+          "Xinyao Rao",
+          "Zecheng Tang",
+          "Zheyuan Lai",
+          "Liuxuan Sun",
+          "Minjun Yu",
+          "Xun Cao",
+          "Wei Li"
+        ]
+      }
+    ]
+  }
+}
