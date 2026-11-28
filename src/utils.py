@@ -423,7 +423,9 @@ def _load_keys(prefix: str) -> list[str]:
 _PROVIDER_KEYS: dict[str, list[str]] = {
     "openrouter": _load_keys("OPENROUTER_API_KEY"),
     "agnes": _load_keys("AGNES_API_KEY"),
+    "openai": _load_keys("OPENAI_API_KEY"),
 }
+_PROVIDER_KEY_ENV = {"openrouter": "OPENROUTER_API_KEY", "agnes": "AGNES_API_KEY", "openai": "OPENAI_API_KEY"}
 
 # Lazy 檢查：不在 import 時 raise，讓不需 LLM 的指令（clean / status / list）
 # 即使沒設定 API key 也能正常執行；真正呼叫 LLM 時才在 get_next_api_key() raise。
@@ -460,15 +462,20 @@ def reset_model_health() -> None:
 
 
 def _provider_for_model(model: str | None) -> str:
-    """由 model id 推斷 provider。agnes-* 走 Agnes，其餘預設 OpenRouter。"""
+    """由 model id 推斷 provider。agnes-* 走 Agnes，無 vendor 前綴的 gpt-* 走 OpenAI 直連，
+    其餘預設 OpenRouter（OpenRouter 上的 OpenAI 模型是 `openai/gpt-...`，帶斜線）。"""
     if model and model.startswith("agnes"):
         return "agnes"
+    if model and model.startswith("gpt-") and "/" not in model:
+        return "openai"
     return "openrouter"
 
 
 def _get_api_base_url(provider: str = "openrouter") -> str:
     if provider == "agnes":
         return os.getenv("AGNES_API_URL") or _AGNES_DEFAULT_BASE_URL
+    if provider == "openai":
+        return os.getenv("OPENAI_API_URL") or "https://api.openai.com/v1"
     url = os.getenv("OPENROUTER_API_URL")
     if url:
         return url
@@ -481,7 +488,7 @@ def _next_key_with_index(provider: str = "openrouter") -> tuple[str, int]:
     無 key 時才 raise（lazy，僅在真正呼叫該 provider 時）。"""
     cycle = _PROVIDER_CYCLES.get(provider)
     if cycle is None:
-        env = "OPENROUTER_API_KEY" if provider == "openrouter" else "AGNES_API_KEY"
+        env = _PROVIDER_KEY_ENV.get(provider, "OPENROUTER_API_KEY")
         raise ValueError(f"No API keys configured for provider '{provider}' (set {env}[_2..9])")
     idx, key = next(cycle)
     return key, idx
@@ -571,12 +578,16 @@ def _try_model(
     timeout / 其他 error / empty content：視為該 model 本次失敗回 None，讓上層走 fallback 鏈。
     key 值絕不入 log，只記序號 key#N。
     """
+    # OpenAI 直連的 gpt-6.x 拒收 max_tokens（要 max_completion_tokens）與非預設 temperature
+    if _provider_for_model(model) == "openai":
+        params = {"max_completion_tokens": max_tokens}
+    else:
+        params = {"max_tokens": max_tokens, "temperature": temperature}
     for attempt in range(max_retries + 1):
         client, key_idx = _client_with_key_index(model)
         try:
             resp = client.with_options(timeout=timeout).chat.completions.create(
-                model=model, messages=messages,
-                max_tokens=max_tokens, temperature=temperature,
+                model=model, messages=messages, **params,
             )
             content = _extract_content(resp)
             return content or None

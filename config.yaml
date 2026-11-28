@@ -13,6 +13,7 @@ llm:
   #   403   thinkingmachines/inkling（only available on agentic harnesses）
   #   推理外洩 nvidia/nemotron-3.5-lightning、nemotron-3-ultra（吐 "Here's a thinking process"）
   scoring_models:
+    - gpt-6.1-terra                          # 2026-11-28 主力：OpenAI 直連（付費，OPENAI_API_KEY）；以下免費 model 為備援
     - minimax/minimax-m3:free                # 實測 4/4 乾淨 JSON，1.1s 最快
     - nvidia/nemotron-3-super-120b-a12b:free  # 上游 Nvidia；實測 2/3（偶發空字串）
     - openrouter/free                        # 免費 model 隨機路由：每次呼叫重擲，等於再賭一個不同上游
@@ -22,13 +23,14 @@ llm:
   # 當前 :free 池只剩 15 個 model，繁中寫作實測能用的僅此一個（ling-3.0-tiny 回空字串、
   # gemma-4-31b 上游 429），中間隔著 Darkbloom/Google 與 Agnes，整條 chain 仍跨 3 個上游。
   generation_models:
+    - gpt-6.1-terra                          # 2026-11-28 主力：OpenAI 直連；A/B 實測繁中品質與 gpt-6.2-sol 相當、價格一半
     - nvidia/nemotron-3-ultra-550b-a55b:free # 上游 Nvidia；繁中台灣用語實測自然（550B，~26s）
     - google/gemma-4-26b-a4b-it:free         # 上游 Darkbloom / Google AI Studio
     - nvidia/nemotron-3-super-120b-a12b:free # 上游 Nvidia
     - agnes-2.0-flash                        # Agnes（apihub.agnes-ai.com）：免費 model 全掛時的可用性保險，寫作品質佳
   # Legacy：GeneratedContent.model_used 顯示 / UI 舊 code 仍讀這些 key
-  model: minimax/minimax-m3:free
-  generation_model: nvidia/nemotron-3-ultra-550b-a55b:free
+  model: gpt-6.1-terra
+  generation_model: gpt-6.1-terra
   # 批次生成：改用本機 Claude Code CLI（headless），一個 session 寫多篇。
   # enabled: false → 走上面的 OpenRouter 逐篇 chain（預設）；true → 走 CLI 批次，
   # 批次缺漏或 CLI 不可用時**逐篇退回** OpenRouter，兩條路徑共用同一個入口與寫檔邏輯，
@@ -39,7 +41,7 @@ llm:
   # 後段品質越容易掉，且整批失敗損失越大。4 篇是實測過契約 100% 成立的大小
   # （4/4 完整、零前導雜訊、47.6s/篇）。
   batch_generation:
-    enabled: true
+    enabled: false  # 2026-11-28 退訂 Claude，改走 OpenAI 逐篇
     model: sonnet
     batch_size: 4
     timeout_seconds: 900
@@ -56,7 +58,7 @@ llm:
   # 2026-09-01 實測 20 筆真實素材：44.8s、0 缺漏、總分範圍 32-77。**沒有證據顯示分數比
   # 逐筆更分散**——同日 OpenRouter 逐筆存檔的跨度是 47，兩者相當（且母體不同，不可直接比）。
   batch_scoring:
-    enabled: true
+    enabled: false  # 2026-11-28 退訂 Claude，改走 OpenAI 逐篇
     model: sonnet
     batch_size: 20
     timeout_seconds: 900

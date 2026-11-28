@@ -49,3 +49,57 @@ class TestKeyRotationIsolation:
         # 兩個 provider 各自獨立 key 池，不共用
         assert "openrouter" in u._PROVIDER_KEYS
         assert "agnes" in u._PROVIDER_KEYS
+
+
+class TestOpenAIProvider:
+    @pytest.mark.parametrize(
+        "model,expected",
+        [
+            ("gpt-6.1-terra", "openai"),
+            ("gpt-6.2-sol", "openai"),
+            # OpenRouter 上的 OpenAI 模型帶 vendor 前綴，仍走 OpenRouter
+            ("openai/gpt-oss-120b:free", "openrouter"),
+        ],
+    )
+    def test_gpt_models_route_to_openai(self, model, expected):
+        assert u._provider_for_model(model) == expected
+
+    def test_openai_base_url_default(self, monkeypatch):
+        monkeypatch.delenv("OPENAI_API_URL", raising=False)
+        assert u._get_api_base_url("openai") == "https://api.openai.com/v1"
+
+    def test_missing_openai_key_raises_with_helpful_msg(self, monkeypatch):
+        monkeypatch.setitem(u._PROVIDER_CYCLES, "openai", None)
+        with pytest.raises(ValueError, match="OPENAI_API_KEY"):
+            u.get_next_api_key("openai")
+
+    def _capture_create_kwargs(self, monkeypatch, model):
+        captured = {}
+
+        class FakeCompletions:
+            def create(self, **kw):
+                captured.update(kw)
+                msg = type("M", (), {"content": "ok"})()
+                return type("R", (), {"choices": [type("C", (), {"message": msg})()]})()
+
+        class FakeClient:
+            chat = type("Chat", (), {"completions": FakeCompletions()})()
+
+            def with_options(self, **_):
+                return self
+
+        monkeypatch.setattr(u, "_client_with_key_index", lambda m: (FakeClient(), 1))
+        assert u._try_model(model, [{"role": "user", "content": "hi"}], 1200, 0.3, 0) == "ok"
+        return captured
+
+    def test_openai_uses_max_completion_tokens_and_default_temperature(self, monkeypatch):
+        # gpt-6.x 拒收 max_tokens 與非預設 temperature（2026-11-28 實打 API 確認）
+        kw = self._capture_create_kwargs(monkeypatch, "gpt-6.1-terra")
+        assert kw["max_completion_tokens"] == 1200
+        assert "max_tokens" not in kw
+        assert "temperature" not in kw
+
+    def test_openrouter_keeps_max_tokens_and_temperature(self, monkeypatch):
+        kw = self._capture_create_kwargs(monkeypatch, "openrouter/free")
+        assert kw["max_tokens"] == 1200
+        assert kw["temperature"] == 0.3
